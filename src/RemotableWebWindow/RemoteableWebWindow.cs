@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
-using WebWindows;
+
 using Google.Protobuf;
 using System.Drawing;
 using System.Collections.Generic;
@@ -158,16 +158,6 @@ namespace PeakSwc.RemoteableWebWindows
         public int Height { get => JSRuntime.InvokeAsync<int>("RemoteWebWindow.height").Result; set => JSRuntime.InvokeVoidAsync("RemoteWebWindow.setHeight", new object[] { value }); }
         public int Left { get => JSRuntime.InvokeAsync<int>("RemoteWebWindow.left").Result; set => JSRuntime.InvokeVoidAsync("RemoteWebWindow.setLeft", new object[] { value }); }
         public Point Location { get { var l = JSRuntime.InvokeAsync<Point>("RemoteWebWindow.location").Result; return new Point(l.X, l.Y); } set => JSRuntime.InvokeVoidAsync("RemoteWebWindow.setLocation", new object[] { value }); }
-
-        public IReadOnlyList<WebWindows.Monitor> Monitors
-        {
-            get
-            {
-                // TODO
-                List<WebWindows.Monitor> results = new List<WebWindows.Monitor>();
-                return results;
-            }
-        }
 
         public bool Resizable { get => true;  set { }  }
 

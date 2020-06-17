@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "MyRemoteBlazorApp": {
-      "commandName": "Project",
-      "remoteDebugEnabled": false,
-      "nativeDebugging": true
-    }
-  }
-}
