@@ -51,5 +51,32 @@ namespace RemoteBlazorWebView.Wpf
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(RemoteBlazorWebView), new FrameworkPropertyMetadata(typeof(RemoteBlazorWebView)));
         }
+
+        public event EventHandler<string> OnWebMessageReceived;
+
+        public void Initialize(Action<WebViewOptions> configure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Invoke(Action callback)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void NavigateToUrl(string url)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SendMessage(string message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ShowMessage(string title, string message)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

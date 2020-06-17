@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using PeakSwc.RemoteableWebWindows;
 
 namespace BlazorWebViewTutorial.WpfApp
 {
@@ -38,7 +39,9 @@ namespace BlazorWebViewTutorial.WpfApp
             {
                 this.initialized = true;
                 // run blazor.
-                this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
+                //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
+
+                this.disposable = BlazorWebViewHost.Run<Startup>(new RemotableWebWindow(new Uri("https://localhost"), "title", "wwwroot/index.html"), "wwwroot/index.html");
             }
         }
 

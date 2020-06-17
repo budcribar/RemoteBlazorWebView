@@ -12,11 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0-preview8" />
+    <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\RemotableWebWindow\RemotableWebWindow.csproj" />
     <ProjectReference Include="..\BlazorWebViewTutorial.Shared\BlazorWebViewTutorial.Shared.csproj" />
   </ItemGroup>
 

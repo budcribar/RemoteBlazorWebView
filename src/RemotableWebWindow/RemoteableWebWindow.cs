@@ -4,7 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
-
+using BlazorWebView;
+using BlazorWebView.Wpf;
 using Google.Protobuf;
 using System.Drawing;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ using System.Net;
 
 namespace PeakSwc.RemoteableWebWindows
 {
-    public class RemotableWebWindow : IWebWindow
+    public class RemotableWebWindow : IBlazorWebView 
     {
         #region private
         private readonly Uri uri;
@@ -288,6 +289,16 @@ namespace PeakSwc.RemoteableWebWindows
         public void NavigateToString(string content)
         {
             // TODO
+        }
+
+        public void Initialize(Action<WebViewOptions> configure)
+        {
+            // called 
+        }
+
+        public void Invoke(Action callback)
+        {
+            throw new NotImplementedException();
         }
     }
 }
