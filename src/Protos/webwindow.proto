@@ -1,0 +1,99 @@
+
+// TODO: Review style guidelines
+
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option csharp_namespace = "PeakSwc.RemoteableWebWindows";
+
+package webwindow;
+
+message SendMessageRequest {
+    string id = 1;
+    string message = 2;
+}
+
+message ShowMessageRequest {
+    string id = 1;
+    string title = 2;
+    string body = 3;
+}
+message UrlMessageRequest {
+    string id = 1;
+    string url = 2;
+}
+message FileMessageRequest {
+    string id = 1;
+    string path = 2;
+}
+message IdMessageRequest {
+    string id = 1;
+}
+
+message CreateWebWindowRequest {
+  string id = 1;
+  string title = 2;
+  string htmlHostPath = 3;
+  string hostname = 4;
+}
+
+message WebMessageResponse {
+    string response = 1;
+}
+
+message IntMessageResponse {
+    int32 response = 1;
+}
+
+message IntMessageRequest {
+    string id = 1;
+    int32 message = 2;
+}
+
+message FileReadRequest {
+    string id = 1;
+    string path = 2;
+     bytes data = 3;
+}
+message FileReadResponse {
+    string id = 1;
+    string path = 2;   
+}
+
+message StringResponse {
+    string response = 1; 
+}
+
+message StringRequest {
+    string id = 1;
+    string request = 2; 
+}
+
+service RemoteWebWindow {
+  
+    rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
+    
+    rpc Show (IdMessageRequest) returns (google.protobuf.Empty);
+    rpc ShowMessage(ShowMessageRequest) returns (google.protobuf.Empty);
+
+    rpc NavigateToLocalFile(FileMessageRequest) returns (google.protobuf.Empty);
+    rpc NavigateToString(StringRequest) returns (google.protobuf.Empty);
+    rpc NavigateToUrl(UrlMessageRequest) returns (google.protobuf.Empty);
+
+    rpc WaitForExit(IdMessageRequest) returns (google.protobuf.Empty);
+
+    rpc CreateWebWindow(CreateWebWindowRequest) returns (stream WebMessageResponse);
+    rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse);  
+
+}
+
+message EmptyRequest {
+}
+
+service BrowserIPC {
+    rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
+    rpc SendMessage(StringRequest) returns (EmptyRequest);
+    rpc GetHeight(IdMessageRequest) returns (IntMessageResponse);
+
+}

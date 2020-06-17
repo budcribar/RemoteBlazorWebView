@@ -1,0 +1,489 @@
+﻿WebWindow.NavigateToUrl http://app/
+	-> read File.OpenRead(wwwroot/index.html)
+	-> read bootstrap.min.css
+
+
+	ComponentsDesktop. Run<TStartup>(IWebWindow webWindow)
+
+
+	Need to create web window and attach the handler at the server and at the client before navigating
+
+	Server creates web window and attaches OnWebMessageReceived before the RemoteWebWindow is instantiated
+
+	Do we need to call CoInitiallize(NULL) before creating the web window?
+	https://social.msdn.microsoft.com/Forums/azure/en-US/c1a642e2-184e-4f5a-984a-e30bdfe97fb8/does-createwindowexa-calls-coinitialize-internally?forum=windowsgeneraldevelopmentissues
+
+
+	Debug into C++
+	https://stackoverflow.com/questions/3535075/no-symbols-loaded-in-mixed-c-sharp-cwin32-project-using-vs2010
+
+
+
+	1. Home gives "There is nothing at this address" message
+	2. Initial cookie failed
+	3. Refresh does not work - Client is waiting to finish
+	4. There is no event handler associated with this event. EventId: '2'. (Parameter 'eventHandlerId')
+	5. System.InvalidOperationException: 'Not valid in the current state: CompleteArray'
+	    public async void ReceiveMessage(string message)
+        {
+            await ResponseStream.WriteAsync(new WebMessageResponse { Response = "webmessage:" + message });
+        }
+
+
+	Why is the id not incremented??
+
+	sent:ipc:BeginInvokeDotNetFromJS ["3","WebWindow.Blazor","DispatchEvent",0,"[{\"browserRendererId\":0,\"eventHandlerId\":6,\"eventArgsType\":\"mouse\",\"eventFieldInfo\":null},\"{\\\"type\\\":\\\"click\\\",\\\"detail\\\":1,\\\"screenX\\\":2281,\\\"screenY\\\":829,\\\"clientX\\\":331,\\\"clientY\\\":226,\\\"button\\\":0,\\\"buttons\\\":0,\\\"ctrlKey\\\":false,\\\"shiftKey\\\":false,\\\"altKey\\\":false,\\\"metaKey\\\":false}\"]"]
+	Received: JS.BeginInvokeJS:[3,"RemoteWebWindow.height",null]
+	ipc:EndInvokeJSFromDotNet [3,true,"[3,true,795]"]
+	HandleScriptNotify
+	ipc.On("EndInvokeJSFromDotNet"
+
+
+
+
+
+
+
+
+	1. System.InvalidOperationException: Not valid in the current state: CompleteArray
+   at Grpc.AspNetCore.Server.Internal.HttpContextSerializationContext.ThrowInvalidState(InternalState state)
+   at Grpc.AspNetCore.Server.Internal.HttpContextSerializationContext.Complete(Byte[] payload)
+   at Grpc.Core.Marshaller`1.EmulateContextualSerializer(T message, SerializationContext context)
+   at Grpc.AspNetCore.Server.Internal.PipeExtensions.WriteMessageAsync[TResponse](PipeWriter pipeWriter, TResponse response, HttpContextServerCallContext serverCallContext, Action`2 serializer, Boolean canFlush)
+Exception thrown: 'System.InvalidOperationException' in Grpc.AspNetCore.Server.dll
+Exception thrown: 'System.InvalidOperationException' in System.Private.CoreLib.dll
+Exception thrown: 'System.InvalidOperationException' in System.Private.CoreLib.dll
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+An unhandled exception of type 'System.InvalidOperationException' occurred in System.Private.CoreLib.dll
+Not valid in the current state: CompleteArray
+
+
+
+'RemoteableWebWindowService.exe' (CoreCLR: DefaultDomain): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.CoreLib.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\src\RemoteableWebWindowService\bin\Debug\netcoreapp3.1\RemoteableWebWindowService.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Components.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\src\RemoteableWebWindowService\bin\Debug\netcoreapp3.1\System.Windows.Forms.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ComponentModel.Primitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Drawing.Primitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.Specialized.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\MyRemoteBlazorApp.exe'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ntdll.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\kernel32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\KernelBase.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\user32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\win32u.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\gdi32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\gdi32full.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\msvcp_win.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ucrtbase.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\System.Drawing.Common.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.TraceSource.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.Extensions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\Microsoft.Win32.Primitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Debug.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ComponentModel.EventBasedAsync.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Thread.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\src\RemoteableWebWindowService\bin\Debug\netcoreapp3.1\Accessibility.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Hosting.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Hosting.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Hosting.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Buffers.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.DependencyInjection.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Win32.SystemEvents.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.DependencyInjection.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\netstandard.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ComponentModel.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.IO.FileSystem.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Hosting.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.EnvironmentVariables.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Primitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Tasks.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Linq.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\shell32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\advapi32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\msvcrt.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\sechost.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\rpcrt4.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\imm32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\host\fxr\3.1.3\hostfxr.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\hostpolicy.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\coreclr.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ole32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\combase.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\oleaut32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\shlwapi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\bcrypt.dll'. Symbols loaded.
+The thread 0x8de8 has exited with code 0 (0x0).
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.CoreLib.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: DefaultDomain): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.CoreLib.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Server.Kestrel.Core.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Server.Kestrel.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Server.IIS.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.RuntimeInformation.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Server.IISIntegration.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.NonGeneric.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.CommandLine.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Mvc.Core.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.FileProviders.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.FileProviders.Physical.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Memory.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.FileExtensions.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\bcryptprimitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.Json.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\kernel.appcore.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.UserSecrets.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Configuration.Binder.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\clrjit.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.Uri.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\MyRemoteBlazorApp.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.IO.FileSystem.Watcher.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.Concurrent.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\MyRemoteBlazorApp.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.FileSystemGlobbing.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Timer.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.dll'. 
+The thread 0xaf0c has exited with code 0 (0x0).
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Overlapped.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Json.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.Uri.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Encoding.Extensions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Numerics.Vectors.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.CompilerServices.Unsafe.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Private.Uri.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Options.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.EventLog.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\RemotableWebWindow.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.Configuration.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Options.ConfigurationExtensions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.Console.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.Debug.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\RemotableWebWindow.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.Logging.EventSource.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Tracing.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\netstandard.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.DiagnosticSource.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Http.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Http.Features.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Http.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\netstandard.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Connections.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Primitives.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Hosting.Server.Abstractions.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\WebWindow.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.HostFiltering.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.HttpOverrides.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Routing.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.Extensions.ObjectPool.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\WebWindow.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Routing.Abstractions.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ObjectModel.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Drawing.Primitives.dll'. 
+
+Microsoft.Hosting.Lifetime: Information: Now listening on: https://127.0.0.1:443
+Microsoft.Hosting.Lifetime: Information: Application started. Press Ctrl+C to shut down.
+Microsoft.Hosting.Lifetime: Information: Hosting environment: Development
+Microsoft.Hosting.Lifetime: Information: Content root path: C:\Users\budcr\source\repos\MyWebWindow\src\RemoteableWebWindowService
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.FileProviders.Abstractions.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.FileProviders.Abstractions.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Primitives.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Primitives.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Memory.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Memory.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.Concurrent.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.Concurrent.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Json.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Json.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.RuntimeInformation.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.RuntimeInformation.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Google.Protobuf.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Google.Protobuf.dll'. 
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Grpc.Net.Client.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Grpc.Net.Client.dll'. 
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Http.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Http.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Grpc.Net.Common.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Grpc.Net.Common.dll'. 
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Primitives.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Primitives.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Tracing.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Tracing.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Security.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Security.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.X509Certificates.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.X509Certificates.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.IO.Compression.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.IO.Compression.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Linq.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Linq.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.DiagnosticSource.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.DiagnosticSource.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Timer.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Timer.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\Microsoft.Win32.Primitives.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\Microsoft.Win32.Primitives.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.InteropServices.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\IPHLPAPI.DLL'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\dnsapi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\nsi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\dhcpcsvc6.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\dhcpcsvc.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\winnsi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\winhttp.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Sockets.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Sockets.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Overlapped.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Overlapped.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.NameResolution.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.NameResolution.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ws2_32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\NapiNSP.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\pnrpnsp.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\wshbth.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\nlaapi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\mswsock.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\winrnr.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\rasadhlp.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\devobj.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\cfgmgr32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\FWPUCLNT.DLL'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Newtonsoft.Json.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Newtonsoft.Json.dll'. 
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Console.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Console.dll'. Symbols loaded.
+The thread 0xb47c has exited with code 0 (0x0).
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\sspicli.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.Primitives.dll'. 
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.Security.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.Primitives.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.NonGeneric.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Collections.NonGeneric.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.Windows.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.Windows.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Claims.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Claims.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\schannel.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\normaliz.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.Windows.dll'. Symbols loaded.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Principal.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.ThreadPool.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.ThreadPool.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\mskeyprotect.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ntasn1.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ncrypt.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\ncryptsslp.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\crypt32.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\msasn1.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.Encoding.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Security.Cryptography.Encoding.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\cryptsp.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\rsaenh.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\cryptbase.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Windows\System32\gpapi.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Buffers.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Buffers.dll'. Symbols loaded.
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/CreateWebWindow application/grpc 
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/FileReader application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/CreateWebWindow'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/FileReader'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/NavigateToUrl application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/NavigateToUrl'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/NavigateToUrl'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 28.1435ms 200 application/grpc
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Net.WebSockets.dll'. Symbols loaded.
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/WaitForExit application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/WaitForExit'
+
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/  
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ComponentModel.Annotations.dll'. Symbols loaded.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint '/Index'
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.WebUtilities.dll'. Symbols loaded.
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Route matched with {page = "/Index"}. Executing page /Index
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Executing handler method PeakSwc.RemoteableWebWindows.Pages.IndexModel.OnGet - ModelState is Valid
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Executed handler method OnGet, returned result .
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Executing an implicit handler method - ModelState is Valid
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Executed an implicit handler method, returned result Microsoft.AspNetCore.Mvc.RazorPages.PageResult.
+'RemoteableWebWindowService.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.3\Microsoft.AspNetCore.Http.Extensions.dll'. Symbols loaded.
+Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Information: Executed page /Index in 103.18ms
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint '/Index'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 208.3821ms 200 text/html; charset=utf-8
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/2be9b498-90eb-4fee-a6df-cf59bbe95f7e/wwwroot/index.html  
+Microsoft.AspNetCore.Session.DistributedSession: Information: Accessing expired session, Key:152a344c-a2e0-cbd0-5bbf-5572442edbfe
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/2be9b498-90eb-4fee-a6df-cf59bbe95f7e/wwwroot/index.html'. Physical path: 'N/A'
+Microsoft.AspNetCore.Session.DistributedSession: Information: Session started; Key:152a344c-a2e0-cbd0-5bbf-5572442edbfe, Id:b10c09d1-6f94-0e21-d22d-f8f6b8d7eb27
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 111.11ms 200 text/html
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/css/bootstrap/bootstrap.min.css  
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/css/site.css  
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/remote/remote.blazor.desktop.js  
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/css/site.css'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 63.9896ms 200 text/css
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/css/bootstrap/bootstrap.min.css'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/css/open-iconic/font/css/open-iconic-bootstrap.min.css  
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 102.3679ms 200 text/css
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/css/open-iconic/font/css/open-iconic-bootstrap.min.css'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 499.9203ms 200 text/css
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/remote/remote.blazor.desktop.js'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 639.6025ms 200 application/javascript
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/css/bootstrap/bootstrap.min.css.map  
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/css/bootstrap/bootstrap.min.css.map'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 179.5164ms 200 text/plain
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/ReceiveMessage application/grpc-web+proto 5
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 114
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/ReceiveMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 127.4792ms 200 application/grpc-web
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Encoding.Extensions.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Encoding.Extensions.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Primitives.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Primitives.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Emit.Lightweight.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Emit.Lightweight.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Emit.ILGeneration.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Reflection.Emit.ILGeneration.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Numerics.Vectors.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Numerics.Vectors.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.CompilerServices.Unsafe.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Runtime.CompilerServices.Unsafe.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Thread.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Threading.Thread.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Options.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Options.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Logging.Console.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Logging.Console.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Logging.Configuration.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Logging.Configuration.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Options.ConfigurationExtensions.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Options.ConfigurationExtensions.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Resources.ResourceManager.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Resources.ResourceManager.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Debug.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Diagnostics.Debug.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Configuration.Binder.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.Extensions.Configuration.Binder.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Encodings.Web.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Text.Encodings.Web.dll'. Symbols loaded.
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 23.0364ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 57
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 49.728ms 200 application/grpc-web
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ObjectModel.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.ObjectModel.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.AspNetCore.Components.Web.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Users\budcr\source\repos\MyWebWindow\testassets\MyRemoteBlazorApp\bin\Debug\netcoreapp3.1\Microsoft.AspNetCore.Components.Web.dll'. Symbols loaded.
+'MyRemoteBlazorApp.exe' (Win32): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Linq.Expressions.dll'. 
+'MyRemoteBlazorApp.exe' (CoreCLR: clrhost): Loaded 'C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.3\System.Linq.Expressions.dll'. Symbols loaded.
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 28.5854ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 GET https://localhost/css/open-iconic/font/fonts/open-iconic.woff  
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Information: Sending file. Request path: '/css/open-iconic/font/fonts/open-iconic.woff'. Physical path: 'N/A'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 44.0288ms 200 application/font-woff
+The thread 0x3f00 has exited with code 0 (0x0).
+The thread 0x3574 has exited with code 0 (0x0).
+The thread 0x894c has exited with code 0 (0x0).
+The thread 0x912c has exited with code 0 (0x0).
+The thread 0x20ac has exited with code 0 (0x0).
+The thread 0xc254 has exited with code 0 (0x0).
+The thread 0x3b38 has exited with code 0 (0x0).
+The thread 0x9060 has exited with code 0 (0x0).
+The thread 0x3b08 has exited with code 0 (0x0).
+The thread 0xa940 has exited with code 0 (0x0).
+The thread 0x73cc has exited with code 0 (0x0).
+The thread 0x6bd4 has exited with code 0 (0x0).
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 435
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 124
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 84.1857ms 200 application/grpc-web
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 59.73ms 200 application/grpc-web
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 16.0993ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 23.9016ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 19.6256ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 13.9875ms 200 application/grpc
+The thread 0x13f8 has exited with code 0 (0x0).
+The thread 0x7260 has exited with code 0 (0x0).
+The thread 0x95b0 has exited with code 0 (0x0).
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 435
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 25.0904ms 200 application/grpc-web
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.RemoteWebWindow/SendMessage application/grpc 
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.RemoteWebWindow/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 19.3104ms 200 application/grpc
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request starting HTTP/2 POST https://localhost/webwindow.BrowserIPC/SendMessage application/grpc-web+proto 57
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: CORS policy execution failed.
+Microsoft.AspNetCore.Cors.Infrastructure.CorsService: Information: Request origin https://localhost does not have permission to access the resource.
+PeakSwc.StaticFiles.PeakSwcStaticFileMiddleware: Debug: Static files was skipped as the request already matched an endpoint.
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executing endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Routing.EndpointMiddleware: Information: Executed endpoint 'gRPC - /webwindow.BrowserIPC/SendMessage'
+Microsoft.AspNetCore.Hosting.Diagnostics: Information: Request finished in 27.0057ms 200 application/grpc-web
+
+
+
+

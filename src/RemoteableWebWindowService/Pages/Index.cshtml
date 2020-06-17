@@ -1,0 +1,58 @@
+﻿@page
+
+@model IndexModel
+@inject ConcurrentDictionary<Guid, ServiceState> Dictionary
+
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <div>
+        <script type="text/javascript">
+            function setCookie(cname, cvalue, exdays) {
+                var d = new Date();
+                d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+                var expires = "expires=" + d.toUTCString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            }
+
+            function getCookie(cname) {
+                var cookie = document.cookie;
+                var cookieArray = cookie.split('; ');
+
+
+                for (var loop = 0; loop < cookieArray.length; loop++) {
+                    var nameValue = cookieArray[loop].split('=');
+
+                    if (nameValue[0].toString() == cname) {
+                        return nameValue[1];
+                    }
+
+                }
+                return "";
+            }
+
+            function setHref(guid) {
+                var cookie = getCookie("guid");
+
+                if (cookie == guid)
+                    href = '/app?restart=true';
+                else
+                    href = '/app';
+
+            }
+
+            var href = ""
+        </script>
+
+        @foreach (var key in Dictionary.Keys)
+        {
+
+    <button onclick="setHref('@key'); setCookie('guid', '@key', 1); setCookie('home', '@Dictionary[@key].HtmlHostPath', 1); location.href = href">@Dictionary[@key].Hostname</button>
+
+        }
+
+    </div>
+</div>

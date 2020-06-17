@@ -1,0 +1,28 @@
+{
+  "name": "components.desktop.client",
+  "private": true,
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:debug": "webpack --mode development",
+    "build:production": "webpack --mode production",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "protoc": "protoc --plugin=protoc-gen-ts=\"C:\\Users\\budcr\\source\\repos\\MyWebWindow\\src\\RemoteWebWindow.Blazor.JS\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos webwindow.proto"
+  },
+  "devDependencies": {
+    "@dotnet/jsinterop": "3.0.0-preview9.19423.4",
+    "@improbable-eng/grpc-web": "0.12.0",
+    "@types/base64-arraybuffer": "^0.1.0",
+    "@types/google-protobuf": "^3.7.2",
+    "base64-arraybuffer": "^0.1.5",
+    "google-protobuf": "^3.11.4",
+    "grpc-web": "1.0.7",
+    "ts-loader": "^4.4.1",
+    "ts-protoc-gen": "^0.12.0",
+    "tsconfig-paths-webpack-plugin": "^3.2.0",
+    "typescript": "^3.8.3",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
+  }
+}

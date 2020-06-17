@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "RemoteableWebWindowService": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "nativeDebugging": false,
+      "applicationUrl": "https://localhost:5001"
+    }
+  }
+}

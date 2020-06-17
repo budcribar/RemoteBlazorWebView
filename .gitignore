@@ -1,0 +1,14 @@
+.vs/
+.vscode/
+bin/
+obj/
+*.user
+Debug/
+Release/
+packages/
+artifacts/
+/src/RemoteableWebWindowService/publish/publish
+/src/RemoteWebWindow.Blazor.JS/node_modules
+/testassets/MyRemoteBlazorApp/publish
+/src/RemoteableWebWindowService/publish
+/src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
