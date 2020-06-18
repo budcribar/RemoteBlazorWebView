@@ -47,7 +47,6 @@ namespace PeakSwc.RemoteableWebWindows
                 {
                     HtmlHostPath = request.HtmlHostPath,
                     Hostname = request.Hostname,
-                    Title = request.Title
                 };
 
 

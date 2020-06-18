@@ -26,7 +26,6 @@ namespace PeakSwc.RemoteableWebWindows
     {
         #region private
         private readonly Uri uri;
-        private readonly string windowTitle;
         private readonly string hostHtmlPath;
         private readonly string hostname;
 
@@ -57,7 +56,7 @@ namespace PeakSwc.RemoteableWebWindows
                     var channel = GrpcChannel.ForAddress(uri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = hostHtmlPath, Title = windowTitle, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
+                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = hostHtmlPath, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
                     var completed = new ManualResetEventSlim();
                    
                     Task.Run(async () =>
@@ -231,10 +230,9 @@ namespace PeakSwc.RemoteableWebWindows
             }
         }
 
-        public RemotableWebWindow(Uri uri, string windowTitle, string hostHtmlPath)
+        public RemotableWebWindow(Uri uri, string hostHtmlPath)
         {
             this.uri = uri;
-            this.windowTitle = windowTitle;
             this.hostHtmlPath = hostHtmlPath;
             this.hostname = Dns.GetHostName();
         }

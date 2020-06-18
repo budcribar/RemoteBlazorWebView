@@ -39,6 +39,7 @@ namespace PeakSwc.RemoteableWebWindows
             return Task.CompletedTask;
         }
 
+        // TODO Use Google EmptyRequest
         public override Task<EmptyRequest> SendMessage(StringRequest request, ServerCallContext context)
         {
             Guid id = Guid.Parse(request.Id);
