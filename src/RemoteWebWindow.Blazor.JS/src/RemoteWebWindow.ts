@@ -10,7 +10,7 @@ export async function sendMessage(message: string) {
     req.setId(webWindow.guid);
     req.setRequest(message);
     await grpc.invoke(BrowserIPC.SendMessage, {
-        request: req, host: "https://localhost:443", onEnd: (code, msg, trailers) => {
+        request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
                 console.log("sent:" + message)
             } else {
@@ -27,7 +27,7 @@ export function initializeRemoteWebWindow() {
     grpc.invoke(BrowserIPC.ReceiveMessage,
         {
             request: message,
-            host: "https://localhost:443",
+            host: window.location.origin,
             onMessage: (message: StringRequest) => {
                 console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());

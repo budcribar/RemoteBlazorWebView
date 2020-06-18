@@ -81,8 +81,6 @@ namespace PeakSwc.RemoteableWebWindows
                                             lock (bootLock)
                                             {
                                                 bootCount++;
-                                                //if (bootCount >= 1)
-                                                //    cts.Cancel();
                                             }
                                         }
                                         else if (data.StartsWith("size:"))
