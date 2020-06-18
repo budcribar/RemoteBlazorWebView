@@ -107,6 +107,18 @@ namespace PeakSwc.StaticFiles
 ";
                 contents = contents.Replace("</app>", inject);
 
+                string inject2 = @$"
+</body>
+  <script type = 'text/javascript'>
+       console.log('navigating...');
+       setTimeout(function(){{Blazor._internal.navigationManager.navigateTo('/', false);}}, 1000); //
+   </script>
+";
+
+
+                // TODO Inject the navigate needs better solution
+                contents = contents.Replace("</body>", inject2);
+
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
 
             }

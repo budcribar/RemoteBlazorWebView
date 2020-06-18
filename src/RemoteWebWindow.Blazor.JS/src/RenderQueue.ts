@@ -32,7 +32,7 @@ export class RenderQueue {
         if (receivedBatchId > this.nextBatchId) {
             if (this.fatalError) {
                 console.log(`Received a new batch ${receivedBatchId} but errored out on a previous batch ${this.nextBatchId - 1}`);
-                await DotNet.invokeMethodAsync('WebWindow.Blazor', 'OnRenderCompleted', this.nextBatchId - 1, this.fatalError.toString());
+                await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', this.nextBatchId - 1, this.fatalError.toString());
                 return;
             }
             return;
@@ -47,7 +47,7 @@ export class RenderQueue {
             console.error(`There was an error applying batch ${receivedBatchId}.`);
 
             // If there's a rendering exception, notify server *and* throw on client
-            DotNet.invokeMethodAsync('WebWindow.Blazor', 'OnRenderCompleted', receivedBatchId, error.toString());
+            DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', receivedBatchId, error.toString());
             throw error;
         }
     }
@@ -58,7 +58,7 @@ export class RenderQueue {
 
     private async completeBatch(batchId: number): Promise<void> {
         try {
-            await DotNet.invokeMethodAsync('WebWindow.Blazor', 'OnRenderCompleted', batchId, null);
+            await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', batchId, null);
         } catch {
             console.warn(`Failed to deliver completion notification for render '${batchId}'.`);
         }
