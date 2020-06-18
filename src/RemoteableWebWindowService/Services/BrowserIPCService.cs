@@ -47,6 +47,5 @@ namespace PeakSwc.RemoteableWebWindows
             return Task.FromResult<EmptyRequest>(new EmptyRequest());
         }
 
-
     }
 }
