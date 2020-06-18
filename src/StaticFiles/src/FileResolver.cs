@@ -122,8 +122,7 @@ namespace PeakSwc.StaticFiles
 
     public class FileResolver : IFileProvider
     {
-        //private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim mres)>> _fileDictionary;
-        //private readonly ConcurrentDictionary<Guid,BlockingCollection<(Guid, string)>> _fileCollection;
+       
         private readonly ConcurrentDictionary<Guid, ServiceState> _rootDictionary;
 
         public FileResolver (ConcurrentDictionary<Guid, ServiceState> rootDictionary) {

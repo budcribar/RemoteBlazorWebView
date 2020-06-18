@@ -16,28 +16,22 @@ namespace PeakSwc.RemoteableWebWindows
 {
     public class Startup
     {
-        //private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim mres)>> fileDictionary = new ConcurrentDictionary<Guid, ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim mres)>>();
-        // readonly ConcurrentDictionary<Guid, BlockingCollection<(Guid, string)>> fileCollection = new ConcurrentDictionary<Guid, BlockingCollection<(Guid, string)>>();
         private readonly ConcurrentDictionary<Guid, ServiceState> rootDictionary = new ConcurrentDictionary<Guid, ServiceState>();
         private readonly ConcurrentDictionary<Guid, IPC> ipcDictionary = new ConcurrentDictionary<Guid, IPC>();
-
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
-        {
-           
-            services.AddRazorPages();
-            services.AddSingleton(ipcDictionary);          
-            services.AddSignalR();
-            services.AddGrpc();
+        {         
+            services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
-            //services.AddSingleton(fileDictionary);
-            //ervices.AddSingleton(fileCollection);
+
+            services.AddRazorPages();             
+            services.AddGrpc();    
 
             services.AddCors(o =>
             {
-                o.AddPolicy("MyPolicy", builder =>
+                o.AddPolicy("CorsPolicy", builder =>
                 {
                     builder.AllowAnyOrigin();
                     builder.AllowAnyHeader();
@@ -62,7 +56,7 @@ namespace PeakSwc.RemoteableWebWindows
 
             app.UseRouting();
 
-            app.UseCors("MyPolicy");
+            app.UseCors("CorPolicy");
 
             app.UseGrpcWeb();
  
