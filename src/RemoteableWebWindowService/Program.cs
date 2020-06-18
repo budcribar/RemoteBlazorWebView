@@ -10,42 +10,20 @@ using System.Net;
 using Microsoft.JSInterop.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using System.Threading;
-using System.Windows.Forms;
+
 
 namespace PeakSwc.RemoteableWebWindows
 {
     public class Program
     {
-        public static Form form;
-        public static Dispatcher dispatcher;
+       
         [STAThread]
         public static void Main(string[] args)
         {
-            //Application.Current
-            dispatcher = Dispatcher.CreateDefault();
-            form = new Form
-            {
-                Visible = false,
-                WindowState = FormWindowState.Minimized
-            };
-
-
-
-            //var ww = new WebWindowTunnel(new Uri("https://localhost:443"), new Uri("https://localhost:5001"));
-            //ww.Start();
-
-
-            Task.Run(() => CreateHostBuilder(args).Build().Run());
-
-            //CreateHostBuilder(args).Build().Run();
-
-
-            Application.Run(form);
-
+            CreateHostBuilder(args).Build().Run();
         }
 
-        // Additional configuration is required to successfully run gRPC on macOS.
-        // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
+       
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
