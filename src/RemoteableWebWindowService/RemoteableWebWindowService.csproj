@@ -28,15 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Accessibility">
-      <HintPath>Accessibility.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Windows.Forms">
-      <HintPath>System.Windows.Forms.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Update="wwwroot\css\bootstrap\bootstrap.min.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

@@ -94,6 +94,4 @@ message EmptyRequest {
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(StringRequest) returns (EmptyRequest);
-    rpc GetHeight(IdMessageRequest) returns (IntMessageResponse);
-
 }

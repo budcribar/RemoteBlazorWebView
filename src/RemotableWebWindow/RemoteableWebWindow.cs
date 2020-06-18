@@ -43,9 +43,8 @@ namespace PeakSwc.RemoteableWebWindows
                 return id;
             }
         }
-        private RemoteWebWindow.RemoteWebWindowClient client {
-            get; 
-            set; } = null;
+        private RemoteWebWindow.RemoteWebWindowClient client = null;
+        
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
