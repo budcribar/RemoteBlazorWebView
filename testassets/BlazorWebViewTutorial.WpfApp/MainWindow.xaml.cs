@@ -41,7 +41,7 @@ namespace BlazorWebViewTutorial.WpfApp
                 // run blazor.
                 //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
 
-                this.disposable = BlazorWebViewHost.Run<Startup>(new RemotableWebWindow(new Uri("https://localhost"), "title", "wwwroot/index.html"), "wwwroot/index.html");
+                this.disposable = BlazorWebViewHost.Run<Startup>(new RemotableWebWindow(new Uri("https://localhost:443"), "title", "wwwroot/index.html"), "wwwroot/index.html");
             }
         }
 

@@ -13,6 +13,12 @@ using Newtonsoft.Json;
 using Microsoft.JSInterop;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
+
+// TODO 1. Had to move css and sample data from BlazorWebViewTutorial.Shared to BlazorWebViewTutorial.WpfApp wwwroot
+//      2. modify index.html to reference <script src="remote.blazor.desktop.js"></script>
+//      3. link in remote.blazor.desktop.js
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -37,7 +43,9 @@ namespace PeakSwc.RemoteableWebWindows
                 return id;
             }
         }
-        private RemoteWebWindow.RemoteWebWindowClient client = null;
+        private RemoteWebWindow.RemoteWebWindowClient client {
+            get; 
+            set; } = null;
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
@@ -293,12 +301,68 @@ namespace PeakSwc.RemoteableWebWindows
 
         public void Initialize(Action<WebViewOptions> configure)
         {
-            // called 
+            //var options = new WebViewOptions();
+            //configure.Invoke(options);
+
+            //foreach (var (schemeName, handler) in options.SchemeHandlers)
+            //{
+            //    this.AddCustomScheme(schemeName, handler);
+            //}
+
+            //if (!BlazorWebViewNative_Initialize(this.blazorWebView))
+            //{
+            //    throw new InvalidOperationException(this.lastErrorMessage);
+            //}
         }
 
         public void Invoke(Action callback)
         {
-            throw new NotImplementedException();
+            callback.Invoke();
+            //throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// A callback delegate to handle a Resource request.
+        /// </summary>
+        /// <param name="url">The url to request a resource for.</param>
+        /// <param name="numBytes">The number of bytes of the resource.</param>
+        /// <param name="contentType">The content type of the resource.</param>
+        /// <returns>A pointer to a stream.</returns>
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+        private delegate IntPtr WebResourceRequestedCallback(string url, out int numBytes, out string contentType);
+
+        //private void AddCustomScheme(string scheme, ResolveWebResourceDelegate requestHandler)
+        //{
+        //    // Because of WKWebView limitations, this can only be called during the constructor
+        //    // before the first call to Show. To enforce this, it's private and is only called
+        //    // in response to the constructor options.
+        //    WebResourceRequestedCallback callback = (string url, out int numBytes, out string contentType) =>
+        //    {
+        //        var responseStream = requestHandler(url, out contentType, out Encoding encoding);
+        //        if (responseStream == null)
+        //        {
+        //            // Webview should pass through request to normal handlers (e.g., network)
+        //            // or handle as 404 otherwise
+        //            numBytes = 0;
+        //            return default;
+        //        }
+
+        //        // Read the stream into memory and serve the bytes
+        //        // In the future, it would be possible to pass the stream through into C++
+        //        using (responseStream)
+        //        using (var ms = new MemoryStream())
+        //        {
+        //            responseStream.CopyTo(ms);
+
+        //            numBytes = (int)ms.Position;
+        //            var buffer = Marshal.AllocCoTaskMem(numBytes);
+        //            Marshal.Copy(ms.GetBuffer(), 0, buffer, numBytes);
+        //            return buffer;
+        //        }
+        //    };
+
+        //    this.gcHandlesToFree.Add(GCHandle.Alloc(callback));
+        //    BlazorWebViewNative_AddCustomScheme(this.blazorWebView, scheme, callback);
+        //}
     }
 }

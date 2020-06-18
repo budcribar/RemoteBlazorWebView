@@ -12,9 +12,9 @@ function boot() {
 
     initializeRemoteWebWindow();
 
-    setEventDispatcher((eventDescriptor, eventArgs) => DotNet.invokeMethodAsync('WebWindow.Blazor', 'DispatchEvent', eventDescriptor, JSON.stringify(eventArgs)));
+    setEventDispatcher((eventDescriptor, eventArgs) => DotNet.invokeMethodAsync('BlazorWebView', 'DispatchEvent', eventDescriptor, JSON.stringify(eventArgs)));
     navigationManagerFunctions.listenForNavigationEvents((uri: string, intercepted: boolean) => {
-        return DotNet.invokeMethodAsync('WebWindow.Blazor', 'NotifyLocationChanged', uri, intercepted);
+        return DotNet.invokeMethodAsync('BlazorWebView', 'NotifyLocationChanged', uri, intercepted);
     });
     const renderQueue = RenderQueue.getOrCreate();
 

@@ -12,6 +12,28 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="wwwroot\css\bootstrap\bootstrap.min.css" />
+    <None Remove="wwwroot\css\bootstrap\bootstrap.min.css.map" />
+    <None Remove="wwwroot\css\open-iconic\FONT-LICENSE" />
+    <None Remove="wwwroot\css\open-iconic\font\css\open-iconic-bootstrap.min.css" />
+    <None Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.eot" />
+    <None Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.otf" />
+    <None Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.svg" />
+    <None Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.ttf" />
+    <None Remove="wwwroot\css\open-iconic\font\fonts\open-iconic.woff" />
+    <None Remove="wwwroot\css\open-iconic\ICON-LICENSE" />
+    <None Remove="wwwroot\css\open-iconic\README.md" />
+    <None Remove="wwwroot\css\site.css" />
+    <None Remove="wwwroot\sample-data\weather.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\src\RemoteWebWindow.Blazor.JS\dist\remote.blazor.desktop.js" Link="wwwroot\remote.blazor.desktop.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
