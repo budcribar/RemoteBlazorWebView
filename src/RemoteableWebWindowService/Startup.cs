@@ -91,12 +91,18 @@ namespace PeakSwc.RemoteableWebWindows
                         if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
                         {
                             ipcDictionary[Guid.Parse(guid)].ReceiveMessage("booted:");
-
                             // TODO synchronize properly
                             Thread.Sleep(3000);
-                        }
 
-                        context.Response.Redirect(home);
+
+                            //  Need to wait until we get an initialized then refresh
+
+                            context.Response.Redirect("/");
+                           
+                            
+                        }
+                        else
+                            context.Response.Redirect(home);
                     }
                     else await context.Response.WriteAsync("Invalid Guid");
 

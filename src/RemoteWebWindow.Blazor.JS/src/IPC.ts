@@ -1,5 +1,5 @@
 import { sendMessage } from "./RemoteWebWindow";
-
+import { navigateTo } from "../upstream/aspnetcore/web.js/src/Services/NavigationManager"
 interface Callback {
     (...args: any[]): void;
 }
@@ -43,7 +43,14 @@ export function receiveMessage(message: string) {
     const group = registrations[eventName];
     if (group) {
         const args: any[] = JSON.parse(argsJson);
+
+      
         group.forEach(callback => callback.apply(null, args));
+
+        //TODO Hack
+        if (eventName == "JS.EndInvokeDotNet" && args[0] == "1")
+            navigateTo("/", false);
+
     }
 }
 

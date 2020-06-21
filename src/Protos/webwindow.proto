@@ -80,7 +80,6 @@ service RemoteWebWindow {
     rpc NavigateToString(StringRequest) returns (google.protobuf.Empty);
     rpc NavigateToUrl(UrlMessageRequest) returns (google.protobuf.Empty);
 
-    rpc WaitForExit(IdMessageRequest) returns (google.protobuf.Empty);
 
     rpc CreateWebWindow(CreateWebWindowRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse);  

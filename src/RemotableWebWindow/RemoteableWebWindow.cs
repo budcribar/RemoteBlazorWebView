@@ -44,7 +44,7 @@ namespace PeakSwc.RemoteableWebWindows
         }
         private RemoteWebWindow.RemoteWebWindowClient client = null;
         
-        private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
 
@@ -258,20 +258,36 @@ namespace PeakSwc.RemoteableWebWindows
             Client.ShowMessage(new ShowMessageRequest { Id=Id, Body = body, Title = title });
         }
 
-        public void WaitForExit()
+        private void Reset()
         {
-            while (true)
+            Client.NavigateToString(new StringRequest { Id = Id });  // TODO
+            id = null;
+            client = null;
+
+            cts.Cancel();
+            cts = new CancellationTokenSource();
+
+        }
+
+        public Task WaitForExit()
+        {
+            return Task.Run(() =>
             {
-                lock (bootLock)
+                while (true)
                 {
-                    if (bootCount >= 1)
+                    lock (bootLock)
                     {
-                        bootCount = 0;
-                        break;
+                        if (bootCount >= 1)
+                        {
+                            bootCount = 0;
+                            break;
+                        }
                     }
+                    Thread.Sleep(1000);
                 }
-                Thread.Sleep(1000);
-            }              
+                Reset();
+            });
+                   
 
         }
 

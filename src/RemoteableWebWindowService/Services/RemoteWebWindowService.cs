@@ -98,16 +98,16 @@ namespace PeakSwc.RemoteableWebWindows
                 }
             }
         }
-        public override Task<Empty> WaitForExit(IdMessageRequest request, ServerCallContext context)
-        {
-            Guid id = Guid.Parse(request.Id);
+        //public override Task<Empty> WaitForExit(IdMessageRequest request, ServerCallContext context)
+        //{
+        //    Guid id = Guid.Parse(request.Id);
 
-            // TODO
-            Thread.Sleep(TimeSpan.FromHours(24));
+        //    // TODO
+        //    Thread.Sleep(TimeSpan.FromHours(24));
 
-            Shutdown(id);
-            return Task.FromResult<Empty>(new Empty());
-        }
+        //    Shutdown(id);
+        //    return Task.FromResult<Empty>(new Empty());
+        //}
 
         public override Task<Empty> Show(IdMessageRequest request, ServerCallContext context)
         {
@@ -139,16 +139,22 @@ namespace PeakSwc.RemoteableWebWindows
             return Task.FromResult<Empty>(new Empty());
         }
 
+       
         public override Task<Empty> NavigateToLocalFile(FileMessageRequest request, ServerCallContext context)
         {
+           
+
             //Guid id = Guid.Parse(request.Id);
             //_webWindowDictionary[id].NavigateToLocalFile(request.Path);
             return Task.FromResult<Empty>(new Empty());
         }
-       
+
+        // TODO This is really shutdown... using this method  temporarily
         public override Task<Empty> NavigateToString(StringRequest request, ServerCallContext context)
         {
-            //Guid id = Guid.Parse(request.Id);
+            Guid id = Guid.Parse(request.Id);
+
+            Shutdown(id);
             // TODO _webWindowDictionary[id].NavigateToString(request.Request);
             return Task.FromResult<Empty>(new Empty());
         }

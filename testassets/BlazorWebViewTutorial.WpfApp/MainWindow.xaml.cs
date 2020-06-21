@@ -19,6 +19,7 @@ namespace BlazorWebViewTutorial.WpfApp
     // add usings here
     using BlazorWebView.Wpf;
     using BlazorWebView;
+    using System.Threading;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -33,7 +34,7 @@ namespace BlazorWebViewTutorial.WpfApp
             InitializeComponent();
         }
 
-        private void Window_ContentRendered(object sender, EventArgs e)
+        private async void Window_ContentRendered(object sender, EventArgs e)
         {
             if (!this.initialized)
             {
@@ -41,7 +42,11 @@ namespace BlazorWebViewTutorial.WpfApp
                 // run blazor.
                 //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
 
-                this.disposable = BlazorWebViewHost.Run<Startup>(new RemotableWebWindow(new Uri("https://localhost:443"), "wwwroot/index.html"), "wwwroot/index.html");
+                var rww = new RemotableWebWindow(new Uri("https://localhost:443"), "wwwroot/index.html");
+                this.disposable = BlazorWebViewHost.Run<Startup>(rww, "wwwroot/index.html");
+                await rww.WaitForExit();
+                this.Close();
+
             }
         }
 
