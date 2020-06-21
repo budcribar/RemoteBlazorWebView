@@ -31,12 +31,7 @@ namespace PeakSwc.RemoteableWebWindows
             _ipc = ipc;
         }
 
-        private void Shutdown(Guid id)
-        {
-            _logger.LogInformation("Shutting down...");
-            _webWindowDictionary.Remove(id, out var _);
-            _ipc.Remove(id, out var _);
-        }
+       
 
         public override async Task CreateWebWindow(CreateWebWindowRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
@@ -99,6 +94,14 @@ namespace PeakSwc.RemoteableWebWindows
             }
         }
 
+        public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
+        {
+            Guid id = Guid.Parse(request.Id);
+            _logger.LogInformation("Shutting down...");
+            _webWindowDictionary.Remove(id, out var _);
+            _ipc.Remove(id, out var _);
+            return Task.FromResult<Empty>(new Empty());
+        }
 
         public override Task<Empty> ShowMessage(ShowMessageRequest request, ServerCallContext context)
         {
