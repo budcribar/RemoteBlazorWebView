@@ -15,7 +15,7 @@ namespace PeakSwc.StaticFiles
     public class FileInfo : IFileInfo
     {
        
-        private readonly ConcurrentDictionary<Guid, ServiceState> _rootDictionary;
+        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
         private readonly HttpContext context;
         Stream stream = null;
@@ -47,13 +47,13 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path.Substring(1);
 
-                stream = ProcessFile(Guid.Parse(guid), path);
+                stream = ProcessFile(guid, path);
             }
 
             return stream;
         } 
 
-        public FileInfo(HttpContext context, string path, ConcurrentDictionary<Guid, ServiceState> rootDictionary)
+        public FileInfo(HttpContext context, string path, ConcurrentDictionary<string, ServiceState> rootDictionary)
         {
             this.path = path;
             
@@ -73,7 +73,7 @@ namespace PeakSwc.StaticFiles
 
         public bool IsDirectory => false;
 
-        private Stream ProcessFile(Guid id, string appFile)
+        private Stream ProcessFile(string id, string appFile)
         {
             if (!_rootDictionary.ContainsKey(id))
                 return null;
@@ -83,7 +83,7 @@ namespace PeakSwc.StaticFiles
             _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
           
 
-            _rootDictionary[id].FileDictionary[appFile].mres.Wait();
+            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
             var stream = _rootDictionary[id].FileDictionary[appFile].stream;
             stream.Position = 0;
 
@@ -123,9 +123,9 @@ namespace PeakSwc.StaticFiles
     public class FileResolver : IFileProvider
     {
        
-        private readonly ConcurrentDictionary<Guid, ServiceState> _rootDictionary;
+        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
 
-        public FileResolver (ConcurrentDictionary<Guid, ServiceState> rootDictionary) {
+        public FileResolver (ConcurrentDictionary<string, ServiceState> rootDictionary) {
            
             _rootDictionary = rootDictionary;
         }

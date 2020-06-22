@@ -16,8 +16,8 @@ namespace PeakSwc.RemoteableWebWindows
 {
     public class Startup
     {
-        private readonly ConcurrentDictionary<Guid, ServiceState> rootDictionary = new ConcurrentDictionary<Guid, ServiceState>();
-        private readonly ConcurrentDictionary<Guid, IPC> ipcDictionary = new ConcurrentDictionary<Guid, IPC>();
+        private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new ConcurrentDictionary<string, ServiceState>();
+        private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new ConcurrentDictionary<string, IPC>();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -85,21 +85,18 @@ namespace PeakSwc.RemoteableWebWindows
                     var guid = context.Request.Cookies["guid"];
                     var home = context.Request.Cookies["home"];
 
-                    if (rootDictionary.ContainsKey(Guid.Parse(guid)))
+                    if (rootDictionary.ContainsKey(guid))
                     {
 
                         if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
                         {
-                            ipcDictionary[Guid.Parse(guid)].ReceiveMessage("booted:");
+                            ipcDictionary[guid].ReceiveMessage("booted:");
                             // TODO synchronize properly
                             Thread.Sleep(3000);
 
-
                             //  Need to wait until we get an initialized then refresh
 
-                            context.Response.Redirect("/");
-                           
-                            
+                            context.Response.Redirect("/");                      
                         }
                         else
                             context.Response.Redirect(home);

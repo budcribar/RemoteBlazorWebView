@@ -7,13 +7,7 @@ using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Threading;
-using System.Text;
-using System.Drawing;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Components;
 using RemoteableWebWindowService;
-using Microsoft.JSInterop;
 using RemoteableWebWindowService.Services;
 
 namespace PeakSwc.RemoteableWebWindows
@@ -21,22 +15,19 @@ namespace PeakSwc.RemoteableWebWindows
     public class RemoteWebWindowService : RemoteWebWindow.RemoteWebWindowBase
     { 
         private readonly ILogger<RemoteWebWindowService> _logger;
-        private readonly ConcurrentDictionary<Guid, ServiceState> _webWindowDictionary;     
-        private readonly ConcurrentDictionary<Guid,IPC> _ipc;
+        private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
+        private readonly ConcurrentDictionary<string, IPC> _ipc;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<Guid, ServiceState> rootDictionary, ConcurrentDictionary<Guid, IPC> ipc)
+        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;
             _ipc = ipc;
-        }
-
-       
+        }  
 
         public override async Task CreateWebWindow(CreateWebWindowRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
-            Guid id = Guid.Parse(request.Id);
-            if (!_webWindowDictionary.ContainsKey(id))
+            if (!_webWindowDictionary.ContainsKey(request.Id))
             {
                 ServiceState state = new ServiceState
                 {
@@ -45,11 +36,11 @@ namespace PeakSwc.RemoteableWebWindows
                 };
 
 
-                if (!_ipc.ContainsKey(id)) _ipc.TryAdd(id, new IPC());
-                _ipc[id].ResponseStream = responseStream;
+                if (!_ipc.ContainsKey(request.Id)) _ipc.TryAdd(request.Id, new IPC());
+                _ipc[request.Id].ResponseStream = responseStream;
               
 
-                _webWindowDictionary.TryAdd(id, state);
+                _webWindowDictionary.TryAdd(request.Id, state);
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
@@ -64,21 +55,17 @@ namespace PeakSwc.RemoteableWebWindows
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
-
-
             await foreach (var message in requestStream.ReadAllAsync())
-            {
-                Guid id = new Guid(message.Id);
-
+            {    
                 if (message.Path == "Initialize")
                 {
                     var task2 = Task.Run(async () =>
                     {
                         while (true)
                         {
-                            var file = await _webWindowDictionary[id].FileCollection.Reader.ReadAsync();
+                            var file = await _webWindowDictionary[message.Id].FileCollection.Reader.ReadAsync();
                             {
-                                await responseStream.WriteAsync(new FileReadResponse { Id = id.ToString(), Path = file });
+                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
                             }
                         }
 
@@ -87,34 +74,31 @@ namespace PeakSwc.RemoteableWebWindows
                 }
                 else
                 {
-
-                    _webWindowDictionary[id].FileDictionary[message.Path] = (new MemoryStream(message.Data.ToArray()), _webWindowDictionary[id].FileDictionary[message.Path].mres);
-                    _webWindowDictionary[id].FileDictionary[message.Path].mres.Set();
+                    var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
+                    _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(message.Data.ToArray()), resetEvent);
+                    resetEvent.Set();
                 }
             }
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            Guid id = Guid.Parse(request.Id);
             _logger.LogInformation("Shutting down...");
-            _webWindowDictionary.Remove(id, out var _);
-            _ipc.Remove(id, out var _);
+            _webWindowDictionary.Remove(request.Id, out var _);
+            _ipc.Remove(request.Id, out var _);
             return Task.FromResult<Empty>(new Empty());
         }
 
         public override Task<Empty> ShowMessage(ShowMessageRequest request, ServerCallContext context)
         {
-            //Guid id = Guid.Parse(request.Id);
+           
             //_webWindowDictionary[id].ShowMessage(request.Title, request.Body);
             return Task.FromResult<Empty>(new Empty());
         }
 
         public override Task<Empty> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            Guid id = Guid.Parse(request.Id);
-
-            _ipc[id].SendMessage(request.Message);
+            _ipc[request.Id].SendMessage(request.Message);
             return Task.FromResult<Empty>(new Empty());
         }
 

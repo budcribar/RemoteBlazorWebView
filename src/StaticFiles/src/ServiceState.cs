@@ -14,7 +14,7 @@ namespace RemoteableWebWindowService.Services
         public string HtmlHostPath { get; set; }
         public string Hostname { get; set; }
         public bool InUse { get; set; }
-        public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim mres)> FileDictionary { get; set; } = new ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim mres)>();
+        public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)>();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
 
         public ServiceState()
