@@ -16,10 +16,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 
-// TODO 1. Had to move css and sample data from BlazorWebViewTutorial.Shared to BlazorWebViewTutorial.WpfApp wwwroot
-//      2. modify index.html to reference <script src="remote.blazor.desktop.js"></script>
-//      3. link in remote.blazor.desktop.js
-//      4. implement ShowMessage
+
 
 namespace PeakSwc.RemoteableWebWindows
 {

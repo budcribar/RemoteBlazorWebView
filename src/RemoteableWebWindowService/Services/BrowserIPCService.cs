@@ -5,6 +5,7 @@ using System.Threading;
 using RemoteableWebWindowService;
 using System;
 using System.Collections.Concurrent;
+using Google.Protobuf.WellKnownTypes;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -39,11 +40,11 @@ namespace PeakSwc.RemoteableWebWindows
         }
 
         // TODO Use Google EmptyRequest
-        public override Task<EmptyRequest> SendMessage(StringRequest request, ServerCallContext context)
+        public override Task<Empty> SendMessage(StringRequest request, ServerCallContext context)
         {
             if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());
             IPC[request.Id].ReceiveMessage(request.Request);
-            return Task.FromResult<EmptyRequest>(new EmptyRequest());
+            return Task.FromResult<Empty>(new Empty());
         }
 
     }

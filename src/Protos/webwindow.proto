@@ -61,10 +61,7 @@ service RemoteWebWindow {
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse);  
 }
 
-message EmptyRequest {
-}
-
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
-    rpc SendMessage(StringRequest) returns (EmptyRequest);
+    rpc SendMessage(StringRequest) returns (google.protobuf.Empty);
 }

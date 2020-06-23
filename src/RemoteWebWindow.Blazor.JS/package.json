@@ -8,8 +8,9 @@
     "build:debug": "webpack --mode development",
     "build:production": "webpack --mode production",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "protoc": "protoc --plugin=protoc-gen-ts=\"C:\\Users\\budcr\\source\\repos\\MyWebWindow\\src\\RemoteWebWindow.Blazor.JS\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos webwindow.proto"
+    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos -I.\\protoc\\include webwindow.proto"
   },
+
   "devDependencies": {
     "@dotnet/jsinterop": "3.0.0-preview9.19423.4",
     "@improbable-eng/grpc-web": "0.12.0",

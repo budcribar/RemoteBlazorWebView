@@ -21,6 +21,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorWebViewTutorial.WpfAp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorWebViewTutorial.Shared", "testassets\BlazorWebViewTutorial.Shared\BlazorWebViewTutorial.Shared.csproj", "{2369AFB1-F3D3-401F-A15A-05164D07EB58}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D05DB932-B305-40C7-968A-19F814FD7F2A}"
+	ProjectSection(SolutionItems) = preProject
+		src\Protos\webwindow.proto = src\Protos\webwindow.proto
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

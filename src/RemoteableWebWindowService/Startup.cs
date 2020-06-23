@@ -64,14 +64,6 @@ namespace PeakSwc.RemoteableWebWindows
             {
                 // TODO get from context
                 FileProvider = new FileResolver(rootDictionary),
-                //OnPrepareResponse = context => {
-                //    var components = context.Context.Request.Path.Value.Split('/');
-                //    if(components.Length >= 2 && Guid.TryParse(components[1], out Guid g))
-                //    {
-                //        var newTarget =  string.Join("/", components.TakeLast(components.Length - 2));
-                //        context.Context.Response.Redirect(newTarget, false);
-                //    }
-                //}
             });
 
             app.UseEndpoints(endpoints =>
