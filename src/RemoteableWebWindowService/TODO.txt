@@ -1,9 +1,6 @@
 ﻿1. WebWindow.NavigateToUrl http://app/
 	-> (Startup.cs endpoints.MapGet("/app", async context => can we server the index.html here and avoid the hack to NavigateTo("/")?
 
-2. Rebuild the Blazor.JS project using the new grpc proto files
-
-
 3. Do a diff on the blazor.desktop.js and the remote.blazor.desktop.js
 
 
