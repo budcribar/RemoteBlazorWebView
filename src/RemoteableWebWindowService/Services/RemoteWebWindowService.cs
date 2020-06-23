@@ -89,13 +89,6 @@ namespace PeakSwc.RemoteableWebWindows
             return Task.FromResult<Empty>(new Empty());
         }
 
-        public override Task<Empty> ShowMessage(ShowMessageRequest request, ServerCallContext context)
-        {
-           
-            //_webWindowDictionary[id].ShowMessage(request.Title, request.Body);
-            return Task.FromResult<Empty>(new Empty());
-        }
-
         public override Task<Empty> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
             _ipc[request.Id].SendMessage(request.Message);

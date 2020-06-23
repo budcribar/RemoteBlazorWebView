@@ -20,6 +20,8 @@ namespace BlazorWebViewTutorial.WpfApp
     using BlazorWebView.Wpf;
     using BlazorWebView;
     using System.Threading;
+    using Microsoft.JSInterop;
+    using System.Reflection;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -43,7 +45,11 @@ namespace BlazorWebViewTutorial.WpfApp
                 //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
 
                 var rww = new RemotableWebWindow(new Uri("https://localhost:443"), "wwwroot/index.html");
+
                 this.disposable = BlazorWebViewHost.Run<Startup>(rww, "wwwroot/index.html");
+
+                rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
+
                 await rww.WaitForExit();
                 this.Close();
 

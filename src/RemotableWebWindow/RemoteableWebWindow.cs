@@ -45,8 +45,9 @@ namespace PeakSwc.RemoteableWebWindows
         private CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
+        public IJSRuntime JSRuntime { get; set; }
 
-        public RemoteWebWindow.RemoteWebWindowClient Client {
+        private  RemoteWebWindow.RemoteWebWindowClient Client {
             get
             {
                 if (client == null)
@@ -129,7 +130,6 @@ namespace PeakSwc.RemoteableWebWindows
 
         public event EventHandler<string> OnWebMessageReceived;
 
-
         public RemotableWebWindow(Uri uri, string hostHtmlPath)
         {
             this.uri = uri;
@@ -144,10 +144,9 @@ namespace PeakSwc.RemoteableWebWindows
             Client.SendMessage(new SendMessageRequest { Id=Id, Message = message });
         }
 
-
         public void ShowMessage(string title, string body)
         {
-            Client.ShowMessage(new ShowMessageRequest { Id=Id, Body = body, Title = title });
+            JSRuntime.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
         }
         private void Shutdown()
         {

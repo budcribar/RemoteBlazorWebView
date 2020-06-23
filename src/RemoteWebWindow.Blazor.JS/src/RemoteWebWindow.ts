@@ -41,5 +41,12 @@ export function initializeRemoteWebWindow() {
             }
         });
 
+    (<any>window).RemoteWebWindow = {
+
+        showMessage: function (title,body) {
+
+            window.alert(body);
+        }
+    };
 
 }
