@@ -78,6 +78,7 @@ namespace PeakSwc.RemoteableWebWindows
                                             lock (bootLock)
                                             {
                                                 bootCount++;
+                                                Shutdown();
                                                 OnDisconnected?.Invoke(this, null);
                                             }
                                         }
@@ -88,9 +89,7 @@ namespace PeakSwc.RemoteableWebWindows
 
                                             OnWebMessageReceived?.Invoke(null, data);
                                         break;
-                                    //case "location":
-                                    //    LocationChangedEvent?.Invoke(null, JsonConvert.DeserializeObject<Point>( data));
-                                    //    break;
+                                   
                                     
                                 }
                                                                
@@ -155,28 +154,7 @@ namespace PeakSwc.RemoteableWebWindows
         {
             Client.Shutdown(new IdMessageRequest { Id = Id });
         }
-        public Task WaitForExit()
-        {
-            return Task.Run(() =>
-            {
-                while (true)
-                {
-                    lock (bootLock)
-                    {
-                        if (bootCount >= 1)
-                        {
-                            bootCount = 0;
-                            break;
-                        }
-                    }
-                    Thread.Sleep(1000);
-                }
-                Shutdown();
-            });
-                   
-
-        }
-
+       
         public void Initialize(Action<WebViewOptions> configure)
         {
             _ = Client;
