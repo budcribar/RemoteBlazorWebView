@@ -55,37 +55,58 @@ namespace PeakSwc.RemoteableWebWindows
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
-            await foreach (var message in requestStream.ReadAllAsync())
-            {    
-                if (message.Path == "Initialize")
+            var id = "";
+            try
+            {
+                await foreach (var message in requestStream.ReadAllAsync())
                 {
-                    var task2 = Task.Run(async () =>
+                    if (message.Path == "Initialize")
                     {
-                        while (true)
+                        id = message.Id;
+                        var task2 = Task.Run(async () =>
                         {
-                            var file = await _webWindowDictionary[message.Id].FileCollection.Reader.ReadAsync();
+                            while (true)
                             {
-                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
+                                var file = await _webWindowDictionary[message.Id].FileCollection.Reader.ReadAsync();
+                                {
+                                    await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
+                                }
                             }
-                        }
 
-                    });
+                        });
 
-                }
-                else
-                {
-                    var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                    _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(message.Data.ToArray()), resetEvent);
-                    resetEvent.Set();
+                    }
+                    else
+                    {
+                        var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
+                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(message.Data.ToArray()), resetEvent);
+                        resetEvent.Set();
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                ExShutdown(id);
+               
+                // Client has shut down
+            }
+           
+        }
+
+        private void ExShutdown(string id)
+        {
+            _logger.LogInformation("Shutting down..."  + id);
+
+            if (_webWindowDictionary.ContainsKey(id))
+                _webWindowDictionary.Remove(id, out var _);
+
+            if (_ipc.ContainsKey(id))
+                _ipc.Remove(id, out var _);
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            _logger.LogInformation("Shutting down...");
-            _webWindowDictionary.Remove(request.Id, out var _);
-            _ipc.Remove(request.Id, out var _);
+            ExShutdown(request.Id);
             return Task.FromResult<Empty>(new Empty());
         }
 
