@@ -45,16 +45,15 @@ namespace BlazorWebViewTutorial.WpfApp
                 //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
 
                 var rww = new RemotableWebWindow(new Uri("https://localhost:443"), "wwwroot/index.html");
+                rww.OnDisconnected += (s, e) =>  Application.Current.Dispatcher.Invoke(Close);
+                rww.OnConnected += (s, e) => { rww.ShowMessage("Title", "Hello World"); };
 
                 this.disposable = BlazorWebViewHost.Run<Startup>(rww, "wwwroot/index.html");
-
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
-
-                await rww.WaitForExit();
-                this.Close();
 
             }
         }
+
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

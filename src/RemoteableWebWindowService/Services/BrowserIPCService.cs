@@ -24,12 +24,14 @@ namespace PeakSwc.RemoteableWebWindows
 
         public void Shutdown()
         {
+            // TODO Need to call this at some point
             _logger.LogInformation("Shutting down.");
             shutdown = true;
         }
 
         public override Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
+           
             if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());
             IPC[request.Id].BrowserResponseStream = responseStream;
 
@@ -39,7 +41,6 @@ namespace PeakSwc.RemoteableWebWindows
             return Task.CompletedTask;
         }
 
-        // TODO Use Google EmptyRequest
         public override Task<Empty> SendMessage(StringRequest request, ServerCallContext context)
         {
             if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());

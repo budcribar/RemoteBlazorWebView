@@ -48,8 +48,11 @@ export function receiveMessage(message: string) {
         group.forEach(callback => callback.apply(null, args));
 
         //TODO Hack
-        if (eventName == "JS.EndInvokeDotNet" && args[0] == "1")
+        if (eventName == "JS.EndInvokeDotNet" && args[0] == "1") {
             navigateTo("/", false);
+            sendMessage("connected:");
+        }
+            
 
     }
 }

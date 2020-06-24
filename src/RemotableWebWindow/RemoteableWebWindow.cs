@@ -78,9 +78,12 @@ namespace PeakSwc.RemoteableWebWindows
                                             lock (bootLock)
                                             {
                                                 bootCount++;
+                                                OnDisconnected?.Invoke(this, null);
                                             }
                                         }
-                                       
+                                        else if (data == "connected:")
+                                            OnConnected?.Invoke(this, null);
+
                                         else
 
                                             OnWebMessageReceived?.Invoke(null, data);
@@ -95,12 +98,10 @@ namespace PeakSwc.RemoteableWebWindows
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-
+                            OnDisconnected?.Invoke(this, null);
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
-                    }, cts.Token);
-
-                   
+                    }, cts.Token);             
 
                     completed.Wait();
 
@@ -129,6 +130,8 @@ namespace PeakSwc.RemoteableWebWindows
         }
 
         public event EventHandler<string> OnWebMessageReceived;
+        public event EventHandler OnConnected;
+        public event EventHandler OnDisconnected;
 
         public RemotableWebWindow(Uri uri, string hostHtmlPath)
         {
@@ -146,7 +149,7 @@ namespace PeakSwc.RemoteableWebWindows
 
         public void ShowMessage(string title, string body)
         {
-            JSRuntime.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
+            JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
         }
         private void Shutdown()
         {
