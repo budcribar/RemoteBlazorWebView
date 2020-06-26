@@ -10,4 +10,8 @@
     <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\RemotableWebWindow\RemotableWebWindow.csproj" />
+  </ItemGroup>
+
 </Project>

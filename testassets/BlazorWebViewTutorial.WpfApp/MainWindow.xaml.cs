@@ -14,6 +14,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using PeakSwc.RemoteableWebWindows;
 
+
+
 namespace BlazorWebViewTutorial.WpfApp
 {
     // add usings here
@@ -22,6 +24,7 @@ namespace BlazorWebViewTutorial.WpfApp
     using System.Threading;
     using Microsoft.JSInterop;
     using System.Reflection;
+    using System.Diagnostics;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -36,21 +39,17 @@ namespace BlazorWebViewTutorial.WpfApp
             InitializeComponent();
         }
 
-        private async void Window_ContentRendered(object sender, EventArgs e)
+        private void Window_ContentRendered(object sender, EventArgs e)
         {
             if (!this.initialized)
             {
                 this.initialized = true;
-                // run blazor.
-                //this.disposable = BlazorWebViewHost.Run<Startup>(this.BlazorWebView, "wwwroot/index.html");
 
-                var rww = new RemotableWebWindow(new Uri("https://localhost:443"), "wwwroot/index.html");
-                rww.OnDisconnected += (s, e) =>  Application.Current.Dispatcher.Invoke(Close);
-                rww.OnConnected += (s, e) => { rww.ShowMessage("Title", "Hello World"); };
+                this.disposable = this.RemoteBlazorWebView.Run<Startup>("wwwroot/index.html", null, new Uri("https://localhost:443"));
+                //this.disposable = this.RemoteBlazorWebView.Run<Startup>("wwwroot/index.html", null);
 
-                this.disposable = BlazorWebViewHost.Run<Startup>(rww, "wwwroot/index.html");
-                rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
-
+                this.RemoteBlazorWebView.OnDisconnected += (s, e) =>  Application.Current.Dispatcher.Invoke(Close);
+                this.RemoteBlazorWebView.OnConnected += (s, e) => { this.RemoteBlazorWebView.ShowMessage("Title", "Hello World"); };
             }
         }
 
@@ -63,5 +62,7 @@ namespace BlazorWebViewTutorial.WpfApp
                 this.disposable = null;
             }
         }
+
+       
     }
 }

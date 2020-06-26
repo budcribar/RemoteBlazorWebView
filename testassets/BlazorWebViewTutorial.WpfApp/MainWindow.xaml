@@ -4,10 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BlazorWebViewTutorial.WpfApp"
-        xmlns:blazor="clr-namespace:BlazorWebView.Wpf;assembly=BlazorWebView.Wpf"
+        xmlns:blazor="clr-namespace:RemoteBlazorWebView.Wpf;assembly=RemoteBlazorWebView.Wpf"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800" ContentRendered="Window_ContentRendered" Closing="Window_Closing">
+    
     <Grid>
-        <blazor:BlazorWebView x:Name="BlazorWebView" />
+        <blazor:RemoteBlazorWebView x:Name="RemoteBlazorWebView" />
     </Grid>
 </Window>
