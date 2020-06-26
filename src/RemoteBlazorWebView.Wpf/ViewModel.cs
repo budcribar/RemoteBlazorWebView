@@ -18,10 +18,14 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
         private string _showHyperlink = "Visible";
+        private string _showWebwindow = "Hidden";
 
+        public string ShowWebWindow => _showHyperlink == "Visible" ? "Hidden" : "Visible";
+       
         public string ShowHyperlink { get { return _showHyperlink; } set {
                 _showHyperlink = value;
                 NotifyPropertyChanged("ShowHyperlink");
+                NotifyPropertyChanged("ShowWebWindow");
             } }
 
         public event PropertyChangedEventHandler PropertyChanged;
