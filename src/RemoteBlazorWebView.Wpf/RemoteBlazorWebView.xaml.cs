@@ -25,7 +25,7 @@ namespace RemoteBlazorWebView.Wpf
     public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
     {
         private IBlazorWebView innerBlazorWebView;
-        // private readonly Grid grid;
+        private Grid grid;
 
         static RemoteBlazorWebView()
         {
@@ -44,8 +44,10 @@ namespace RemoteBlazorWebView.Wpf
             {
                 innerBlazorWebView = new BlazorWebView.Wpf.BlazorWebView();
                 ShowHyperlink = "Hidden";
+                grid = new Grid();
 
-                MainGrid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
+                grid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
+                Content = grid;
             }
             else
             {

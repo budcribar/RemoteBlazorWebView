@@ -9,10 +9,7 @@
     
     
     <Grid x:Name="MainGrid">
-        <TextBox Height = "23"  
-         HorizontalAlignment = "Left"  
-         Margin = "80,49,0,0" Name = "txtBox"  
-         VerticalAlignment = "Top" Width = "200" />
+        
         
         <TextBlock Visibility="{Binding Path=ShowHyperlink}">
             
