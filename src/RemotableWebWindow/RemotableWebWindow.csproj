@@ -10,7 +10,6 @@
     <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
     <PackageReference Include="Google.Protobuf" Version="3.12.3" />
     <PackageReference Include="Grpc.Net.Client" Version="2.29.0" />
-    <PackageReference Include="BlazorWebView" Version="0.2.0" />
     <PackageReference Include="Grpc.Tools" Version="2.29.0">
       
       <PrivateAssets>all</PrivateAssets>
