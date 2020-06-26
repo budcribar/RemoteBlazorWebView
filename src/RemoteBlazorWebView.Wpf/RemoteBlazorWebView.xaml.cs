@@ -36,12 +36,12 @@ namespace RemoteBlazorWebView.Wpf
             
             if (uri == null)
             {
-                innerBlazorWebView = new BlazorWebView.Wpf.BlazorWebView();
+                innerBlazorWebView = MainBlazorWebView;
                 model.ShowHyperlink = "Hidden";
-                grid = new Grid();
+                //grid = new Grid();
 
-                grid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
-                Content = grid;
+                //grid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
+                //Content = grid;
             }
             else
             {
