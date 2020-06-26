@@ -6,17 +6,17 @@
              xmlns:local="clr-namespace:RemoteBlazorWebView.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    
-    
-    <Grid x:Name="MainGrid">
-        
-        
-        <TextBlock Visibility="{Binding Path=ShowHyperlink}">
+
+
+    <Grid x:Name="MainGrid" >
+       
+        <TextBlock Visibility="{Binding Path=ShowHyperlink, UpdateSourceTrigger=PropertyChanged}">
             
             <Hyperlink Click="Hyperlink_Click">
-                <!--<TextBlock Text="Click to view the remote User Interface" />-->
-                <TextBlock Text="{Binding Path=Uri}" />
+             
+                <TextBlock Text="{Binding Path=Uri, UpdateSourceTrigger=PropertyChanged}" />
              </Hyperlink>
         </TextBlock>
+        
     </Grid>
 </UserControl>

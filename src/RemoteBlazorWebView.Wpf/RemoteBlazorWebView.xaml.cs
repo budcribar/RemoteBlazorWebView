@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using PeakSwc.RemoteableWebWindows;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -26,24 +27,26 @@ namespace RemoteBlazorWebView.Wpf
     {
         private IBlazorWebView innerBlazorWebView;
         private Grid grid;
+        private ViewModel model = new ViewModel();
 
         static RemoteBlazorWebView()
         {
-            DefaultStyleKeyProperty.OverrideMetadata(typeof(RemoteBlazorWebView), new FrameworkPropertyMetadata(typeof(RemoteBlazorWebView)));
+            //DefaultStyleKeyProperty.OverrideMetadata(typeof(RemoteBlazorWebView), new FrameworkPropertyMetadata(typeof(RemoteBlazorWebView)));
         }
 
         public RemoteBlazorWebView()
         {
             InitializeComponent();
-            DataContext = this;
+            DataContext = model;
         }
 
         public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate defaultResolveDelegate = null, Uri uri = null)
         {
+            
             if (uri == null)
             {
                 innerBlazorWebView = new BlazorWebView.Wpf.BlazorWebView();
-                ShowHyperlink = "Hidden";
+                model.ShowHyperlink = "Hidden";
                 grid = new Grid();
 
                 grid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
@@ -51,9 +54,11 @@ namespace RemoteBlazorWebView.Wpf
             }
             else
             {
-                ShowHyperlink = "Visible";
+                model.Uri = uri.ToString();
+                model.ShowHyperlink = "Visible";
 
                 innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath);
+
             }
 
 
@@ -136,13 +141,11 @@ namespace RemoteBlazorWebView.Wpf
             innerBlazorWebView.ShowMessage(title, message);
         }
 
-        public string ShowHyperlink { get; set; } = "Visible";
-
-        public string Uri => "https://localhost";
+        
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start("explorer", Uri);
+            Process.Start("explorer", model.Uri);
         }
 
     }
