@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
 using BlazorWebView;
-using BlazorWebView.Wpf;
+
 using Google.Protobuf;
 using System.Drawing;
 using System.Collections.Generic;

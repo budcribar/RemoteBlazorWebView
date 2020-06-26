@@ -84,7 +84,7 @@ namespace PeakSwc.RemoteableWebWindows
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ExShutdown(id);
                
