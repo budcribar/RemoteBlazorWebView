@@ -48,11 +48,8 @@ namespace BlazorWebViewTutorial.WpfApp
                 this.initialized = true;
                 this.RemoteBlazorWebView.Run<Startup>("wwwroot/index.html", null, Uri);
         
-                //this.disposable = this.RemoteBlazorWebView.Run<Startup>("wwwroot/index.html", null, new Uri("https://localhost:443"));
-                //this.disposable = this.RemoteBlazorWebView.Run<Startup>("wwwroot/index.html", null);
-
                 this.RemoteBlazorWebView.OnDisconnected += (s, e) =>  Application.Current.Dispatcher.Invoke(Close);
-                this.RemoteBlazorWebView.OnConnected += (s, e) => { this.RemoteBlazorWebView.ShowMessage("Title", "Hello World"); };
+                // this.RemoteBlazorWebView.OnConnected += (s, e) => { this.RemoteBlazorWebView.ShowMessage("Title", "Hello World"); };
             }
         }
 

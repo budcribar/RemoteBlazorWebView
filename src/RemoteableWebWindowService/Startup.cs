@@ -11,6 +11,10 @@ using PeakSwc.Builder;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
+using FileInfo = PeakSwc.StaticFiles.FileInfo;
+using Microsoft.AspNetCore.Identity;
+using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Primitives;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -46,6 +50,18 @@ namespace PeakSwc.RemoteableWebWindows
             });
         }
 
+        public void Set(HttpContext context, string key, string value, int? expireTime)
+        {
+            CookieOptions option = new CookieOptions();
+
+            if (expireTime.HasValue)
+                option.Expires = DateTime.Now.AddMinutes(expireTime.Value);
+            else
+                option.Expires = DateTime.Now.AddMilliseconds(10);
+
+            context.Response.Cookies.Append(key, value, option);
+        }
+
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -74,9 +90,29 @@ namespace PeakSwc.RemoteableWebWindows
 
                 endpoints.MapGet("/app", async context =>
                 {
-                    var guid = context.Request.Cookies["guid"];
-                    var home = context.Request.Cookies["home"];
+                    string guid = "";
+                    string home = "";
 
+                    if (context.Request.Query.TryGetValue("guid", out StringValues value))
+                    {
+                        guid = value.ToString();
+                        Set(context, "guid", guid,60);
+                    } 
+                    else
+                    {
+                        guid = context.Request.Cookies["guid"];
+                    }
+                        
+
+                    if (context.Request.Query.TryGetValue("home", out StringValues hvalue))
+                    {
+                        home = hvalue.ToString();
+                        Set(context, "home", home, 60);
+                    }
+                       
+                    else
+                        home = context.Request.Cookies["home"];
+                    // wwwroot/index.html
                     if (rootDictionary.ContainsKey(guid))
                     {
 
@@ -91,7 +127,16 @@ namespace PeakSwc.RemoteableWebWindows
                             context.Response.Redirect("/");                      
                         }
                         else
+                        {
+                            //var fi = new FileInfo(context, home, rootDictionary);
+
+                            //using Stream stream = fi.CreateReadStream();
+                            //using StreamReader sr = new StreamReader(stream);
+                            
+                            //await context.Response.WriteAsync(sr.ReadToEnd());
                             context.Response.Redirect(home);
+                        }
+                            
                     }
                     else await context.Response.WriteAsync("Invalid Guid");
 

@@ -4,6 +4,7 @@ using PeakSwc.RemoteableWebWindows;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -38,31 +39,25 @@ namespace RemoteBlazorWebView.Wpf
             {
                 innerBlazorWebView = MainBlazorWebView;
                 model.ShowHyperlink = "Hidden";
-                //grid = new Grid();
-
-                //grid.Children.Add((BlazorWebView.Wpf.BlazorWebView)this.innerBlazorWebView);
-                //Content = grid;
             }
             else
             {
-                model.Uri = uri.ToString();
-                model.ShowHyperlink = "Visible";
-
                 innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath);
-
             }
 
-
-            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, "wwwroot/index.html");
+            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath);
 
 
             if (innerBlazorWebView is RemotableWebWindow rww)
+            {
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
+                model.Uri = uri.ToString() + "app?guid=" + rww.Id + "&home=" + hostHtmlPath;
+                model.ShowHyperlink = "Visible";
+            }
 
             return disposable;
 
         }
-
 
         public event EventHandler<string> OnWebMessageReceived
         {
@@ -136,7 +131,17 @@ namespace RemoteBlazorWebView.Wpf
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start("explorer", model.Uri);
+            var url = "\"" + model.Uri + "\"";
+
+            try
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" +url) { CreateNoWindow = true });
+            }
+            catch (Exception) {
+     
+            }
+
+           
         }
 
     }

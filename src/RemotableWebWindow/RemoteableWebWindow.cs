@@ -30,7 +30,7 @@ namespace PeakSwc.RemoteableWebWindows
         private int bootCount = 0;
         private readonly object bootLock = new object();
         private string id = null;
-        private string Id
+        public string Id
         {
             get
             {
