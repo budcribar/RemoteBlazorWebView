@@ -78,6 +78,7 @@ namespace PeakSwc.RemoteableWebWindows
  
             app.PeakSwcUseStaticFiles(new StaticFileOptions
             {
+
                 // TODO get from context
                 FileProvider = new FileResolver(rootDictionary),
             });
@@ -91,8 +92,7 @@ namespace PeakSwc.RemoteableWebWindows
                 endpoints.MapGet("/app", async context =>
                 {
                     string guid = "";
-                    string home = "";
-
+               
                     if (context.Request.Query.TryGetValue("guid", out StringValues value))
                     {
                         guid = value.ToString();
@@ -103,18 +103,9 @@ namespace PeakSwc.RemoteableWebWindows
                         guid = context.Request.Cookies["guid"];
                     }
                         
-
-                    if (context.Request.Query.TryGetValue("home", out StringValues hvalue))
-                    {
-                        home = hvalue.ToString();
-                        Set(context, "home", home, 60);
-                    }
-                       
-                    else
-                        home = context.Request.Cookies["home"];
-                    // wwwroot/index.html
                     if (rootDictionary.ContainsKey(guid))
                     {
+                        var home = rootDictionary[guid].HtmlHostPath;
 
                         if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
                         {
@@ -128,12 +119,6 @@ namespace PeakSwc.RemoteableWebWindows
                         }
                         else
                         {
-                            //var fi = new FileInfo(context, home, rootDictionary);
-
-                            //using Stream stream = fi.CreateReadStream();
-                            //using StreamReader sr = new StreamReader(stream);
-                            
-                            //await context.Response.WriteAsync(sr.ReadToEnd());
                             context.Response.Redirect(home);
                         }
                             

@@ -60,7 +60,7 @@ namespace PeakSwc.StaticFiles
             _response = context.Response;
             _logger = logger;
             _fileProvider = fileProvider;
-            if (_fileProvider is FileResolver) ((FileResolver)_fileProvider).Context = context; // TODO hack
+            if (_fileProvider is FileResolver resolver) resolver.Context = context; // TODO hack
             _method = _request.Method;
             _contentType = contentType;
             _fileInfo = null;

@@ -18,7 +18,6 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
         private string _showHyperlink = "Visible";
-        private string _showWebwindow = "Hidden";
 
         public string ShowWebWindow => _showHyperlink == "Visible" ? "Hidden" : "Visible";
        

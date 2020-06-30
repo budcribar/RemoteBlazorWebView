@@ -53,11 +53,12 @@ namespace PeakSwc.StaticFiles
             return stream;
         } 
 
-        public FileInfo(HttpContext context, string path, ConcurrentDictionary<string, ServiceState> rootDictionary)
+        public FileInfo(HttpContext context, string path)
         {
             this.path = path;
-            
-            _rootDictionary = rootDictionary;
+
+            _rootDictionary = context.RequestServices.GetService(typeof(ConcurrentDictionary<string, ServiceState>)) as ConcurrentDictionary<string, ServiceState>;
+
             this.context = context;
         }
 
@@ -87,9 +88,7 @@ namespace PeakSwc.StaticFiles
             var stream = _rootDictionary[id].FileDictionary[appFile].stream;
             stream.Position = 0;
 
-
-            // TODO use the file specified in the dictionary
-            if (appFile.EndsWith("index.html"))
+            if (Path.GetFileName(appFile) == Path.GetFileName(_rootDictionary[id].HtmlHostPath))
             {
 
                 using StreamReader sr = new StreamReader(stream);
@@ -140,7 +139,7 @@ namespace PeakSwc.StaticFiles
 
         public IFileInfo GetFileInfo(string subpath)
         {
-            return new FileInfo(Context, subpath, _rootDictionary);
+            return new FileInfo(Context, subpath);
         }
 
         public IChangeToken Watch(string filter)

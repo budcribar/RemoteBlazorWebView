@@ -26,8 +26,6 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly Uri uri;
         private readonly string hostHtmlPath;
         private readonly string hostname;
-
-        private int bootCount = 0;
         private readonly object bootLock = new object();
         private string id = null;
         public string Id
@@ -42,7 +40,7 @@ namespace PeakSwc.RemoteableWebWindows
         }
         private RemoteWebWindow.RemoteWebWindowClient client = null;
         
-        private CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
         public IJSRuntime JSRuntime { get; set; }
@@ -77,7 +75,6 @@ namespace PeakSwc.RemoteableWebWindows
                                         {
                                             lock (bootLock)
                                             {
-                                                bootCount++;
                                                 Shutdown();
                                                 OnDisconnected?.Invoke(this, null);
                                             }

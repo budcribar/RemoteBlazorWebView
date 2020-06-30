@@ -49,9 +49,7 @@
 
         @foreach (var key in Dictionary.Keys)
         {
-
-    <button onclick="setHref('@key'); setCookie('guid', '@key', 1); setCookie('home', '@Dictionary[@key].HtmlHostPath', 1); location.href = href">@Dictionary[@key].Hostname</button>
-
+            <button onclick="setHref('@key'); setCookie('guid', '@key', 1);  location.href = href">@Dictionary[@key].Hostname</button>
         }
 
     </div>

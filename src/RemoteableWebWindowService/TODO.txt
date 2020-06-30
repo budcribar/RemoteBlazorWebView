@@ -15,7 +15,7 @@ Don't let showmessage do anything until it has been connected.
             if (appFile.EndsWith("index.html"))
 
 
-OnDisconnected when browser shuts down
+Hyperlink is good only one time and so is the button!!! (Need to prevent user from clicking again)
 
 
 

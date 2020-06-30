@@ -18,8 +18,7 @@ namespace RemoteBlazorWebView.Wpf
     public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
     {
         private IBlazorWebView innerBlazorWebView;
-        private Grid grid;
-        private ViewModel model = new ViewModel();
+        private readonly ViewModel model = new ViewModel();
 
         static RemoteBlazorWebView()
         {
@@ -51,7 +50,7 @@ namespace RemoteBlazorWebView.Wpf
             if (innerBlazorWebView is RemotableWebWindow rww)
             {
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
-                model.Uri = uri.ToString() + "app?guid=" + rww.Id + "&home=" + hostHtmlPath;
+                model.Uri = uri.ToString() + "app?guid=" + rww.Id;
                 model.ShowHyperlink = "Visible";
             }
 
