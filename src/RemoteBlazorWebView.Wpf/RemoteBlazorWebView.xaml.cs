@@ -19,11 +19,7 @@ namespace RemoteBlazorWebView.Wpf
     {
         private IBlazorWebView innerBlazorWebView;
         private readonly ViewModel model = new ViewModel();
-
-        static RemoteBlazorWebView()
-        {
-            //DefaultStyleKeyProperty.OverrideMetadata(typeof(RemoteBlazorWebView), new FrameworkPropertyMetadata(typeof(RemoteBlazorWebView)));
-        }
+        static RemoteBlazorWebView() { }
 
         public RemoteBlazorWebView()
         {
@@ -46,7 +42,6 @@ namespace RemoteBlazorWebView.Wpf
 
             IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath);
 
-
             if (innerBlazorWebView is RemotableWebWindow rww)
             {
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
@@ -55,7 +50,6 @@ namespace RemoteBlazorWebView.Wpf
             }
 
             return disposable;
-
         }
 
         public event EventHandler<string> OnWebMessageReceived
@@ -124,9 +118,7 @@ namespace RemoteBlazorWebView.Wpf
         public void ShowMessage(string title, string message)
         {
             innerBlazorWebView.ShowMessage(title, message);
-        }
-
-        
+        }      
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
@@ -135,12 +127,11 @@ namespace RemoteBlazorWebView.Wpf
             try
             {
                 Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" +url) { CreateNoWindow = true });
+                model.ShowHyperlink = "Hidden";
             }
             catch (Exception) {
      
-            }
-
-           
+            }          
         }
 
     }
