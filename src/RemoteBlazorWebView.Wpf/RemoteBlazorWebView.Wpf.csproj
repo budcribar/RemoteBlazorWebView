@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="save.RemoteBlazorWebView.xaml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BlazorWebView" Version="0.2.0" />
     <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
   </ItemGroup>
