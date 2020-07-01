@@ -1,11 +1,14 @@
 ﻿using BlazorWebView;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.JSInterop;
 using PeakSwc.RemoteableWebWindows;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -26,10 +29,36 @@ namespace RemoteBlazorWebView.Wpf
             InitializeComponent();
             DataContext = model;
         }
+        private static readonly FileExtensionContentTypeProvider FileExtensionContentTypeProvider = new FileExtensionContentTypeProvider();
+        private static string GetContentType(string url)
+        {
+            if (FileExtensionContentTypeProvider.TryGetContentType(url, out string result))
+            {
+                return result;
+            }
+
+            return "application/octet-stream";
+        }
 
         public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate defaultResolveDelegate = null, Uri uri = null)
         {
-            
+            if (defaultResolveDelegate == null)
+            {
+                defaultResolveDelegate = (string url, out string contentType, out Encoding encoding) =>
+                {
+                    var contentRootAbsolute = Path.GetDirectoryName(Path.GetFullPath(hostHtmlPath));
+                    var appFile = Path.Combine(contentRootAbsolute, new Uri(url).AbsolutePath.Substring(1));
+                    if (appFile == contentRootAbsolute)
+                    {
+                        appFile = hostHtmlPath;
+                    }
+
+                    contentType = GetContentType(appFile);
+                    encoding = Encoding.Default;
+                    return null;
+                };
+            }
+
             if (uri == null)
             {
                 innerBlazorWebView = MainBlazorWebView;
@@ -40,7 +69,7 @@ namespace RemoteBlazorWebView.Wpf
                 innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath);
             }
 
-            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath);
+            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath, defaultResolveDelegate);
 
             if (innerBlazorWebView is RemotableWebWindow rww)
             {

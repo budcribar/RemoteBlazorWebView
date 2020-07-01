@@ -94,7 +94,7 @@ namespace PeakSwc.StaticFiles
                 using StreamReader sr = new StreamReader(stream);
                 var contents = sr.ReadToEnd();
                 //contents = contents.Replace("framework://blazor.desktop.js", "_framework/blazor.server.js");
-                contents = contents.Replace("framework://blazor.desktop.js", "remote/remote.blazor.desktop.js");
+                contents = contents.Replace("framework://blazor.desktop.js", "remote.blazor.desktop.js");
 
 
                 string inject = @$"
