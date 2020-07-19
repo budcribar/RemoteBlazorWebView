@@ -21,8 +21,6 @@ How to publish the server...
 https://weblog.west-wind.com/posts/2019/Sep/30/Serving-ASPNET-Core-Web-Content-from-External-Folders
 
 
-Change the javascript based on local/remote automatically...
-
 
 
 

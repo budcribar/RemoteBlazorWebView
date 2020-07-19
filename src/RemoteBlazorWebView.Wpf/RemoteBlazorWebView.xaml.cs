@@ -30,6 +30,8 @@ namespace RemoteBlazorWebView.Wpf
             DataContext = model;
         }
 
+        public Func<string, byte[]> FrameworkFileResolver { get; set; }
+
         public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate defaultResolveDelegate = null, Uri uri = null)
         {
             if (uri == null)
@@ -46,6 +48,8 @@ namespace RemoteBlazorWebView.Wpf
 
             if (innerBlazorWebView is RemotableWebWindow rww)
             {
+                if (FrameworkFileResolver != null)
+                    rww.FrameworkFileResolver = FrameworkFileResolver;
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
                 model.Uri = uri.ToString() + "app?guid=" + rww.Id;
                 model.ShowHyperlink = "Visible";

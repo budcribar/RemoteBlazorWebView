@@ -1,0 +1,12 @@
+1. login as bud@chargeandchange.onmicrosoft.com
+
+2. Start WebWindow  VM
+
+3. rdp using old MSN password
+
+
+4. Run the Certify the web application
+
+
+
+

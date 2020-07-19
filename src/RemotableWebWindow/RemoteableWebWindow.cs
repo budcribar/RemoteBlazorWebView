@@ -43,6 +43,19 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
+
+        // TODO Use stream
+        public Func<string, byte[]> FrameworkFileResolver { get; set; } = SupplyFrameworkFile;
+
+        public static Byte[] SupplyFrameworkFile(string uri)
+        {
+            if (File.Exists(uri))
+            {
+                return File.ReadAllBytes(uri);
+            }
+            return null;
+        }
+
         public IJSRuntime JSRuntime { get; set; }
 
         private  RemoteWebWindow.RemoteWebWindowClient Client {
@@ -109,13 +122,8 @@ namespace PeakSwc.RemoteableWebWindows
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
-                            if (File.Exists(message.Path))
-                            {
-                                var bytes = File.ReadAllBytes(message.Path);
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = ByteString.CopyFrom(bytes) });
-                            }
-                            else await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path });
-
+                            var bytes = FrameworkFileResolver(message.Path);
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : ByteString.CopyFrom(bytes) });
                         }
 
                     }, cts.Token);

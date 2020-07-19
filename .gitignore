@@ -13,3 +13,4 @@ artifacts/
 /src/RemoteableWebWindowService/publish
 /src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebWindow.Blazor.JS/package-lock.json
+/publish

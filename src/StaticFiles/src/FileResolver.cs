@@ -27,7 +27,9 @@ namespace PeakSwc.StaticFiles
                 if (string.IsNullOrEmpty(path)) return null;
 
                 var guid = context.Request.Cookies["guid"];
-                var home = context.Request.Cookies["home"];
+                if (guid == null) return null;
+
+                var home = _rootDictionary[guid].HtmlHostPath;
 
                 if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(home)) return null;
 
