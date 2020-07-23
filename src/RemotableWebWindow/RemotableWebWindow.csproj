@@ -10,7 +10,7 @@
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
       <PackageReference Include="BlazorWebView" Version="0.2.0" />
     <PackageReference Include="Google.Protobuf" Version="3.12.3" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.29.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.30.0" />
     <PackageReference Include="Grpc.Tools" Version="2.30.0">
       
       <PrivateAssets>all</PrivateAssets>

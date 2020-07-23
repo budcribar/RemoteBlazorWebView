@@ -9,6 +9,8 @@ using System.Collections.Concurrent;
 using System.IO;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
+using System.Diagnostics;
+using Google.Protobuf;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -23,8 +25,14 @@ namespace PeakSwc.RemoteableWebWindows
             _logger = logger;
             _webWindowDictionary = rootDictionary;
             _ipc = ipc;
-        }  
+        }
 
+        public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
+        {
+            var results = new IdArrayResponse();
+            results.Responses.AddRange(_webWindowDictionary.Keys);
+            return Task.FromResult(results);
+        }
         public override async Task CreateWebWindow(CreateWebWindowRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             if (!_webWindowDictionary.ContainsKey(request.Id))

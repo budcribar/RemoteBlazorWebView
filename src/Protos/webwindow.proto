@@ -32,6 +32,10 @@ message WebMessageResponse {
     string response = 1;
 }
 
+message IdArrayResponse {
+    repeated string responses = 1;
+}
+
 message FileReadRequest {
     string id = 1;
     string path = 2;
@@ -51,7 +55,8 @@ service RemoteWebWindow {
     rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebWindow(CreateWebWindowRequest) returns (stream WebMessageResponse);
-    rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse);  
+    rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
+    rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
 }
 
 service BrowserIPC {

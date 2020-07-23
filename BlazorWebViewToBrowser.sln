@@ -26,6 +26,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\Protos\webwindow.proto = src\Protos\webwindow.proto
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -210,6 +212,30 @@ Global
 		{2369AFB1-F3D3-401F-A15A-05164D07EB58}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{2369AFB1-F3D3-401F-A15A-05164D07EB58}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{2369AFB1-F3D3-401F-A15A-05164D07EB58}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x64.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x86.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|Any CPU.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|Any CPU.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|x64.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|x64.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|x86.ActiveCfg = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.MinSizeRel|x86.Build.0 = Debug|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x64.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x64.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|Any CPU.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|Any CPU.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|x64.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -222,6 +248,7 @@ Global
 		{AA110533-9A33-4884-B006-73742762B0F5} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{88A67DC6-EE02-41C0-A255-6B42D8BB7CC8} = {48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}
 		{2369AFB1-F3D3-401F-A15A-05164D07EB58} = {48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE} = {48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}
