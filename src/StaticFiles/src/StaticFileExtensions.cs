@@ -64,7 +64,7 @@ namespace PeakSwc.Builder
             {
                 throw new ArgumentNullException(nameof(options));
             }
-
+         
             return app.UseMiddleware<PeakSwcStaticFileMiddleware>(Options.Create(options));
         }
     }

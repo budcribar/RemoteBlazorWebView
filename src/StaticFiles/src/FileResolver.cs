@@ -27,11 +27,11 @@ namespace PeakSwc.StaticFiles
                 if (string.IsNullOrEmpty(path)) return null;
 
                 var guid = context.Request.Cookies["guid"];
-                if (guid == null) return null;
+                if (string.IsNullOrEmpty(guid) || !_rootDictionary.ContainsKey(guid)) return null;
 
                 var home = _rootDictionary[guid].HtmlHostPath;
 
-                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(home)) return null;
+                if (string.IsNullOrEmpty(home)) return null;
 
                 var root = Path.GetDirectoryName(home);
 
@@ -79,7 +79,11 @@ namespace PeakSwc.StaticFiles
         private Stream ProcessFile(string id, string appFile)
         {
             if (!_rootDictionary.ContainsKey(id))
+            {
+                Console.WriteLine($"Cannot process {appFile} id {id} not found...");
                 return null;
+            }
+                
 
             _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
 
