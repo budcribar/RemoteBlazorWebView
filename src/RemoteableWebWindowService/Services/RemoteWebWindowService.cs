@@ -19,6 +19,8 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly ILogger<RemoteWebWindowService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
         private readonly ConcurrentDictionary<string, IPC> _ipc;
+        private readonly ConcurrentDictionary<string, byte[]> _fileCache = new ConcurrentDictionary<string, byte[]>();
+        private readonly bool useCache = false;
 
         public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc)
         {
@@ -71,13 +73,24 @@ namespace PeakSwc.RemoteableWebWindows
                     if (message.Path == "Initialize")
                     {
                         id = message.Id;
-                        var task2 = Task.Run(async () =>
+                        var task = Task.Run(async () =>
                         {
                             while (true)
                             {
                                 var file = await _webWindowDictionary[message.Id].FileCollection.Reader.ReadAsync();
                                 {
-                                    await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
+                                    if (_fileCache.ContainsKey(file) && useCache)
+                                    {
+                                        // TODO need to further identify file by hash
+                                        var resetEvent = _webWindowDictionary[message.Id].FileDictionary[file].resetEvent;
+                                        _webWindowDictionary[message.Id].FileDictionary[file] = (new MemoryStream(_fileCache[file]), resetEvent);
+                                        resetEvent.Set();
+                                    }
+                                    else
+                                    {
+                                        await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
+                                    }
+                                    
                                 }
                             }
 
@@ -86,9 +99,14 @@ namespace PeakSwc.RemoteableWebWindows
                     }
                     else
                     {
+                        var bytes = message.Data.ToArray();
                         var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(message.Data.ToArray()), resetEvent);
+                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
+
+
+                        // TODO Further identify file by hash
+                        _fileCache.TryAdd(message.Path,bytes);
                     }
                 }
             }
