@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>PeakSwc.RemoteableWebWindows</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>PeakSWC.RemotableWebView</PackageId>
+    <Version>0.0.1-pre</Version>
+    <Authors>Bud Cribar</Authors>
+    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/budcribar/BlazorWebViewToBrowser</RepositoryUrl>
+    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <AssemblyVersion>0.0.1.0</AssemblyVersion>
+    <FileVersion>0.0.1.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="contentFiles\RemoteableWebViewService.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="contentFiles\RemoteableWebViewService.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
+      <PackageReference Include="BlazorWebView" Version="0.2.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.12.3" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.30.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.30.0">
+      
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+
+</Project>

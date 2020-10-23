@@ -14,3 +14,8 @@ artifacts/
 /src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebWindow.Blazor.JS/package-lock.json
 /publish
+/src/RemotableWebWindow/contentFiles/appsettings.Development.json
+/src/RemotableWebWindow/contentFiles/appsettings.json
+/src/RemotableWebWindow/contentFiles/RemoteableWebViewService.exe
+/src/RemotableWebWindow/contentFiles/RemoteableWebViewService.pdb
+/src/RemotableWebWindow/contentFiles/web.config

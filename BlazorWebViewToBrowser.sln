@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "testassets", "testassets", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteableWebWindowService", "src\RemoteableWebWindowService\RemoteableWebWindowService.csproj", "{3FFDC421-5BC7-4361-8625-2D807B59194B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteableWebViewService", "src\RemoteableWebWindowService\RemoteableWebViewService.csproj", "{3FFDC421-5BC7-4361-8625-2D807B59194B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemotableWebWindow", "src\RemotableWebWindow\RemotableWebWindow.csproj", "{E815B201-58FD-4A65-A74F-688844BE7427}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemotableWebView", "src\RemotableWebWindow\RemotableWebView.csproj", "{E815B201-58FD-4A65-A74F-688844BE7427}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PeakSwc.StaticFiles", "src\StaticFiles\src\PeakSwc.StaticFiles.csproj", "{310F9564-831E-4381-A8E3-B800E3C30627}"
 EndProject
@@ -26,7 +26,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\Protos\webwindow.proto = src\Protos\webwindow.proto
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
