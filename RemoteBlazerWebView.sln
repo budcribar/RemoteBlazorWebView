@@ -19,6 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.Wpf", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D05DB932-B305-40C7-968A-19F814FD7F2A}"
 	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
 		src\Protos\webwindow.proto = src\Protos\webwindow.proto
 	EndProjectSection
 EndProject
