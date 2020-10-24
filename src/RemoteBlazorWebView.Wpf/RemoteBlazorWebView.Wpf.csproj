@@ -4,6 +4,19 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
+    <PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
+    <Version>0.1.1-pre</Version>
+    <Authors>Bud Cribar</Authors>
+    <Company>Peak Software Consulting, LLC</Company>
+    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryUrl>https://github.com/budcribar/BlazorWebViewToBrowser</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +30,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemotableWebWindow\RemotableWebView.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

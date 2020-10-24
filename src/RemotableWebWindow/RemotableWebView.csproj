@@ -6,26 +6,20 @@
     <Platforms>AnyCPU;x64</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemotableWebView</PackageId>
-    <Version>0.0.1-pre</Version>
+    <Version>0.1.1-pre</Version>
     <Authors>Bud Cribar</Authors>
-    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
-    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <Description></Description>
+    <Copyright></Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon>favicon-32x32.png</PackageIcon>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/budcribar/BlazorWebViewToBrowser</RepositoryUrl>
-    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <PackageIcon></PackageIcon>
+    <RepositoryType></RepositoryType>
+    <RepositoryUrl></RepositoryUrl>
+    <PackageTags></PackageTags>
     <AssemblyVersion>0.0.1.0</AssemblyVersion>
     <FileVersion>0.0.1.0</FileVersion>
+    <Company>Peak Software Consulting, LLC</Company>
+    <AssemblyName>PeakSWC.RemotableWebView</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="contentFiles\RemoteableWebViewService.exe" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="contentFiles\RemoteableWebViewService.exe" />
-  </ItemGroup>
 
   <ItemGroup>
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
@@ -38,13 +32,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Include="..\..\icons\favicon-32x32.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
   </ItemGroup>
 
 
