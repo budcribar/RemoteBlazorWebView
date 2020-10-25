@@ -78,6 +78,7 @@ namespace PeakSwc.StaticFiles
 
         private Stream ProcessFile(string id, string appFile)
         {
+            Console.WriteLine($"Attempting to read {appFile}");
             if (!_rootDictionary.ContainsKey(id))
             {
                 Console.WriteLine($"Cannot process {appFile} id {id} not found...");
@@ -115,6 +116,7 @@ namespace PeakSwc.StaticFiles
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
 
             }
+            Console.WriteLine($"Successfully read {appFile}");
             return stream;
         }
 

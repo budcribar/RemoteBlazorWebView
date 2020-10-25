@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="package-lock.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <WebpackInputs Remove="src\RemoteWebWindow.ts" />
     <WebpackInputs Remove="src\RenderQueue.ts" />
   </ItemGroup>
