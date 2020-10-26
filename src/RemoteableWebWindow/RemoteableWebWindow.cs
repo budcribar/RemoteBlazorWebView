@@ -1,4 +1,5 @@
-﻿using System;
+﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,8 +16,7 @@ using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-
-
+using System.Reflection;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -49,6 +49,17 @@ namespace PeakSwc.RemoteableWebWindows
 
         public static Byte[] SupplyFrameworkFile(string uri)
         {
+            if (Path.GetFileName(uri) == "remote.blazor.desktop.js")
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    assembly.GetManifestResourceStream("PeakSwc.RemoteableWebWindows.remote.blazor.desktop.js").CopyTo(ms);
+                    return ms.ToArray();
+                }
+            }
+
             if (File.Exists(uri))
             {
                 return File.ReadAllBytes(uri);

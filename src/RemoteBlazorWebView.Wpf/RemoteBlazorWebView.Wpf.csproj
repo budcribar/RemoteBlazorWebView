@@ -5,14 +5,14 @@
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
     <PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
-    <Version>0.1.1-pre</Version>
+    <Version>0.1.3-pre</Version>
     <Authors>Bud Cribar</Authors>
     <Company>Peak Software Consulting, LLC</Company>
     <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
     <Copyright>Peak Software Consulting, LLC</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>favicon-32x32.png</PackageIcon>
-    <RepositoryUrl>https://github.com/budcribar/BlazorWebViewToBrowser</RepositoryUrl>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -20,16 +20,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="save.RemoteBlazorWebView.xaml.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="BlazorWebView" Version="0.2.0" />
     <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RemotableWebWindow\RemotableWebView.csproj" />
+    <ProjectReference Include="..\RemoteableWebWindow\RemoteableWebView.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\RemotableWebWindow\RemotableWebView.csproj" />
+    <ProjectReference Include="..\..\src\RemoteableWebWindow\RemoteableWebView.csproj" />
   </ItemGroup>
 
 </Project>
