@@ -21,6 +21,11 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
 
+- task: Npm@1
+  inputs:
+    command: 'install'
+    workingDir: 'src\RemoteWebWindow.Blazor.JS'
+
 - task: VSBuild@1
   inputs:
     solution: '$(solution)'
