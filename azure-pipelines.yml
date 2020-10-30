@@ -1,9 +1,7 @@
 name: .NET Core and WPF on Windows
 
-on:
-  push:
-    branches:
-    - master
+trigger:
+  - master
 
 jobs:
   build:
