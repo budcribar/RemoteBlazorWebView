@@ -28,6 +28,12 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
+- task: DownloadPipelineArtifact@2
+  inputs:
+    buildType: 'current'
+    artifactName: 'Artifacts'
+    targetPath: '$(Pipeline.Workspace)'
+
 - task: VSTest@2
   inputs:
     platform: '$(buildPlatform)'
