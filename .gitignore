@@ -19,3 +19,5 @@ artifacts/
 /src/RemotableWebWindow/contentFiles/RemoteableWebViewService.exe
 /src/RemotableWebWindow/contentFiles/RemoteableWebViewService.pdb
 /src/RemotableWebWindow/contentFiles/web.config
+src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
+/src/RemoteWebWindow.Blazor.JS/upstream/aspnetcore/web.js/package-lock.json
