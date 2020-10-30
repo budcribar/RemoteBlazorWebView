@@ -31,7 +31,6 @@ steps:
 - task: DownloadPipelineArtifact@2
   inputs:
     buildType: 'current'
-    artifactName: 'Artifacts'
     targetPath: '$(Pipeline.Workspace)'
 
 - task: VSTest@2
