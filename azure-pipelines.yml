@@ -39,13 +39,13 @@ steps:
     command: 'publish'
     publishWebProjects: false
     projects: 'src\RemoteableWebWindowService'
-    arguments: '--runtime win-x64'
+    arguments: '--runtime win-x64 -p:PublishSingleFile=true --self-contained true'
     modifyOutputPath: false
-
+ 
 - task: PublishBuildArtifacts@1
   inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
+    PathtoPublish: 'src\RemoteableWebWindowService\bin\Debug\netcoreapp3.1\win-x64'
+    ArtifactName: 'dropServer'
     publishLocation: 'Container'
 
 - task: PublishBuildArtifacts@1
