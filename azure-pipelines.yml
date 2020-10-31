@@ -55,11 +55,6 @@ steps:
     publishLocation: 'Container'
     
     
-- task: DownloadPipelineArtifact@2
-  inputs:
-    buildType: 'current'
-    targetPath: '$(Pipeline.Workspace)'
-
 - task: VSTest@2
   inputs:
     platform: '$(buildPlatform)'
