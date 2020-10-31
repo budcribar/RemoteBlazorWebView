@@ -39,7 +39,7 @@ steps:
   inputs:
     command: 'publish'
     publishWebProjects: false
-    projects: '\src\RemoteableWebWindowService\RemoteableWebWindowService.csproj'
+    projects: 'src\RemoteableWebWindowService\RemoteableWebWindowService.csproj'
     arguments: '--runtime win-x64 --no-build'
     modifyOutputPath: false
 
