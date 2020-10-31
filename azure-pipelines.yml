@@ -3,6 +3,8 @@
 # Add steps that publish symbols, save build artifacts, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
+#  https://medium.com/@dan.cokely/creating-nuget-packages-in-azure-devops-with-azure-pipelines-and-yaml-d6fa30f0f15e
+
 trigger:
 - master
 
@@ -37,6 +39,14 @@ steps:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
     ArtifactName: 'drop'
     publishLocation: 'Container'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'artifacts'
+    ArtifactName: 'dropNugets'
+    publishLocation: 'Container'
+    
+    
 - task: DownloadPipelineArtifact@2
   inputs:
     buildType: 'current'
