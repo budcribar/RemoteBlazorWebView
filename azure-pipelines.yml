@@ -39,7 +39,7 @@ steps:
     command: 'publish'
     publishWebProjects: false
     projects: 'src\RemoteableWebWindowService'
-    arguments: '--runtime win-x64 --no-build'
+    arguments: '--runtime win-x64'
     modifyOutputPath: false
 
 - task: PublishBuildArtifacts@1
