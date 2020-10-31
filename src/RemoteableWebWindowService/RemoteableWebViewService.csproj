@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
@@ -8,7 +7,6 @@
     <Platforms>AnyCPU;x64</Platforms>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
   </PropertyGroup>
-
   
   <ItemGroup>
     <Compile Remove="JSInterop\**" />
@@ -16,18 +14,15 @@
     <EmbeddedResource Remove="JSInterop\**" />
     <None Remove="JSInterop\**" />
   </ItemGroup>
-
-  
+ 
   <ItemGroup>
     <Compile Remove="Services\CachedRemoteWebWindowService.cs" />
   </ItemGroup>
-
-  
  
   <ItemGroup>
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.32.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.32.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.33.1" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.33.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 
