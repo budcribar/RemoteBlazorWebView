@@ -6,7 +6,7 @@
     <Platforms>AnyCPU;x64</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteableWebView</PackageId>
-    <Version>0.1.3-pre</Version>
+    <Version>0.1.4-pre</Version>
     <Authors>Bud Cribar</Authors>
     <Description></Description>
     <Copyright></Copyright>
