@@ -1,0 +1,3 @@
+[submodule "RemoteBlazorWebViewTutorial"]
+	path = RemoteBlazorWebViewTutorial
+	url = https://github.com/budcribar/RemoteBlazorWebViewTutorial
