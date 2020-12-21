@@ -20,7 +20,7 @@ namespace RemoteBlazorWebView.Wpf
     /// </summary>
     public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
     {
-        private IBlazorWebView innerBlazorWebView;
+        private IBlazorWebView? innerBlazorWebView;
         private readonly ViewModel model = new ViewModel();
         static RemoteBlazorWebView() { }
 
@@ -30,9 +30,9 @@ namespace RemoteBlazorWebView.Wpf
             DataContext = model;
         }
 
-        public Func<string, byte[]> FrameworkFileResolver { get; set; }
+        public Func<string, byte[]>? FrameworkFileResolver { get; set; }
 
-        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate defaultResolveDelegate = null, Uri uri = null)
+        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null)
         {
             if (uri == null)
             {
@@ -51,7 +51,7 @@ namespace RemoteBlazorWebView.Wpf
                 if (FrameworkFileResolver != null)
                     rww.FrameworkFileResolver = FrameworkFileResolver;
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
-                model.Uri = uri.ToString() + "app?guid=" + rww.Id;
+                model.Uri = uri?.ToString() + "app?guid=" + rww.Id;
                 model.ShowHyperlink = "Visible";
             }
 
@@ -62,12 +62,14 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                this.innerBlazorWebView.OnWebMessageReceived += value;
+                if (this.innerBlazorWebView != null)
+                    this.innerBlazorWebView.OnWebMessageReceived += value;
             }
 
             remove
             {
-                this.innerBlazorWebView.OnWebMessageReceived -= value;
+                if (this.innerBlazorWebView != null)
+                    this.innerBlazorWebView.OnWebMessageReceived -= value;
             }
         }
 
@@ -103,27 +105,27 @@ namespace RemoteBlazorWebView.Wpf
 
         public void Initialize(Action<WebViewOptions> configure)
         {
-            innerBlazorWebView.Initialize(configure);
+            innerBlazorWebView?.Initialize(configure);
         }
 
         public void Invoke(Action callback)
         {
-            innerBlazorWebView.Invoke(callback);
+            innerBlazorWebView?.Invoke(callback);
         }
 
         public void NavigateToUrl(string url)
         {
-            innerBlazorWebView.NavigateToUrl(url);
+            innerBlazorWebView?.NavigateToUrl(url);
         }
 
         public void SendMessage(string message)
         {
-            innerBlazorWebView.SendMessage(message);
+            innerBlazorWebView?.SendMessage(message);
         }
 
         public void ShowMessage(string title, string message)
         {
-            innerBlazorWebView.ShowMessage(title, message);
+            innerBlazorWebView?.ShowMessage(title, message);
         }      
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)

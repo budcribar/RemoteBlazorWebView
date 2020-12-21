@@ -7,7 +7,7 @@ namespace RemoteBlazorWebView.Wpf
 {
     public class ViewModel : INotifyPropertyChanged
     {
-        private string _uri;
+        private string _uri = "";
         public string Uri
         {
             get { return _uri; }
@@ -27,7 +27,7 @@ namespace RemoteBlazorWebView.Wpf
                 NotifyPropertyChanged("ShowWebWindow");
             } }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public void NotifyPropertyChanged(string propertyName)
         {
