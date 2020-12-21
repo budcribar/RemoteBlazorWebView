@@ -6,6 +6,8 @@
     <OutputType>Exe</OutputType>
     <Platforms>AnyCPU;x64</Platforms>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   
   <ItemGroup>

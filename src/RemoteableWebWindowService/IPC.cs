@@ -16,9 +16,8 @@ namespace RemoteableWebWindowService
 {
     public class IPC
     {
-        public string Name { get; set; }
-        public IServerStreamWriter<WebMessageResponse> ResponseStream { get; set; }
-        public IServerStreamWriter<StringRequest> BrowserResponseStream { get; set; }
+        public IServerStreamWriter<WebMessageResponse>? ResponseStream { get; set; }
+        public IServerStreamWriter<StringRequest>? BrowserResponseStream { get; set; }
 
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -43,7 +42,7 @@ namespace RemoteableWebWindowService
                 await foreach (var m in responseChannel.Reader.ReadAllAsync())
                 {
                     // Serialize the write
-                    await ResponseStream.WriteAsync(m);
+                    await (ResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
             }, cts.Token);
 
@@ -52,7 +51,7 @@ namespace RemoteableWebWindowService
                 await foreach (var m in browserResponseChannel.Reader.ReadAllAsync())
                 {
                     // Serialize the write
-                    await BrowserResponseStream.WriteAsync(m);
+                    await (BrowserResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
             }, cts.Token);
 
@@ -70,11 +69,11 @@ namespace RemoteableWebWindowService
 
         public async void LocationChanged(Point point)
         {
-            await ResponseStream.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) });
+            await (ResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
         }
         public async void SizeChanged(Size size)
         {
-            await ResponseStream.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) });
+            await (ResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
         }
     }
 }

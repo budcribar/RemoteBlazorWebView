@@ -14,21 +14,17 @@ namespace PeakSwc.StaticFiles
 {
     public class FileInfo : IFileInfo
     {
-       
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
         private string guid;
-        //private readonly HttpContext context;
-        Stream stream = null;
+        private Stream? stream = null;
 
-        private Stream GetStream()
-        {
-           
+        private Stream? GetStream()
+        {    
             if (stream == null)
             {
                 if (string.IsNullOrEmpty(path)) return null;
 
-                //var guid = context.Request.Cookies["guid"];
                 if (string.IsNullOrEmpty(guid) || !_rootDictionary.ContainsKey(guid)) return null;
 
                 var home = _rootDictionary[guid].HtmlHostPath;
@@ -36,6 +32,8 @@ namespace PeakSwc.StaticFiles
                 if (string.IsNullOrEmpty(home)) return null;
 
                 var root = Path.GetDirectoryName(home);
+
+                if (string.IsNullOrEmpty(root)) return null;
 
                 // TODO do we need this?
                 if (File.Exists(path))
@@ -69,9 +67,9 @@ namespace PeakSwc.StaticFiles
 
         public bool Exists => GetStream() != null;
 
-        public long Length => GetStream().Length;
+        public long Length => GetStream()?.Length ?? 0;
 
-        public string PhysicalPath => null;
+        public string? PhysicalPath => null;
 
         public string Name => Path.GetFileName(path);
 
@@ -79,7 +77,7 @@ namespace PeakSwc.StaticFiles
 
         public bool IsDirectory => false;
 
-        private Stream ProcessFile(string id, string appFile)
+        private Stream? ProcessFile(string id, string appFile)
         {
             Console.WriteLine($"Attempting to read {appFile}");
             if (!_rootDictionary.ContainsKey(id))
@@ -95,7 +93,9 @@ namespace PeakSwc.StaticFiles
           
 
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
-            var stream = _rootDictionary[id].FileDictionary[appFile].stream;
+            MemoryStream? stream = _rootDictionary[id].FileDictionary[appFile].stream;
+            if (stream == null) return null;
+
             stream.Position = 0;
 
             if (Path.GetFileName(appFile) == Path.GetFileName(_rootDictionary[id].HtmlHostPath))
@@ -126,24 +126,20 @@ namespace PeakSwc.StaticFiles
         }
 
 
-        public Stream CreateReadStream()
+        public Stream? CreateReadStream()
         {
             return GetStream();
         }
     }
 
     public class FileResolver : IFileProvider
-    {
-       
+    {      
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
 
         public FileResolver (ConcurrentDictionary<string, ServiceState> rootDictionary) {
            
             _rootDictionary = rootDictionary;
         }
-
-        public HttpContext Context { get; set; }
-
 
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
