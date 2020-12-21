@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.FileProviders;
+﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using RemoteableWebWindowService.Services;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -61,8 +58,6 @@ namespace PeakSwc.StaticFiles
             this.path = path.Remove(0, guid.Length + 1);
 
             _rootDictionary = rootDictionary;
-
-            //this.context = context;
         }
 
         public bool Exists => GetStream() != null;
@@ -86,12 +81,9 @@ namespace PeakSwc.StaticFiles
                 return null;
             }
                 
-
             _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
-
             _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
           
-
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
             MemoryStream? stream = _rootDictionary[id].FileDictionary[appFile].stream;
             if (stream == null) return null;
@@ -124,7 +116,6 @@ namespace PeakSwc.StaticFiles
             Console.WriteLine($"Successfully read {appFile}");
             return stream;
         }
-
 
         public Stream? CreateReadStream()
         {

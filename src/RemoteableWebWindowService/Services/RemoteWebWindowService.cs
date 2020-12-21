@@ -9,8 +9,6 @@ using System.Collections.Concurrent;
 using System.IO;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
-using System.Diagnostics;
-using Google.Protobuf;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -45,11 +43,9 @@ namespace PeakSwc.RemoteableWebWindows
                     Hostname = request.Hostname,
                 };
 
-
                 if (!_ipc.ContainsKey(request.Id)) _ipc.TryAdd(request.Id, new IPC());
                 _ipc[request.Id].ResponseStream = responseStream;
               
-
                 _webWindowDictionary.TryAdd(request.Id, state);
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
@@ -61,7 +57,6 @@ namespace PeakSwc.RemoteableWebWindows
             }
             
         }
-
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
@@ -103,7 +98,6 @@ namespace PeakSwc.RemoteableWebWindows
                         var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
                         _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
-
 
                         // TODO Further identify file by hash
                         _fileCache.TryAdd(message.Path,bytes);

@@ -1,14 +1,9 @@
 ﻿using Grpc.Core;
-using Microsoft.AspNetCore.SignalR;
 //using Newtonsoft.Json;
 using PeakSwc.RemoteableWebWindows;
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
-using System.Diagnostics;
 using System.Threading.Channels;
 using System.Threading;
 
@@ -16,13 +11,12 @@ namespace RemoteableWebWindowService
 {
     public class IPC
     {
-        public IServerStreamWriter<WebMessageResponse>? ResponseStream { get; set; }
-        public IServerStreamWriter<StringRequest>? BrowserResponseStream { get; set; }
-
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
-
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
+
+        public IServerStreamWriter<WebMessageResponse>? ResponseStream { get; set; }
+        public IServerStreamWriter<StringRequest>? BrowserResponseStream { get; set; }
 
         public async void SendMessage(string eventName, params object[] args)
         {

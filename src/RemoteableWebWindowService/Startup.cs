@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -11,11 +10,7 @@ using PeakSwc.StaticFiles;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
-using FileInfo = PeakSwc.StaticFiles.FileInfo;
-using Microsoft.AspNetCore.Identity;
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Primitives;
-using Microsoft.Extensions.FileProviders;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -80,9 +75,6 @@ namespace PeakSwc.RemoteableWebWindows
             app.UseStaticFiles(new StaticFileOptions
             {
                  FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>())
-                
-                // TODO get from context
-                // FileProvider = new FileResolver(rootDictionary),
             });
 
             app.UseEndpoints(endpoints =>
@@ -116,7 +108,6 @@ namespace PeakSwc.RemoteableWebWindows
                             Thread.Sleep(3000);
 
                             //  Need to wait until we get an initialized then refresh
-
                             context.Response.Redirect("/");                      
                         }
                         else

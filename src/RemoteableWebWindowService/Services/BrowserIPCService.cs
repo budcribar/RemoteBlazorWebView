@@ -3,7 +3,6 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using RemoteableWebWindowService;
-using System;
 using System.Collections.Concurrent;
 using Google.Protobuf.WellKnownTypes;
 
@@ -17,8 +16,7 @@ namespace PeakSwc.RemoteableWebWindows
 
         public BrowserIPCService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, IPC> ipc)
         {
-            _logger = logger;
-            
+            _logger = logger;         
             IPC = ipc;
         }
 
@@ -47,6 +45,5 @@ namespace PeakSwc.RemoteableWebWindows
             IPC[request.Id].ReceiveMessage(request.Request);
             return Task.FromResult<Empty>(new Empty());
         }
-
     }
 }

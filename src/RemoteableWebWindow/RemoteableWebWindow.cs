@@ -44,7 +44,6 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
-
         // TODO Use stream
         public Func<string, byte[]> FrameworkFileResolver { get; set; } = SupplyFrameworkFile;
 
