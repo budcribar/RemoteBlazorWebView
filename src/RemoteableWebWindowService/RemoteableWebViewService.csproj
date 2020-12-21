@@ -27,10 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StaticFiles\src\PeakSwc.StaticFiles.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="publish\" />
   </ItemGroup>
 

@@ -3,6 +3,7 @@ import { navigateTo } from "../upstream/aspnetcore/web.js/src/Services/Navigatio
 interface Callback {
     (...args: any[]): void;
 }
+declare var webWindow: any;
 
 const registrations = {} as { [eventName: string]: Callback[] };
 
@@ -47,9 +48,9 @@ export function receiveMessage(message: string) {
       
         group.forEach(callback => callback.apply(null, args));
 
-        //TODO Hack
+        //TODO Hack required to get home displayed
         if (eventName == "JS.EndInvokeDotNet" && args[0] == "1") {
-            navigateTo("/", false);
+            navigateTo(`/${webWindow.guid}/`, false);
             sendMessage("connected:");
         }
             

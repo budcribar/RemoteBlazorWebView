@@ -40,6 +40,7 @@ namespace PeakSwc.RemoteableWebWindows
         }
         private RemoteWebWindow.RemoteWebWindowClient client = null;
         
+        // TODO
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 

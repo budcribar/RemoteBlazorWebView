@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PeakSwc.StaticFiles;
-using PeakSwc.Builder;
+//using PeakSwc.Builder;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +15,7 @@ using FileInfo = PeakSwc.StaticFiles.FileInfo;
 using Microsoft.AspNetCore.Identity;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.FileProviders;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -76,11 +77,12 @@ namespace PeakSwc.RemoteableWebWindows
 
             app.UseGrpcWeb();
  
-            app.PeakSwcUseStaticFiles(new StaticFileOptions
+            app.UseStaticFiles(new StaticFileOptions
             {
-
+                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>())
+                
                 // TODO get from context
-                FileProvider = new FileResolver(rootDictionary),
+                // FileProvider = new FileResolver(rootDictionary),
             });
 
             app.UseEndpoints(endpoints =>
@@ -119,7 +121,7 @@ namespace PeakSwc.RemoteableWebWindows
                         }
                         else
                         {
-                            context.Response.Redirect(home);
+                            context.Response.Redirect(guid + "/" + home);
                         }
                             
                     }
