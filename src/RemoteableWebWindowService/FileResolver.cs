@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace PeakSwc.StaticFiles
@@ -93,9 +94,7 @@ namespace PeakSwc.StaticFiles
                
                 contents = contents.Replace("framework://blazor.desktop.js", "remote.blazor.desktop.js");
 
-                // TODO Parse this correctly
-                contents = contents.Replace("<base href=\"/\" />", $"<base href = \"/{id}/\" />");
-
+                contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
 
             }
