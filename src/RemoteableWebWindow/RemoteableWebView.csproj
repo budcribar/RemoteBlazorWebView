@@ -19,7 +19,7 @@
     <FileVersion>0.0.1.0</FileVersion>
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteableWebView</AssemblyName>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>

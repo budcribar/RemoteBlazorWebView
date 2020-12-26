@@ -29,36 +29,30 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly object bootLock = new object();
         public string Id { get; }
         
-        private RemoteWebWindow.RemoteWebWindowClient client = null;
+        private RemoteWebWindow.RemoteWebWindowClient? client = null;
         
-        // TODO
+        // TODO unused
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
-        // TODO Use stream
-        public Func<string, byte[]> FrameworkFileResolver { get; set; } = SupplyFrameworkFile;
+        private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
 
-        public static Byte[] SupplyFrameworkFile(string uri)
+        public static Stream? SupplyFrameworkFile(string uri)
         {
-            if (Path.GetFileName(uri) == "remote.blazor.desktop.js")
+            try
             {
-                var assembly = Assembly.GetExecutingAssembly();
+                if (Path.GetFileName(uri) == "remote.blazor.desktop.js")
+                    return Assembly.GetExecutingAssembly().GetManifestResourceStream("PeakSwc.RemoteableWebWindows.remote.blazor.desktop.js");
 
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    assembly.GetManifestResourceStream("PeakSwc.RemoteableWebWindows.remote.blazor.desktop.js").CopyTo(ms);
-                    return ms.ToArray();
-                }
+                if (File.Exists(uri))
+                    return File.OpenRead(uri);
             }
-
-            if (File.Exists(uri))
-            {
-                return File.ReadAllBytes(uri);
-            }
+            catch (Exception) { return null;  }
+               
             return null;
         }
 
-        public IJSRuntime JSRuntime { get; set; }
+        public IJSRuntime? JSRuntime { get; set; }
 
         private  RemoteWebWindow.RemoteWebWindowClient Client {
             get
@@ -109,7 +103,7 @@ namespace PeakSwc.RemoteableWebWindows
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-                            OnDisconnected?.Invoke(this, null);
+                            OnDisconnected?.Invoke(this, Id);
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
                     }, cts.Token);             
@@ -124,8 +118,8 @@ namespace PeakSwc.RemoteableWebWindows
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
-                            var bytes = FrameworkFileResolver(message.Path);
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : ByteString.CopyFrom(bytes) });
+                            var bytes = FrameworkFileResolver(message.Path) ?? null;
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : ByteString.FromStream(bytes)});
                         }
 
                     }, cts.Token);
@@ -135,9 +129,9 @@ namespace PeakSwc.RemoteableWebWindows
             }
         }
 
-        public event EventHandler<string> OnWebMessageReceived;
-        public event EventHandler<string> OnConnected;
-        public event EventHandler<string> OnDisconnected;
+        public event EventHandler<string>? OnWebMessageReceived;
+        public event EventHandler<string>? OnConnected;
+        public event EventHandler<string>? OnDisconnected;
 
         public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
         {
