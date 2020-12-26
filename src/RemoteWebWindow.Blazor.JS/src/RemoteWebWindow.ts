@@ -3,11 +3,10 @@ import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webwindow_pb_service";
 import { StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
 
-declare var webWindow: any;
-
 export async function sendMessage(message: string) {
     var req = new StringRequest();
-    req.setId(webWindow.guid);
+    var id = window.location.pathname.split('/')[1];
+    req.setId(id);
     req.setRequest(message);
     await grpc.invoke(BrowserIPC.SendMessage, {
         request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
@@ -22,7 +21,8 @@ export async function sendMessage(message: string) {
 
 export function initializeRemoteWebWindow() {
     var message = new IdMessageRequest();
-    message.setId(webWindow.guid);
+    var id = window.location.pathname.split('/')[1];
+    message.setId(id);
 
     grpc.invoke(BrowserIPC.ReceiveMessage,
         {

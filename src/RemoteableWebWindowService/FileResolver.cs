@@ -95,15 +95,6 @@ namespace PeakSwc.StaticFiles
 
                 // TODO Parse this correctly
                 contents = contents.Replace("<base href=\"/\" />", $"<base href = \"/{id}/\" />");
-                // TODO Check how others inject the javascript
-                string inject = @$"
-</app>
-  <script type = 'text/javascript'>
-       var webWindow = new Object();
-       webWindow.guid = '{id}';
-   </script>
-";
-                contents = contents.Replace("</app>", inject);
 
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
 
