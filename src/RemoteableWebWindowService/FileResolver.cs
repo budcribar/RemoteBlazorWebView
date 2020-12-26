@@ -32,15 +32,6 @@ namespace PeakSwc.StaticFiles
 
                 if (string.IsNullOrEmpty(root)) return null;
 
-                // TODO do we need this?
-                if (File.Exists(path))
-                    try
-                    {
-                        return File.Open(path, FileMode.Open, FileAccess.Read);
-                    }
-                    catch { return null; }
-                    
-
                 if (!path.Contains(root))
                     path = root + path;
                 if (path.StartsWith('/'))
@@ -54,8 +45,12 @@ namespace PeakSwc.StaticFiles
 
         public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path)
         {
-            guid = path.Split('/')[1];
-            this.path = path.Remove(0, guid.Length + 1);
+            try
+            {
+                guid = path.Split('/')[1];
+                this.path = path.Remove(0, guid.Length + 1);
+            }
+            catch (Exception) { guid = ""; this.path = ""; }
 
             _rootDictionary = rootDictionary;
         }

@@ -145,11 +145,8 @@ namespace PeakSwc.RemoteableWebWindows
                 var sid = id.ToString();
                 if (sid == null) return;
                 
-                    ipcDictionary[sid].ReceiveMessage("booted:");
-                //await context.Response.WriteAsync($"Restarting..");
-                //await Task.Delay(10000);
-                // wait for connect...
-               
+                ipcDictionary[sid].ReceiveMessage("booted:");
+                
                 context.Response.Redirect($"/restart?guid={sid}");
                 await Task.CompletedTask;
             });
