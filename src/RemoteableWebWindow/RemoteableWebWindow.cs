@@ -27,17 +27,8 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly string hostHtmlPath;
         private readonly string hostname;
         private readonly object bootLock = new object();
-        private string id = null;
-        public string Id
-        {
-            get
-            {
-                if (id == null)
-                    id = Guid.NewGuid().ToString();
-
-                return id;
-            }
-        }
+        public string Id { get; }
+        
         private RemoteWebWindow.RemoteWebWindowClient client = null;
         
         // TODO
@@ -100,15 +91,15 @@ namespace PeakSwc.RemoteableWebWindows
                                             lock (bootLock)
                                             {
                                                 Shutdown();
-                                                OnDisconnected?.Invoke(this, null);
+                                                OnDisconnected?.Invoke(this, Id);
                                             }
                                         }
                                         else if (data == "connected:")
-                                            OnConnected?.Invoke(this, null);
+                                            OnConnected?.Invoke(this, Id);
 
                                         else
 
-                                            OnWebMessageReceived?.Invoke(null, data);
+                                            OnWebMessageReceived?.Invoke(this, data);
                                         break;
                                    
                                     
@@ -145,11 +136,12 @@ namespace PeakSwc.RemoteableWebWindows
         }
 
         public event EventHandler<string> OnWebMessageReceived;
-        public event EventHandler OnConnected;
-        public event EventHandler OnDisconnected;
+        public event EventHandler<string> OnConnected;
+        public event EventHandler<string> OnDisconnected;
 
-        public RemotableWebWindow(Uri uri, string hostHtmlPath)
+        public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
         {
+            Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
             this.uri = uri;
             this.hostHtmlPath = hostHtmlPath;
             this.hostname = Dns.GetHostName();

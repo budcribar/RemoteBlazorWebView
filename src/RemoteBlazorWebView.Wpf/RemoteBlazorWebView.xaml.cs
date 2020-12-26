@@ -32,7 +32,7 @@ namespace RemoteBlazorWebView.Wpf
 
         public Func<string, byte[]>? FrameworkFileResolver { get; set; }
 
-        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null)
+        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null, Guid id = default(Guid))
         {
             if (uri == null)
             {
@@ -41,7 +41,7 @@ namespace RemoteBlazorWebView.Wpf
             }
             else
             {
-                innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath);
+                innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath, id);
             }
 
             IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath, defaultResolveDelegate);
@@ -73,7 +73,7 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
-        public event EventHandler OnConnected
+        public event EventHandler<string> OnConnected
         {
             add
             {
@@ -87,7 +87,7 @@ namespace RemoteBlazorWebView.Wpf
                     rmm.OnConnected -= value;
             }
         }
-        public event EventHandler OnDisconnected
+        public event EventHandler<string> OnDisconnected
         {
             add
             {

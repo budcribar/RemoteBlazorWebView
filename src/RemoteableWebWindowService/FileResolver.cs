@@ -95,12 +95,12 @@ namespace PeakSwc.StaticFiles
 
                 using StreamReader sr = new StreamReader(stream);
                 var contents = sr.ReadToEnd();
-                //contents = contents.Replace("framework://blazor.desktop.js", "_framework/blazor.server.js");
+               
                 contents = contents.Replace("framework://blazor.desktop.js", "remote.blazor.desktop.js");
 
                 // TODO Parse this correctly
                 contents = contents.Replace("<base href=\"/\" />", $"<base href = \"/{id}/\" />");
-                // TODO Check how puji injects the javascript
+                // TODO Check how others inject the javascript
                 string inject = @$"
 </app>
   <script type = 'text/javascript'>

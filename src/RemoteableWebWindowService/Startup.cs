@@ -11,6 +11,7 @@ using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using System.Threading.Tasks;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -74,51 +75,84 @@ namespace PeakSwc.RemoteableWebWindows
  
             app.UseStaticFiles(new StaticFileOptions
             {
-                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>())
+                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>()),
             });
 
             app.UseEndpoints(endpoints =>
-            {             
-                endpoints.MapGrpcService<RemoteWebWindowService>();
+            {
+            endpoints.MapGrpcService<RemoteWebWindowService>();
 
-                endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
+            endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
 
-                endpoints.MapGet("/app", async context =>
+            endpoints.MapGet("/app", async context =>
+            {
+                string guid = "";
+
+                if (context.Request.Query.TryGetValue("guid", out StringValues value))
                 {
-                    string guid = "";
-               
-                    if (context.Request.Query.TryGetValue("guid", out StringValues value))
-                    {
-                        guid = value.ToString();
-                        Set(context, "guid", guid,60);
-                    } 
-                    else
-                    {
-                        guid = context.Request.Cookies["guid"];
-                    }
-                        
-                    if (rootDictionary.ContainsKey(guid))
-                    {
-                        var home = rootDictionary[guid].HtmlHostPath;
+                    guid = value.ToString();
+                    Set(context, "guid", guid, 60);
+                }
+                else
+                {
+                    guid = context.Request.Cookies["guid"];
+                }
 
-                        if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
-                        {
-                            ipcDictionary[guid].ReceiveMessage("booted:");
+                if (rootDictionary.ContainsKey(guid))
+                {
+                    var home = rootDictionary[guid].HtmlHostPath;
+
+                    if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
+                    {
+                        ipcDictionary[guid].ReceiveMessage("booted:");
                             // TODO synchronize properly
                             Thread.Sleep(3000);
 
                             //  Need to wait until we get an initialized then refresh
-                            context.Response.Redirect("/");                      
-                        }
-                        else
-                        {
-                            context.Response.Redirect(guid + "/" + home);
-                        }
-                            
+                            context.Response.Redirect("/");
                     }
-                    else await context.Response.WriteAsync("Invalid Guid");
+                    else
+                    {
+                        context.Response.Redirect(guid + "/" + home);
+                    }
 
-                });
+                }
+                else await context.Response.WriteAsync("Invalid Guid");
+
+            });
+
+            endpoints.MapGet("/wait/{id:guid}",  async context =>
+            {
+                var id = context.Request.RouteValues["id"];
+                var sid = id?.ToString() ?? "";
+
+                for (int i = 0; i < 30; i++)
+                {
+                    if (rootDictionary.ContainsKey(sid))
+                        break;
+                    await Task.Delay(1000);
+                }
+                if (rootDictionary.ContainsKey(sid))
+                    await context.Response.WriteAsync($"Wait completed");
+                else
+                    await context.Response.WriteAsync($"Unable to restart -> Timed out");
+                    
+            });
+
+            endpoints.MapGet("/{id:guid}", async context =>
+            {             
+                var id = context.Request.RouteValues["id"];
+                var sid = id.ToString();
+                if (sid == null) return;
+                
+                    ipcDictionary[sid].ReceiveMessage("booted:");
+                //await context.Response.WriteAsync($"Restarting..");
+                //await Task.Delay(10000);
+                // wait for connect...
+               
+                context.Response.Redirect($"/restart?guid={sid}");
+                await Task.CompletedTask;
+            });
 
                 endpoints.MapRazorPages();               
             });
