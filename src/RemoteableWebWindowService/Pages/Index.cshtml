@@ -38,9 +38,9 @@
                 var cookie = getCookie("guid");
 
                 if (cookie == guid)
-                    href = '/app?restart=true';
+                    href = '/' + guid;
                 else
-                    href = '/app';
+                    href = '/app?guid=' + guid;
 
             }
 

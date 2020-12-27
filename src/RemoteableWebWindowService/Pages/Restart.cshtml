@@ -20,7 +20,6 @@
         const guid = urlParams.get('guid');
         httpGetAsync("/wait/" + guid, function () {
             console.log("restarting " + guid);
-            //window.location.assign("https://localhost/app?guid=" + guid);
             window.location.assign("/app?guid=" + guid);
         });
     </script>

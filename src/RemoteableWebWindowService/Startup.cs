@@ -47,17 +47,6 @@ namespace PeakSwc.RemoteableWebWindows
             });
         }
 
-        public void Set(HttpContext context, string key, string value, int? expireTime)
-        {
-            CookieOptions option = new CookieOptions();
-
-            if (expireTime.HasValue)
-                option.Expires = DateTime.Now.AddMinutes(expireTime.Value);
-            else
-                option.Expires = DateTime.Now.AddMilliseconds(10);
-
-            context.Response.Cookies.Append(key, value, option);
-        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -86,39 +75,19 @@ namespace PeakSwc.RemoteableWebWindows
 
             endpoints.MapGet("/app", async context =>
             {
-                string guid = "";
-
                 if (context.Request.Query.TryGetValue("guid", out StringValues value))
                 {
-                    guid = value.ToString();
-                    Set(context, "guid", guid, 60);
-                }
-                else
-                {
-                    guid = context.Request.Cookies["guid"];
-                }
+                    string guid = value.ToString();
 
-                if (rootDictionary.ContainsKey(guid))
-                {
-                    var home = rootDictionary[guid].HtmlHostPath;
-
-                    if (context.Request.QueryString.HasValue && context.Request.QueryString.Value.Contains("restart"))
+                    if (rootDictionary.ContainsKey(guid))
                     {
-                        ipcDictionary[guid].ReceiveMessage("booted:");
-                            // TODO synchronize properly
-                            Thread.Sleep(3000);
-
-                            //  Need to wait until we get an initialized then refresh
-                            context.Response.Redirect("/");
-                    }
-                    else
-                    {
+                        var home = rootDictionary[guid].HtmlHostPath;
+             
                         context.Response.Redirect(guid + "/" + home);
                     }
-
+                    else await context.Response.WriteAsync("Invalid Guid");
                 }
                 else await context.Response.WriteAsync("Invalid Guid");
-
             });
 
             endpoints.MapGet("/wait/{id:guid}",  async context =>
@@ -140,7 +109,8 @@ namespace PeakSwc.RemoteableWebWindows
             });
 
             endpoints.MapGet("/{id:guid}", async context =>
-            {             
+            {        
+                // restart url
                 var id = context.Request.RouteValues["id"];
                 var sid = id.ToString();
                 if (sid == null) return;
