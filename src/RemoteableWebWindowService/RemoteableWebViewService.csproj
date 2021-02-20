@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackAsTool>true</PackAsTool>
+    <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
  

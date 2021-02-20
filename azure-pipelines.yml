@@ -58,12 +58,6 @@ steps:
  
 - task: PublishBuildArtifacts@1
   inputs:
-    PathtoPublish: 'src\RemoteableWebWindowService\bin\Debug\netcoreapp3.1\win-x64\publish.zip'
-    ArtifactName: 'dropServer'
-    publishLocation: 'Container'
-
-- task: PublishBuildArtifacts@1
-  inputs:
     PathtoPublish: 'artifacts'
     ArtifactName: 'dropNugets'
     publishLocation: 'Container'
