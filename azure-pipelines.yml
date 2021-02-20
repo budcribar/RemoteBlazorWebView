@@ -13,6 +13,13 @@ variables:
   buildConfiguration: 'MinSizeRel'
 
 steps:
+
+- task: projectversionasvariable@1
+  inputs:
+    path: 'Directory.Build.props'
+    versionTag: 'VersionPrefix'
+
+
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
@@ -31,12 +38,16 @@ steps:
     configuration: '$(buildConfiguration)'
 
 - task: DotNetCoreCLI@2
+  displayName: 'Package RemoteableWebWindowService'
   inputs:
-    command: 'publish'
-    publishWebProjects: false
-    projects: 'src\RemoteableWebWindowService'
+    command: pack
+    packagesToPack: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj'
+    versioningScheme: byPrereleaseNumber
+    majorVersion: $(Version.Major)
+    minorVersion: $(Version.Minor)
+    patchVersion: $(Version.Patch)
     arguments: '--runtime win-x64 -p:PublishSingleFile=true --self-contained true'
-    modifyOutputPath: false
+ 
  
 - task: PublishBuildArtifacts@1
   inputs:
