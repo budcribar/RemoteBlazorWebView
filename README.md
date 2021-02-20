@@ -9,7 +9,13 @@ RemoteBlazorWebView is a drop-in replacement for BlazorWebView and with a minima
 
 # Usage instructions
 
-You do not need to build this repo unless you want to customize the RemoteableWebWindowService. The RemoteableWebWindowService.exe has been published and can be used along with the PeakSWC.RemoteBlazorWebView.Wpf nuget package
+You do not need to build this repo unless you want to customize the RemoteableWebWindowService. Run the following command to install the RemoteableWebWindowService
+
+```console
+dotnet tool update -g PeakSWC.RemoteableWebViewService --version 0.*-*
+```
+
+The RemoteableWebWindowService.exe has been published and can be used along with the PeakSWC.RemoteBlazorWebView.Wpf nuget package
 
 # Samples
 
