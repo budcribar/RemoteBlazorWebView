@@ -10,6 +10,16 @@
     <LangVersion>latest</LangVersion>
     <PackAsTool>true</PackAsTool>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>PeakSWC.RemoteableWebViewService</PackageId>
+    <Authors>Bud Cribar</Authors>
+    <Company>Peak Software Consulting, LLC</Company>
+    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>    
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -25,6 +35,13 @@
 
   <ItemGroup>
     <Folder Include="publish\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
+      <PackagePath></PackagePath>
+      <Pack>True</Pack>
+    </None>
   </ItemGroup>
 
 </Project>
