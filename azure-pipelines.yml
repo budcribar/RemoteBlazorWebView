@@ -21,9 +21,7 @@ steps:
 
 # - task: NuGetToolInstaller@1
 
-#- task: NuGetCommand@2
-#  inputs:
-#    restoreSolution: '$(solution)'
+
 
 #Build RemoteableWebWindowService Nuget Package
 - task: DotNetCoreCLI@2
@@ -49,6 +47,10 @@ steps:
     command: 'install'
     workingDir: 'src\RemoteWebWindow.Blazor.JS'
 
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+
 - task: VSBuild@1
   inputs:
     solution: '$(solution)'
@@ -60,9 +62,9 @@ steps:
   displayName: 'NuGet push packages'
   inputs:
     command: push
-    publishVstsFeed: 'Nugets'
+    publishVstsFeed: 'RemoteBlazorWebView/Nugets'
     allowPackageConflicts: false
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    packagesToPush: 'artifacts/*.nupkg'
  
 - task: PublishBuildArtifacts@1
   inputs:
