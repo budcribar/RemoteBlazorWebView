@@ -40,13 +40,13 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'Package RemoteableWebWindowService'
   inputs:
-    command: pack
-    packagesToPack: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj'
+    command: custom
+    custom: pack
     versioningScheme: byPrereleaseNumber
     majorVersion: $(Version.Major)
     minorVersion: $(Version.Minor)
     patchVersion: $(Version.Patch)
-    arguments: '--runtime win-x64 -p:PublishSingleFile=true --self-contained true'
+    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release --runtime win-x64 -p:PublishSingleFile=true --self-contained true'
  
 - task: NuGetCommand@2
   displayName: 'NuGet push packages'
