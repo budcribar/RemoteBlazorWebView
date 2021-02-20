@@ -21,21 +21,28 @@ steps:
 
 # - task: NuGetToolInstaller@1
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
+#- task: NuGetCommand@2
+#  inputs:
+#    restoreSolution: '$(solution)'
 
+#Build RemoteableWebWindowService Nuget Package
+- task: DotNetCoreCLI@2
+  displayName: 'Build RemoteableWebWindowService'
+  inputs:
+    command: build
+    projects: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+#Package RemoteableWebWindowService Nuget Package
 - task: DotNetCoreCLI@2
   displayName: 'Package RemoteableWebWindowService'
   inputs:
-    command: custom
-    custom: pack
+    command: pack
+    packagesToPack: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj '
     versioningScheme: byPrereleaseNumber
     majorVersion: $(Version.Major)
     minorVersion: $(Version.Minor)
     patchVersion: $(Version.Patch)
-    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release  --runtime win-x64 -p:PublishSingleFile=true'
- 
 
 - task: Npm@1
   inputs:
