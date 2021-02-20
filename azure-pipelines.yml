@@ -62,7 +62,7 @@ steps:
   displayName: 'NuGet push packages'
   inputs:
     command: push
-    publishVstsFeed: 'RemoteBlazorWebView/Nugets'
+    publishVstsFeed: 'RemoteBlazorWebView/Nugets2'
     allowPackageConflicts: false
     packagesToPush: 'artifacts/*.nupkg'
  
