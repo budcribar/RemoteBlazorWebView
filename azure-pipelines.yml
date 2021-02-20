@@ -21,9 +21,7 @@ steps:
 
 # - task: NuGetToolInstaller@1
 
-#- task: NuGetCommand@2
-#  inputs:
-#    restoreSolution: '$(solution)'
+
 
 #Build RemoteableWebWindowService Nuget Package
 - task: DotNetCoreCLI@2
@@ -48,6 +46,10 @@ steps:
   inputs:
     command: 'install'
     workingDir: 'src\RemoteWebWindow.Blazor.JS'
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
 
 - task: VSBuild@1
   inputs:
