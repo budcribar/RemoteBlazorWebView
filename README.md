@@ -4,7 +4,7 @@ RemoteBlazorWebView is based on the BlazorWebView project (https://github.com/js
 
 RemoteBlazorWebView enables you to interact with the user interface of a program developed with the BlazorWebView control using a web browser. This is accomplished by setting up a server (RemoteableWebService) in the cloud and pointing your browser to it.
 
-RemoteBlazorWebView is a drop in replacement for BlazorWebView and with a minimal change you will be able to remotely control your application.
+RemoteBlazorWebView is a drop-in replacement for BlazorWebView and with a minimal change you will be able to remotely control your application.
 
 
 # Usage instructions
