@@ -8,6 +8,7 @@
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <PackAsTool>true</PackAsTool>
   </PropertyGroup>
  
   <ItemGroup>
