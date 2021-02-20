@@ -34,7 +34,7 @@ steps:
     majorVersion: $(Version.Major)
     minorVersion: $(Version.Minor)
     patchVersion: $(Version.Patch)
-    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release  -r win-x64 -p:PublishSingleFile=true'
+    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release  --runtime win-x64 -p:PublishSingleFile=true'
  
 
 - task: Npm@1
