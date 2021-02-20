@@ -27,24 +27,26 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Properties\**" />
+    <EmbeddedResource Remove="Properties\**" />
+    <None Remove="Properties\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="..\RemoteWebWindow.Blazor.JS\dist\remote.blazor.desktop.js" Link="remote.blazor.desktop.js" />
   </ItemGroup>
 
   <ItemGroup>
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
       <PackageReference Include="BlazorWebView" Version="0.2.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.13.0" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.33.1" />
-    <PackageReference Include="Grpc.Tools" Version="2.33.1">
+    <PackageReference Include="Google.Protobuf" Version="3.15.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.35.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.35.0">
       
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
 
 

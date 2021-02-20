@@ -9,22 +9,11 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Compile Remove="JSInterop\**" />
-    <Content Remove="JSInterop\**" />
-    <EmbeddedResource Remove="JSInterop\**" />
-    <None Remove="JSInterop\**" />
-  </ItemGroup>
- 
-  <ItemGroup>
-    <Compile Remove="Services\CachedRemoteWebWindowService.cs" />
-  </ItemGroup>
  
   <ItemGroup>
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.33.1" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.33.1" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.35.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.35.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 
