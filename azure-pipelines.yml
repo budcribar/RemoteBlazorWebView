@@ -19,12 +19,23 @@ steps:
     path: 'Directory.Build.props'
     versionTag: 'VersionPrefix'
 
-
-- task: NuGetToolInstaller@1
+# - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
   inputs:
     restoreSolution: '$(solution)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Package RemoteableWebWindowService'
+  inputs:
+    command: custom
+    custom: pack
+    versioningScheme: byPrereleaseNumber
+    majorVersion: $(Version.Major)
+    minorVersion: $(Version.Minor)
+    patchVersion: $(Version.Patch)
+    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release --runtime win-x64 -p:PublishSingleFile=true'
+ 
 
 - task: Npm@1
   inputs:
@@ -37,17 +48,7 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Package RemoteableWebWindowService'
-  inputs:
-    command: custom
-    custom: pack
-    versioningScheme: byPrereleaseNumber
-    majorVersion: $(Version.Major)
-    minorVersion: $(Version.Minor)
-    patchVersion: $(Version.Patch)
-    arguments: 'src\RemoteableWebWindowService\RemoteableWebViewService.csproj  -c Release --runtime win-x64 -p:PublishSingleFile=true --self-contained true'
- 
+
 - task: NuGetCommand@2
   displayName: 'NuGet push packages'
   inputs:
