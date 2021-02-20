@@ -15,8 +15,6 @@ You do not need to build this repo unless you want to customize the RemoteableWe
 dotnet tool update -g PeakSWC.RemoteableWebViewService --version 0.*-*
 ```
 
-The RemoteableWebWindowService.exe has been published and can be used along with the PeakSWC.RemoteBlazorWebView.Wpf nuget package
-
 # Samples
 
 Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial 
