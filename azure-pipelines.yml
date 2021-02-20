@@ -64,7 +64,7 @@ steps:
     command: push
     publishVstsFeed: 'Nugets'
     allowPackageConflicts: false
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    packagesToPush: 'artifacts/*.nupkg'
  
 - task: PublishBuildArtifacts@1
   inputs:
