@@ -48,6 +48,13 @@ steps:
     patchVersion: $(Version.Patch)
     arguments: '--runtime win-x64 -p:PublishSingleFile=true --self-contained true'
  
+- task: NuGetCommand@2
+  displayName: 'NuGet push packages'
+  inputs:
+    command: push
+    publishVstsFeed: 'Nugets'
+    allowPackageConflicts: false
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
  
 - task: PublishBuildArtifacts@1
   inputs:
