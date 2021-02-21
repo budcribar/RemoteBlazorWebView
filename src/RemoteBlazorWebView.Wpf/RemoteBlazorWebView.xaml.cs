@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.JSInterop;
 using PeakSwc.RemoteableWebWindows;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,8 +21,9 @@ namespace RemoteBlazorWebView.Wpf
     /// </summary>
     public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
     {
-        private IBlazorWebView? innerBlazorWebView;
+        private MultiBlazorWebView innerBlazorWebView = new MultiBlazorWebView();
         private readonly ViewModel model = new ViewModel();
+
         static RemoteBlazorWebView() { }
 
         public RemoteBlazorWebView()
@@ -36,24 +38,22 @@ namespace RemoteBlazorWebView.Wpf
         {
             if (uri == null)
             {
-                innerBlazorWebView = MainBlazorWebView;
+                innerBlazorWebView.Add(MainBlazorWebView,true);
                 model.ShowHyperlink = "Hidden";
             }
-            else
+            if (uri != null)
             {
-                innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath, id);
-            }
+                innerBlazorWebView.Add(MainBlazorWebView, false);
 
-            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath, defaultResolveDelegate);
+                var rww = new RemotableWebWindow(uri, hostHtmlPath, id);
+                innerBlazorWebView.Add(rww, true );
 
-            if (innerBlazorWebView is RemotableWebWindow rww)
-            {
-                //if (FrameworkFileResolver != null)
-               //     rww.FrameworkFileResolver = FrameworkFileResolver;
                 rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
                 model.Uri = uri?.ToString() + "app?guid=" + rww.Id;
                 model.ShowHyperlink = "Visible";
             }
+
+            IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath, defaultResolveDelegate); 
 
             return disposable;
         }
@@ -77,28 +77,28 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                if (this.innerBlazorWebView is RemotableWebWindow rmm)
-                    rmm.OnConnected += value;
+                //if (this.innerBlazorWebView is RemotableWebWindow rmm)
+                //    rmm.OnConnected += value;
             }
 
             remove
             {
-                if (this.innerBlazorWebView is RemotableWebWindow rmm)
-                    rmm.OnConnected -= value;
+                //if (this.innerBlazorWebView is RemotableWebWindow rmm)
+                //    rmm.OnConnected -= value;
             }
         }
         public event EventHandler<string> OnDisconnected
         {
             add
             {
-                if (this.innerBlazorWebView is RemotableWebWindow rmm)
-                    rmm.OnDisconnected += value;
+                //if (this.innerBlazorWebView is RemotableWebWindow rmm)
+                //    rmm.OnDisconnected += value;
             }
 
             remove
             {
-                if (this.innerBlazorWebView is RemotableWebWindow rmm)
-                    rmm.OnDisconnected -= value;
+                //if (this.innerBlazorWebView is RemotableWebWindow rmm)
+                //    rmm.OnDisconnected -= value;
             }
         }
 
