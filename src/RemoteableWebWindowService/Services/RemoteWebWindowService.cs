@@ -17,7 +17,7 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly ILogger<RemoteWebWindowService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
         private readonly ConcurrentDictionary<string, IPC> _ipc;
-        private readonly ConcurrentDictionary<string, byte[]> _fileCache = new ConcurrentDictionary<string, byte[]>();
+        private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly bool useCache = false;
 
         public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc)
@@ -37,7 +37,7 @@ namespace PeakSwc.RemoteableWebWindows
         {
             if (!_webWindowDictionary.ContainsKey(request.Id))
             {
-                ServiceState state = new ServiceState
+                ServiceState state = new()
                 {
                     HtmlHostPath = request.HtmlHostPath,
                     Hostname = request.Hostname,

@@ -17,8 +17,8 @@ namespace PeakSwc.RemoteableWebWindows
 {
     public class Startup
     {
-        private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new ConcurrentDictionary<string, ServiceState>();
-        private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new ConcurrentDictionary<string, IPC>();
+        private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
+        private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940

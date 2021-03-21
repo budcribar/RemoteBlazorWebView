@@ -32,7 +32,7 @@ namespace RemoteBlazorWebView.Wpf
 
         //private Func<string, Stream?> FrameworkFileResolver { get; set; } = FrameworkFileResolver;
 
-        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null, Guid id = default(Guid))
+        public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null, Guid id = default)
         {
             if (uri == null)
             {
