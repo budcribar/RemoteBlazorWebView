@@ -16,10 +16,22 @@ namespace RemoteBlazorWebView.Wpf
             blazorWebViews.Add((view, controller));
         }
 
-        public event EventHandler<string>? OnWebMessageReceived;
+        public event EventHandler<string>? OnWebMessageReceived
+        {
+            add
+            {
+                blazorWebViews.ForEach(x => x.view.OnWebMessageReceived += value);
+            }
+
+            remove
+            {
+                blazorWebViews.ForEach(x => x.view.OnWebMessageReceived -= value);
+            }
+        }
 
         public void Initialize(Action<WebViewOptions> configure)
         {
+            //blazorWebViews.Where(x => x.controller).First().view.Initialize(configure);
             blazorWebViews.ForEach(x => x.view.Initialize(configure));
         }
 
@@ -30,6 +42,7 @@ namespace RemoteBlazorWebView.Wpf
 
         public void NavigateToUrl(string url)
         {
+            //blazorWebViews.Where(x => x.controller).First().view.NavigateToUrl(url);
             blazorWebViews.ForEach(x => x.view.NavigateToUrl(url));
         }
 

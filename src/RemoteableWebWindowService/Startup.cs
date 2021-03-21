@@ -64,7 +64,7 @@ namespace PeakSwc.RemoteableWebWindows
  
             app.UseStaticFiles(new StaticFileOptions
             {
-                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>()),
+                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>() ?? new()),
             });
 
             app.UseEndpoints(endpoints =>
@@ -112,6 +112,8 @@ namespace PeakSwc.RemoteableWebWindows
             {        
                 // restart url
                 var id = context.Request.RouteValues["id"];
+
+                if (id == null) return;
                 var sid = id.ToString();
                 if (sid == null) return;
                 

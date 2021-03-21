@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5</TargetFramework>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <OutputType>Exe</OutputType>
     <Platforms>x64</Platforms>
@@ -29,8 +29,8 @@
  
   <ItemGroup>
     <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.35.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.35.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 
