@@ -1,13 +1,16 @@
 import { receiveMessage } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webwindow_pb_service";
-import { StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
+import { SendSequenceMessageRequest,StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
+
+var sequenceNum: number = 1;
 
 export async function sendMessage(message: string) {
-    var req = new StringRequest();
+    var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
     req.setId(id);
-    req.setRequest(message);
+    req.setMessage(message);
+    req.setSequence(sequenceNum++);
     await grpc.invoke(BrowserIPC.SendMessage, {
         request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {

@@ -14,15 +14,6 @@ type RemoteWebWindowSendMessage = {
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
-type RemoteWebWindowShowMessage = {
-  readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestType: typeof webwindow_pb.ShowMessageRequest;
-  readonly responseType: typeof google_protobuf_empty_pb.Empty;
-};
-
 type RemoteWebWindowShutdown = {
   readonly methodName: string;
   readonly service: typeof RemoteWebWindow;
@@ -50,13 +41,22 @@ type RemoteWebWindowFileReader = {
   readonly responseType: typeof webwindow_pb.FileReadResponse;
 };
 
+type RemoteWebWindowGetIds = {
+  readonly methodName: string;
+  readonly service: typeof RemoteWebWindow;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webwindow_pb.IdArrayResponse;
+};
+
 export class RemoteWebWindow {
   static readonly serviceName: string;
   static readonly SendMessage: RemoteWebWindowSendMessage;
-  static readonly ShowMessage: RemoteWebWindowShowMessage;
   static readonly Shutdown: RemoteWebWindowShutdown;
   static readonly CreateWebWindow: RemoteWebWindowCreateWebWindow;
   static readonly FileReader: RemoteWebWindowFileReader;
+  static readonly GetIds: RemoteWebWindowGetIds;
 }
 
 type BrowserIPCReceiveMessage = {
@@ -73,7 +73,7 @@ type BrowserIPCSendMessage = {
   readonly service: typeof BrowserIPC;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof webwindow_pb.StringRequest;
+  readonly requestType: typeof webwindow_pb.SendSequenceMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
@@ -124,15 +124,6 @@ export class RemoteWebWindowClient {
     requestMessage: webwindow_pb.SendMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
-  showMessage(
-    requestMessage: webwindow_pb.ShowMessageRequest,
-    metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
-  ): UnaryResponse;
-  showMessage(
-    requestMessage: webwindow_pb.ShowMessageRequest,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
-  ): UnaryResponse;
   shutdown(
     requestMessage: webwindow_pb.IdMessageRequest,
     metadata: grpc.Metadata,
@@ -144,6 +135,15 @@ export class RemoteWebWindowClient {
   ): UnaryResponse;
   createWebWindow(requestMessage: webwindow_pb.CreateWebWindowRequest, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.WebMessageResponse>;
   fileReader(metadata?: grpc.Metadata): BidirectionalStream<webwindow_pb.FileReadRequest, webwindow_pb.FileReadResponse>;
+  getIds(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webwindow_pb.IdArrayResponse|null) => void
+  ): UnaryResponse;
+  getIds(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    callback: (error: ServiceError|null, responseMessage: webwindow_pb.IdArrayResponse|null) => void
+  ): UnaryResponse;
 }
 
 export class BrowserIPCClient {
@@ -152,12 +152,12 @@ export class BrowserIPCClient {
   constructor(serviceHost: string, options?: grpc.RpcOptions);
   receiveMessage(requestMessage: webwindow_pb.IdMessageRequest, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.StringRequest>;
   sendMessage(
-    requestMessage: webwindow_pb.StringRequest,
+    requestMessage: webwindow_pb.SendSequenceMessageRequest,
     metadata: grpc.Metadata,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
   sendMessage(
-    requestMessage: webwindow_pb.StringRequest,
+    requestMessage: webwindow_pb.SendSequenceMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
 }

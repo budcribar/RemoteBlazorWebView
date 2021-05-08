@@ -51,6 +51,12 @@ message StringRequest {
     string request = 2; 
 }
 
+message SendSequenceMessageRequest {
+    string id = 1;
+    uint32 sequence = 2;
+    string message = 3; 
+}
+
 service RemoteWebWindow {
     rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
@@ -61,5 +67,5 @@ service RemoteWebWindow {
 
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
-    rpc SendMessage(StringRequest) returns (google.protobuf.Empty);
+    rpc SendMessage(SendSequenceMessageRequest) returns (google.protobuf.Empty);
 }

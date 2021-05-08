@@ -28,34 +28,6 @@ export namespace SendMessageRequest {
   }
 }
 
-export class ShowMessageRequest extends jspb.Message {
-  getId(): string;
-  setId(value: string): void;
-
-  getTitle(): string;
-  setTitle(value: string): void;
-
-  getBody(): string;
-  setBody(value: string): void;
-
-  serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): ShowMessageRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: ShowMessageRequest): ShowMessageRequest.AsObject;
-  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: ShowMessageRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): ShowMessageRequest;
-  static deserializeBinaryFromReader(message: ShowMessageRequest, reader: jspb.BinaryReader): ShowMessageRequest;
-}
-
-export namespace ShowMessageRequest {
-  export type AsObject = {
-    id: string,
-    title: string,
-    body: string,
-  }
-}
-
 export class FileMessageRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -148,6 +120,28 @@ export namespace WebMessageResponse {
   }
 }
 
+export class IdArrayResponse extends jspb.Message {
+  clearResponsesList(): void;
+  getResponsesList(): Array<string>;
+  setResponsesList(value: Array<string>): void;
+  addResponses(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): IdArrayResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: IdArrayResponse): IdArrayResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: IdArrayResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): IdArrayResponse;
+  static deserializeBinaryFromReader(message: IdArrayResponse, reader: jspb.BinaryReader): IdArrayResponse;
+}
+
+export namespace IdArrayResponse {
+  export type AsObject = {
+    responsesList: Array<string>,
+  }
+}
+
 export class FileReadRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -223,6 +217,34 @@ export namespace StringRequest {
   export type AsObject = {
     id: string,
     request: string,
+  }
+}
+
+export class SendSequenceMessageRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getSequence(): number;
+  setSequence(value: number): void;
+
+  getMessage(): string;
+  setMessage(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SendSequenceMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SendSequenceMessageRequest): SendSequenceMessageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SendSequenceMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SendSequenceMessageRequest;
+  static deserializeBinaryFromReader(message: SendSequenceMessageRequest, reader: jspb.BinaryReader): SendSequenceMessageRequest;
+}
+
+export namespace SendSequenceMessageRequest {
+  export type AsObject = {
+    id: string,
+    sequence: number,
+    message: string,
   }
 }
 

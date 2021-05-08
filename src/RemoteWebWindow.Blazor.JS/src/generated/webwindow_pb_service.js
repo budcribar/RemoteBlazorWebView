@@ -20,15 +20,6 @@ RemoteWebWindow.SendMessage = {
   responseType: google_protobuf_empty_pb.Empty
 };
 
-RemoteWebWindow.ShowMessage = {
-  methodName: "ShowMessage",
-  service: RemoteWebWindow,
-  requestStream: false,
-  responseStream: false,
-  requestType: webwindow_pb.ShowMessageRequest,
-  responseType: google_protobuf_empty_pb.Empty
-};
-
 RemoteWebWindow.Shutdown = {
   methodName: "Shutdown",
   service: RemoteWebWindow,
@@ -56,6 +47,15 @@ RemoteWebWindow.FileReader = {
   responseType: webwindow_pb.FileReadResponse
 };
 
+RemoteWebWindow.GetIds = {
+  methodName: "GetIds",
+  service: RemoteWebWindow,
+  requestStream: false,
+  responseStream: false,
+  requestType: google_protobuf_empty_pb.Empty,
+  responseType: webwindow_pb.IdArrayResponse
+};
+
 exports.RemoteWebWindow = RemoteWebWindow;
 
 function RemoteWebWindowClient(serviceHost, options) {
@@ -68,37 +68,6 @@ RemoteWebWindowClient.prototype.sendMessage = function sendMessage(requestMessag
     callback = arguments[1];
   }
   var client = grpc.unary(RemoteWebWindow.SendMessage, {
-    request: requestMessage,
-    host: this.serviceHost,
-    metadata: metadata,
-    transport: this.options.transport,
-    debug: this.options.debug,
-    onEnd: function (response) {
-      if (callback) {
-        if (response.status !== grpc.Code.OK) {
-          var err = new Error(response.statusMessage);
-          err.code = response.status;
-          err.metadata = response.trailers;
-          callback(err, null);
-        } else {
-          callback(null, response.message);
-        }
-      }
-    }
-  });
-  return {
-    cancel: function () {
-      callback = null;
-      client.close();
-    }
-  };
-};
-
-RemoteWebWindowClient.prototype.showMessage = function showMessage(requestMessage, metadata, callback) {
-  if (arguments.length === 2) {
-    callback = arguments[1];
-  }
-  var client = grpc.unary(RemoteWebWindow.ShowMessage, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -240,6 +209,37 @@ RemoteWebWindowClient.prototype.fileReader = function fileReader(metadata) {
   };
 };
 
+RemoteWebWindowClient.prototype.getIds = function getIds(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(RemoteWebWindow.GetIds, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
 exports.RemoteWebWindowClient = RemoteWebWindowClient;
 
 var BrowserIPC = (function () {
@@ -262,7 +262,7 @@ BrowserIPC.SendMessage = {
   service: BrowserIPC,
   requestStream: false,
   responseStream: false,
-  requestType: webwindow_pb.StringRequest,
+  requestType: webwindow_pb.SendSequenceMessageRequest,
   responseType: google_protobuf_empty_pb.Empty
 };
 

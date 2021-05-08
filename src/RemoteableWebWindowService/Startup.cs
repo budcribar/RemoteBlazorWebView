@@ -19,6 +19,7 @@ namespace PeakSwc.RemoteableWebWindows
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
         private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
+        private readonly ConcurrentDictionary<string, BrowserIPCState> state = new();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -26,6 +27,7 @@ namespace PeakSwc.RemoteableWebWindows
         {         
             services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
+            services.AddSingleton(state);
 
             services.AddRazorPages();             
             services.AddGrpc();    
