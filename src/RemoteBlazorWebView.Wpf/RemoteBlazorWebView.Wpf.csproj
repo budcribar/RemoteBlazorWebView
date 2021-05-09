@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
     <PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
@@ -20,12 +20,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorWebView" Version="0.2.0" />
-    <PackageReference Include="BlazorWebView.Wpf" Version="0.2.0" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\RemoteableWebWindow\RemoteableWebView.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.0-preview.3.21201.13" />
   </ItemGroup>
 
   <ItemGroup>

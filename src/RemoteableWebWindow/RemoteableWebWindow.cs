@@ -14,7 +14,7 @@ using System.Reflection;
 
 namespace PeakSwc.RemoteableWebWindows
 {
-    public class RemotableWebWindow : IBlazorWebView 
+    public class RemotableWebWindow //: IBlazorWebView 
     {
         #region private
         private readonly Uri uri;
