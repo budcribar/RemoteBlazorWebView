@@ -22,7 +22,7 @@ namespace RemoteBlazorWebView.Wpf
     /// </summary>
     public partial class RemoteBlazorWebView : UserControl
     {
-        private WebView2WebViewManager manager;
+        // private WebView2WebViewManager? manager;
 
 
         #region Dependency property definitions
@@ -94,7 +94,7 @@ namespace RemoteBlazorWebView.Wpf
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
 
-        private Microsoft.AspNetCore.Components.WebView.Wpf.BlazorWebView? innerBlazorWebView;
+        //private Microsoft.AspNetCore.Components.WebView.Wpf.BlazorWebView? innerBlazorWebView;
         private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
         private readonly ViewModel model = new ViewModel();
         static RemoteBlazorWebView() { }
@@ -115,7 +115,7 @@ namespace RemoteBlazorWebView.Wpf
             
             DataContext = model;
         }
-        private void HandleRootComponentsCollectionChanged(object sender, NotifyCollectionChangedEventArgs eventArgs)
+        private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
             MainBlazorWebView.Services = this.Services;
             RootComponents.ToList().ForEach(x => MainBlazorWebView.RootComponents.Add(x));
