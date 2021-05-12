@@ -1,18 +1,11 @@
-﻿using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.JSInterop;
-using PeakSwc.RemoteableWebWindows;
+﻿using PeakSwc.RemoteableWebWindows;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.AspNetCore.Components.WebView.Wpf;
 using System.Collections.ObjectModel;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
 using System.Collections.Specialized;
 
 namespace RemoteBlazorWebView.Wpf
@@ -51,12 +44,37 @@ namespace RemoteBlazorWebView.Wpf
             propertyType: typeof(IServiceProvider),
             ownerType: typeof(RemoteBlazorWebView),
             typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
+
+        public static readonly DependencyProperty UriProperty = DependencyProperty.Register(
+            name: nameof(ServerUri),
+            propertyType: typeof(Uri),
+            ownerType: typeof(RemoteBlazorWebView),
+            typeMetadata: new PropertyMetadata(OnServerUriPropertyChanged));
+
+        public static readonly DependencyProperty IdProperty = DependencyProperty.Register(
+                   name: nameof(Id),
+                   propertyType: typeof(Guid),
+                   ownerType: typeof(RemoteBlazorWebView),
+                   typeMetadata: new PropertyMetadata(OnIdPropertyChanged));
         #endregion
+
+        public Uri ServerUri
+        {
+            get => (Uri)GetValue(UriProperty);
+            set => SetValue(UriProperty, value);
+        }
+        public Guid Id
+        {
+            get => (Guid)GetValue(IdProperty);
+            set => SetValue(IdProperty, value);
+        }
+
 
         /// <summary>
         /// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
+
         public string HostPage
         {
             get => (string)GetValue(HostPageProperty);
@@ -93,8 +111,16 @@ namespace RemoteBlazorWebView.Wpf
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
+        private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServerUriPropertyChanged(e);
 
-        //private Microsoft.AspNetCore.Components.WebView.Wpf.BlazorWebView? innerBlazorWebView;
+        private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+
+        private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnIdPropertyChanged(e);
+
+        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+
+
+        private IBlazorWebView? innerBlazorWebView;
         private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
         private readonly ViewModel model = new ViewModel();
         static RemoteBlazorWebView() { }
@@ -108,11 +134,6 @@ namespace RemoteBlazorWebView.Wpf
             model.ShowHyperlink = "Hidden";
             InitializeComponent();
 
-           
-            
-           
-
-            
             DataContext = model;
         }
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
@@ -120,7 +141,19 @@ namespace RemoteBlazorWebView.Wpf
             MainBlazorWebView.Services = this.Services;
             RootComponents.ToList().ForEach(x => MainBlazorWebView.RootComponents.Add(x));
             MainBlazorWebView.HostPage = HostPage;
-            
+
+            if (ServerUri == null)
+            {
+                //innerBlazorWebView = MainBlazorWebView;
+                model.ShowHyperlink = "Hidden";
+            }
+            else
+            {
+                var rww = new RemotableWebWindow(ServerUri, HostPage, Id);
+                innerBlazorWebView = rww as IBlazorWebView;
+                model.Uri = ServerUri?.ToString() + "app?guid=" + rww.Id;
+                model.ShowHyperlink = "Visible";
+            }
         }
 
 
@@ -238,12 +271,6 @@ namespace RemoteBlazorWebView.Wpf
             catch (Exception) {
      
             }          
-        }
-
-        
-        private void MainGrid_Initialized(object sender, EventArgs e)
-        {
-            RootComponents.ToList().ForEach(x => MainBlazorWebView.RootComponents.Add(x));
         }
     }
 }

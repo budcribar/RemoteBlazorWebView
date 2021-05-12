@@ -9,7 +9,7 @@
              d:DesignHeight="450" d:DesignWidth="800"  >
 
 
-    <Grid x:Name="MainGrid" Initialized="MainGrid_Initialized" >
+    <Grid x:Name="MainGrid"  >
        
         <TextBlock Visibility="{Binding Path=ShowHyperlink, UpdateSourceTrigger=PropertyChanged}">
             
