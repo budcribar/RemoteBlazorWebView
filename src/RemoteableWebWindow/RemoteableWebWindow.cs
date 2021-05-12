@@ -110,10 +110,22 @@ namespace PeakSwc.RemoteableWebWindows
 
                         await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = "Initialize" });
 
+                        // TODO Use multiple threads to read files
+                        _ = Task.Run(async () =>
+                        {
+                            await foreach (var message in files.ResponseStream.ReadAllAsync())
+                            {
+                                var bytes = FrameworkFileResolver(message.Path) ?? null;
+                                var temp = ByteString.FromStream(bytes);
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : temp });
+                            }
+                        });
+
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
                             var bytes = FrameworkFileResolver(message.Path) ?? null;
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : ByteString.FromStream(bytes)});
+                            var temp = ByteString.FromStream(bytes);
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : temp });
                         }
 
                     }, cts.Token);
@@ -133,6 +145,7 @@ namespace PeakSwc.RemoteableWebWindows
             this.uri = uri;
             this.hostHtmlPath = hostHtmlPath;
             this.hostname = Dns.GetHostName();
+            _ = Client;
         }
 
         public void NavigateToUrl(string url) { }

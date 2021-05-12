@@ -12,6 +12,7 @@ using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -56,7 +57,18 @@ namespace PeakSwc.RemoteableWebWindows
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-            }      
+            }
+
+            var provider = new FileExtensionContentTypeProvider();
+            // Add new mappings
+            provider.Mappings[".blat"] = "application/octet-stream";
+            provider.Mappings[".dll"] = "application/octet-stream";
+            provider.Mappings[".dat"] = "application/octet-stream";
+            provider.Mappings[".json"] = "application/json";
+            provider.Mappings[".wasm"] = "application/wasm";
+            provider.Mappings[".woff"] = "application/font-woff";
+            provider.Mappings[".woff2"] = "application/font-woff";
+            provider.Mappings[".ico"] = "image/x-icon";
 
             app.UseRouting();
 
@@ -66,7 +78,8 @@ namespace PeakSwc.RemoteableWebWindows
  
             app.UseStaticFiles(new StaticFileOptions
             {
-                 FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>()),
+                FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>()),
+                ContentTypeProvider = provider
             });
 
             app.UseEndpoints(endpoints =>

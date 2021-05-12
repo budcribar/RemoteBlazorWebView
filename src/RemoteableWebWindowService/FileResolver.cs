@@ -92,7 +92,7 @@ namespace PeakSwc.StaticFiles
                 using StreamReader sr = new StreamReader(stream);
                 var contents = sr.ReadToEnd();
                
-                contents = contents.Replace("framework://blazor.desktop.js", "remote.blazor.desktop.js");
+                contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");
 
                 contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));

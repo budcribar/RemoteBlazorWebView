@@ -3,6 +3,7 @@
 using Microsoft.AspNetCore.Components.WebView.Wpf;
 using System;
 using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace RemoteBlazorWebView.Wpf
 {
@@ -17,8 +18,11 @@ namespace RemoteBlazorWebView.Wpf
 
         public ObservableCollection<RootComponent> RootComponents { get; }
 
+        public event RoutedEventHandler Unloaded;
+        public event RoutedEventHandler Loaded;
 
-
+        //private void MainBlazorWebView_Loaded(object sender, RoutedEventArgs e)
+        //private void MainBlazorWebView_Unloaded(object sender, RoutedEventArgs e)
 
 
         //public void Initialize(Action<WebViewOptions> configure)

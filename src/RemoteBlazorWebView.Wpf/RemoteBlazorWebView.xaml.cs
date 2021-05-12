@@ -119,6 +119,37 @@ namespace RemoteBlazorWebView.Wpf
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
+        public new event RoutedEventHandler Unloaded
+        {
+            add
+            {
+
+                //if (this.innerBlazorWebView != null)
+                //    this.innerBlazorWebView.OnWebMessageReceived += value;
+            }
+
+            remove
+            {
+                //if (this.innerBlazorWebView != null)
+                //    this.innerBlazorWebView.OnWebMessageReceived -= value;
+            }
+        }
+
+        public new event RoutedEventHandler Loaded
+        {
+            add
+            {
+
+                //if (this.innerBlazorWebView != null)
+                //    this.innerBlazorWebView.OnWebMessageReceived += value;
+            }
+
+            remove
+            {
+                //if (this.innerBlazorWebView != null)
+                //    this.innerBlazorWebView.OnWebMessageReceived -= value;
+            }
+        }
 
         private IBlazorWebView? innerBlazorWebView;
         private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
@@ -136,12 +167,14 @@ namespace RemoteBlazorWebView.Wpf
 
             DataContext = model;
         }
+
+
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
             MainBlazorWebView.Services = this.Services;
             RootComponents.ToList().ForEach(x => MainBlazorWebView.RootComponents.Add(x));
             MainBlazorWebView.HostPage = HostPage;
-
+           
             if (ServerUri == null)
             {
                 //innerBlazorWebView = MainBlazorWebView;
@@ -155,6 +188,16 @@ namespace RemoteBlazorWebView.Wpf
                 model.ShowHyperlink = "Visible";
             }
         }
+
+        //private void MainBlazorWebView_Unloaded(object sender, RoutedEventArgs e)
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        //private void MainBlazorWebView_Loaded(object sender, RoutedEventArgs e)
+        //{
+        //    throw new NotImplementedException();
+        //}
 
 
 
