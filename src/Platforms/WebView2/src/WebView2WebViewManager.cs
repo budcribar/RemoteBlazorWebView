@@ -5,10 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Web.WebView2.Core;
 
-namespace Microsoft.AspNetCore.Components.WebView.WebView2
+namespace PeakSWC
 {
     /// <summary>
     /// An implementation of <see cref="WebViewManager"/> that uses the Edge WebView2 browser control
@@ -75,7 +77,9 @@ namespace Microsoft.AspNetCore.Components.WebView.WebView2
 
                 if (TryGetResponseContent(eventArgs.Request.Uri, allowFallbackOnHostPage, out var statusCode, out var statusMessage, out var content, out var headers))
                 {
-                    var headerString = GetHeaderString(headers);
+                    // TODO
+                    //var headerString = GetHeaderString(headers);
+                    var headerString = headers;
                     eventArgs.Response = environment.CreateWebResourceResponse(content, statusCode, statusMessage, headerString);
                 }
             };

@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
 
-namespace Microsoft.AspNetCore.Components.WebView.WebView2
+namespace PeakSWC
 {
     /// <summary>
     /// Provides an abstraction for different UI frameworks to provide access to APIs from
