@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 
-namespace Microsoft.AspNetCore.Components.WebView.Wpf
+namespace PeakSWC
 {
     /// <summary>
     /// Describes a root component that can be added to a <see cref="BlazorWebView"/>.

@@ -6,8 +6,9 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows;
 using WindowsDispatcher = System.Windows.Threading.Dispatcher;
+using Microsoft.AspNetCore.Components;
 
-namespace Microsoft.AspNetCore.Components.WebView.Wpf
+namespace RemoteBlazorWebView.Wpf
 {
     internal sealed class WpfDispatcher : Dispatcher
     {

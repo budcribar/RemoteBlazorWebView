@@ -4,9 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.AspNetCore.Components.WebView.Wpf;
+//using Microsoft.AspNetCore.Components.WebView.Wpf;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using PeakSWC;
 
 namespace RemoteBlazorWebView.Wpf
 {
@@ -16,7 +17,6 @@ namespace RemoteBlazorWebView.Wpf
     public partial class RemoteBlazorWebView : UserControl
     {
         // private WebView2WebViewManager? manager;
-
 
         #region Dependency property definitions
         /// <summary>

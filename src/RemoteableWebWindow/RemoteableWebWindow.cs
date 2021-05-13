@@ -5,16 +5,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
-using BlazorWebView;
+//using BlazorWebView;
 
 using Google.Protobuf;
-using Microsoft.JSInterop;
+//using Microsoft.JSInterop;
 using System.Net;
 using System.Reflection;
 
 namespace PeakSwc.RemoteableWebWindows
 {
-    public class RemotableWebWindow : IBlazorWebView 
+    public class RemotableWebWindow // : IBlazorWebView 
     {
         #region private
         private readonly Uri uri;
@@ -46,7 +46,7 @@ namespace PeakSwc.RemoteableWebWindows
             return null;
         }
 
-        public IJSRuntime? JSRuntime { get; set; }
+        //public IJSRuntime? JSRuntime { get; set; }
 
         private  RemoteWebWindow.RemoteWebWindowClient Client {
             get
@@ -157,17 +157,17 @@ namespace PeakSwc.RemoteableWebWindows
 
         public void ShowMessage(string title, string body)
         {
-            JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
+            //JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
         }
         private void Shutdown()
         {
             Client.Shutdown(new IdMessageRequest { Id = Id });
         }
        
-        public void Initialize(Action<WebViewOptions> configure)
-        {
-            _ = Client;
-        }
+        //public void Initialize(Action<WebViewOptions> configure)
+        //{
+        //    _ = Client;
+        //}
 
         public void Invoke(Action callback)
         {

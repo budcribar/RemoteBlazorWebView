@@ -10,14 +10,15 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
+using RemoteBlazorWebView.Wpf;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 
-namespace Microsoft.AspNetCore.Components.WebView.Wpf
+namespace PeakSWC
 {
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public sealed class BlazorWebView : Control, IDisposable
+    public  class BlazorWebViewBase : Control, IDisposable
     {
         #region Dependency property definitions
         /// <summary>
@@ -26,7 +27,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         public static readonly DependencyProperty HostPageProperty = DependencyProperty.Register(
             name: nameof(HostPage),
             propertyType: typeof(string),
-            ownerType: typeof(BlazorWebView),
+            ownerType: typeof(BlazorWebViewBase),
             typeMetadata: new PropertyMetadata(OnHostPagePropertyChanged));
 
         /// <summary>
@@ -35,7 +36,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         public static readonly DependencyProperty RootComponentsProperty = DependencyProperty.Register(
             name: nameof(RootComponents),
             propertyType: typeof(ObservableCollection<RootComponent>),
-            ownerType: typeof(BlazorWebView));
+            ownerType: typeof(BlazorWebViewBase));
 
         /// <summary>
         /// The backing store for the <see cref="Services"/> property.
@@ -43,7 +44,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         public static readonly DependencyProperty ServicesProperty = DependencyProperty.Register(
             name: nameof(Services),
             propertyType: typeof(IServiceProvider),
-            ownerType: typeof(BlazorWebView),
+            ownerType: typeof(BlazorWebViewBase),
             typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
         #endregion
 
@@ -55,7 +56,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         /// <summary>
         /// Creates a new instance of <see cref="BlazorWebView"/>.
         /// </summary>
-        public BlazorWebView()
+        public BlazorWebViewBase()
         {
             SetValue(RootComponentsProperty, new ObservableCollection<RootComponent>());
             RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
@@ -93,11 +94,11 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
             set => SetValue(ServicesProperty, value);
         }
 
-        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServicesPropertyChanged(e);
+        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnServicesPropertyChanged(e);
 
         private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
-        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnHostPagePropertyChanged(e);
+        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnHostPagePropertyChanged(e);
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
@@ -199,7 +200,7 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         /// <summary>
         /// Performs the final cleanup before the garbage collector destroys the object.
         /// </summary>
-        ~BlazorWebView()
+        ~BlazorWebViewBase()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);

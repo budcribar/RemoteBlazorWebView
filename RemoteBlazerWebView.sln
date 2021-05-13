@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.Shared", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.Shared\RemoteBlazorWebViewTutorial.Shared.csproj", "{1B1EB835-22D9-45AA-939E-521262D6EC61}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorBase.WebView.Wpf", "src\Platforms\Wpf\src\BlazorBase.WebView.Wpf.csproj", "{12018992-9D06-4D39-BE03-816DF4033972}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,30 @@ Global
 		{1B1EB835-22D9-45AA-939E-521262D6EC61}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{1B1EB835-22D9-45AA-939E-521262D6EC61}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{1B1EB835-22D9-45AA-939E-521262D6EC61}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|x64.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Debug|x86.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|Any CPU.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|Any CPU.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|x64.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|x64.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|x86.ActiveCfg = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.MinSizeRel|x86.Build.0 = Debug|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|x64.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|x64.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|x86.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.Release|x86.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|Any CPU.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|Any CPU.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|x64.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
+		{12018992-9D06-4D39-BE03-816DF4033972}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -223,6 +249,7 @@ Global
 		{AA110533-9A33-4884-B006-73742762B0F5} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE} = {48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}
 		{0C6D64F9-68DC-43E7-850E-C4085F0B23CB} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
+		{12018992-9D06-4D39-BE03-816DF4033972} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}

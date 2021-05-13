@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 
-namespace Microsoft.AspNetCore.Components.WebView.Wpf
+namespace RemoteBlazorWebView.Wpf
 {
     internal class WpfWeb2ViewWrapper : IWebView2Wrapper
     {
