@@ -31,7 +31,10 @@ namespace PeakSwc.StaticFiles
 
                 var root = Path.GetDirectoryName(home);
 
-                if (string.IsNullOrEmpty(root)) return null;
+                // TODO
+                //if (string.IsNullOrEmpty(root)) return null;
+                if (string.IsNullOrEmpty(root))
+                    root = "wwwroot";
 
                 if (!path.Contains(root))
                     path = root + path;

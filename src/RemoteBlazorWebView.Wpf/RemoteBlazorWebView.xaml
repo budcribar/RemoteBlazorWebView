@@ -17,9 +17,9 @@
         </TextBlock>
        
         
-        <base:BlazorWebViewBase Visibility="{Binding Path=ShowWebWindow, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" x:Name="MainBlazorWebView">
+        <base:RemoteBlazorWebViewBase Visibility="{Binding Path=ShowWebWindow, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" x:Name="MainBlazorWebView">
        
-        </base:BlazorWebViewBase>
+        </base:RemoteBlazorWebViewBase>
 
 
     </Grid>

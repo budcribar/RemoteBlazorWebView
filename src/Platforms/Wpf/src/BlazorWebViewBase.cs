@@ -49,8 +49,8 @@ namespace PeakSWC
         #endregion
 
         private const string webViewTemplateChildName = "WebView";
-        private WebView2Control _webview;
-        private WebView2WebViewManager _webviewManager;
+        protected WebView2Control _webview;
+        protected WebView2WebViewManager _webviewManager;
         private bool _isDisposed;
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace PeakSWC
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
-        private bool RequiredStartupPropertiesSet =>
+        protected bool RequiredStartupPropertiesSet =>
             _webview != null &&
             HostPage != null &&
             Services != null;
@@ -130,7 +130,7 @@ namespace PeakSWC
             StartWebViewCoreIfPossible();
         }
 
-        private void StartWebViewCoreIfPossible()
+        protected virtual void StartWebViewCoreIfPossible()
         {
             CheckDisposed();
 
@@ -216,7 +216,7 @@ namespace PeakSWC
             GC.SuppressFinalize(this);
         }
 
-        private void CheckDisposed()
+        protected void CheckDisposed()
         {
             if (_isDisposed)
             {

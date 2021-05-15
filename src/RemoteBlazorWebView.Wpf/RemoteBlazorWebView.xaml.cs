@@ -15,7 +15,7 @@ namespace RemoteBlazorWebView.Wpf
     /// Interaction logic for UserControl1.xaml
     /// </summary>
     public partial class RemoteBlazorWebView : UserControl
-    {
+    { 
         // private WebView2WebViewManager? manager;
 
         #region Dependency property definitions
@@ -182,9 +182,14 @@ namespace RemoteBlazorWebView.Wpf
             }
             else
             {
-                var rww = new RemotableWebWindow(ServerUri, HostPage, Id);
-                innerBlazorWebView = rww as IBlazorWebView;
-                model.Uri = ServerUri?.ToString() + "app?guid=" + rww.Id;
+                MainBlazorWebView.ServerUri = ServerUri;
+                if (Id == default) Id = Guid.NewGuid();
+                MainBlazorWebView.Id = Id;
+
+                
+                //var rww = new RemotableWebWindow(ServerUri, HostPage, Id);
+                //innerBlazorWebView = rww as IBlazorWebView;
+                model.Uri = ServerUri?.ToString() + "app?guid=" + Id;
                 model.ShowHyperlink = "Visible";
             }
         }

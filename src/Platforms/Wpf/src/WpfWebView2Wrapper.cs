@@ -3,11 +3,12 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
+//using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Web.WebView2.Core;
+using PeakSWC;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 
-namespace RemoteBlazorWebView.Wpf
+namespace PeakSWC
 {
     internal class WpfWeb2ViewWrapper : IWebView2Wrapper
     {
