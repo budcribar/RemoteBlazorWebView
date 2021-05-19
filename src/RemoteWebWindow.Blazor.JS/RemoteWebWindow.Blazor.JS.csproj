@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <WebpackInputs Remove="src\RemoteWebWindow.ts" />
-    <WebpackInputs Remove="src\RenderQueue.ts" />
   </ItemGroup>
 
   <ItemGroup>

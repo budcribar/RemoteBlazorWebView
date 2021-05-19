@@ -1,5 +1,6 @@
 import { EventDescriptor } from '../../Rendering/Events/EventDispatcher';
 import { trySerializeMessage } from './WebViewIpcCommon';
+import { sendMessage } from '../../../../../../src/RemoteWebWindow';
 
 export function sendAttachPage(baseUrl: string, startUrl: string) {
   send('AttachPage', baseUrl, startUrl);
@@ -25,8 +26,6 @@ export function sendLocationChanged(uri: string, intercepted: boolean) {
   send('OnLocationChanged', uri, intercepted);
   return Promise.resolve(); // Like in Blazor Server, we only issue the notification here - there's no need to wait for a response
 }
-
-declare function sendMessage(message: string);
 
 function send(messageType: string, ...args: any[]) {
   const serializedMessage = trySerializeMessage(messageType, args);

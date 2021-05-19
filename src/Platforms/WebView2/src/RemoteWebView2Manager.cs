@@ -18,7 +18,7 @@ namespace PeakSWC
         {
             if (url != null)
             {
-                this.url = url;
+                //this.url = url;
                 remoteableWebView = new RemotableWebWindow(url, hostPageRelativePath, id);
                 remoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
             }
@@ -33,6 +33,8 @@ namespace PeakSWC
 
         protected override void NavigateCore(Uri absoluteUri)
         {
+            this.url = absoluteUri;
+
             if (remoteableWebView == null)
                 base.NavigateCore(absoluteUri);
             else
@@ -49,7 +51,7 @@ namespace PeakSWC
                 base.SendMessage(message);
             else
             {
-                base.SendMessage(message);
+                //base.SendMessage(message);
                 remoteableWebView.SendMessage(message);
             }
                
