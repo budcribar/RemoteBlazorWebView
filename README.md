@@ -1,10 +1,10 @@
 # RemoteBlazorWebView
 
-RemoteBlazorWebView is based on the BlazorWebView project (https://github.com/jspuij/BlazorWebViewTutorial) developed by Jan-Willem Spuij which, in turn, was based on the WebWindow project developed by Steve Sanderson (https://github.com/SteveSandersonMS/WebWindow
+RemoteBlazorWebView is based on the .NET 6 Blazor WebView Control for WPF
 
-RemoteBlazorWebView enables you to interact with the user interface of a program developed with the BlazorWebView control using a web browser. This is accomplished by setting up a server (RemoteableWebService) in the cloud and pointing your browser to it.
+RemoteBlazorWebView enables you to interact with the user interface of a program developed with the BlazorWebView WPF control using a web browser. This is accomplished by setting up a server (RemoteableWebService) in the cloud and pointing your browser to it.
 
-RemoteBlazorWebView is a drop-in replacement for BlazorWebView and with a minimal change you will be able to remotely control your application.
+RemoteBlazorWebView is a drop-in replacement for the BlazorWebView WPF control and with minimal changes you will be able to remotely control your application.
 
 
 # Usage instructions
