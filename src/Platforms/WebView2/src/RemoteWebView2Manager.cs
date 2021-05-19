@@ -38,11 +38,7 @@ namespace PeakSWC
             if (remoteableWebView == null)
                 base.NavigateCore(absoluteUri);
             else
-            {
-                base.NavigateCore(absoluteUri);
-                remoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
-            }
-                
+                remoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri); 
         }
 
         protected override void SendMessage(string message)
@@ -50,13 +46,7 @@ namespace PeakSWC
             if (remoteableWebView == null)
                 base.SendMessage(message);
             else
-            {
-                //base.SendMessage(message);
                 remoteableWebView.SendMessage(message);
-            }
-               
         }
-
-
     }
 }
