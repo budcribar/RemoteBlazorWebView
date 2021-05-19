@@ -151,7 +151,7 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
-        private IBlazorWebView? innerBlazorWebView;
+        //private IBlazorWebView? innerBlazorWebView;
         private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
         private readonly ViewModel model = new ViewModel();
         static RemoteBlazorWebView() { }
