@@ -46,9 +46,9 @@ export function initializeRemoteWebWindow() {
 
     (<any>window).RemoteWebWindow = {
 
-        showMessage: function (title,body) {
+        showMessage: function (message) {
 
-            window.alert(body);
+            window.alert(message);
         }
     };
 
