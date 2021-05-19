@@ -1,60 +1,75 @@
 import { sendMessage } from "./RemoteWebWindow";
 import { navigateTo } from "../upstream/aspnetcore/web.js/src/Services/NavigationManager"
-interface Callback {
-    (...args: any[]): void;
-}
+import { attachRootComponentToElement, renderBatch } from '../upstream/aspnetcore/web.js/src/Rendering/Renderer';
+import { OutOfProcessRenderBatch } from '../upstream/aspnetcore/web.js/src/Rendering/RenderBatch/OutOfProcessRenderBatch';
+import { sendRenderCompleted } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+import { setApplicationIsTerminated, tryDeserializeMessage } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcCommon';
+import { showErrorNotification } from '../upstream/aspnetcore/web.js/src/BootErrors';
+import { DotNet } from '@microsoft/dotnet-js-interop';
+import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 
-const registrations = {} as { [eventName: string]: Callback[] };
+const messageHandlers = {
 
-export function on(eventName: string, callback: Callback): void {
-    if (!(eventName in registrations)) {
-        registrations[eventName] = [];
+    'AttachToDocument': (componentId: number, elementSelector: string) => {
+        attachRootComponentToElement(elementSelector, componentId);
+    },
+
+    'RenderBatch': (batchId: number, batchDataBase64: string) => {
+        try {
+            const batchData = base64ToArrayBuffer(batchDataBase64);
+            renderBatch(0, new OutOfProcessRenderBatch(batchData));
+            sendRenderCompleted(batchId, null);
+        } catch (ex) {
+            sendRenderCompleted(batchId, ex.toString());
+        }
+    },
+
+    'NotifyUnhandledException': (message: string, stackTrace: string) => {
+        setApplicationIsTerminated();
+        console.error(`${message}\n${stackTrace}`);
+        showErrorNotification();
+    },
+
+    'BeginInvokeJS': DotNet.jsCallDispatcher.beginInvokeJSFromDotNet,
+
+    'EndInvokeDotNet': (asyncCallId: string, success: boolean, invocationResultOrError: string) => {
+        const resultOrExceptionMessage: any = DotNet.parseJsonWithRevivers(invocationResultOrError);
+        DotNet.jsCallDispatcher.endInvokeDotNetFromJS(asyncCallId, success, resultOrExceptionMessage);
+
+        //TODO Hack required to get home displayed
+        if (asyncCallId == "1") {
+            var id = window.location.pathname.split('/')[1];
+            navigateTo(`/${id}/`, false);
+            sendMessage("connected:");
+        }
+    },
+
+    'Navigate': navigationManagerFunctions.navigateTo,
+};
+
+function base64ToArrayBuffer(base64: string) {
+    const binaryString = atob(base64);
+    const length = binaryString.length;
+    const result = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+        result[i] = binaryString.charCodeAt(i);
     }
-
-    registrations[eventName].push(callback);
+    return result;
 }
 
-export function off(eventName: string, callback: Callback): void {
-    const group = registrations[eventName];
-    const index = group.indexOf(callback);
-    if (index >= 0) {
-        group.splice(index, 1);
-    }
-}
-
-export function once(eventName: string, callback: Callback): void {
-    const callbackOnce: Callback = (...args: any[]) => {
-        off(eventName, callbackOnce);
-        callback.apply(null, args);
-    };
-
-    on(eventName, callbackOnce);
-}
 
 export function send(eventName: string, args: any): void {
     sendMessage(`ipc:${eventName} ${JSON.stringify(args)}`);
 }
 
 export function receiveMessage(message: string) {
-    const colonPos = message.indexOf(':');
-    const eventName = message.substring(0, colonPos);
-    const argsJson = message.substr(colonPos + 1);
-
-    const group = registrations[eventName];
-    if (group) {
-        const args: any[] = JSON.parse(argsJson);
-
-      
-        group.forEach(callback => callback.apply(null, args));
-
-        //TODO Hack required to get home displayed
-        if (eventName == "JS.EndInvokeDotNet" && args[0] == "1") {
-            var id = window.location.pathname.split('/')[1];
-            navigateTo(`/${id}/`, false);
-            sendMessage("connected:");
+    const parsedMessage = tryDeserializeMessage(message);
+    if (parsedMessage) {
+        if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {
+            messageHandlers[parsedMessage.messageType].apply(null, parsedMessage.args);
+        } else {
+            throw new Error(`Unsupported IPC message type '${parsedMessage.messageType}'`);
         }
-            
-
     }
 }
 

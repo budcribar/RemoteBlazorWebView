@@ -5,13 +5,13 @@ import { SendSequenceMessageRequest,StringRequest, IdMessageRequest } from "./ge
 
 var sequenceNum: number = 1;
 
-export async function sendMessage(message: string) {
+export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
     req.setId(id);
     req.setMessage(message);
     req.setSequence(sequenceNum++);
-    await grpc.invoke(BrowserIPC.SendMessage, {
+    grpc.invoke(BrowserIPC.SendMessage, {
         request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
                 //console.log("sent:" + message)

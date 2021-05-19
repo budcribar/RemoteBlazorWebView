@@ -1,66 +1,68 @@
-﻿import '@dotnet/jsinterop/dist/Microsoft.JSInterop';
-import { renderBatch } from '@browserjs/Rendering/Renderer';
-import { OutOfProcessRenderBatch } from '@browserjs/Rendering/RenderBatch/OutOfProcessRenderBatch';
+﻿
+//import { DotNet } from '@microsoft/dotnet-js-interop';
 
-export class RenderQueue {
-    private static instance: RenderQueue;
+//import { renderBatch } from '@browserjs/Rendering/Renderer';
+//import { OutOfProcessRenderBatch } from '@browserjs/Rendering/RenderBatch/OutOfProcessRenderBatch';
 
-    private nextBatchId = 2;
+//export class RenderQueue {
+//    private static instance: RenderQueue;
 
-    private fatalError?: string;
+//    private nextBatchId = 2;
 
-    public browserRendererId: number;
+//    private fatalError?: string;
 
-    public constructor(browserRendererId: number) {
-        this.browserRendererId = browserRendererId;
-    }
+//    public browserRendererId: number;
 
-    public static getOrCreate(): RenderQueue {
-        if (!RenderQueue.instance) {
-            RenderQueue.instance = new RenderQueue(0);
-        }
+//    public constructor(browserRendererId: number) {
+//        this.browserRendererId = browserRendererId;
+//    }
 
-        return this.instance;
-    }
+//    public static getOrCreate(): RenderQueue {
+//        if (!RenderQueue.instance) {
+//            RenderQueue.instance = new RenderQueue(0);
+//        }
 
-    public async processBatch(receivedBatchId: number, batchData: Uint8Array): Promise<void> {
-        if (receivedBatchId < this.nextBatchId) {
-            await this.completeBatch(receivedBatchId);
-            return;
-        }
+//        return this.instance;
+//    }
 
-        if (receivedBatchId > this.nextBatchId) {
-            if (this.fatalError) {
-                console.log(`Received a new batch ${receivedBatchId} but errored out on a previous batch ${this.nextBatchId - 1}`);
-                await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', this.nextBatchId - 1, this.fatalError.toString());
-                return;
-            }
-            return;
-        }
+//    public async processBatch(receivedBatchId: number, batchData: Uint8Array): Promise<void> {
+//        if (receivedBatchId < this.nextBatchId) {
+//            await this.completeBatch(receivedBatchId);
+//            return;
+//        }
 
-        try {
-            this.nextBatchId++;
-            renderBatch(this.browserRendererId, new OutOfProcessRenderBatch(batchData));
-            await this.completeBatch(receivedBatchId);
-        } catch (error) {
-            this.fatalError = error.toString();
-            console.error(`There was an error applying batch ${receivedBatchId}.`);
+//        if (receivedBatchId > this.nextBatchId) {
+//            if (this.fatalError) {
+//                console.log(`Received a new batch ${receivedBatchId} but errored out on a previous batch ${this.nextBatchId - 1}`);
+//                await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', this.nextBatchId - 1, this.fatalError.toString());
+//                return;
+//            }
+//            return;
+//        }
 
-            // If there's a rendering exception, notify server *and* throw on client
-            DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', receivedBatchId, error.toString());
-            throw error;
-        }
-    }
+//        try {
+//            this.nextBatchId++;
+//            renderBatch(this.browserRendererId, new OutOfProcessRenderBatch(batchData));
+//            await this.completeBatch(receivedBatchId);
+//        } catch (error) {
+//            this.fatalError = error.toString();
+//            console.error(`There was an error applying batch ${receivedBatchId}.`);
 
-    public getLastBatchid(): number {
-        return this.nextBatchId - 1;
-    }
+//            // If there's a rendering exception, notify server *and* throw on client
+//            DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', receivedBatchId, error.toString());
+//            throw error;
+//        }
+//    }
 
-    private async completeBatch(batchId: number): Promise<void> {
-        try {
-            await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', batchId, null);
-        } catch {
-            console.warn(`Failed to deliver completion notification for render '${batchId}'.`);
-        }
-    }
-}
+//    public getLastBatchid(): number {
+//        return this.nextBatchId - 1;
+//    }
+
+//    private async completeBatch(batchId: number): Promise<void> {
+//        try {
+//            await DotNet.invokeMethodAsync('BlazorWebView', 'OnRenderCompleted', batchId, null);
+//        } catch {
+//            console.warn(`Failed to deliver completion notification for render '${batchId}'.`);
+//        }
+//    }
+//}

@@ -17,6 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="upstream\aspnetcore\web.js\node_modules\**" />
+    <EmbeddedResource Remove="upstream\aspnetcore\web.js\node_modules\**" />
+    <None Remove="upstream\aspnetcore\web.js\node_modules\**" />
+    <WebpackInputs Remove="upstream\aspnetcore\web.js\node_modules\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="package-lock.json" />
   </ItemGroup>
 

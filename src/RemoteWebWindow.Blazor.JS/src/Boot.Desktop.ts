@@ -1,59 +1,44 @@
-import '@dotnet/jsinterop/dist/Microsoft.JSInterop';
-import '@browserjs/GlobalExports';
-import { setEventDispatcher } from '@browserjs/Rendering/RendererEventDispatcher';
-import { internalFunctions as navigationManagerFunctions } from '@browserjs/Services/NavigationManager';
-import { decode } from 'base64-arraybuffer';
+import { DotNet } from '@microsoft/dotnet-js-interop';
+import { Blazor } from '../upstream/aspnetcore/web.js/src/GlobalExports';
+import { shouldAutoStart } from '../upstream/aspnetcore/web.js/src/BootCommon';
+import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
+import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
+import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+import { InputFile } from '../upstream/aspnetcore/web.js/src//InputFile';
+
 import * as ipc from './IPC';
-import { RenderQueue } from './RenderQueue';
 import { initializeRemoteWebWindow } from './RemoteWebWindow';
 
 
-function boot() {
+let started = false;
+
+async function boot(): Promise<void> {
+    if (started) {
+        throw new Error('Blazor has already started.');
+    }
+
+    started = true;
 
     initializeRemoteWebWindow();
 
-    setEventDispatcher((eventDescriptor, eventArgs) => DotNet.invokeMethodAsync('BlazorWebView', 'DispatchEvent', eventDescriptor, JSON.stringify(eventArgs)));
-    navigationManagerFunctions.listenForNavigationEvents((uri: string, intercepted: boolean) => {
-        return DotNet.invokeMethodAsync('BlazorWebView', 'NotifyLocationChanged', uri, intercepted);
-    });
-    const renderQueue = RenderQueue.getOrCreate();
-
-    // Configure the mechanism for JS<->NET calls
     DotNet.attachDispatcher({
-        beginInvokeDotNetFromJS: (callId: number, assemblyName: string | null, methodIdentifier: string, dotNetObjectId: number | null, argsJson: string) => {
-            ipc.send('BeginInvokeDotNetFromJS', [callId ? callId.toString() : null, assemblyName, methodIdentifier, dotNetObjectId || 0, argsJson]);
-        },
-        endInvokeJSFromDotNet: (callId: number, succeeded: boolean, resultOrError: any) => {
-            ipc.send('EndInvokeJSFromDotNet', [callId, succeeded, resultOrError]);
-        }
+        beginInvokeDotNetFromJS: sendBeginInvokeDotNetFromJS,
+        endInvokeJSFromDotNet: sendEndInvokeJSFromDotNet,
     });
 
+    Blazor._internal.InputFile = InputFile;
     navigationManagerFunctions.enableNavigationInterception();
+    navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
 
-    ipc.on('JS.BeginInvokeJS', (asyncHandle, identifier, argsJson) => {
-        DotNet.jsCallDispatcher.beginInvokeJSFromDotNet(asyncHandle, identifier, argsJson);
-    });
-
-    ipc.on('JS.EndInvokeDotNet', (callId, success, resultOrError) => {
-        DotNet.jsCallDispatcher.endInvokeDotNetFromJS(callId, success, resultOrError);
-    });
-
-    ipc.on('JS.RenderBatch', (batchId, batchBase64) => {
-        const batchData = new Uint8Array(decode(batchBase64));
-        renderQueue.processBatch(batchId, batchData);
-    });
-
-    ipc.on('JS.Error', (message) => {
-        console.error(message);
-    });
-
-    // Confirm that the JS side is ready for the app to start
-    ipc.send('components:init', [
-        navigationManagerFunctions.getLocationHref().replace(/\/index\.html$/, ''),
-        navigationManagerFunctions.getBaseURI()]);
+    sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
    
 
 }
 
-  
-boot();
+setEventDispatcher(sendBrowserEvent);
+
+Blazor.start = boot;
+
+if (shouldAutoStart()) {
+    boot();
+}
