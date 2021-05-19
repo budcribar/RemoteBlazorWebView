@@ -12,6 +12,13 @@ const messageHandlers = {
 
     'AttachToDocument': (componentId: number, elementSelector: string) => {
         attachRootComponentToElement(elementSelector, componentId);
+
+        //TODO Hack required to get home displayed
+        if (componentId == 0) {
+            var id = window.location.pathname.split('/')[1];
+            navigateTo(`/${id}/`, false);
+            sendMessage("connected:");
+        }
     },
 
     'RenderBatch': (batchId: number, batchDataBase64: string) => {
@@ -36,12 +43,7 @@ const messageHandlers = {
         const resultOrExceptionMessage: any = DotNet.parseJsonWithRevivers(invocationResultOrError);
         DotNet.jsCallDispatcher.endInvokeDotNetFromJS(asyncCallId, success, resultOrExceptionMessage);
 
-        //TODO Hack required to get home displayed
-        if (asyncCallId == "1") {
-            var id = window.location.pathname.split('/')[1];
-            navigateTo(`/${id}/`, false);
-            sendMessage("connected:");
-        }
+      
     },
 
     'Navigate': navigationManagerFunctions.navigateTo,
