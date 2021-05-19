@@ -15,13 +15,6 @@ namespace PeakSWC
         public Uri ServerUri { get; set; }
         public Guid Id { get; set; }
 
-        public RemoteBlazorWebViewBase ()
-        {
-
-        }
-
-
-
         protected override void StartWebViewCoreIfPossible() {
             CheckDisposed();
 

@@ -68,31 +68,33 @@ namespace PeakSwc.RemoteableWebWindows
                                 var command = message.Response.Split(':')[0];
                                 var data = message.Response.Substring(message.Response.IndexOf(':')+1);
 
-                                switch (command)
+                                try
                                 {
-                                    case "created": 
-                                        completed.Set();
-                                        break;
-                                    case "webmessage":
-                                        if (data == "booted:")
-                                        {
-                                            lock (bootLock)
+                                    switch (command)
+                                    {
+                                        case "created":
+                                            completed.Set();
+                                            break;
+                                        case "webmessage":
+                                            if (data == "booted:")
                                             {
-                                                Shutdown();
-                                                OnDisconnected?.Invoke(this, Id);
+                                                lock (bootLock)
+                                                {
+                                                    Shutdown();
+                                                    OnDisconnected?.Invoke(this, Id);
+                                                }
                                             }
-                                        }
-                                        else if (data == "connected:")
-                                            OnConnected?.Invoke(this, Id);
-
-                                        else
-
-                                            OnWebMessageReceived?.Invoke(this, data);
-                                        break;
-                                   
-                                    
+                                            else if (data == "connected:")
+                                                OnConnected?.Invoke(this, Id);
+                                            else
+                                                OnWebMessageReceived?.Invoke(this, data);
+                                            break;
+                                    }
                                 }
-                                                               
+                                catch (Exception ex)
+                                {
+                                    var m = ex.Message;
+                                }
                             }
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
@@ -115,6 +117,7 @@ namespace PeakSwc.RemoteableWebWindows
                         {
                             await foreach (var message in files.ResponseStream.ReadAllAsync())
                             {
+                                // TODO Missing file
                                 var bytes = FrameworkFileResolver(message.Path) ?? null;
                                 var temp = ByteString.FromStream(bytes);
                                 await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : temp });
