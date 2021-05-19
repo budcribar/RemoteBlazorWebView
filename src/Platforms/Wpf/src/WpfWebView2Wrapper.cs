@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
 //using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Web.WebView2.Core;
 using PeakSWC;
