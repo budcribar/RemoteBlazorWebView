@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using RemoteBlazorWebView.Wpf;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using PeakSWC.RemoteableWebWindows;
 
 namespace PeakSWC
 {

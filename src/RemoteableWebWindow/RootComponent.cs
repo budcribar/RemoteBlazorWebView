@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 
-namespace PeakSWC
+namespace PeakSWC.RemoteableWebWindows
 {
     /// <summary>
     /// Describes a root component that can be added to a <see cref="BlazorWebView"/>.

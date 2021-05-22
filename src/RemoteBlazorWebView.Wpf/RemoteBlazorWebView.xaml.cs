@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using PeakSWC;
+using PeakSWC.RemoteableWebWindows;
 
 namespace RemoteBlazorWebView.Wpf
 {
