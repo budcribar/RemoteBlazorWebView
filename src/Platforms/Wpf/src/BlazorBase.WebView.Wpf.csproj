@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\WebView2\src\PeakSWC.WebView2.csproj" />
+    <ProjectReference Include="..\..\..\RemoteableWebWindow\RemoteableWebView.csproj" />
   </ItemGroup>
 
 </Project>
