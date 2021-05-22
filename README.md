@@ -1,4 +1,4 @@
-# RemoteBlazorWebView
+# RemoteBlazorWebView.Wpf
 
 RemoteBlazorWebView.Wpf is based on the .NET 6 Blazor WebView Control for WPF
 
