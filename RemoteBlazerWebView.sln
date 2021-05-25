@@ -16,6 +16,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D05DB932-B305-40C7-968A-19F814FD7F2A}"
 	ProjectSection(SolutionItems) = preProject
 		azure-pipelines.yml = azure-pipelines.yml
+		Build.md = Build.md
 		Directory.Build.props = Directory.Build.props
 		README.md = README.md
 		src\Protos\webwindow.proto = src\Protos\webwindow.proto

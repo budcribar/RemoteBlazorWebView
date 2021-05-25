@@ -11,6 +11,7 @@ using Google.Protobuf;
 //using Microsoft.JSInterop;
 using System.Net;
 using System.Reflection;
+using System.Windows;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -81,11 +82,11 @@ namespace PeakSwc.RemoteableWebWindows
                                                 lock (bootLock)
                                                 {
                                                     Shutdown();
-                                                    OnDisconnected?.Invoke(this, Id);
+                                                    OnDisconnected?.Invoke(this, new RoutedEventArgs { Source = Id });
                                                 }
                                             }
                                             else if (data == "connected:")
-                                                OnConnected?.Invoke(this, Id);
+                                                OnConnected?.Invoke(this, new RoutedEventArgs { Source = Id });
                                             else
                                                 OnWebMessageReceived?.Invoke(this, data);
                                             break;
@@ -99,7 +100,7 @@ namespace PeakSwc.RemoteableWebWindows
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-                            OnDisconnected?.Invoke(this, Id);
+                            OnDisconnected?.Invoke(this, new RoutedEventArgs { Source = Id });
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
                     }, cts.Token);             
@@ -139,8 +140,8 @@ namespace PeakSwc.RemoteableWebWindows
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
-        public event EventHandler<string>? OnConnected;
-        public event EventHandler<string>? OnDisconnected;
+        public event RoutedEventHandler? OnConnected;
+        public event RoutedEventHandler? OnDisconnected;
 
         public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
         {

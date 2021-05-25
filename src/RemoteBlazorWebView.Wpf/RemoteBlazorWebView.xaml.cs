@@ -123,15 +123,18 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived += value;
+                if (RemotableWebWindow != null)
+                    RemotableWebWindow.OnDisconnected += value;
+                else
+                    MainBlazorWebView.Unloaded += value;
             }
 
             remove
             {
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived -= value;
+                if (RemotableWebWindow != null)
+                    RemotableWebWindow.OnDisconnected -= value;
+                else
+                    MainBlazorWebView.Unloaded -= value;
             }
         }
 
@@ -139,15 +142,18 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived += value;
+                if (RemotableWebWindow != null)
+                    RemotableWebWindow.OnConnected += value;
+                else
+                    MainBlazorWebView.Loaded += value;
             }
 
             remove
             {
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived -= value;
+                if (RemotableWebWindow != null)
+                    RemotableWebWindow.OnConnected -= value;
+                else
+                    MainBlazorWebView.Loaded -= value;
             }
         }
 
@@ -194,43 +200,8 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
-        //private void MainBlazorWebView_Unloaded(object sender, RoutedEventArgs e)
-        //{
-        //    throw new NotImplementedException();
-        //}
+       
 
-        //private void MainBlazorWebView_Loaded(object sender, RoutedEventArgs e)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-
-
-        //public IDisposable Run<TStartup>(string hostHtmlPath, ResolveWebResourceDelegate? defaultResolveDelegate = null, Uri? uri = null, Guid id = default)
-        //{
-        //    if (uri == null)
-        //    {
-        //        innerBlazorWebView = MainBlazorWebView;
-        //        model.ShowHyperlink = "Hidden";
-        //    }
-        //    else
-        //    {
-        //        innerBlazorWebView = new RemotableWebWindow(uri, hostHtmlPath, id);
-        //    }
-
-        //    IDisposable disposable = BlazorWebViewHost.Run<TStartup>(innerBlazorWebView, hostHtmlPath, defaultResolveDelegate);
-
-        //    if (innerBlazorWebView is RemotableWebWindow rww)
-        //    {
-        //        //if (FrameworkFileResolver != null)
-        //       //     rww.FrameworkFileResolver = FrameworkFileResolver;
-        //        rww.JSRuntime = typeof(BlazorWebViewHost).GetProperties(BindingFlags.Static | BindingFlags.NonPublic).Where(x => x.Name == "JSRuntime").FirstOrDefault()?.GetGetMethod(true)?.Invoke(null, null) as JSRuntime;
-        //        model.Uri = uri?.ToString() + "app?guid=" + rww.Id;
-        //        model.ShowHyperlink = "Visible";
-        //    }
-
-        //    return disposable;
-        //}
 
         public event EventHandler<string> OnWebMessageReceived
         {
@@ -247,41 +218,6 @@ namespace RemoteBlazorWebView.Wpf
                 //    this.innerBlazorWebView.OnWebMessageReceived -= value;
             }
         }
-
-        //public event EventHandler<string> OnConnected
-        //{
-        //    add
-        //    {
-        //        if (this.innerBlazorWebView is RemotableWebWindow rmm)
-        //            rmm.OnConnected += value;
-        //    }
-
-        //    remove
-        //    {
-        //        if (this.innerBlazorWebView is RemotableWebWindow rmm)
-        //            rmm.OnConnected -= value;
-        //    }
-        //}
-        public event EventHandler<string> OnDisconnected
-        {
-            add
-            {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnDisconnected += value;
-            }
-
-            remove
-            {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnDisconnected -= value;
-            }
-        }
-
-
-        //public void Initialize(Action<WebViewOptions> configure)
-        //{
-        //    innerBlazorWebView?.Initialize(configure);
-        //}
 
         public void Invoke(Action callback)
         {
