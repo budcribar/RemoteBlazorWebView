@@ -27,6 +27,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteableWebView", "src\Re
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.WpfApp", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj", "{001010A9-9EAA-4BB7-BAC0-4C2BE831CC37}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.Shared", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.Shared\RemoteBlazorWebViewTutorial.Shared.csproj", "{22F350D6-52E3-495E-9C66-9E8A2104F67F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,8 +45,8 @@ Global
 		RelWithDebInfo|x86 = RelWithDebInfo|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|Any CPU.Build.0 = Debug|x64
 		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|x64.Build.0 = Debug|Any CPU
 		{3FFDC421-5BC7-4361-8625-2D807B59194B}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -187,6 +189,30 @@ Global
 		{001010A9-9EAA-4BB7-BAC0-4C2BE831CC37}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{001010A9-9EAA-4BB7-BAC0-4C2BE831CC37}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{001010A9-9EAA-4BB7-BAC0-4C2BE831CC37}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|x64.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Debug|x86.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|Any CPU.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|Any CPU.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|x64.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|x64.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|x86.ActiveCfg = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.MinSizeRel|x86.Build.0 = Debug|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|x64.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|x64.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|x86.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.Release|x86.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|Any CPU.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|Any CPU.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|x64.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
+		{22F350D6-52E3-495E-9C66-9E8A2104F67F}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
