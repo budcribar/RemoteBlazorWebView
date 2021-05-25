@@ -18,13 +18,15 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
         private readonly ConcurrentDictionary<string, IPC> _ipc;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
+        private readonly ConcurrentDictionary<string, BrowserIPCState> _state;
         private readonly bool useCache = false;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc)
+        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc, ConcurrentDictionary<string, BrowserIPCState> state)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;
             _ipc = ipc;
+            _state = state;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
@@ -122,6 +124,9 @@ namespace PeakSwc.RemoteableWebWindows
 
             if (_ipc.ContainsKey(id))
                 _ipc.Remove(id, out var _);
+
+            if (_state.ContainsKey(id))
+                _state.Remove(id, out var _);
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

@@ -25,9 +25,10 @@ namespace PeakSwc.RemoteableWebWindows
                         //options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps("a419da49-1b24-460a-8397-6be2d80c41f2.pfx", ""); });
 
                         //options.Listen(IPAddress.Parse("18.217.178.146"), 80, lo => { lo.UseHttps("poc_certificate.pfx", "boldtek@2020"); });
-                        
+
                         // localhost
                         options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); });
+                        //options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2; });
                     });
                     webBuilder.UseStartup<Startup>();
                 });

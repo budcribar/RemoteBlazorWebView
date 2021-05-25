@@ -14,7 +14,7 @@ export async function sendMessage(message: string) {
     await grpc.invoke(BrowserIPC.SendMessage, {
         request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                //console.log("sent:" + message)
+                //console.log("sent:" + req.getSequence() + ":" + message)
             } else {
                 console.log("hit an error", code, msg, trailers);
             }

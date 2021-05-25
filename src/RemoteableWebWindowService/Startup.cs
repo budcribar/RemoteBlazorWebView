@@ -111,8 +111,8 @@ namespace PeakSwc.RemoteableWebWindows
             });
 
             endpoints.MapGet("/{id:guid}", async context =>
-            {        
-                // restart url
+            {
+                // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
                 var id = context.Request.RouteValues["id"];
                 var sid = id.ToString();
                 if (sid == null) return;
@@ -122,6 +122,18 @@ namespace PeakSwc.RemoteableWebWindows
                 context.Response.Redirect($"/restart?guid={sid}");
                 await Task.CompletedTask;
             });
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
+                {
+                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
+                    var id = context.Request.RouteValues["id"];
+                    var sid = id.ToString();
+                    if (sid == null) return;
+
+                    ipcDictionary[sid].ReceiveMessage("booted:");
+
+                    context.Response.Redirect($"/restart?guid={sid}");
+                    await Task.CompletedTask;
+                });
 
                 endpoints.MapRazorPages();               
             });
