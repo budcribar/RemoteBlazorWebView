@@ -5,10 +5,7 @@ import { internalFunctions as navigationManagerFunctions } from '../upstream/asp
 import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
 import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
 import { InputFile } from '../upstream/aspnetcore/web.js/src//InputFile';
-
-import * as ipc from './IPC';
 import { initializeRemoteWebWindow } from './RemoteWebWindow';
-
 
 let started = false;
 
@@ -31,8 +28,6 @@ async function boot(): Promise<void> {
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
 
     sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
-   
-
 }
 
 setEventDispatcher(sendBrowserEvent);
