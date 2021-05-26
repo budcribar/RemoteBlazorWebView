@@ -2,7 +2,7 @@
 #  https://medium.com/@dan.cokely/creating-nuget-packages-in-azure-devops-with-azure-pipelines-and-yaml-d6fa30f0f15e
 
 trigger:
-- master
+- net31
 
 pool:
   vmImage: 'windows-latest'
