@@ -1,4 +1,4 @@
-import { receiveMessage } from './IPC';
+import { receiveMessage, send } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webwindow_pb_service";
 import { SendSequenceMessageRequest,StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
@@ -51,5 +51,7 @@ export function initializeRemoteWebWindow() {
             window.alert(message);
         }
     };
+
+    (window.external as any).sendMessage = sendMessage;
 
 }
