@@ -119,41 +119,48 @@ namespace RemoteBlazorWebView.Wpf
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
 
-        public new event RoutedEventHandler Unloaded
+        public new event EventHandler<string> Unloaded
         {
             add
             {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnDisconnected += value;
-                else
-                    MainBlazorWebView.Unloaded += value;
+                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
+
+                if (manager != null && manager.remoteableWebView != null)
+                    manager.remoteableWebView.OnDisconnected += value;
+                //else
+                //    MainBlazorWebView.Unloaded +=  value;
             }
 
             remove
             {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnDisconnected -= value;
-                else
-                    MainBlazorWebView.Unloaded -= value;
+                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
+                if (manager != null && manager.remoteableWebView != null)
+                    manager.remoteableWebView.OnDisconnected -= value;
+                //else
+                //    MainBlazorWebView.Unloaded -= value;
             }
         }
 
-        public new event RoutedEventHandler Loaded
+        public new event EventHandler<string> Loaded
         {
             add
             {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnConnected += value;
-                else
-                    MainBlazorWebView.Loaded += value;
+                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
+
+                if (manager != null && manager.remoteableWebView != null)
+                    manager.remoteableWebView.OnConnected += value;
+                //else
+                    //MainBlazorWebView.Loaded += value;
             }
 
             remove
             {
-                if (RemotableWebWindow != null)
-                    RemotableWebWindow.OnConnected -= value;
-                else
-                    MainBlazorWebView.Loaded -= value;
+                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
+
+                if (manager != null && manager.remoteableWebView != null)
+                    manager.remoteableWebView.OnConnected -= value;
+                //else
+                //    MainBlazorWebView.Loaded -= value;
             }
         }
 

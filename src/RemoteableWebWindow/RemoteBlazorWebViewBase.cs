@@ -7,14 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.FileProviders;
 
-
 namespace PeakSWC
 {
     public class RemoteBlazorWebViewBase : BlazorWebViewBase
     {
         public Uri ServerUri { get; set; }
         public Guid Id { get; set; }
-
+       
         protected override void StartWebViewCoreIfPossible() {
             CheckDisposed();
 

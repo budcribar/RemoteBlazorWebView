@@ -51,7 +51,7 @@ namespace PeakSWC
 
         private const string webViewTemplateChildName = "WebView";
         protected WebView2Control _webview;
-        protected WebView2WebViewManager _webviewManager;
+        public WebView2WebViewManager _webviewManager;
         private bool _isDisposed;
 
         /// <summary>

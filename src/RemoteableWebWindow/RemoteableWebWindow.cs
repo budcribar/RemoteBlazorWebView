@@ -12,25 +12,28 @@ using Google.Protobuf;
 using System.Net;
 using System.Reflection;
 using System.Windows;
+using Microsoft.AspNetCore.Components;
 
 namespace PeakSwc.RemoteableWebWindows
 {
     public class RemotableWebWindow // : IBlazorWebView 
     {
         #region private
-        private readonly Uri uri;
-        private readonly string hostHtmlPath;
+       
         private readonly string hostname;
         private readonly object bootLock = new object();
-        public string Id { get; }
+        public Dispatcher Dispacher { get; set; }
         
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
-        
+        private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
+
         // TODO unused
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
-        private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
+        public Uri uri { get; set; }
+        public string hostHtmlPath { get; set; }
+        public string Id { get; set; }
 
         public static Stream? SupplyFrameworkFile(string uri)
         {
@@ -82,11 +85,13 @@ namespace PeakSwc.RemoteableWebWindows
                                                 lock (bootLock)
                                                 {
                                                     Shutdown();
-                                                    OnDisconnected?.Invoke(this, new RoutedEventArgs { Source = Id });
+                                                    
+                                                    OnDisconnected?.Invoke(this, Id);
                                                 }
                                             }
                                             else if (data == "connected:")
-                                                OnConnected?.Invoke(this, new RoutedEventArgs { Source = Id });
+                                               
+                                                OnConnected?.Invoke(this, Id );
                                             else
                                                 OnWebMessageReceived?.Invoke(this, data);
                                             break;
@@ -95,12 +100,13 @@ namespace PeakSwc.RemoteableWebWindows
                                 catch (Exception ex)
                                 {
                                     var m = ex.Message;
+                                    
                                 }
                             }
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-                            OnDisconnected?.Invoke(this, new RoutedEventArgs { Source = Id });
+                            OnDisconnected?.Invoke(this, Id );
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
                     }, cts.Token);             
@@ -140,17 +146,21 @@ namespace PeakSwc.RemoteableWebWindows
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
-        public event RoutedEventHandler? OnConnected;
-        public event RoutedEventHandler? OnDisconnected;
-
-        public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
-        {
-            Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
-            this.uri = uri;
-            this.hostHtmlPath = hostHtmlPath;
-            this.hostname = Dns.GetHostName();
-            _ = Client;
+        public event EventHandler<string>? OnConnected;
+        public event EventHandler<string>? OnDisconnected;
+        public RemotableWebWindow() {
+            hostname = Dns.GetHostName();
+           
         }
+
+        //public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
+        //{
+        //    Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
+        //    this.uri = uri;
+        //    this.hostHtmlPath = hostHtmlPath;
+        //    _ = Client;
+
+        //}
 
         public void NavigateToUrl(string url) { }
 
@@ -167,11 +177,11 @@ namespace PeakSwc.RemoteableWebWindows
         {
             Client.Shutdown(new IdMessageRequest { Id = Id });
         }
-       
-        //public void Initialize(Action<WebViewOptions> configure)
-        //{
-        //    _ = Client;
-        //}
+
+        public void Initialize()
+        {
+            _ = Client;
+        }
 
         public void Invoke(Action callback)
         {

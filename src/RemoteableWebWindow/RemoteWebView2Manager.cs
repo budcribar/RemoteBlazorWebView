@@ -12,16 +12,21 @@ namespace PeakSWC
 {
     public class RemoteWebView2Manager : WebView2WebViewManager
     {
-        RemotableWebWindow? remoteableWebView;
+        public RemotableWebWindow? remoteableWebView { get; set; } = new RemotableWebWindow();
         Uri? url;
-
+       
         public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath, Uri? url, Guid id) : base(webview, services, dispatcher, fileProvider, hostPageRelativePath)
         {
             if (url != null)
             {
-                //this.url = url;
-                remoteableWebView = new RemotableWebWindow(url, hostPageRelativePath, id);
+               
+                //remoteableWebView = new RemotableWebWindow();
+                remoteableWebView.uri = url;
+                remoteableWebView.hostHtmlPath = hostPageRelativePath;
+                remoteableWebView.Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
                 remoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
+                remoteableWebView.Initialize();
+                remoteableWebView.Dispacher = dispatcher;
             }
                
         }
