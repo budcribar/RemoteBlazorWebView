@@ -21,6 +21,7 @@
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <IsPackable>true</IsPackable>
     <Version></Version>
   </PropertyGroup>
   
