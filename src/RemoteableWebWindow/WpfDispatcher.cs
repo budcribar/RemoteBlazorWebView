@@ -1,35 +1,43 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using Microsoft.AspNetCore.Components;
 using System;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
-using static System.Windows.Threading.Dispatcher;
+using System.Windows;
+using WindowsDispatcher = System.Windows.Threading.Dispatcher;
+using Microsoft.AspNetCore.Components;
 
 namespace RemoteBlazorWebView.Wpf
 {
-    internal class WpfDispatcher : Dispatcher
+    internal sealed class WpfDispatcher : Dispatcher
     {
-        public static Dispatcher Instance { get; } = new WpfDispatcher();
+        private readonly WindowsDispatcher _windowsDispatcher;
+
+        private WpfDispatcher(WindowsDispatcher windowsDispatcher)
+        {
+            _windowsDispatcher = windowsDispatcher ?? throw new ArgumentNullException(nameof(windowsDispatcher));
+        }
+
+        public static Dispatcher Instance { get; } = new WpfDispatcher(Application.Current.Dispatcher);
 
         private static Action<Exception> RethrowException = exception =>
             ExceptionDispatchInfo.Capture(exception).Throw();
 
         public override bool CheckAccess()
-            => CurrentDispatcher.CheckAccess();
+            => _windowsDispatcher.CheckAccess();
 
         public override async Task InvokeAsync(Action workItem)
         {
             try
             {
-                if (CurrentDispatcher.CheckAccess())
+                if (_windowsDispatcher.CheckAccess())
                 {
                     workItem();
                 }
                 else
                 {
-                    await CurrentDispatcher.InvokeAsync(workItem);
+                    await _windowsDispatcher.InvokeAsync(workItem);
                 }
             }
             catch (Exception ex)
@@ -37,7 +45,7 @@ namespace RemoteBlazorWebView.Wpf
                 // TODO: Determine whether this is the right kind of rethrowing pattern
                 // You do have to do something like this otherwise unhandled exceptions
                 // throw from inside Dispatcher.InvokeAsync are simply lost.
-                _ = CurrentDispatcher.BeginInvoke(RethrowException, ex);
+                _ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
                 throw;
             }
         }
@@ -46,13 +54,13 @@ namespace RemoteBlazorWebView.Wpf
         {
             try
             {
-                if (CurrentDispatcher.CheckAccess())
+                if (_windowsDispatcher.CheckAccess())
                 {
                     await workItem();
                 }
                 else
                 {
-                    await CurrentDispatcher.InvokeAsync(workItem);
+                    await _windowsDispatcher.InvokeAsync(workItem);
                 }
             }
             catch (Exception ex)
@@ -60,7 +68,7 @@ namespace RemoteBlazorWebView.Wpf
                 // TODO: Determine whether this is the right kind of rethrowing pattern
                 // You do have to do something like this otherwise unhandled exceptions
                 // throw from inside Dispatcher.InvokeAsync are simply lost.
-                _ = CurrentDispatcher.BeginInvoke(RethrowException, ex);
+                _ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
                 throw;
             }
         }
@@ -69,13 +77,13 @@ namespace RemoteBlazorWebView.Wpf
         {
             try
             {
-                if (CurrentDispatcher.CheckAccess())
+                if (_windowsDispatcher.CheckAccess())
                 {
                     return workItem();
                 }
                 else
                 {
-                    return await CurrentDispatcher.InvokeAsync(workItem);
+                    return await _windowsDispatcher.InvokeAsync(workItem);
                 }
             }
             catch (Exception ex)
@@ -83,7 +91,7 @@ namespace RemoteBlazorWebView.Wpf
                 // TODO: Determine whether this is the right kind of rethrowing pattern
                 // You do have to do something like this otherwise unhandled exceptions
                 // throw from inside Dispatcher.InvokeAsync are simply lost.
-                _ = CurrentDispatcher.BeginInvoke(RethrowException, ex);
+                _ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
                 throw;
             }
         }
@@ -92,13 +100,13 @@ namespace RemoteBlazorWebView.Wpf
         {
             try
             {
-                if (CurrentDispatcher.CheckAccess())
+                if (_windowsDispatcher.CheckAccess())
                 {
                     return await workItem();
                 }
                 else
                 {
-                    return await CurrentDispatcher.InvokeAsync(workItem).Task.Unwrap();
+                    return await _windowsDispatcher.InvokeAsync(workItem).Task.Unwrap();
                 }
             }
             catch (Exception ex)
@@ -106,7 +114,7 @@ namespace RemoteBlazorWebView.Wpf
                 // TODO: Determine whether this is the right kind of rethrowing pattern
                 // You do have to do something like this otherwise unhandled exceptions
                 // throw from inside Dispatcher.InvokeAsync are simply lost.
-                _ = CurrentDispatcher.BeginInvoke(RethrowException, ex);
+                _ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
                 throw;
             }
         }
