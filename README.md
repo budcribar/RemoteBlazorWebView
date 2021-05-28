@@ -1,6 +1,6 @@
 # RemoteBlazorWebView.Wpf
 
-RemoteBlazorWebView.Wpf is based on the .NET 6 Blazor WebView Control for WPF
+RemoteBlazorWebView.Wpf is based on the .NET 6 Blazor WebView Control for WPF preview4
 
 RemoteBlazorWebView.Wpf enables you to interact with the user interface of a program developed with the BlazorWebView WPF control using a web browser. This is accomplished by setting up a server (RemoteableWebService) in the cloud and pointing your browser to it.
 
