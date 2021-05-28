@@ -22,7 +22,7 @@ namespace PeakSwc.RemoteableWebWindows
        
         private readonly string hostname;
         private readonly object bootLock = new object();
-        public Dispatcher Dispacher { get; set; }
+        public Dispatcher? Dispacher { get; set; }
         
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
         private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
@@ -31,7 +31,7 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         #endregion
 
-        public Uri uri { get; set; }
+        public Uri? uri { get; set; }
         public string hostHtmlPath { get; set; }
         public string Id { get; set; }
 
@@ -189,10 +189,10 @@ namespace PeakSwc.RemoteableWebWindows
             Client.SendMessage(new SendMessageRequest { Id=Id, Message = message });
         }
 
-        public void ShowMessage(string title, string body)
-        {
-            //JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
-        }
+        //public void ShowMessage(string title, string body)
+        //{
+        //    //JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
+        //}
         private void Shutdown()
         {
             Client.Shutdown(new IdMessageRequest { Id = Id });
@@ -203,10 +203,10 @@ namespace PeakSwc.RemoteableWebWindows
             _ = Client;
         }
 
-        public void Invoke(Action callback)
-        {
-            callback.Invoke();
-        }
+        //public void Invoke(Action callback)
+        //{
+        //    callback.Invoke();
+        //}
       
     }
 }

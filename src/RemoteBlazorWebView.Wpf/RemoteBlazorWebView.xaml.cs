@@ -69,6 +69,16 @@ namespace RemoteBlazorWebView.Wpf
             set => SetValue(IdProperty, value);
         }
 
+        
+        public bool IsRestarting
+        {
+            get { return (bool)GetValue(IsRestartingProperty); }
+            set { SetValue(IsRestartingProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for IsRestarting.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty IsRestartingProperty =
+            DependencyProperty.Register(nameof(IsRestarting), typeof(bool), typeof(RemoteBlazorWebView), new PropertyMetadata(false));
 
         /// <summary>
         /// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
@@ -193,7 +203,7 @@ namespace RemoteBlazorWebView.Wpf
                 //innerBlazorWebView = MainBlazorWebView;
                 model.ShowHyperlink = "Hidden";
             }
-            else
+            else 
             {
                 MainBlazorWebView.ServerUri = ServerUri;
                 if (Id == default) Id = Guid.NewGuid();
@@ -203,12 +213,9 @@ namespace RemoteBlazorWebView.Wpf
                 //var rww = new RemotableWebWindow(ServerUri, HostPage, Id);
                 //innerBlazorWebView = rww as IBlazorWebView;
                 model.Uri = ServerUri?.ToString() + "app?guid=" + Id;
-                model.ShowHyperlink = "Visible";
+                model.ShowHyperlink = IsRestarting ? "Hidden" : "Visible";
             }
         }
-
-       
-
 
         public event EventHandler<string> OnWebMessageReceived
         {
