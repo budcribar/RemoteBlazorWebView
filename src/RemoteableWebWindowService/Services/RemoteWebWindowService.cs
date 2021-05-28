@@ -98,11 +98,12 @@ namespace PeakSwc.RemoteableWebWindows
                     {
                         var bytes = message.Data.ToArray();
                         var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
+                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = ( new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
 
                         // TODO Further identify file by hash
-                        _fileCache.TryAdd(message.Path,bytes);
+                        if(bytes.Length > 0)
+                            _fileCache.TryAdd(message.Path,bytes);
                     }
                 }
             }

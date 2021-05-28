@@ -118,26 +118,46 @@ namespace PeakSwc.RemoteableWebWindows
                         var files = client.FileReader();
 
                         await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = "Initialize" });
+                        
 
                         // TODO Use multiple threads to read files
                         _ = Task.Run(async () =>
                         {
                             await foreach (var message in files.ResponseStream.ReadAllAsync())
                             {
-                                // TODO Missing file
-                                var bytes = FrameworkFileResolver(message.Path) ?? null;
-                                var temp = ByteString.FromStream(bytes);
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : temp });
+                                try
+                                {
+                                    // TODO Missing file
+                                    var bytes = FrameworkFileResolver(message.Path) ?? null;
+                                    ByteString temp = ByteString.Empty;
+                                    if (bytes != null)
+                                        temp = ByteString.FromStream(bytes);
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
+                                }
+                                catch (Exception ex)
+                                {
+                                    var m = ex.Message;
+                                }
                             }
+                              
                         });
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
+                        try
+                        {
                             var bytes = FrameworkFileResolver(message.Path) ?? null;
-                            var temp = ByteString.FromStream(bytes);
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = bytes == null ? null : temp });
+                            ByteString temp = ByteString.Empty;
+                            if (bytes != null)
+                                temp = ByteString.FromStream(bytes);
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
                         }
-
+                        catch (Exception ex)
+                        {
+                            var m = ex.Message;
+                        }
+                    }
+                       
                     }, cts.Token);
 
                 }

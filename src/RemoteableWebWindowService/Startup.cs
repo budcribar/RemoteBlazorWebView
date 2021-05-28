@@ -29,9 +29,10 @@ namespace PeakSwc.RemoteableWebWindows
             services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
             services.AddSingleton(state);
+            services.AddTransient<FileResolver>();
 
             services.AddRazorPages();             
-            services.AddGrpc();    
+            services.AddGrpc(options => { options.EnableDetailedErrors = true; } );    
 
             services.AddCors(o =>
             {
@@ -75,12 +76,13 @@ namespace PeakSwc.RemoteableWebWindows
             app.UseCors("CorPolicy");
 
             app.UseGrpcWeb();
- 
+
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string,ServiceState>>()),
+                //FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string, ServiceState>>()),
+                FileProvider = app.ApplicationServices.GetService<FileResolver>(),
                 ContentTypeProvider = provider
-            });
+            }); ; ;
 
             app.UseEndpoints(endpoints =>
             {
