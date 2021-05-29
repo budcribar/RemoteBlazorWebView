@@ -13,6 +13,7 @@ using Microsoft.Extensions.FileProviders;
 using RemoteBlazorWebView.Wpf;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using PeakSWC.RemoteableWebWindows;
+using System.Collections.Generic;
 
 namespace PeakSWC
 {
@@ -50,8 +51,8 @@ namespace PeakSWC
         #endregion
 
         private const string webViewTemplateChildName = "WebView";
-        protected WebView2Control _webview;
-        public WebView2WebViewManager _webviewManager;
+        protected WebView2Control? _webview;
+        public WebView2WebViewManager? _webviewManager;
         private bool _isDisposed;
 
         /// <summary>
@@ -97,11 +98,11 @@ namespace PeakSWC
 
         private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnServicesPropertyChanged(e);
 
-        private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+        private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
         private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnHostPagePropertyChanged(e);
 
-        private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+        private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
         protected bool RequiredStartupPropertiesSet =>
             _webview != null &&
@@ -143,6 +144,7 @@ namespace PeakSWC
             // We assume the host page is always in the root of the content directory, because it's
             // unclear there's any other use case. We can add more options later if so.
             var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
+            if (contentRootDir == null) throw new Exception("No root directory found");
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 
@@ -155,7 +157,7 @@ namespace PeakSWC
             _webviewManager.Navigate("/");
         }
 
-        private void HandleRootComponentsCollectionChanged(object sender, NotifyCollectionChangedEventArgs eventArgs)
+        private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
             CheckDisposed();
 
@@ -165,8 +167,8 @@ namespace PeakSWC
                 // Dispatch because this is going to be async, and we want to catch any errors
                 WpfDispatcher.Instance.InvokeAsync(async () =>
                 {
-                    var newItems = eventArgs.NewItems.Cast<RootComponent>();
-                    var oldItems = eventArgs.OldItems.Cast<RootComponent>();
+                    var newItems = eventArgs.NewItems?.Cast<RootComponent>() ?? new List<RootComponent>();
+                    var oldItems = eventArgs.OldItems?.Cast<RootComponent>() ?? new List<RootComponent> ();
 
                     foreach (var item in newItems.Except(oldItems))
                     {

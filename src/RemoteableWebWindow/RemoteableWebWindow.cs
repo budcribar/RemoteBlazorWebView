@@ -21,19 +21,19 @@ namespace PeakSwc.RemoteableWebWindows
         #region private
        
         private readonly string hostname;
-        private readonly object bootLock = new object();
+        private readonly object bootLock = new();
         public Dispatcher? Dispacher { get; set; }
         
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
         private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
 
         // TODO unused
-        private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource cts = new();
         #endregion
 
-        public Uri? uri { get; set; }
-        public string hostHtmlPath { get; set; }
-        public string Id { get; set; }
+        public Uri? ServerUri { get; set; }
+        public string HostHtmlPath { get; set; } = "";
+        public string Id { get; set; } = "";
 
         public static Stream? SupplyFrameworkFile(string uri)
         {
@@ -52,15 +52,17 @@ namespace PeakSwc.RemoteableWebWindows
 
         //public IJSRuntime? JSRuntime { get; set; }
 
-        private  RemoteWebWindow.RemoteWebWindowClient Client {
+        private  RemoteWebWindow.RemoteWebWindowClient? Client {
             get
             {
+                if (ServerUri == null) return null;
+
                 if (client == null)
                 {
-                    var channel = GrpcChannel.ForAddress(uri);
+                    var channel = GrpcChannel.ForAddress(ServerUri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = hostHtmlPath, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
+                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
                     var completed = new ManualResetEventSlim();
                    
                     Task.Run(async () =>
@@ -70,7 +72,7 @@ namespace PeakSwc.RemoteableWebWindows
                             await foreach (var message in events.ResponseStream.ReadAllAsync())
                             {
                                 var command = message.Response.Split(':')[0];
-                                var data = message.Response.Substring(message.Response.IndexOf(':')+1);
+                                var data = message.Response[(message.Response.IndexOf(':') + 1)..];
 
                                 try
                                 {
@@ -182,11 +184,11 @@ namespace PeakSwc.RemoteableWebWindows
 
         //}
 
-        public void NavigateToUrl(string url) { }
+        public void NavigateToUrl(string _) { }
 
         public void SendMessage(string message)
         {
-            Client.SendMessage(new SendMessageRequest { Id=Id, Message = message });
+            Client?.SendMessage(new SendMessageRequest { Id=Id, Message = message });
         }
 
         //public void ShowMessage(string title, string body)
@@ -195,7 +197,7 @@ namespace PeakSwc.RemoteableWebWindows
         //}
         private void Shutdown()
         {
-            Client.Shutdown(new IdMessageRequest { Id = Id });
+            Client?.Shutdown(new IdMessageRequest { Id = Id });
         }
 
         public void Initialize()

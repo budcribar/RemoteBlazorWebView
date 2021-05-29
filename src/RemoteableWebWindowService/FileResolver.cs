@@ -17,7 +17,7 @@ namespace PeakSwc.StaticFiles
     {
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
-        private string guid;
+        private readonly string guid;
         private Stream? stream = null;
         private readonly ILogger<FileResolver> _logger;
 
@@ -41,7 +41,7 @@ namespace PeakSwc.StaticFiles
                 if (!path.Contains(root))
                     path = root + path;
                 if (path.StartsWith('/'))
-                    path = path.Substring(1);
+                    path = path[1..];
 
                 stream = ProcessFile(guid, path);
             }
@@ -94,7 +94,7 @@ namespace PeakSwc.StaticFiles
           
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
             MemoryStream? stream = _rootDictionary[id].FileDictionary[appFile].stream;
-            if (stream.Length == 0)
+            if (stream == null || stream.Length == 0)
             {
                 _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
                 return null;
@@ -104,7 +104,7 @@ namespace PeakSwc.StaticFiles
 
             if (Path.GetFileName(appFile) == Path.GetFileName(_rootDictionary[id].HtmlHostPath))
             {
-                using StreamReader sr = new StreamReader(stream);
+                using StreamReader sr = new(stream);
                 var contents = sr.ReadToEnd();
                 var initialLength = contents.Length;
                 contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");

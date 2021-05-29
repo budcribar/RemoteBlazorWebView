@@ -15,7 +15,7 @@ namespace RemoteBlazorWebView.Wpf
     /// Interaction logic for UserControl1.xaml
     /// </summary>
     public partial class RemoteBlazorWebView : UserControl
-    { 
+    {
         // private WebView2WebViewManager? manager;
 
         #region Dependency property definitions
@@ -69,7 +69,7 @@ namespace RemoteBlazorWebView.Wpf
             set => SetValue(IdProperty, value);
         }
 
-        
+
         public bool IsRestarting
         {
             get { return (bool)GetValue(IsRestartingProperty); }
@@ -110,42 +110,34 @@ namespace RemoteBlazorWebView.Wpf
 
         private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServicesPropertyChanged(e);
 
-        private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
-
-        private void StartWebViewCoreIfPossible()
-        {
-            //TODO
-        }
+        private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnHostPagePropertyChanged(e);
 
-        private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+        private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServerUriPropertyChanged(e);
 
-        private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+        private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnIdPropertyChanged(e);
 
-        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         public new event EventHandler<string> Unloaded
         {
             add
             {
-                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
-
-                if (manager != null && manager.remoteableWebView != null)
-                    manager.remoteableWebView.OnDisconnected += value;
+                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnDisconnected += value;
                 //else
                 //    MainBlazorWebView.Unloaded +=  value;
             }
 
             remove
             {
-                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
-                if (manager != null && manager.remoteableWebView != null)
-                    manager.remoteableWebView.OnDisconnected -= value;
+                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnDisconnected -= value;
                 //else
                 //    MainBlazorWebView.Unloaded -= value;
             }
@@ -155,28 +147,24 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
-
-                if (manager != null && manager.remoteableWebView != null)
-                    manager.remoteableWebView.OnConnected += value;
+                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnConnected += value;
                 //else
-                    //MainBlazorWebView.Loaded += value;
+                //MainBlazorWebView.Loaded += value;
             }
 
             remove
             {
-                var manager = MainBlazorWebView._webviewManager as RemoteWebView2Manager;
-
-                if (manager != null && manager.remoteableWebView != null)
-                    manager.remoteableWebView.OnConnected -= value;
+                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnConnected -= value;
                 //else
                 //    MainBlazorWebView.Loaded -= value;
             }
         }
 
         //private IBlazorWebView? innerBlazorWebView;
-        private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
-        private readonly ViewModel model = new ViewModel();
+        // private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
+        private readonly ViewModel model = new();
         static RemoteBlazorWebView() { }
 
         public RemoteBlazorWebView()
@@ -217,45 +205,45 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
-        public event EventHandler<string> OnWebMessageReceived
-        {
-            add
-            {
+        //public event EventHandler<string> OnWebMessageReceived
+        //{
+        //    add
+        //    {
               
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived += value;
-            }
+        //        //if (this.innerBlazorWebView != null)
+        //        //    this.innerBlazorWebView.OnWebMessageReceived += value;
+        //    }
 
-            remove
-            {
-                //if (this.innerBlazorWebView != null)
-                //    this.innerBlazorWebView.OnWebMessageReceived -= value;
-            }
-        }
+        //    remove
+        //    {
+        //        //if (this.innerBlazorWebView != null)
+        //        //    this.innerBlazorWebView.OnWebMessageReceived -= value;
+        //    }
+        //}
 
-        public void Invoke(Action callback)
-        {
-            // TODO
-            //innerBlazorWebView?.Invoke(callback);
-        }
+        //public void Invoke(Action callback)
+        //{
+        //    // TODO
+        //    //innerBlazorWebView?.Invoke(callback);
+        //}
 
-        public void NavigateToUrl(string url)
+        public void NavigateToUrl(string _)
         {
             // TODO
             //innerBlazorWebView?.NavigateToUrl(url);
         }
 
-        public void SendMessage(string message)
-        {
-           // TODO
-           //innerBlazorWebView?.SendMessage(message);
-        }
+        //public void SendMessage(string message)
+        //{
+        //   // TODO
+        //   //innerBlazorWebView?.SendMessage(message);
+        //}
 
-        public void ShowMessage(string title, string message)
-        {
-            // TODO
-            //innerBlazorWebView?.ShowMessage(title, message);
-        }      
+        //public void ShowMessage(string title, string message)
+        //{
+        //    // TODO
+        //    //innerBlazorWebView?.ShowMessage(title, message);
+        //}      
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {

@@ -12,21 +12,23 @@ namespace PeakSWC
 {
     public class RemoteWebView2Manager : WebView2WebViewManager
     {
-        public RemotableWebWindow? remoteableWebView { get; set; } 
+        public RemotableWebWindow? RemoteableWebView { get; set; } 
         Uri? url;
        
         public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath, Uri? url, Guid id) : base(webview, services, dispatcher, fileProvider, hostPageRelativePath)
         {
             if (url != null)
             {
-               
-                remoteableWebView = new RemotableWebWindow();
-                remoteableWebView.uri = url;
-                remoteableWebView.hostHtmlPath = hostPageRelativePath;
-                remoteableWebView.Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
-                remoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
-                remoteableWebView.Initialize();
-                remoteableWebView.Dispacher = dispatcher;
+
+                RemoteableWebView = new RemotableWebWindow
+                {
+                    ServerUri = url,
+                    HostHtmlPath = hostPageRelativePath,
+                    Id = id == default ? Guid.NewGuid().ToString() : id.ToString(),
+                    Dispacher = dispatcher
+                };
+                RemoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
+                RemoteableWebView.Initialize();
             }
                
         }
@@ -41,18 +43,18 @@ namespace PeakSWC
         {
             this.url = absoluteUri;
 
-            if (remoteableWebView == null)
+            if (RemoteableWebView == null)
                 base.NavigateCore(absoluteUri);
             else
-                remoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri); 
+                RemoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri); 
         }
 
         protected override void SendMessage(string message)
         {
-            if (remoteableWebView == null)
+            if (RemoteableWebView == null)
                 base.SendMessage(message);
             else
-                remoteableWebView.SendMessage(message);
+                RemoteableWebView.SendMessage(message);
         }
     }
 }

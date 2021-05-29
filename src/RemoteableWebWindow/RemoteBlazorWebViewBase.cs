@@ -11,7 +11,7 @@ namespace PeakSWC
 {
     public class RemoteBlazorWebViewBase : BlazorWebViewBase
     {
-        public Uri ServerUri { get; set; }
+        public Uri? ServerUri { get; set; }
         public Guid Id { get; set; }
        
         protected override void StartWebViewCoreIfPossible() {
@@ -25,6 +25,7 @@ namespace PeakSWC
             // We assume the host page is always in the root of the content directory, because it's
             // unclear there's any other use case. We can add more options later if so.
             var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
+            if (contentRootDir == null) throw new Exception("No root directory found");
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 

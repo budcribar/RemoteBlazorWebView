@@ -14,7 +14,7 @@ namespace PeakSWC
         private readonly WebView2Control _webView2;
         private bool _hasInitialized;
 
-        public WpfWeb2ViewWrapper(WebView2Control webView2)
+        public WpfWeb2ViewWrapper(WebView2Control? webView2)
         {
             _webView2 = webView2 ?? throw new ArgumentNullException(nameof(webView2));
         }
@@ -33,7 +33,7 @@ namespace PeakSWC
             remove => _webView2.AcceleratorKeyPressed -= value;
         }
 
-        public Task EnsureCoreWebView2Async(CoreWebView2Environment environment = null)
+        public Task EnsureCoreWebView2Async(CoreWebView2Environment? environment = null)
         {
             if (_hasInitialized)
             {
