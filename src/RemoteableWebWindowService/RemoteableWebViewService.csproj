@@ -43,10 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="publish\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
       <PackagePath></PackagePath>
       <Pack>True</Pack>
