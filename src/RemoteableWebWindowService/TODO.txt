@@ -4,18 +4,8 @@
 3. Do a diff on the blazor.desktop.js and the remote.blazor.desktop.js
 
 
-// TODO 
-//      2. modify index.html to reference <script src="remote.blazor.desktop.js"></script>
-//      3. link in remote.blazor.desktop.js
-
-
 Don't let showmessage do anything until it has been connected.
 
- // TODO use the file specified in the dictionary
-            if (appFile.EndsWith("index.html"))
-
-
-Hyperlink is good only one time and so is the button!!! (Need to prevent user from clicking again)
 
 How to publish the server...
 https://weblog.west-wind.com/posts/2019/Sep/30/Serving-ASPNET-Core-Web-Content-from-External-Folders

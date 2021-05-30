@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Net.Http;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -30,6 +31,7 @@ namespace PeakSwc.RemoteableWebWindows
             services.AddSingleton(rootDictionary);
             services.AddSingleton(state);
             services.AddTransient<FileResolver>();
+            services.AddHttpClient();
 
             services.AddRazorPages();             
             services.AddGrpc(options => { options.EnableDetailedErrors = true; } );    
@@ -86,70 +88,105 @@ namespace PeakSwc.RemoteableWebWindows
 
             app.UseEndpoints(endpoints =>
             {
-            endpoints.MapGrpcService<RemoteWebWindowService>();
+                endpoints.MapGrpcService<RemoteWebWindowService>();
 
-            endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
+                endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
 
-            endpoints.MapGet("/app", async context =>
-            {
-                if (context.Request.Query.TryGetValue("guid", out StringValues value))
+                endpoints.MapGet("/app/{id:guid}", async context =>
                 {
-                    string guid = value.ToString();
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
                     if (rootDictionary.ContainsKey(guid))
                     {
                         var home = rootDictionary[guid].HtmlHostPath;
              
-                        context.Response.Redirect(guid + "/" + home);
+                        context.Response.Redirect($"/{guid}/{home}");
                     }
-                    else await context.Response.WriteAsync("Invalid Guid");
-                }
-                else await context.Response.WriteAsync("Invalid Guid");
-            });
-
-            endpoints.MapGet("/wait/{id:guid}",  async context =>
-            {
-                var id = context.Request.RouteValues["id"];
-                var sid = id?.ToString() ?? "";
-
-                for (int i = 0; i < 30; i++)
-                {
-                    if (rootDictionary.ContainsKey(sid))
-                        break;
-                    await Task.Delay(1000);
-                }
-                if (rootDictionary.ContainsKey(sid))
-                    await context.Response.WriteAsync($"Wait completed");
-                else
-                    await context.Response.WriteAsync($"Unable to restart -> Timed out");
-                    
-            });
-
-            endpoints.MapGet("/{id:guid}", async context =>
-            {
-                // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                var id = context.Request.RouteValues["id"];
-                var sid = id.ToString();
-                if (sid == null) return;
-                
-                ipcDictionary[sid].ReceiveMessage("booted:");
-                
-                context.Response.Redirect($"/restart?guid={sid}");
-                await Task.CompletedTask;
-            });
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
-                {
-                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                    var id = context.Request.RouteValues["id"];
-                    var sid = id.ToString();
-                    if (sid == null) return;
-
-                    ipcDictionary[sid].ReceiveMessage("booted:");
-
-                    context.Response.Redirect($"/restart?guid={sid}");
-                    await Task.CompletedTask;
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync("Invalid Guid");
+                    }
                 });
 
+                endpoints.MapGet("/restart/{id:guid}", async context =>
+                {
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                    
+                    var text = "<script type='text/javascript'>" +
+                    "var xmlHttp = new XMLHttpRequest();" +
+                    "xmlHttp.onreadystatechange = function () {" +
+                    "   if (xmlHttp.readyState == 4 && xmlHttp.status == 200)" +
+                    $"     window.location.assign('/app/{guid}');" +
+                    "  };" +
+                    $" xmlHttp.open('GET', '/wait/{guid}', true);" +
+                    "  xmlHttp.send(null);" +
+                    "</script><h1 class='display-4'>Restarting...</h1>";
+                   
+                    await context.Response.WriteAsync(text);
+
+                });
+
+                endpoints.MapGet("/wait/{id:guid}",  async context =>
+                {
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        if (rootDictionary.ContainsKey(guid))
+                            break;
+                        await Task.Delay(1000);
+                    }
+                    if (rootDictionary.ContainsKey(guid))
+                        await context.Response.WriteAsync($"Wait completed");
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync($"Unable to restart -> Timed out");
+                    }
+                        
+                    
+                });
+
+                endpoints.MapGet("/{id:guid}", async context =>
+                {
+                    // Refresh from home page
+                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
+
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+
+                    if (ipcDictionary.ContainsKey(guid))
+                    {
+                        ipcDictionary[guid].ReceiveMessage("booted:");
+                        context.Response.Redirect($"/restart/{guid}");
+                        await Task.CompletedTask;
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync("Invalid Guid");
+                    }
+                });
+
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
+                {
+                    // Refresh from counter page
+                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+
+                    if (ipcDictionary.ContainsKey(guid))
+                    {
+                        ipcDictionary[guid].ReceiveMessage("booted:");
+                        context.Response.Redirect($"/restart/{guid}");
+                        await Task.CompletedTask;
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync("Invalid Guid");
+                    }
+
+                });
                 endpoints.MapRazorPages();               
             });
         }

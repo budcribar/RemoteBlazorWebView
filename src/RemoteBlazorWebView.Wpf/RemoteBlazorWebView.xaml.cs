@@ -196,11 +196,7 @@ namespace RemoteBlazorWebView.Wpf
                 MainBlazorWebView.ServerUri = ServerUri;
                 if (Id == default) Id = Guid.NewGuid();
                 MainBlazorWebView.Id = Id;
-
-                
-                //var rww = new RemotableWebWindow(ServerUri, HostPage, Id);
-                //innerBlazorWebView = rww as IBlazorWebView;
-                model.Uri = ServerUri?.ToString() + "app?guid=" + Id;
+                model.Uri = $"{ServerUri}app/{Id}";
                 model.ShowHyperlink = IsRestarting ? "Hidden" : "Visible";
             }
         }

@@ -27,7 +27,7 @@ namespace PeakSwc.RemoteableWebWindows
                         if (File.Exists ("cert.pfx"))
                             options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps("cert.pfx", ""); });
                         else 
-                            options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); });
+                            options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps();});
                     });
                     webBuilder.UseStartup<Startup>();
                 });
