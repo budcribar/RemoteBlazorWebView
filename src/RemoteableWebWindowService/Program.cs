@@ -8,7 +8,7 @@ namespace PeakSwc.RemoteableWebWindows
 {
     public class Program
     {     
-        [STAThread]
+        //[STAThread]
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();

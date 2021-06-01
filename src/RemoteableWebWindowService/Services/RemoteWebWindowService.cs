@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
+using System.Threading.Channels;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -19,13 +20,15 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly ConcurrentDictionary<string, IPC> _ipc;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly ConcurrentDictionary<string, BrowserIPCState> _state;
+        private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc, ConcurrentDictionary<string, BrowserIPCState> state)
+        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, BrowserIPCState> state)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;
             _ipc = ipc;
+            _serviceStateChannel = serviceStateChannel;
             _state = state;
         }
 
@@ -43,12 +46,25 @@ namespace PeakSwc.RemoteableWebWindows
                 {
                     HtmlHostPath = request.HtmlHostPath,
                     Hostname = request.Hostname,
+                    InUse = false,
+                    Url = $"https://{context.Host}/app/{request.Id}",
+                    Id = request.Id
                 };
+
+                // TODO URL needs correct host
+                // Let home page know client is available
+                _webWindowDictionary.TryAdd(request.Id, state);
+
+               
+                var list = new ClientResponseList();
+                _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName=x.Hostname, Id=x.Id, State=x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url=x.Url }));      
+
+                await _serviceStateChannel.Writer.WriteAsync(list);
 
                 if (!_ipc.ContainsKey(request.Id)) _ipc.TryAdd(request.Id, new IPC());
                 _ipc[request.Id].ResponseStream = responseStream;
               
-                _webWindowDictionary.TryAdd(request.Id, state);
+               
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
@@ -128,6 +144,11 @@ namespace PeakSwc.RemoteableWebWindows
 
             if (_state.ContainsKey(id))
                 _state.Remove(id, out var _);
+
+            var list = new ClientResponseList();
+            _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+
+             _serviceStateChannel.Writer.WriteAsync(list);
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

@@ -12,14 +12,14 @@ namespace PeakSwc.RemoteableWebWindows
     {
         private readonly ILogger<RemoteWebWindowService> _logger;
         private ConcurrentDictionary<string, IPC> IPC { get; set; }
-        private ConcurrentDictionary<string, BrowserIPCState> stateDict { get; init; }
+        private ConcurrentDictionary<string, BrowserIPCState> StateDict { get; init; }
         private volatile bool shutdown = false;
        
         public BrowserIPCService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, IPC> ipc, ConcurrentDictionary<string, BrowserIPCState> state)
         {
             _logger = logger;         
             IPC = ipc;
-            stateDict = state;
+            StateDict = state;
         }
 
         public void Shutdown()
@@ -44,9 +44,9 @@ namespace PeakSwc.RemoteableWebWindows
         public override Task<Empty> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {         
             if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());
-            if (!stateDict.ContainsKey(request.Id)) stateDict.TryAdd(request.Id, new BrowserIPCState());
+            if (!StateDict.ContainsKey(request.Id)) StateDict.TryAdd(request.Id, new BrowserIPCState());
 
-            var state = stateDict[request.Id];
+            var state = StateDict[request.Id];
 
             lock (state)
             {

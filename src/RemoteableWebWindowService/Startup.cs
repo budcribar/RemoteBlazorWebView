@@ -1,19 +1,18 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading;
+﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PeakSwc.StaticFiles;
-//using PeakSwc.Builder;
 using RemoteableWebWindowService;
 using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.StaticFiles;
-using System.Net.Http;
+using System.Threading.Channels;
+using System.Linq;
+using Microsoft.AspNetCore.Rewrite;
+using Microsoft.Extensions.FileProviders;
 
 namespace PeakSwc.RemoteableWebWindows
 {
@@ -22,6 +21,7 @@ namespace PeakSwc.RemoteableWebWindows
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
         private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
         private readonly ConcurrentDictionary<string, BrowserIPCState> state = new();
+        private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -29,12 +29,12 @@ namespace PeakSwc.RemoteableWebWindows
         {         
             services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
+            services.AddSingleton(serviceStateChannel);
             services.AddSingleton(state);
-            services.AddTransient<FileResolver>();
-            services.AddHttpClient();
+            services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 
-            services.AddRazorPages();             
-            services.AddGrpc(options => { options.EnableDetailedErrors = true; } );    
+            services.AddGrpc(options => { options.EnableDetailedErrors = true; });
+            services.AddTransient<FileResolver>();
 
             services.AddCors(o =>
             {
@@ -52,7 +52,7 @@ namespace PeakSwc.RemoteableWebWindows
                 });
             });
         }
-
+            
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -61,6 +61,13 @@ namespace PeakSwc.RemoteableWebWindows
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            app.UseCors("CorPolicy");
+
+            app.UseResponseCompression();
+            app.UseRouting();
+
+            app.UseGrpcWeb();
 
             var provider = new FileExtensionContentTypeProvider();
             // Add new mappings
@@ -73,23 +80,19 @@ namespace PeakSwc.RemoteableWebWindows
             provider.Mappings[".woff2"] = "application/font-woff";
             provider.Mappings[".ico"] = "image/x-icon";
 
-            app.UseRouting();
-
-            app.UseCors("CorPolicy");
-
-            app.UseGrpcWeb();
+            // TODO Use?
+            app.UseRewriter(new Microsoft.AspNetCore.Rewrite.RewriteOptions().AddRewrite("^wwwroot$", "wwwroot/index.html", false));
 
             app.UseStaticFiles(new StaticFileOptions
-            {
-                //FileProvider = new FileResolver(app.ApplicationServices.GetService<ConcurrentDictionary<string, ServiceState>>()),
-                FileProvider = app.ApplicationServices.GetService<FileResolver>(),
+            { 
+                FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly)),
                 ContentTypeProvider = provider
-            }); ; ;
+            }); 
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<RemoteWebWindowService>();
-
+                endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb();
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
 
                 endpoints.MapGet("/app/{id:guid}", async context =>
@@ -98,6 +101,12 @@ namespace PeakSwc.RemoteableWebWindows
 
                     if (rootDictionary.ContainsKey(guid))
                     {
+                        rootDictionary[guid].InUse = true;
+                        // Update Status
+                        var list = new ClientResponseList();
+                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                        await serviceStateChannel.Writer.WriteAsync(list);
+
                         var home = rootDictionary[guid].HtmlHostPath;
              
                         context.Response.Redirect($"/{guid}/{home}");
@@ -187,7 +196,13 @@ namespace PeakSwc.RemoteableWebWindows
                     }
 
                 });
-                endpoints.MapRazorPages();               
+
+                endpoints.MapGet("/", async context =>
+                {
+                    context.Response.Redirect("wwwroot");
+                    await Task.CompletedTask;
+                });
+
             });
         }
     }

@@ -83,6 +83,20 @@ export class BrowserIPC {
   static readonly SendMessage: BrowserIPCSendMessage;
 }
 
+type ClientIPCGetClients = {
+  readonly methodName: string;
+  readonly service: typeof ClientIPC;
+  readonly requestStream: false;
+  readonly responseStream: true;
+  readonly requestType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webwindow_pb.ClientResponse;
+};
+
+export class ClientIPC {
+  static readonly serviceName: string;
+  static readonly GetClients: ClientIPCGetClients;
+}
+
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
 export type Status = { details: string, code: number; metadata: grpc.Metadata }
 
@@ -160,5 +174,12 @@ export class BrowserIPCClient {
     requestMessage: webwindow_pb.SendSequenceMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
+}
+
+export class ClientIPCClient {
+  readonly serviceHost: string;
+
+  constructor(serviceHost: string, options?: grpc.RpcOptions);
+  getClients(requestMessage: google_protobuf_empty_pb.Empty, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.ClientResponse>;
 }
 

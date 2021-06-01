@@ -69,3 +69,23 @@ service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (google.protobuf.Empty);
 }
+
+enum ClientState {
+    Connected = 0;
+    ShuttingDown = 1;
+}
+
+message ClientResponse {
+    string id = 1;
+    string hostName = 2;
+    string url = 3;
+    ClientState state = 4;
+}
+
+message ClientResponseList {
+    repeated ClientResponse clientResponses = 1;
+}
+
+service ClientIPC {
+    rpc GetClients(google.protobuf.Empty) returns (stream ClientResponseList);
+}

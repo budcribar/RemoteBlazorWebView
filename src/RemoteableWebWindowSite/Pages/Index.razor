@@ -1,0 +1,58 @@
+﻿@page "/"
+@inject GrpcChannel Channel
+@using PeakSwc.RemoteableWebWindows
+@using Grpc.Core;
+@using Microsoft.Extensions.Logging
+@using System.Threading
+@inject ILogger<Index> _logger
+@implements IDisposable
+
+<h3>Active Clients</h3>
+
+<ul>
+    @if(list != null)
+    {
+        foreach (var client in list.ClientResponses)
+        {
+           if(client.State == ClientState.Connected)
+           {
+                <li> <a href="@client.Url">@client.HostName</a></li>
+           }
+           else {
+                <li> @client.HostName (in use)</li>
+           }
+        }
+    }
+
+</ul>
+@code {
+    private ClientResponseList? list;
+    private CancellationTokenSource tokenSource = new CancellationTokenSource();
+
+    protected override void OnInitialized()
+    {
+        var client = new ClientIPC.ClientIPCClient(Channel);
+
+        var response =  client.GetClients(new());
+        var stream = response.ResponseStream;
+
+        Task _ = Task.Run(async () =>
+        {
+            tokenSource.Token.ThrowIfCancellationRequested();
+            await foreach (var clientResponseList in response.ResponseStream.ReadAllAsync())
+            {
+                list = clientResponseList;
+
+                list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
+             
+                await InvokeAsync(StateHasChanged);
+
+            }
+        }, tokenSource.Token);
+
+    }
+
+    public void Dispose() {
+        tokenSource.Cancel();
+    }
+}
