@@ -73,6 +73,10 @@ namespace PeakSwc.RemoteableWebWindows
                     await Task.Delay(1000);
                 }
             }
+            else
+            {
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" });
+            }
             
         }
 

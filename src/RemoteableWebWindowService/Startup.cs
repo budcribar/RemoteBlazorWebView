@@ -101,15 +101,24 @@ namespace PeakSwc.RemoteableWebWindows
 
                     if (rootDictionary.ContainsKey(guid))
                     {
-                        rootDictionary[guid].InUse = true;
-                        // Update Status
-                        var list = new ClientResponseList();
-                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
-                        await serviceStateChannel.Writer.WriteAsync(list);
+                        if (rootDictionary[guid].InUse)
+                        {
+                            context.Response.StatusCode = 400;
+                            await context.Response.WriteAsync("Client is currently locked");
 
-                        var home = rootDictionary[guid].HtmlHostPath;
-             
-                        context.Response.Redirect($"/{guid}/{home}");
+                        } else
+                        {
+                            rootDictionary[guid].InUse = true;
+                            // Update Status
+                            var list = new ClientResponseList();
+                            rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                            await serviceStateChannel.Writer.WriteAsync(list);
+
+                            var home = rootDictionary[guid].HtmlHostPath;
+
+                            context.Response.Redirect($"/{guid}/{home}");
+                        }
+                      
                     }
                     else
                     {

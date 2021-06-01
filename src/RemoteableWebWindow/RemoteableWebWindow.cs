@@ -64,6 +64,7 @@ namespace PeakSwc.RemoteableWebWindows
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
                     var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
                     var completed = new ManualResetEventSlim();
+                    var createFailed = false;
                    
                     Task.Run(async () =>
                     {
@@ -81,6 +82,11 @@ namespace PeakSwc.RemoteableWebWindows
                                         case "created":
                                             completed.Set();
                                             break;
+                                        case "createFailed":
+                                            createFailed = true;
+                                            completed.Set();
+                                            break;
+
                                         case "webmessage":
                                             if (data == "booted:")
                                             {
@@ -115,6 +121,9 @@ namespace PeakSwc.RemoteableWebWindows
 
                     completed.Wait();
 
+                    if (createFailed)
+                        return null;
+
                     Task.Run(async () =>
                     {
                         var files = client.FileReader();
@@ -123,26 +132,26 @@ namespace PeakSwc.RemoteableWebWindows
                         
 
                         // TODO Use multiple threads to read files
-                        _ = Task.Run(async () =>
-                        {
-                            await foreach (var message in files.ResponseStream.ReadAllAsync())
-                            {
-                                try
-                                {
-                                    // TODO Missing file
-                                    var bytes = FrameworkFileResolver(message.Path) ?? null;
-                                    ByteString temp = ByteString.Empty;
-                                    if (bytes != null)
-                                        temp = ByteString.FromStream(bytes);
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
-                                }
-                                catch (Exception ex)
-                                {
-                                    var m = ex.Message;
-                                }
-                            }
+                        //_ = Task.Run(async () =>
+                        //{
+                        //    await foreach (var message in files.ResponseStream.ReadAllAsync())
+                        //    {
+                        //        try
+                        //        {
+                        //            // TODO Missing file
+                        //            var bytes = FrameworkFileResolver(message.Path) ?? null;
+                        //            ByteString temp = ByteString.Empty;
+                        //            if (bytes != null)
+                        //                temp = ByteString.FromStream(bytes);
+                        //            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
+                        //        }
+                        //        catch (Exception ex)
+                        //        {
+                        //            var m = ex.Message;
+                        //        }
+                        //    }
                               
-                        });
+                        //});
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
