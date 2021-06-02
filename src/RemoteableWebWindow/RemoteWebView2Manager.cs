@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC
 {
-    public class RemoteWebView2Manager : WebView2WebViewManager
+    public class RemoteWebView2Manager : WebView2WebViewManager, IWebViewManager
     {
         public RemotableWebWindow? RemoteableWebView { get; set; } 
         Uri? url;
