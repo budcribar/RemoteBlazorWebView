@@ -1,0 +1,43 @@
+{
+  "name": "components.desktop.client",
+  "private": true,
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "build:debug": "npm run protoc && webpack --mode development",
+    "build:production": "npm run protoc && webpack --mode production",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos -I.\\protoc\\include webwindow.proto"
+  },
+  "devDependencies": {
+    "@improbable-eng/grpc-web": "^0.14.0",
+    "@microsoft/dotnet-js-interop": "6.0.0-preview.3.21201.13",
+    "@microsoft/signalr": "5.0.5",
+    "@microsoft/signalr-protocol-msgpack": "5.0.5",
+    "@types/base64-arraybuffer": "^0.1.0",
+    "@types/emscripten": "1.39.3",
+    "@types/google-protobuf": "^3.7.2",
+    "@types/jest": "^24.9.1",
+    "@types/jsdom": "11.0.6",
+    "@typescript-eslint/eslint-plugin": "^1.13.0",
+    "@typescript-eslint/parser": "^1.13.0",
+    "base64-arraybuffer": "^0.1.5",
+    "eslint": "^5.16.0",
+    "google-protobuf": "^3.15.8",
+    "grpc-web": "^1.2.1",
+    "jest": "^24.9.0",
+    "rimraf": "^2.7.1",
+    "ts-jest": "^24.3.0",
+    "ts-loader": "^4.4.1",
+    "ts-protoc-gen": "^0.14.0",
+    "tsconfig-paths-webpack-plugin": "^3.5.1",
+    "typescript": "^3.8.3",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11"
+  },
+  "resolutions": {
+    "**/set-value": "^2.0.1"
+  }
+}

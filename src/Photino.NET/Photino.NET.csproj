@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Authors>TryPhotino</Authors>
+    <Company>TryPhotino</Company>
+    <Description>.NET 5 app that opens native OS windows hosting web UI on Windows, Mac, and Linux (without Blazor support)</Description>
+    <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageDescription>.NET 5 app that opens native OS windows hosting web UI on Windows, Mac, and Linux (without Blazor support)</PackageDescription>
+    <PackageId>Photino.NET</PackageId>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Product>Photino.NET</Product>
+    <PackageProjectUrl>https://github.com/tryphotino/photino.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/tryphotino/photino.NET</RepositoryUrl>
+    <TargetFramework>net6</TargetFramework>
+    <Title>PhotinoNET</Title>
+  </PropertyGroup>
+
+  <Target Name="SetPackageVersion" DependsOnTargets="Build">
+    <PropertyGroup>
+      <PackageVersion>$(Version)</PackageVersion>
+    </PropertyGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.Native" Version="1.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.0-preview.3.21201.13" />
+  </ItemGroup>
+  
+</Project>
