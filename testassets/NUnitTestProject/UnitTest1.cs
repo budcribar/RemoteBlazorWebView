@@ -17,6 +17,7 @@ using System;
 
 namespace NUnitTestProject
 {
+  
     [TestClass]
     public class Tests
     {
@@ -32,9 +33,9 @@ namespace NUnitTestProject
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemotableWebWindowService")?.Kill();
+            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemotableWebViewService")?.Kill();
             var relative = @"..\..\..\..\..\src\RemoteableWebWindowService";
-            var executable = @"bin\debug\netcoreapp3.1\RemoteableWebWindowService.exe";
+            var executable = @"bin\debug\net6\RemoteableWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
 
             process = new Process();
@@ -44,17 +45,14 @@ namespace NUnitTestProject
             process.Start();
             var ids = new RemoteWebWindow.RemoteWebWindowClient(channel).GetIds(new Empty());
 
-
             Console.WriteLine($"Started server in {sw.Elapsed}");
 
-
-            relative = @"..\..\..\..\..\testassets\BlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\debug\netcoreapp3.1";
-            executable = "BlazorWebViewTutorial.WpfApp.exe";
+            relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var exePath = @"bin\debug\net6-windows";
+            executable = "RemoteBlazorWebViewTutorial.WpfApp.exe";
             f = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath, executable);
 
-            Process.GetProcesses().Where(p => p.ProcessName == "BlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
-
+            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
 
             clients = new List<Process>();
 
@@ -64,13 +62,11 @@ namespace NUnitTestProject
                 Process p = new Process();
                 p.StartInfo.FileName = Path.GetFullPath(f);
                 p.StartInfo.UseShellExecute = false;
-                p.StartInfo.Arguments = @"https://localhost:443";
+                p.StartInfo.Arguments = @"-u=https://localhost:443";
                 p.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
                 
                 p.Start();
                 clients.Add(p);
-
-                
             }
 
             StartClient(numClients);
@@ -93,7 +89,7 @@ namespace NUnitTestProject
             do
             {
                 ids = client.GetIds(new Empty()).Responses.ToArray();
-                Thread.Sleep(10);
+                Thread.Sleep(200);
             } while (ids.Count() != num);
            
         }
@@ -125,12 +121,20 @@ namespace NUnitTestProject
             TestClient(2);
         }
 
+        [Ignore("Not enough resources")]
         [TestMethod]
         public void Test10Client()
         {
             TestClient(10);
         }
 
+        [TestMethod]
+        public void Test5Client()
+        {
+            TestClient(5);
+        }
+
+        [Ignore("Not enough resources")]
         [TestMethod]
         public void Test50Client()
         {
@@ -165,7 +169,7 @@ namespace NUnitTestProject
 
             //_driver.AsParallel().WithDegreeOfParallelism(3).Select((w, i) => new { Index = i, Driver = w }).ForAll(x => x.Driver.Url = url + $"app?guid={ids[x.Index]}"); 
 
-            for (int i=0; i<num; i++) _driver[i].Url = url + $"app?guid={ids[i]}";
+            for (int i=0; i<num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
             Thread.Sleep(1000);
@@ -173,7 +177,12 @@ namespace NUnitTestProject
 
             //_driver.AsParallel().ForAll(x => x.ExecuteScript("window['Blazor'].navigateTo('/counter', false);", null));
 
-            for (int i = 0; i < num; i++) _driver[i].ExecuteScript("window['Blazor'].navigateTo('/counter', false);", null);
+            for (int i = 0; i < num; i++) {
+                var link = _driver[i].FindElementByPartialLinkText("Counter");
+                link.Click();
+            }
+
+            //for (int i = 0; i < num; i++) _driver[i].ExecuteScript("window['Blazor'].navigateTo('/counter', false);", null);
             Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
 
             Thread.Sleep(1000);
