@@ -18,5 +18,6 @@ namespace RemoteableWebWindowService.Services
         public string Id { get; init; } = string.Empty;
         public ConcurrentDictionary<string, (MemoryStream? stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new ();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
+        public IPC IPC { get; init; } = new IPC();
     }
 }

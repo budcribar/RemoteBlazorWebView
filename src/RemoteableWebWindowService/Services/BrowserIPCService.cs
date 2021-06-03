@@ -5,17 +5,18 @@ using System.Threading;
 using RemoteableWebWindowService;
 using System.Collections.Concurrent;
 using Google.Protobuf.WellKnownTypes;
+using RemoteableWebWindowService.Services;
 
 namespace PeakSwc.RemoteableWebWindows
 {
     public class BrowserIPCService : BrowserIPC.BrowserIPCBase
     {
         private readonly ILogger<RemoteWebWindowService> _logger;
-        private ConcurrentDictionary<string, IPC> IPC { get; set; }
+        private ConcurrentDictionary<string, ServiceState> IPC { get; set; }
         private ConcurrentDictionary<string, BrowserIPCState> StateDict { get; init; }
         private volatile bool shutdown = false;
        
-        public BrowserIPCService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, IPC> ipc, ConcurrentDictionary<string, BrowserIPCState> state)
+        public BrowserIPCService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> ipc, ConcurrentDictionary<string, BrowserIPCState> state)
         {
             _logger = logger;         
             IPC = ipc;
@@ -31,9 +32,7 @@ namespace PeakSwc.RemoteableWebWindows
 
         public override Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-           
-            if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());
-            IPC[request.Id].BrowserResponseStream = responseStream;
+            IPC[request.Id].IPC.BrowserResponseStream = responseStream;
 
             while (!shutdown)
                 Thread.Sleep(1000);
@@ -43,7 +42,6 @@ namespace PeakSwc.RemoteableWebWindows
 
         public override Task<Empty> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {         
-            if (!IPC.ContainsKey(request.Id)) IPC.TryAdd(request.Id, new IPC());
             if (!StateDict.ContainsKey(request.Id)) StateDict.TryAdd(request.Id, new BrowserIPCState());
 
             var state = StateDict[request.Id];
@@ -52,7 +50,7 @@ namespace PeakSwc.RemoteableWebWindows
             {
                 if (request.Sequence == state.SequenceNum)
                 {
-                    IPC[request.Id].ReceiveMessage(request.Message);
+                    IPC[request.Id].IPC.ReceiveMessage(request.Message);
                     state.SequenceNum++;
                 }
                 else
@@ -60,7 +58,7 @@ namespace PeakSwc.RemoteableWebWindows
 
                 while (state.MessageDictionary.ContainsKey(state.SequenceNum))
                 {
-                    IPC[request.Id].ReceiveMessage(state.MessageDictionary[state.SequenceNum].Message);
+                    IPC[request.Id].IPC.ReceiveMessage(state.MessageDictionary[state.SequenceNum].Message);
                     state.SequenceNum++;
                 }
             }

@@ -19,7 +19,7 @@ namespace PeakSwc.RemoteableWebWindows
     public class Startup
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
-        private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
+        //private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
         private readonly ConcurrentDictionary<string, BrowserIPCState> state = new();
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
 
@@ -27,7 +27,7 @@ namespace PeakSwc.RemoteableWebWindows
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {         
-            services.AddSingleton(ipcDictionary);
+            //services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton(state);
@@ -173,9 +173,9 @@ namespace PeakSwc.RemoteableWebWindows
 
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
-                    if (ipcDictionary.ContainsKey(guid))
+                    if (rootDictionary.ContainsKey(guid))
                     {
-                        ipcDictionary[guid].ReceiveMessage("booted:");
+                        rootDictionary[guid].IPC.ReceiveMessage("booted:");
                         context.Response.Redirect($"/restart/{guid}");
                         await Task.CompletedTask;
                     }
@@ -192,9 +192,9 @@ namespace PeakSwc.RemoteableWebWindows
                     // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
-                    if (ipcDictionary.ContainsKey(guid))
+                    if (rootDictionary.ContainsKey(guid))
                     {
-                        ipcDictionary[guid].ReceiveMessage("booted:");
+                        rootDictionary[guid].IPC.ReceiveMessage("booted:");
                         context.Response.Redirect($"/restart/{guid}");
                         await Task.CompletedTask;
                     }

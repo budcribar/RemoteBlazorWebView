@@ -17,17 +17,17 @@ namespace PeakSwc.RemoteableWebWindows
     { 
         private readonly ILogger<RemoteWebWindowService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
-        private readonly ConcurrentDictionary<string, IPC> _ipc;
+        //private readonly ConcurrentDictionary<string, IPC> _ipc;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly ConcurrentDictionary<string, BrowserIPCState> _state;
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, IPC> ipc, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, BrowserIPCState> state)
+        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, BrowserIPCState> state)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;
-            _ipc = ipc;
+            //_ipc = ipc;
             _serviceStateChannel = serviceStateChannel;
             _state = state;
         }
@@ -48,7 +48,8 @@ namespace PeakSwc.RemoteableWebWindows
                     Hostname = request.Hostname,
                     InUse = false,
                     Url = $"https://{context.Host}/app/{request.Id}",
-                    Id = request.Id
+                    Id = request.Id,
+                    IPC = new IPC()
                 };
 
                 // TODO URL needs correct host
@@ -60,11 +61,7 @@ namespace PeakSwc.RemoteableWebWindows
                 _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName=x.Hostname, Id=x.Id, State=x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url=x.Url }));      
 
                 await _serviceStateChannel.Writer.WriteAsync(list);
-
-                if (!_ipc.ContainsKey(request.Id)) _ipc.TryAdd(request.Id, new IPC());
-                _ipc[request.Id].ResponseStream = responseStream;
-              
-               
+                state.IPC.ResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
@@ -143,8 +140,8 @@ namespace PeakSwc.RemoteableWebWindows
             if (_webWindowDictionary.ContainsKey(id))
                 _webWindowDictionary.Remove(id, out var _);
 
-            if (_ipc.ContainsKey(id))
-                _ipc.Remove(id, out var _);
+            //if (_ipc.ContainsKey(id))
+            //    _ipc.Remove(id, out var _);
 
             if (_state.ContainsKey(id))
                 _state.Remove(id, out var _);
@@ -163,7 +160,7 @@ namespace PeakSwc.RemoteableWebWindows
 
         public override Task<Empty> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            _ipc[request.Id].SendMessage(request.Message);
+            _webWindowDictionary[request.Id].IPC.SendMessage(request.Message);
             return Task.FromResult<Empty>(new Empty());
         }
 
