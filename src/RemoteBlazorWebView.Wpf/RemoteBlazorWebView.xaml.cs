@@ -128,7 +128,7 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnDisconnected += value;
                 //else
                 //    MainBlazorWebView.Unloaded +=  value;
@@ -136,7 +136,7 @@ namespace RemoteBlazorWebView.Wpf
 
             remove
             {
-                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnDisconnected -= value;
                 //else
                 //    MainBlazorWebView.Unloaded -= value;
@@ -147,7 +147,7 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnConnected += value;
                 //else
                 //MainBlazorWebView.Loaded += value;
@@ -155,7 +155,7 @@ namespace RemoteBlazorWebView.Wpf
 
             remove
             {
-                if (MainBlazorWebView._webviewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnConnected -= value;
                 //else
                 //    MainBlazorWebView.Loaded -= value;

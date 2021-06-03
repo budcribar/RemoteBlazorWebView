@@ -16,10 +16,12 @@ namespace PeakSWC
     {
         public Uri? ServerUri { get; set; }
         public Guid Id { get; set; }
+        public IWebViewManager? WebViewManager { get; set; }
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
-            return new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+            WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+            return WebViewManager;
 
         }
 

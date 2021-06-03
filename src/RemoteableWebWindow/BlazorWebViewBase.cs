@@ -53,8 +53,7 @@ namespace PeakSWC
 
         private const string webViewTemplateChildName = "WebView";
         private WebView2Control? _webview;
-        //TODO change to property
-        public IWebViewManager? _webviewManager;
+        private IWebViewManager? _webviewManager;
         private bool _isDisposed;
 
         /// <summary>
