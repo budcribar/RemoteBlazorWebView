@@ -8,12 +8,13 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using RemoteBlazorWebView.Wpf;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using PeakSWC.RemoteableWebWindows;
 using System.Collections.Generic;
+using PeakSwc.RemoteableWebWindows;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.AspNetCore.Components;
 
 namespace PeakSWC
 {
@@ -51,8 +52,9 @@ namespace PeakSWC
         #endregion
 
         private const string webViewTemplateChildName = "WebView";
-        protected WebView2Control? _webview;
-        public WebView2WebViewManager? _webviewManager;
+        private WebView2Control? _webview;
+        //TODO change to property
+        public IWebViewManager? _webviewManager;
         private bool _isDisposed;
 
         /// <summary>
@@ -104,7 +106,7 @@ namespace PeakSWC
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
-        protected bool RequiredStartupPropertiesSet =>
+        private bool RequiredStartupPropertiesSet =>
             _webview != null &&
             HostPage != null &&
             Services != null;
@@ -132,7 +134,12 @@ namespace PeakSWC
             StartWebViewCoreIfPossible();
         }
 
-        protected virtual void StartWebViewCoreIfPossible()
+        public virtual IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        {
+            return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+        }
+
+        private void StartWebViewCoreIfPossible()
         {
             CheckDisposed();
 
@@ -148,7 +155,7 @@ namespace PeakSWC
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            _webviewManager = new WebView2WebViewManager(new WpfWeb2ViewWrapper(_webview), Services, WpfDispatcher.Instance, fileProvider, hostPageRelativePath);
+            _webviewManager = this.CreateWebViewManager(new WpfWeb2ViewWrapper(_webview), Services, WpfDispatcher.Instance, fileProvider, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously

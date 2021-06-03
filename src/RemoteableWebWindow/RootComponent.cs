@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
+using PeakSwc.RemoteableWebWindows;
 
 namespace PeakSWC.RemoteableWebWindows
 {
@@ -31,7 +32,7 @@ namespace PeakSWC.RemoteableWebWindows
         /// </summary>
         public IDictionary<string, object?>? Parameters { get; set; }
 
-        internal Task AddToWebViewManagerAsync(WebViewManager webViewManager)
+        internal Task AddToWebViewManagerAsync(IWebViewManager webViewManager)
         {
             // As a characteristic of XAML,we can't rely on non-default constructors. So we have to
             // validate that the required properties were set. We could skip validating this and allow
@@ -51,7 +52,7 @@ namespace PeakSWC.RemoteableWebWindows
             return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
         }
 
-        internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
+        internal Task RemoveFromWebViewManagerAsync(IWebViewManager webviewManager)
         {
             if (Selector == null) return Task.CompletedTask;
             return webviewManager.RemoveRootComponentAsync(Selector);

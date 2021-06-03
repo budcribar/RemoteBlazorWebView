@@ -42,6 +42,7 @@
     <PackageReference Include="Grpc.Net.Client" Version="2.36.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.4.21253.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.0-preview.4.21253.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.0-preview.4.21253.5" />
     <PackageReference Include="Grpc.Tools" Version="2.36.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
