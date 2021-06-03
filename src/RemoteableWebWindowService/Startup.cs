@@ -19,18 +19,13 @@ namespace PeakSwc.RemoteableWebWindows
     public class Startup
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
-        //private readonly ConcurrentDictionary<string, IPC> ipcDictionary = new();
-        private readonly ConcurrentDictionary<string, BrowserIPCState> state = new();
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {         
-            //services.AddSingleton(ipcDictionary);
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
-            services.AddSingleton(state);
+         
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
