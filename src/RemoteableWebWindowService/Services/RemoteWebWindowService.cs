@@ -48,11 +48,9 @@ namespace PeakSwc.RemoteableWebWindows
                     IPC = new IPC()
                 };
 
-                // TODO URL needs correct host
                 // Let home page know client is available
                 _webWindowDictionary.TryAdd(request.Id, state);
 
-               
                 var list = new ClientResponseList();
                 _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName=x.Hostname, Id=x.Id, State=x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url=x.Url }));      
 

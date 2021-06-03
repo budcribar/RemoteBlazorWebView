@@ -80,7 +80,6 @@ namespace PeakSwc.RemoteableWebWindows
             provider.Mappings[".woff2"] = "application/font-woff";
             provider.Mappings[".ico"] = "image/x-icon";
 
-            // TODO Use?
             app.UseRewriter(new Microsoft.AspNetCore.Rewrite.RewriteOptions().AddRewrite("^wwwroot$", "wwwroot/index.html", false));
 
             app.UseStaticFiles(new StaticFileOptions

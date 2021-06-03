@@ -9,10 +9,3 @@ Don't let showmessage do anything until it has been connected.
 
 How to publish the server...
 https://weblog.west-wind.com/posts/2019/Sep/30/Serving-ASPNET-Core-Web-Content-from-External-Folders
-
-
-
-
-
-
-
