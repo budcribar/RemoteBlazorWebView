@@ -89,7 +89,7 @@ type ClientIPCGetClients = {
   readonly requestStream: false;
   readonly responseStream: true;
   readonly requestType: typeof google_protobuf_empty_pb.Empty;
-  readonly responseType: typeof webwindow_pb.ClientResponse;
+  readonly responseType: typeof webwindow_pb.ClientResponseList;
 };
 
 export class ClientIPC {
@@ -180,6 +180,6 @@ export class ClientIPCClient {
   readonly serviceHost: string;
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
-  getClients(requestMessage: google_protobuf_empty_pb.Empty, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.ClientResponse>;
+  getClients(requestMessage: google_protobuf_empty_pb.Empty, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.ClientResponseList>;
 }
 

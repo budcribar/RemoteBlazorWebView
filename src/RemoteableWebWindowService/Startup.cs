@@ -78,8 +78,10 @@ namespace PeakSwc.RemoteableWebWindows
             app.UseRewriter(new Microsoft.AspNetCore.Rewrite.RewriteOptions().AddRewrite("^wwwroot$", "wwwroot/index.html", false));
 
             app.UseStaticFiles(new StaticFileOptions
-            { 
+            {
+
                 FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly)),
+                //FileProvider = new CompositeFileProvider(new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly),app.ApplicationServices?.GetService<FileResolver>()),
                 ContentTypeProvider = provider
             }); 
 
@@ -162,8 +164,7 @@ namespace PeakSwc.RemoteableWebWindows
 
                 endpoints.MapGet("/{id:guid}", async context =>
                 {
-                    // Refresh from home page
-                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
+                    // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
 
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
@@ -182,8 +183,7 @@ namespace PeakSwc.RemoteableWebWindows
 
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
                 {
-                    // Refresh from counter page
-                    // https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
+                    // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
                     if (rootDictionary.ContainsKey(guid))

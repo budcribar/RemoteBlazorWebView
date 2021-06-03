@@ -258,8 +258,8 @@ export class ClientResponse extends jspb.Message {
   getUrl(): string;
   setUrl(value: string): void;
 
-  getAddclient(): boolean;
-  setAddclient(value: boolean): void;
+  getState(): ClientStateMap[keyof ClientStateMap];
+  setState(value: ClientStateMap[keyof ClientStateMap]): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ClientResponse.AsObject;
@@ -276,7 +276,36 @@ export namespace ClientResponse {
     id: string,
     hostname: string,
     url: string,
-    addclient: boolean,
+    state: ClientStateMap[keyof ClientStateMap],
   }
 }
+
+export class ClientResponseList extends jspb.Message {
+  clearClientresponsesList(): void;
+  getClientresponsesList(): Array<ClientResponse>;
+  setClientresponsesList(value: Array<ClientResponse>): void;
+  addClientresponses(value?: ClientResponse, index?: number): ClientResponse;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ClientResponseList.AsObject;
+  static toObject(includeInstance: boolean, msg: ClientResponseList): ClientResponseList.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ClientResponseList, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ClientResponseList;
+  static deserializeBinaryFromReader(message: ClientResponseList, reader: jspb.BinaryReader): ClientResponseList;
+}
+
+export namespace ClientResponseList {
+  export type AsObject = {
+    clientresponsesList: Array<ClientResponse.AsObject>,
+  }
+}
+
+export interface ClientStateMap {
+  CONNECTED: 0;
+  SHUTTINGDOWN: 1;
+}
+
+export const ClientState: ClientStateMap;
 
