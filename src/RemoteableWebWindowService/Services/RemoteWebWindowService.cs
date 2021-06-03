@@ -17,19 +17,15 @@ namespace PeakSwc.RemoteableWebWindows
     { 
         private readonly ILogger<RemoteWebWindowService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
-        //private readonly ConcurrentDictionary<string, IPC> _ipc;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
-        private readonly ConcurrentDictionary<string, BrowserIPCState> _state;
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, BrowserIPCState> state)
+        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;
-            //_ipc = ipc;
             _serviceStateChannel = serviceStateChannel;
-            _state = state;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
@@ -139,12 +135,6 @@ namespace PeakSwc.RemoteableWebWindows
 
             if (_webWindowDictionary.ContainsKey(id))
                 _webWindowDictionary.Remove(id, out var _);
-
-            //if (_ipc.ContainsKey(id))
-            //    _ipc.Remove(id, out var _);
-
-            if (_state.ContainsKey(id))
-                _state.Remove(id, out var _);
 
             var list = new ClientResponseList();
             _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));

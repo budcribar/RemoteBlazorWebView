@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using PeakSwc.RemoteableWebWindows;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Channels;
@@ -18,6 +19,7 @@ namespace RemoteableWebWindowService.Services
         public string Id { get; init; } = string.Empty;
         public ConcurrentDictionary<string, (MemoryStream? stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new ();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
-        public IPC IPC { get; init; } = new IPC();
+        public IPC IPC { get; init; } = new();
+        public BrowserIPCState BrowserIPC { get; init; } = new();
     }
 }
