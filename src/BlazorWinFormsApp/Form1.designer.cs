@@ -33,7 +33,7 @@ namespace BlazorWinFormsApp
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.label1 = new System.Windows.Forms.Label();
             this.button1 = new System.Windows.Forms.Button();
-            this.blazorWebView1 = new Remote.WebView.WindowsForms.RemoteBlazorWebView(new System.Uri("https://localhost:443"), Guid.NewGuid());
+            this.blazorWebView1 = new Remote.WebView.WindowsForms.RemoteBlazorWebView();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -82,7 +82,7 @@ namespace BlazorWinFormsApp
             this.blazorWebView1.Location = new System.Drawing.Point(7, 85);
             this.blazorWebView1.Margin = new System.Windows.Forms.Padding(2, 1, 2, 1);
             this.blazorWebView1.Name = "blazorWebView1";
-            //this.blazorWebView1.ServerUri = null;
+            //this.blazorWebView1.ServerUri = new System.Uri("https://localhost:443", System.UriKind.Absolute);
             this.blazorWebView1.Size = new System.Drawing.Size(417, 120);
             this.blazorWebView1.TabIndex = 20;
             // 
@@ -108,5 +108,7 @@ namespace BlazorWinFormsApp
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button button1;
         private Remote.WebView.WindowsForms.RemoteBlazorWebView blazorWebView1;
+
+        //  this.blazorWebView1.ServerUri = new System.Uri("https://localhost:443", System.UriKind.Absolute);
     }
 }

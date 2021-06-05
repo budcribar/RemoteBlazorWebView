@@ -6,18 +6,20 @@ using PeakSwc.RemoteableWebWindows;
 using PeakSWC;
 using System;
 using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace Remote.WebView.WindowsForms
 {
-    public class RemoteBlazorWebView : BlazorWebViewFormBase
+    public partial class RemoteBlazorWebView : BlazorWebViewFormBase
     {
-       
         private Uri _serverUri;
 
         /// <summary>
         /// Uri of the RemoteableWebView service.
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
+
+        [TypeConverter(typeof(UriTypeConverter))]
         [Category("Behavior")]
         [Description(@"Uri of the RemoteableWebView service.")]
         public Uri ServerUri
@@ -26,9 +28,13 @@ namespace Remote.WebView.WindowsForms
             set
             {
                 _serverUri = value;
+                Invalidate();
                 StartWebViewCoreIfPossible();
             }
         }
+        private void ResetServerUri() => ServerUri = new Uri("https://localhost:443");
+       
+        private bool ShouldSerializeServerUri() => ServerUri != null;
 
         private Guid _id;
 
@@ -36,6 +42,7 @@ namespace Remote.WebView.WindowsForms
         /// Optional Id associated with the client
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
+        [TypeConverter(typeof(GuidConverter))]
         [Category("Behavior")]
         [Description(@"Optional Id associated with the client.")]
         public Guid Id
@@ -44,23 +51,19 @@ namespace Remote.WebView.WindowsForms
             set
             {
                 _id = value;
+                Invalidate();
                 StartWebViewCoreIfPossible();
             }
         }
+        private void ResetId() => Id = Guid.Empty;
+        private bool ShouldSerializeId() => Id != Guid.Empty;
 
-        private void OnHostPagePropertyChanged() => StartWebViewCoreIfPossible();
 
-        public RemoteBlazorWebView(Uri uri, Guid id)
-        {
-            this.ServerUri = uri;
-            this.Id = id;
-        }
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             return new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
-
         }
-       
+
     }
 }

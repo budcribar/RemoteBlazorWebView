@@ -15,9 +15,12 @@ using System.IO;
 using Google.Protobuf;
 using System;
 
-namespace NUnitTestProject
+namespace WebdriverTestProject
 {
-  
+    //https://intellitect.com/selenium-chrome-csharp/
+    // https://stackoverflow.com/questions/64233124/how-to-attach-a-selenium-chromedriver-to-an-embedded-cefsharp-browser-in-a-wpf-a
+    //https://docs.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options
+
     [TestClass]
     public class Tests
     {
@@ -30,33 +33,20 @@ namespace NUnitTestProject
 
         public static void Startup(int numClients)
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
-            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemotableWebViewService")?.Kill();
-            var relative = @"..\..\..\..\..\src\RemoteableWebWindowService";
-            var executable = @"bin\debug\net6\RemoteableWebViewService.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
-
-            process = new Process();
-            process.StartInfo.FileName = Path.GetFullPath(f);
-            process.StartInfo.UseShellExecute = true;
            
-            process.Start();
+            process = Utilities.StartServer();
             var ids = new RemoteWebWindow.RemoteWebWindowClient(channel).GetIds(new Empty());
 
-            Console.WriteLine($"Started server in {sw.Elapsed}");
-
-            relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
             var exePath = @"bin\debug\net6-windows";
-            executable = "RemoteBlazorWebViewTutorial.WpfApp.exe";
-            f = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath, executable);
+            var executable = "RemoteBlazorWebViewTutorial.WpfApp.exe";
+            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath, executable);
 
             Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
 
             clients = new List<Process>();
 
-            sw.Restart();
+            Stopwatch sw = new Stopwatch();
             for (int i=0;i<numClients; i++)
             {
                 Process p = new Process();
