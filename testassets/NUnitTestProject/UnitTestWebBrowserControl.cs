@@ -45,7 +45,11 @@ namespace WebdriverTestProject
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            var button = driver.FindElementByTagName("button");
+            var link = driver.FindElementByPartialLinkText("Counter");
+            link.Click();
+            Thread.Sleep(100);
+
+            var button = driver.FindElement(By.ClassName("btn"));
             var para = driver.FindElement(By.XPath("//p"));
 
             sw.Restart();

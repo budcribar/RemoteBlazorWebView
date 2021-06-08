@@ -9,11 +9,8 @@
 
   <ItemGroup>
     
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="RemoteBlazorWebViewTutorial.Shared" Version="1.0.0" />
     <ProjectReference Include="..\RemoteBlazorWebView.Form\Remote.WebView.WindowsForms.csproj" />
-    <ProjectReference Include="..\WebviewAppShared\WebviewAppShared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -144,20 +144,11 @@ namespace WebdriverTestProject
         private void TestClient(int num)
         {
             Startup(num);
-           
-
-            //Assert.AreEqual("Demo", _driver.Title);
-
-            //var element = _driver.FindElement(By.XPath("//button"));
-
-            //element.Click();
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
             Assert.AreEqual(num, _driver.Count());
-
-            //_driver.AsParallel().WithDegreeOfParallelism(3).Select((w, i) => new { Index = i, Driver = w }).ForAll(x => x.Driver.Url = url + $"app?guid={ids[x.Index]}"); 
 
             for (int i=0; i<num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
@@ -165,14 +156,11 @@ namespace WebdriverTestProject
             Thread.Sleep(1000);
             sw.Restart();
 
-            //_driver.AsParallel().ForAll(x => x.ExecuteScript("window['Blazor'].navigateTo('/counter', false);", null));
-
             for (int i = 0; i < num; i++) {
                 var link = _driver[i].FindElementByPartialLinkText("Counter");
                 link.Click();
             }
 
-            //for (int i = 0; i < num; i++) _driver[i].ExecuteScript("window['Blazor'].navigateTo('/counter', false);", null);
             Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
 
             Thread.Sleep(1000);
