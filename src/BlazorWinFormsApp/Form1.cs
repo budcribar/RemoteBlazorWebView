@@ -20,6 +20,8 @@ namespace BlazorWinFormsApp
             serviceCollection.AddScoped<HttpClient>();
             InitializeComponent();
 
+            var runString = new RunString();
+            blazorWebView1.ServerUri = runString.ServerUri;
             blazorWebView1.HostPage = @"wwwroot\index.html";
             blazorWebView1.Services = serviceCollection.BuildServiceProvider();
             blazorWebView1.RootComponents.Add<App>("#app");

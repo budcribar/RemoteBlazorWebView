@@ -22,7 +22,7 @@ namespace WebdriverTestProject
     //https://docs.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options
 
     [TestClass]
-    public class Tests
+    public class TestRemoteBlazorWpf
     {
         private static List<ChromeDriver> _driver = new List<ChromeDriver>();
         private readonly string url = @"https://localhost/";
@@ -31,32 +31,30 @@ namespace WebdriverTestProject
         private static Process process;
         private static List<Process> clients;
 
-        public static void Startup(int numClients)
+        public virtual Process CreateClient()
         {
-           
+            return Utilities.StartRemoteBlazorWpfApp();
+        }
+
+        public virtual void KillClient()
+        {
+            Utilities.KillRemoteBlazorWpfApp();
+        }
+
+        public void Startup(int numClients)
+        {
+            KillClient();
+
             process = Utilities.StartServer();
             var ids = new RemoteWebWindow.RemoteWebWindowClient(channel).GetIds(new Empty());
-
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\debug\net6-windows";
-            var executable = "RemoteBlazorWebViewTutorial.WpfApp.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath, executable);
-
-            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
+            Assert.AreEqual(0, ids.Responses.Count);
 
             clients = new List<Process>();
 
             Stopwatch sw = new Stopwatch();
             for (int i=0;i<numClients; i++)
             {
-                Process p = new Process();
-                p.StartInfo.FileName = Path.GetFullPath(f);
-                p.StartInfo.UseShellExecute = false;
-                p.StartInfo.Arguments = @"-u=https://localhost:443";
-                p.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
-                
-                p.Start();
-                clients.Add(p);
+                clients.Add(CreateClient());
             }
 
             StartClient(numClients);
@@ -88,15 +86,7 @@ namespace WebdriverTestProject
         [TestInitialize]
         public void Setup()
         {
-            var options = new ChromeOptions
-            {
-                PageLoadStrategy = PageLoadStrategy.Normal
-            };
-            //var driver = new EdgeDriver("C:\\Windows\\System32\\", options);
-           
             channel = GrpcChannel.ForAddress(url) ;
-
-           
         }
 
         [TestMethod]
@@ -199,11 +189,10 @@ namespace WebdriverTestProject
             }
             Assert.AreEqual(num, passCount);
 
-            Cleanup();
-
-           
+            //Cleanup();
         }
 
+        [TestCleanup]
         public void Cleanup()
         {
             try {
@@ -215,8 +204,12 @@ namespace WebdriverTestProject
                 clients.ForEach(x => x.Kill());
             }
             catch (Exception) { }
-
-            _driver.ForEach(x => x.Dispose());
+            try
+            {
+                _driver.ForEach(x => x.Quit());
+            }
+            catch (Exception) { }
+            _driver.Clear();
         }
     }
 }

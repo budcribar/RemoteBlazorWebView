@@ -17,13 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\src\BlazorWinFormsApp\wwwroot\**\*.*">
-      <Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\RemoteableWebWindow\RemoteableWebView.csproj" />
   </ItemGroup>
 

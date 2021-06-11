@@ -4,21 +4,29 @@ using OpenQA.Selenium.Edge;
 using System.Threading;
 using System.Diagnostics;
 using System;
+using System.IO;
 
 namespace WebdriverTestProject
 {
     [TestClass]
-    public class TestWebBrowserControl
+    public class TestLocalBlazorForm
     {
         private static EdgeDriver driver;
-       
+        private static string startingDirectory;
+
+        public virtual string BinaryLocation()
+        {
+            return Utilities.BlazorWinFormsAppExe();
+        }
+
         [TestInitialize]
         public void Setup()
         {
-           driver = new EdgeDriver(new EdgeOptions { UseWebView=true, BinaryLocation = Utilities.BlazorWinFormsAppExe() });
-          
-           // Wait for page to load 
-           Thread.Sleep(1000);
+            startingDirectory = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()));
+            driver = new EdgeDriver(new EdgeOptions { UseWebView = true, BinaryLocation = Path.GetFileName(this.BinaryLocation()) });
+            // Wait for page to load 
+            Thread.Sleep(1000);
         }
 
         [TestMethod]
@@ -72,7 +80,9 @@ namespace WebdriverTestProject
         [TestCleanup]
         public void Cleanup()
         {
-            driver.Dispose();
+            Directory.SetCurrentDirectory(startingDirectory);
+
+            driver.Quit();
         }
     }
 }

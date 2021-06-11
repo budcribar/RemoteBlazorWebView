@@ -16,7 +16,7 @@ namespace WebdriverTestProject
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemotableWebViewService")?.Kill();
+            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteableWebViewService")?.Kill();
             var relative = @"..\..\..\..\..\src\RemoteableWebWindowService";
             var executable = @"bin\debug\net6\RemoteableWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
@@ -33,26 +33,42 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsPath()
         {
             var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
-            var exePath = @"bin\debug\net6-windows";
+            //var exePath = @"bin\debug\net6-windows";
+            var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
-
         public static string BlazorWinFormsAppExe()
         {
             return Path.Combine(BlazorWinFormsPath(), "BlazorWinFormsApp.exe");
         }
 
-        public static Process StartBlazorWinFormsApp()
+        public static string BlazorWpfAppExe()
+        {
+            return Path.Combine(BlazorWpfPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
+        }
+        public static string BlazorWpfPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            //var exePath = @"bin\debug\net6-windows";
+            var exePath = "publish";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+
+        public static void KillBlazorWinFormsApp()
+        {
+            Process.GetProcesses().Where(p => p.ProcessName == "BlazorWinFormsApp").ToList().ForEach(x => x.Kill());
+        }
+
+        public static Process StartRemoteBlazorWinFormsApp()
         {
             var f = BlazorWinFormsAppExe();
-
-            Process.GetProcesses().Where(p => p.ProcessName == "BlazorWinFormsApp").ToList().ForEach(x => x.Kill());
 
             Stopwatch sw = new();
            
             Process p = new Process();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
+            p.StartInfo.Arguments = @"-u=https://localhost:443";
             p.StartInfo.WorkingDirectory = BlazorWinFormsPath();
             p.Start();
                
@@ -60,6 +76,30 @@ namespace WebdriverTestProject
 
             return p;
         }
-      
+
+        public static void KillRemoteBlazorWpfApp()
+        {
+            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
+        }
+       
+
+        public static Process StartRemoteBlazorWpfApp()
+        {
+            var f = BlazorWpfAppExe();   
+
+            Stopwatch sw = new();
+
+            Process p = new Process();
+            p.StartInfo.FileName = Path.GetFullPath(f);
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.Arguments = @"-u=https://localhost:443";
+            p.StartInfo.WorkingDirectory = BlazorWpfPath();
+            p.Start();
+
+            Console.WriteLine($"Clients started in {sw.Elapsed}");
+
+            return p;
+        }
+
     }
 }

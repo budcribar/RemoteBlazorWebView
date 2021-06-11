@@ -58,8 +58,6 @@ namespace Remote.WebView.WindowsForms
         private void ResetId() => Id = Guid.Empty;
         private bool ShouldSerializeId() => Id != Guid.Empty;
 
-
-
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             return new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);

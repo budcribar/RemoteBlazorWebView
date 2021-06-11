@@ -28,6 +28,7 @@ namespace PeakSwc.RemoteableWebWindows
                         else 
                             options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps();});
                     });
+                    //webBuilder.UseStaticWebAssets();
                     webBuilder.UseStartup<Startup>();
                 });
     }

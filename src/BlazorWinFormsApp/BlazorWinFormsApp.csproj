@@ -10,6 +10,7 @@
   <ItemGroup>
     
     <PackageReference Include="RemoteBlazorWebViewTutorial.Shared" Version="1.0.0" />
+   
     <ProjectReference Include="..\RemoteBlazorWebView.Form\Remote.WebView.WindowsForms.csproj" />
   </ItemGroup>
 
