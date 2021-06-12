@@ -52,7 +52,7 @@ namespace PeakSwc.RemoteableWebWindows
 
         //public IJSRuntime? JSRuntime { get; set; }
 
-        private  RemoteWebWindow.RemoteWebWindowClient? Client {
+        protected  RemoteWebWindow.RemoteWebWindowClient? Client {
             get
             {
                 if (ServerUri == null) return null;
