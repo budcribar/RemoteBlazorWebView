@@ -1,0 +1,24 @@
+{
+  "profiles": {
+    "BlazorWinFormsApp": {
+      "commandName": "Project"
+    },
+    "Local": {
+      "commandName": "Executable",
+      "executablePath": "$(ProjectDir)\\publish\\BlazorWinFormsApp.exe",
+      "workingDirectory": "$(ProjectDir)\\publish"
+    },
+    "Remote": {
+      "commandName": "Executable",
+      "executablePath": "$(ProjectDir)\\publish\\BlazorWinFormsApp.exe",
+      "commandLineArgs": "-u=https://localhost:443",
+      "workingDirectory": "$(ProjectDir)\\publish"
+    },
+    "Cloud": {
+      "commandName": "Executable",
+      "executablePath": "$(ProjectDir)\\publish\\BlazorWinFormsApp.exe",
+      "commandLineArgs": "-u=https://webserverstransporter.com:443",
+      "workingDirectory": "$(ProjectDir)\\publish"
+    }
+  }
+}

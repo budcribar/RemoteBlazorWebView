@@ -50,6 +50,8 @@ namespace Remote.WebView.WindowsForms
             get => _id;
             set
             {
+                if (value == Guid.Empty)
+                    value = Guid.NewGuid();
                 _id = value;
                 Invalidate();
                 StartWebViewCoreIfPossible();
