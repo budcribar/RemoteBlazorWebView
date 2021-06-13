@@ -36,12 +36,12 @@ else
 }
 
 @code {
-    WeatherForecast[] forecasts;
+    WeatherForecast[] forecasts = Array.Empty<WeatherForecast>();
 
     protected override async Task OnInitializedAsync()
     {
         var forecastsJson = await File.ReadAllTextAsync("wwwroot/sample-data/weather.json");
-        forecasts = JsonSerializer.Deserialize<WeatherForecast[]>(forecastsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        forecasts = JsonSerializer.Deserialize<WeatherForecast[]>(forecastsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? Array.Empty<WeatherForecast>();
     }
 
     public class WeatherForecast
@@ -50,7 +50,7 @@ else
 
         public int TemperatureC { get; set; }
 
-        public string Summary { get; set; }
+        public string Summary { get; set; } = "";
 
         public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
     }

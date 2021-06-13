@@ -40,7 +40,7 @@ namespace Photino.Blazor
             return result?.GetType() == VoidTaskResultType ? null : result;
         }
 
-        protected override void BeginInvokeJS(long taskId, string identifier, string argsJson, JSCallResultType resultType, long targetInstanceId)
+        protected override void BeginInvokeJS(long taskId, string identifier, string? argsJson, JSCallResultType resultType, long targetInstanceId)
         {
             //New (.NET 5)  version of Microsoft.JSInterop added this overload - we revert to the previous overload.
             _ipc.Send("JS.BeginInvokeJS", taskId, identifier, argsJson, resultType, targetInstanceId);

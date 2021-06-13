@@ -20,8 +20,8 @@ namespace PhotinoNET
 
        
 
-        public IDispatcher PlatformDispatcher { get; set; }
-        public IJSRuntime JSRuntime { get; set; }
+        public IDispatcher? PlatformDispatcher { get; set; }
+        public IJSRuntime? JSRuntime { get; set; }
 
         public IPhotinoWindowBase SendWebMessageBase(string message)
         {
@@ -59,8 +59,8 @@ namespace PhotinoNET
         private Point _lastLocation;
 
         // API Members
-        private IPhotinoWindow _parent;
-        public IPhotinoWindow Parent {
+        private IPhotinoWindow? _parent;
+        public IPhotinoWindow? Parent {
             get => _parent;
             private set
             {
@@ -81,7 +81,7 @@ namespace PhotinoNET
         private Guid _id;
         public Guid Id => _id;
 
-        private string _title;
+        private string _title = "Untitled Window";
         public string Title
         {
             get => _title;
@@ -274,15 +274,15 @@ namespace PhotinoNET
         public static bool IsLinuxPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
         // EventHandlers
-        public event EventHandler WindowCreating;
-        public event EventHandler WindowCreated;
+        public event EventHandler? WindowCreating;
+        public event EventHandler? WindowCreated;
         
-        public event EventHandler WindowClosing;
+        public event EventHandler? WindowClosing;
 
-        public event EventHandler<Size> SizeChanged;
-        public event EventHandler<Point> LocationChanged;
+        public event EventHandler<Size>? SizeChanged;
+        public event EventHandler<Point>? LocationChanged;
 
-        public event EventHandler<string> WebMessageReceived;
+        public event EventHandler<string>? WebMessageReceived;
 
         /// <summary>
         /// Creates a new PhotinoWindow instance with
@@ -301,7 +301,7 @@ namespace PhotinoNET
         /// <param name="fullscreen">Open window in fullscreen mode</param>
         public PhotinoWindow(
             string title,
-            Action<PhotinoWindowOptions> configure = null,
+            Action<PhotinoWindowOptions>? configure = null,
             int width = 800,
             int height = 600,
             int left = 20,
@@ -491,7 +491,7 @@ namespace PhotinoNET
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "PhotinoWindow"}\".RemoveChild(Guid id)");
 
-            IPhotinoWindow child = this.Children
+            IPhotinoWindow? child = this.Children
                 .FirstOrDefault(c => c.Id == id);
 
             return this.RemoveChild(child, childIsDisposing);

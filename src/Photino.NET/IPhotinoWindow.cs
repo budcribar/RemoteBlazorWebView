@@ -8,7 +8,7 @@ namespace PhotinoNET
     {
         IntPtr WindowHandle { get; }
 
-        IPhotinoWindow Parent { get; }
+        IPhotinoWindow? Parent { get; }
         List<IPhotinoWindow> Children { get; }
 
         string Title { get; set; }
@@ -25,13 +25,13 @@ namespace PhotinoNET
         bool IsOnTop { get; set; }
         bool WasShown { get; }
 
-        event EventHandler WindowCreating;
-        event EventHandler WindowCreated;
+        event EventHandler? WindowCreating;
+        event EventHandler? WindowCreated;
         
-        event EventHandler WindowClosing;
+        event EventHandler? WindowClosing;
 
-        event EventHandler<Size> SizeChanged;
-        event EventHandler<Point> LocationChanged;
+        event EventHandler<Size>? SizeChanged;
+        event EventHandler<Point>? LocationChanged;
         
        
 

@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.RenderTree;
 
-namespace Microsoft.AspNetCore.Components.Server.Circuits
+namespace Photino.Blazor
 {
     /// <summary>
     /// Writeable memory stream backed by a an <see cref="ArrayBuilder{T}"/>.

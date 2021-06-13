@@ -40,12 +40,12 @@ namespace PeakSWC.RemotePhotinoNET
         public Guid Id { get; set; }
 
         // EventHandlers
-        public event EventHandler WindowCreating;
-        public event EventHandler WindowCreated;
-        public event EventHandler WindowClosing;
+        public event EventHandler? WindowCreating;
+        public event EventHandler? WindowCreated;
+        public event EventHandler? WindowClosing;
 
-        private event EventHandler<Size> SizeChangedEvent;
-        public event EventHandler<Size> SizeChanged
+        private event EventHandler<Size>? SizeChangedEvent;
+        public event EventHandler<Size>? SizeChanged
         {
             add
             {
@@ -70,8 +70,8 @@ namespace PeakSWC.RemotePhotinoNET
 
         private readonly object eventLock = new object();
 
-        private event EventHandler<Point> LocationChangedEvent;
-        public event EventHandler<Point> LocationChanged
+        private event EventHandler<Point>? LocationChangedEvent;
+        public event EventHandler<Point>? LocationChanged
         {
             add
             {
@@ -93,7 +93,7 @@ namespace PeakSWC.RemotePhotinoNET
                 }
             }
         }
-        public event EventHandler<string> WebMessageReceived;
+        public event EventHandler<string>? WebMessageReceived;
 
         public static Stream? SupplyFrameworkFile(string uri)
         {
@@ -200,7 +200,7 @@ namespace PeakSWC.RemotePhotinoNET
                               OnWindowClosing();
                               Console.WriteLine("Stream cancelled.");  //TODO
                           }
-                          catch (Exception ex)
+                          catch (Exception)
                           {
                               // TODO
                               // exceptions will stop ui 
@@ -260,13 +260,13 @@ namespace PeakSWC.RemotePhotinoNET
 
         public uint ScreenDpi => 0;
 
-        public IDispatcher PlatformDispatcher { get; set; } 
+        public IDispatcher? PlatformDispatcher { get; set; } 
 
         public IJSRuntime? JSRuntime { get; set; }
         
         private string InitTitle {set {_title = string.IsNullOrEmpty(value.Trim()) ? "Untitled Window" : value; } }
 
-        private string _title;
+        private string _title = "Untitled Window";
         public string Title
         {
             get => _title;

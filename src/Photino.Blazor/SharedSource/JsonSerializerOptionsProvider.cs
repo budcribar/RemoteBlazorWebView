@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Microsoft.AspNetCore.Components
+namespace Photino.Blazor
 {
     internal static class JsonSerializerOptionsProvider
     {

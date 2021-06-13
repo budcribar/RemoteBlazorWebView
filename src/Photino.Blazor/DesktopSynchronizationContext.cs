@@ -6,7 +6,7 @@ namespace Photino.Blazor
 {
     internal class DesktopSynchronizationContext : SynchronizationContext
     {
-        public event EventHandler<Exception> UnhandledException;
+        public event EventHandler<Exception>? UnhandledException;
 
         private readonly WorkQueue _work;
 
@@ -20,12 +20,12 @@ namespace Photino.Blazor
             return this;
         }
 
-        public override void Post(SendOrPostCallback d, object state)
+        public override void Post(SendOrPostCallback d, object? state)
         {
             _work.Queue.Add(new WorkItem() { Callback = d, Context = this, State = state, });
         }
 
-        public override void Send(SendOrPostCallback d, object state)
+        public override void Send(SendOrPostCallback d, object? state)
         {
             if (_work.CheckAccess())
             {
@@ -116,7 +116,7 @@ namespace Photino.Blazor
                 }
             }
 
-            public void ProcessWorkitemInline(SendOrPostCallback callback, object state)
+            public void ProcessWorkitemInline(SendOrPostCallback? callback, object? state)
             {
                 try
                 {
@@ -131,10 +131,10 @@ namespace Photino.Blazor
 
         private class WorkItem
         {
-            public SendOrPostCallback Callback;
-            public object State;
-            public SynchronizationContext Context;
-            public ManualResetEventSlim Completed;
+            public SendOrPostCallback? Callback;
+            public object? State;
+            public SynchronizationContext? Context;
+            public ManualResetEventSlim? Completed;
         }
     }
 }

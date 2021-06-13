@@ -19,12 +19,12 @@ namespace Photino.Blazor
 {
     public static class ComponentsDesktop
     {
-        internal static string InitialUriAbsolute { get; private set; }
-        internal static string BaseUriAbsolute { get; private set; }
-        internal static DesktopJSRuntime DesktopJSRuntime { get; private set; }
-        internal static DesktopRenderer DesktopRenderer { get; private set; }
-        internal static IPhotinoWindowBase photinoWindow { get; private set; }
-        internal static PlatformDispatcher Dispatcher { get; private set; }
+        internal static string? InitialUriAbsolute { get; private set; }
+        internal static string? BaseUriAbsolute { get; private set; }
+        internal static DesktopJSRuntime? DesktopJSRuntime { get; private set; }
+        internal static DesktopRenderer? DesktopRenderer { get; private set; }
+        internal static IPhotinoWindowBase? photinoWindow { get; private set; }
+        internal static PlatformDispatcher? Dispatcher { get; private set; }
 
         public static void Run<TStartup>(IPhotinoWindowBase iphotinoWindow)
         {
@@ -72,7 +72,7 @@ namespace Photino.Blazor
             return (options) => { 
                 var contentRootAbsolute = Path.GetDirectoryName(Path.GetFullPath(hostHtmlPath));
 
-                options.CustomSchemeHandlers.Add(BlazorAppScheme, (string url, out string contentType) =>
+                options.CustomSchemeHandlers.Add(BlazorAppScheme, (string url, out string? contentType) =>
                 {
                     // TODO: Only intercept for the hostname 'app' and passthrough for others
                     // TODO: Prevent directory traversal?
@@ -87,7 +87,7 @@ namespace Photino.Blazor
                 });
 
                 // framework:// is resolved as embedded resources
-                options.CustomSchemeHandlers.Add("framework", (string url, out string contentType) =>
+                options.CustomSchemeHandlers.Add("framework", (string url, out string? contentType) =>
                 {
                     contentType = GetContentType(url);
                     return SupplyFrameworkFile(url);
@@ -186,12 +186,12 @@ namespace Photino.Blazor
             //DesktopNavigationManager.Instance.NavigateTo("/");
         }
 
-        private static Stream SupplyFrameworkFile(string uri)
+        private static Stream? SupplyFrameworkFile(string uri)
         {
             switch (uri)
             {
                 case "framework://blazor.desktop.js":
-                    return typeof(ComponentsDesktop).Assembly.GetManifestResourceStream("Photino.Blazor.blazor.desktop.js");
+                    return typeof(ComponentsDesktop)?.Assembly.GetManifestResourceStream("Photino.Blazor.blazor.desktop.js");
                 default:
                     throw new ArgumentException($"Unknown framework file: {uri}");
             }
@@ -218,7 +218,9 @@ namespace Photino.Blazor
             {
                 synchronizationContext.Send(state =>
                 {
+                    if (state == null) return;
                     var argsArray = (object[])state;
+                   
                     DotNetDispatcher.BeginInvokeDotNet(
                         DesktopJSRuntime,
                         new DotNetInvocationInfo(
@@ -234,10 +236,12 @@ namespace Photino.Blazor
             {
                 synchronizationContext.Send(state =>
                 {
-                    var argsArray = (object[])state;
+                    var argsArray = state as object[];
+                  
+                    if (argsArray == null || DesktopJSRuntime == null || argsArray[2] is not JsonElement arg) return;
                     DotNetDispatcher.EndInvokeJS(
                         DesktopJSRuntime,
-                        ((JsonElement)argsArray[2]).GetString());
+                        arg.GetString());
                 }, args);
             });
         }

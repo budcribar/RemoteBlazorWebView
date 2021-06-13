@@ -13,7 +13,7 @@ namespace Ignitor
 #elif COMPONENTS_SERVER
 namespace Microsoft.AspNetCore.Components.Server.Circuits
 #else
-namespace Microsoft.AspNetCore.Components.RenderTree
+namespace Photino.Blazor
 #endif
 {
     /// <summary>

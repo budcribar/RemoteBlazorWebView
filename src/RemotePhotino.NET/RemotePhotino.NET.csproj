@@ -15,8 +15,8 @@
     <TargetFramework>net6</TargetFramework>
     <Title>RemotePhotinoNET</Title>
     <RootNamespace>PeakSWC.RemotePhotino.NET</RootNamespace>
-	<Nullable>enable</Nullable>
-	<LangVersion>9.0</LangVersion>
+	  <Nullable>enable</Nullable>
+	  <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

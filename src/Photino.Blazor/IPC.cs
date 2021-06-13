@@ -18,12 +18,12 @@ namespace Photino.Blazor
             _photinoWindow.WebMessageReceived += HandleScriptNotify;
         }
 
-        public void Send(string eventName, params object[] args)
+        public void Send(string eventName, params object?[] args)
         {
             try
             {
                 var pd = _photinoWindow.PlatformDispatcher as PlatformDispatcher;
-                pd.InvokeAsync(() =>
+                pd?.InvokeAsync(() =>
                 {
                     _photinoWindow.SendWebMessageBase($"{eventName}:{JsonSerializer.Serialize(args)}");
                 });
@@ -51,7 +51,7 @@ namespace Photino.Blazor
 
         public void Once(string eventName, Action<object> callback)
         {
-            Action<object> callbackOnce = null;
+            Action<object>? callbackOnce = null;
             callbackOnce = arg =>
             {
                 Off(eventName, callbackOnce);
@@ -61,18 +61,19 @@ namespace Photino.Blazor
             On(eventName, callbackOnce);
         }
 
-        public void Off(string eventName, Action<object> callback)
+        public void Off(string eventName, Action<object>? callback)
         {
             lock (_registrations)
             {
                 if (_registrations.TryGetValue(eventName, out var group))
                 {
-                    group.Remove(callback);
+                    if(callback != null)
+                        group.Remove(callback);
                 }
             }
         }
 
-        private void HandleScriptNotify(object sender, string message)
+        private void HandleScriptNotify(object? sender, string message)
         {
             var value = message;
 

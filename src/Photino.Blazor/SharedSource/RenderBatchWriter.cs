@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Components.RenderTree;
 #if IGNITOR
 namespace Ignitor
 #else
-namespace Microsoft.AspNetCore.Components.Server.Circuits
+namespace Photino.Blazor
 #endif
 {
     // TODO: We should consider *not* having this type of infrastructure in the .Server
@@ -235,7 +235,7 @@ namespace Microsoft.AspNetCore.Components.Server.Circuits
             return startPos;
         }
 
-        void WriteString(string value, bool allowDeduplication)
+        void WriteString(string? value, bool allowDeduplication)
         {
             if (value == null)
             {

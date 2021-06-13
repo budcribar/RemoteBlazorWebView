@@ -14,7 +14,7 @@ namespace PhotinoNET
     public interface IPhotinoWindowBase
     {
         void WaitForClose();
-        IDispatcher PlatformDispatcher { get; set; }
+        IDispatcher? PlatformDispatcher { get; set; }
         IJSRuntime? JSRuntime { get; set; }
         event EventHandler<string> WebMessageReceived;
         IPhotinoWindowBase LoadBase(string path);

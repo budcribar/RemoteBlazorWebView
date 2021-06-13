@@ -1,11 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.AspNetCore.Components;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.AspNetCore.Components
+namespace Photino.Blazor
 {
     internal sealed class ElementReferenceJsonConverter : JsonConverter<ElementReference>
     {
@@ -13,7 +14,7 @@ namespace Microsoft.AspNetCore.Components
 
         public override ElementReference Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string id = null;
+            string? id = null;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)

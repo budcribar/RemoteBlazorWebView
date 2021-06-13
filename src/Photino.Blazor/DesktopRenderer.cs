@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.RenderTree;
-using Microsoft.AspNetCore.Components.Server.Circuits;
+//using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -25,7 +25,7 @@ namespace Photino.Blazor
         private readonly IPC _ipc;
         private readonly IJSRuntime _jsRuntime;
         private static readonly Type _writer;
-        private static readonly MethodInfo _writeMethod;
+        private static readonly MethodInfo? _writeMethod;
         internal readonly ConcurrentQueue<UnacknowledgedRenderBatch> _unacknowledgedRenderBatches = new ConcurrentQueue<UnacknowledgedRenderBatch>();
         private bool _disposing = false;
         private long _nextRenderId = 1;
@@ -49,7 +49,7 @@ namespace Photino.Blazor
         /// <summary>
         /// Notifies when a rendering exception occured.
         /// </summary>
-        public event EventHandler<Exception> UnhandledException;
+        public event EventHandler<Exception>? UnhandledException;
 
         /// <summary>
         /// Attaches a new root component to the renderer,

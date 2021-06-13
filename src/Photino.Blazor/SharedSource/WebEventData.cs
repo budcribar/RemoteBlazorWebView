@@ -4,10 +4,12 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.RenderTree;
 //using static Microsoft.AspNetCore.Internal.LinkerFlags;
+using Microsoft.AspNetCore.Components.Web;
 
-namespace Microsoft.AspNetCore.Components.Web
+namespace Photino.Blazor
 {
     internal class WebEventData
     {

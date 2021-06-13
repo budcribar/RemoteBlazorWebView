@@ -4,6 +4,7 @@
     <TargetFramework>net6</TargetFramework>
     <OutputType>WinExe</OutputType>
     <Platforms>AnyCPU</Platforms>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
