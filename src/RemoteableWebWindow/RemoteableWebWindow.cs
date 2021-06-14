@@ -13,14 +13,43 @@ using System.Net;
 using System.Reflection;
 using System.Windows;
 using Microsoft.AspNetCore.Components;
+using System.Diagnostics;
+using RemoteBlazorWebView.Wpf;
 
 namespace PeakSwc.RemoteableWebWindows
 {
     public class RemotableWebWindow // : IBlazorWebView 
     {
-        #region private
-       
-        private readonly string hostname;
+        public static void Restart(IBlazorWebView blazorWebView)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = Process.GetCurrentProcess().MainModule?.FileName
+            };
+            psi.ArgumentList.Add($"-u={blazorWebView.ServerUri}");
+            psi.ArgumentList.Add($"-i={blazorWebView.Id}");
+            psi.ArgumentList.Add($"-r=true");
+
+            Process.Start(psi);
+           
+        }
+
+        public static void StartBrowser(IBlazorWebView blazorWebView)
+        {
+            var url = $"{blazorWebView.ServerUri}app/{blazorWebView.Id}";
+            try
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" + url) { CreateNoWindow = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open hyperlink. Error:{ex.Message}");
+            }
+        }
+
+#region private
+
+private readonly string hostname;
         private readonly object bootLock = new();
         public Dispatcher? Dispacher { get; set; }
         

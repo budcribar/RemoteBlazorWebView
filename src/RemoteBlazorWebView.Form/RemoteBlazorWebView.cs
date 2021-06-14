@@ -4,14 +4,36 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSwc.RemoteableWebWindows;
 using PeakSWC;
+using RemoteBlazorWebView.Wpf;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 
 namespace Remote.WebView.WindowsForms
 {
-    public partial class RemoteBlazorWebView : BlazorWebViewFormBase
+    public partial class RemoteBlazorWebView : BlazorWebViewFormBase, IBlazorWebView
     {
+
+
+        protected override void OnCreateControl()
+        {
+            base.OnCreateControl();
+
+            foreach (var h in LoadedInternal.ToArray())
+            {
+                Loaded += h;
+                LoadedInternal.Remove(h);
+            }
+            foreach (var h in UnloadedInternal.ToArray())
+            {
+                Unloaded += h;
+                UnloadedInternal.Remove(h);
+            }
+        }
+
+        public IWebViewManager? WebViewManager { get; set; }
+
         private Uri _serverUri;
 
         /// <summary>
@@ -38,6 +60,47 @@ namespace Remote.WebView.WindowsForms
 
         private Guid _id;
 
+
+        private List<EventHandler<string>> UnloadedInternal = new();
+        private List<EventHandler<string>> LoadedInternal = new();
+        public event EventHandler<string> Unloaded
+        {
+            add
+            {
+                // TODO
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnDisconnected += value;
+                else
+                    UnloadedInternal.Add(value);       
+            }
+
+            remove
+            {
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnDisconnected -= value;
+            }
+        }
+
+        public event EventHandler<string> Loaded
+        {
+            add
+            {
+                // TODO
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnConnected += value;
+                else
+                    LoadedInternal.Add(value);
+                
+            }
+
+            remove
+            {
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                    manager.RemoteableWebView.OnConnected -= value;
+            }
+        }
+
+
         /// <summary>
         /// Optional Id associated with the client
         /// This property must be set to a valid value for the Blazor components to start.
@@ -57,13 +120,27 @@ namespace Remote.WebView.WindowsForms
                 StartWebViewCoreIfPossible();
             }
         }
+
+        public bool IsRestarting { get; set; }
+
         private void ResetId() => Id = Guid.Empty;
         private bool ShouldSerializeId() => Id != Guid.Empty;
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
-            return new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+            WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+
+            return WebViewManager;
         }
 
+        public void Restart()
+        {
+            RemotableWebWindow.Restart(this);
+        }
+
+        public void StartBrowser()
+        {
+            RemotableWebWindow.StartBrowser(this);
+        }
     }
 }

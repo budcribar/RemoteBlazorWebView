@@ -21,7 +21,7 @@ namespace PeakSWC
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public  class BlazorWebViewBase : Control, IDisposable
+    public  class BlazorWebViewBaseWpf : Control, IDisposable
     {
         #region Dependency property definitions
         /// <summary>
@@ -30,7 +30,7 @@ namespace PeakSWC
         public static readonly DependencyProperty HostPageProperty = DependencyProperty.Register(
             name: nameof(HostPage),
             propertyType: typeof(string),
-            ownerType: typeof(BlazorWebViewBase),
+            ownerType: typeof(BlazorWebViewBaseWpf),
             typeMetadata: new PropertyMetadata(OnHostPagePropertyChanged));
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace PeakSWC
         public static readonly DependencyProperty RootComponentsProperty = DependencyProperty.Register(
             name: nameof(RootComponents),
             propertyType: typeof(ObservableCollection<RootComponent>),
-            ownerType: typeof(BlazorWebViewBase));
+            ownerType: typeof(BlazorWebViewBaseWpf));
 
         /// <summary>
         /// The backing store for the <see cref="Services"/> property.
@@ -47,7 +47,7 @@ namespace PeakSWC
         public static readonly DependencyProperty ServicesProperty = DependencyProperty.Register(
             name: nameof(Services),
             propertyType: typeof(IServiceProvider),
-            ownerType: typeof(BlazorWebViewBase),
+            ownerType: typeof(BlazorWebViewBaseWpf),
             typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
         #endregion
 
@@ -59,7 +59,7 @@ namespace PeakSWC
         /// <summary>
         /// Creates a new instance of <see cref="BlazorWebView"/>.
         /// </summary>
-        public BlazorWebViewBase()
+        public BlazorWebViewBaseWpf()
         {
             SetValue(RootComponentsProperty, new ObservableCollection<RootComponent>());
             RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
@@ -97,11 +97,11 @@ namespace PeakSWC
             set => SetValue(ServicesProperty, value);
         }
 
-        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnServicesPropertyChanged(e);
+        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBaseWpf)d).OnServicesPropertyChanged(e);
 
         private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
-        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnHostPagePropertyChanged(e);
+        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBaseWpf)d).OnHostPagePropertyChanged(e);
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
@@ -209,7 +209,7 @@ namespace PeakSWC
         /// <summary>
         /// Performs the final cleanup before the garbage collector destroys the object.
         /// </summary>
-        ~BlazorWebViewBase()
+        ~BlazorWebViewBaseWpf()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);

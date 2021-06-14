@@ -12,7 +12,7 @@ using PeakSwc.RemoteableWebWindows;
 
 namespace PeakSWC
 {
-    public class RemoteBlazorWebViewBase : BlazorWebViewBase
+    public class RemoteBlazorWebViewBase : BlazorWebViewBaseWpf
     {
         public Uri? ServerUri { get; set; }
         public Guid Id { get; set; }

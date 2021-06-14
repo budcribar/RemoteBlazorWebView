@@ -14,7 +14,7 @@ namespace RemoteBlazorWebView.Wpf
     /// <summary>
     /// Interaction logic for UserControl1.xaml
     /// </summary>
-    public partial class RemoteBlazorWebView : UserControl
+    public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
     {
         // private WebView2WebViewManager? manager;
 
@@ -58,7 +58,7 @@ namespace RemoteBlazorWebView.Wpf
                    typeMetadata: new PropertyMetadata(OnIdPropertyChanged));
         #endregion
 
-        public Uri ServerUri
+        public Uri? ServerUri
         {
             get => (Uri)GetValue(UriProperty);
             set => SetValue(UriProperty, value);
@@ -162,6 +162,8 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
+       
+
         //private IBlazorWebView? innerBlazorWebView;
         // private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
         private readonly ViewModel model = new();
@@ -243,16 +245,18 @@ namespace RemoteBlazorWebView.Wpf
 
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
-            var url = "\"" + model.Uri + "\"";
+            model.ShowHyperlink = "Hidden";
+            RemotableWebWindow.StartBrowser(this);  
+        }
 
-            try
-            {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" +url) { CreateNoWindow = true });
-                model.ShowHyperlink = "Hidden";
-            }
-            catch (Exception) {
-     
-            }          
+        public void Restart()
+        {
+            RemotableWebWindow.Restart(this);
+        }
+
+        public void StartBrowser()
+        {
+            RemotableWebWindow.StartBrowser(this);
         }
     }
 }

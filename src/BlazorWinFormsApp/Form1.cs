@@ -24,6 +24,7 @@ namespace BlazorWinFormsApp
             var runString = new RunString();
             blazorWebView1.ServerUri = runString.ServerUri;
             blazorWebView1.Id = runString.Id;
+            blazorWebView1.IsRestarting = runString.IsRestarting;
             blazorWebView1.HostPage = @"wwwroot\index.html";
             blazorWebView1.Services = serviceCollection.BuildServiceProvider();
             blazorWebView1.RootComponents.Add<App>("#app");
@@ -34,25 +35,25 @@ namespace BlazorWinFormsApp
             }
             else
             {
-                //blazorWebView1.Visible = false;
-                linkLabel1.Visible = true;
+                linkLabel1.Visible = !blazorWebView1.IsRestarting;
                 linkLabel1.Text = $"{blazorWebView1.ServerUri}app/{blazorWebView1.Id}"; 
             }
+            blazorWebView1.Unloaded += BlazorWebView1_Unloaded;
+        }
+
+        private void BlazorWebView1_Unloaded(object sender, string e)
+        {
+            blazorWebView1.BeginInvoke((Action)(() => {
+                blazorWebView1.Restart();
+                Close();
+            }));
+              
         }
 
         private void LinkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            var url = $"{blazorWebView1.ServerUri}app/{blazorWebView1.Id}";
-
-            try
-            {
-                linkLabel1.Visible = false;
-                Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" + url) { CreateNoWindow = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Unable to open hyperlink. Error:{ex.Message}");
-            }
+            linkLabel1.Visible = false;
+            blazorWebView1.StartBrowser();
         }
         
     }
