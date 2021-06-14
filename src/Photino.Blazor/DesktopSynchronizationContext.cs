@@ -116,7 +116,7 @@ namespace Photino.Blazor
                 }
             }
 
-            public void ProcessWorkitemInline(SendOrPostCallback? callback, object? state)
+            public void ProcessWorkitemInline(SendOrPostCallback callback, object? state)
             {
                 try
                 {
@@ -131,7 +131,7 @@ namespace Photino.Blazor
 
         private class WorkItem
         {
-            public SendOrPostCallback? Callback;
+            public SendOrPostCallback Callback = new SendOrPostCallback(s => { });
             public object? State;
             public SynchronizationContext? Context;
             public ManualResetEventSlim? Completed;

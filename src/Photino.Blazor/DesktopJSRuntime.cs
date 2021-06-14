@@ -9,7 +9,7 @@ namespace Photino.Blazor
     internal class DesktopJSRuntime : JSRuntime
     {
         private readonly IPC _ipc;
-        private static Type VoidTaskResultType = typeof(Task).Assembly
+        private static readonly Type? VoidTaskResultType = typeof(Task).Assembly
             .GetType("System.Threading.Tasks.VoidTaskResult", true);
 
         public DesktopJSRuntime(IPC ipc)
@@ -22,7 +22,7 @@ namespace Photino.Blazor
         protected override void EndInvokeDotNet(DotNetInvocationInfo invocationInfo, in DotNetInvocationResult invocationResult)
         {
             // The other params aren't strictly required and are only used for logging
-            var resultOrError = invocationResult.Success ? HandlePossibleVoidTaskResult(invocationResult.Result) : invocationResult.Exception.ToString();
+            var resultOrError = invocationResult.Success ? HandlePossibleVoidTaskResult(invocationResult.Result) : invocationResult.Exception?.ToString();
             if (resultOrError != null)
             {
                 _ipc.Send("JS.EndInvokeDotNet", invocationInfo.CallId, invocationResult.Success, resultOrError);
@@ -33,7 +33,7 @@ namespace Photino.Blazor
             }
         }
 
-        private static object HandlePossibleVoidTaskResult(object result)
+        private static object? HandlePossibleVoidTaskResult(object? result)
         {
             // Looks like the TaskGenericsUtil logic in Microsoft.JSInterop doesn't know how to
             // understand System.Threading.Tasks.VoidTaskResult

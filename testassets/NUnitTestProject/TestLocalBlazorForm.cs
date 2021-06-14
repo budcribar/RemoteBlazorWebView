@@ -50,7 +50,7 @@ namespace WebdriverTestProject
 
         public void TestClient(int numClicks)
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             sw.Start();
 
             var link = driver.FindElementByPartialLinkText("Counter");

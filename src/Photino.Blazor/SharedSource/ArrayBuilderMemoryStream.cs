@@ -96,6 +96,7 @@ namespace Photino.Blazor
             if (buffer == null)
             {
                 ThrowHelper.ThrowArgumentNullException(nameof(buffer));
+                return;
             }
 
             if (offset < 0)

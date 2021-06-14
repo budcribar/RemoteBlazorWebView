@@ -6,7 +6,7 @@ namespace Photino.Blazor
     {
         public static string GetMimeType(string extensionWithDot)
         {
-            if (!_contentTypes.TryGetValue(extensionWithDot.ToLower(), out string type))
+            if (!_contentTypes.TryGetValue(extensionWithDot.ToLower(), out string? type))
                 type = "application/octet-stream";
 
             return type;

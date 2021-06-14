@@ -60,19 +60,21 @@ namespace Photino.Blazor
             this.context.Post(
                 state =>
                 {
-                    var taskCompletionSource = (TaskCompletionSource<object>)state;
+                    var taskCompletionSource = state as TaskCompletionSource<object>;
                     try
                     {
                         workItem();
-                        taskCompletionSource.SetResult(null);
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+                        taskCompletionSource?.SetResult(null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
                     }
                     catch (OperationCanceledException)
                     {
-                        taskCompletionSource.SetCanceled();
+                        taskCompletionSource?.SetCanceled();
                     }
                     catch (Exception exception)
                     {
-                        taskCompletionSource.SetException(exception);
+                        taskCompletionSource?.SetException(exception);
                     }
                 }, taskCompletionSource);
 
@@ -100,19 +102,21 @@ namespace Photino.Blazor
             this.context.Post(
                 async state =>
                 {
-                    var taskCompletionSource = (TaskCompletionSource<object>)state;
+                    var taskCompletionSource = state as TaskCompletionSource<object>;
                     try
                     {
                         await workItem();
-                        taskCompletionSource.SetResult(null);
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+                        taskCompletionSource?.SetResult(null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
                     }
                     catch (OperationCanceledException)
                     {
-                        taskCompletionSource.SetCanceled();
+                        taskCompletionSource?.SetCanceled();
                     }
                     catch (Exception exception)
                     {
-                        taskCompletionSource.SetException(exception);
+                        taskCompletionSource?.SetException(exception);
                     }
                 }, taskCompletionSource);
 
@@ -141,19 +145,21 @@ namespace Photino.Blazor
             this.context.Post(
                 state =>
                 {
-                    var taskCompletionSource = (TaskCompletionSource<TResult>)state;
+                    var taskCompletionSource = state as TaskCompletionSource<object>;
                     try
                     {
                         TResult result = workItem();
-                        taskCompletionSource.SetResult(result);
+#pragma warning disable CS8604 // Possible null reference argument.
+                        taskCompletionSource?.SetResult(result);
+#pragma warning restore CS8604 // Possible null reference argument.
                     }
                     catch (OperationCanceledException)
                     {
-                        taskCompletionSource.SetCanceled();
+                        taskCompletionSource?.SetCanceled();
                     }
                     catch (Exception exception)
                     {
-                        taskCompletionSource.SetException(exception);
+                        taskCompletionSource?.SetException(exception);
                     }
                 }, taskCompletionSource);
 
@@ -182,19 +188,21 @@ namespace Photino.Blazor
             this.context.Post(
                 async state =>
                 {
-                    var taskCompletionSource = (TaskCompletionSource<TResult>)state;
+                    var taskCompletionSource = state as TaskCompletionSource<object>;
                     try
                     {
                         TResult result = await workItem();
-                        taskCompletionSource.SetResult(result);
+#pragma warning disable CS8604 // Possible null reference argument.
+                        taskCompletionSource?.SetResult(result);
+#pragma warning restore CS8604 // Possible null reference argument.
                     }
                     catch (OperationCanceledException)
                     {
-                        taskCompletionSource.SetCanceled();
+                        taskCompletionSource?.SetCanceled();
                     }
                     catch (Exception exception)
                     {
-                        taskCompletionSource.SetException(exception);
+                        taskCompletionSource?.SetException(exception);
                     }
                 }, taskCompletionSource);
 

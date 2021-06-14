@@ -12,6 +12,7 @@ namespace Photino.Blazor
         {
             
             var renderer = ComponentsDesktop.DesktopRenderer;
+            if (renderer == null) return;
             var webEvent = WebEventData.Parse(renderer,eventDescriptor, eventArgsJson);
             await renderer.DispatchEventAsync(
                 webEvent.EventHandlerId,
@@ -29,6 +30,7 @@ namespace Photino.Blazor
         public static async Task OnRenderCompleted(long renderId, string errorMessageOrNull)
         {
             var renderer = ComponentsDesktop.DesktopRenderer;
+            if (renderer == null) return;
             await renderer.OnRenderCompletedAsync(renderId, errorMessageOrNull);
         }
     }

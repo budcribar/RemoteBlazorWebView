@@ -78,7 +78,7 @@ namespace PhotinoNET
             }
         }
 
-        private Guid _id;
+        private readonly Guid _id;
         public Guid Id => _id;
 
         private string _title = "Untitled Window";
@@ -245,7 +245,7 @@ namespace PhotinoNET
                 return monitors;
             }
         }
-        public Structs.Monitor MainMonitor => this.Monitors.First();
+        public Structs.Monitor MainMonitor => Monitors.First();
 
         // Bug:
         // ScreenDpi is static in macOS's Photino.Native, at 72 dpi.
@@ -494,6 +494,9 @@ namespace PhotinoNET
             IPhotinoWindow? child = this.Children
                 .FirstOrDefault(c => c.Id == id);
 
+            if (child == null)
+                return this;
+
             return this.RemoveChild(child, childIsDisposing);
         }
 
@@ -658,9 +661,11 @@ namespace PhotinoNET
                     }
 
                     // Calculate window size based on main monitor work area
-                    size = new Size();
-                    size.Width = (int)Math.Round((decimal)(this.MainMonitor.WorkArea.Width / 100 * width), 0);
-                    size.Height = (int)Math.Round((decimal)(this.MainMonitor.WorkArea.Height / 100 * height), 0);
+                    size = new Size
+                    {
+                        Width = (int)Math.Round((decimal)(this.MainMonitor.WorkArea.Width / 100 * width), 0),
+                        Height = (int)Math.Round((decimal)(this.MainMonitor.WorkArea.Height / 100 * height), 0)
+                    };
 
                     break;
                 default:
@@ -1175,7 +1180,7 @@ namespace PhotinoNET
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "PhotinoWindow"}\".OnWindowCreating()");
 
-            this.WindowCreating?.Invoke(this, null);
+            this.WindowCreating?.Invoke(this, new());
         }
         
         private void OnWindowCreated()
@@ -1183,7 +1188,7 @@ namespace PhotinoNET
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "PhotinoWindow"}\".OnWindowCreated()");
 
-            this.WindowCreated?.Invoke(this, null);
+            this.WindowCreated?.Invoke(this, new());
         }
 
         private void OnWindowClosing()
@@ -1191,7 +1196,7 @@ namespace PhotinoNET
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "PhotinoWindow"}\".OnWindowClosing()");
 
-            this.WindowClosing?.Invoke(this, null);
+            this.WindowClosing?.Invoke(this, new());
         }
 
         // Invoke native event handlers
@@ -1263,13 +1268,13 @@ namespace PhotinoNET
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetResizable(IntPtr instance, int resizable);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_GetSize(IntPtr instance, out int width, out int height);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetSize(IntPtr instance, int width, int height);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetResizedCallback(IntPtr instance, SizeChangedDelegate callback);
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetResizedCallback(IntPtr instance, SizeChangedDelegate? callback);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_GetAllMonitors(IntPtr instance, MonitorsRequestDelegate callback);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern uint Photino_GetScreenDpi(IntPtr instance);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_GetPosition(IntPtr instance, out int x, out int y);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetPosition(IntPtr instance, int x, int y);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetMovedCallback(IntPtr instance, LocationChangedDelegate callback);
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetClosingCallback(IntPtr instance, ClosingDelegate callback);
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetMovedCallback(IntPtr instance, LocationChangedDelegate? callback);
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetClosingCallback(IntPtr instance, ClosingDelegate? callback);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] static extern void Photino_SetTopmost(IntPtr instance, int topmost);
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)] static extern void Photino_SetIconFile(IntPtr instance, string filename);
         #endregion

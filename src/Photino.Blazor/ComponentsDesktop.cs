@@ -72,11 +72,11 @@ namespace Photino.Blazor
             return (options) => { 
                 var contentRootAbsolute = Path.GetDirectoryName(Path.GetFullPath(hostHtmlPath));
 
-                options.CustomSchemeHandlers.Add(BlazorAppScheme, (string url, out string? contentType) =>
+                options.CustomSchemeHandlers.Add(BlazorAppScheme, (string url, out string contentType) =>
                 {
                     // TODO: Only intercept for the hostname 'app' and passthrough for others
                     // TODO: Prevent directory traversal?
-                    var appFile = Path.Combine(contentRootAbsolute, new Uri(url).AbsolutePath.Substring(1));
+                    var appFile = Path.Combine(contentRootAbsolute ?? "", new Uri(url).AbsolutePath.Substring(1));
                     if (appFile == contentRootAbsolute)
                     {
                         appFile = hostHtmlPath;
@@ -87,7 +87,7 @@ namespace Photino.Blazor
                 });
 
                 // framework:// is resolved as embedded resources
-                options.CustomSchemeHandlers.Add("framework", (string url, out string? contentType) =>
+                options.CustomSchemeHandlers.Add("framework", (string url, out string contentType) =>
                 {
                     contentType = GetContentType(url);
                     return SupplyFrameworkFile(url);
@@ -124,7 +124,7 @@ namespace Photino.Blazor
 
         private static void UnhandledException(Exception ex)
         { 
-            photinoWindow.OpenAlertWindowBase("Error", $"{ex.Message}\n{ex.StackTrace}");
+            photinoWindow?.OpenAlertWindowBase("Error", $"{ex.Message}\n{ex.StackTrace}");
         }
 
         private static async Task RunAsync<TStartup>(IPC ipc, CancellationToken appLifetime, ManualResetEventSlim completed)
@@ -139,12 +139,14 @@ namespace Photino.Blazor
             {
                 UnhandledException(exception);
             };
-            photinoWindow.PlatformDispatcher = Dispatcher;
-
-
             DesktopJSRuntime = new DesktopJSRuntime(ipc);
-            photinoWindow.JSRuntime = DesktopJSRuntime;
 
+            if (photinoWindow != null)
+            {
+                photinoWindow.PlatformDispatcher = Dispatcher;
+                photinoWindow.JSRuntime = DesktopJSRuntime;
+            }
+               
             completed.Set();
 
             // await PerformHandshakeAsync(ipc);
@@ -157,7 +159,7 @@ namespace Photino.Blazor
             serviceCollection.AddSingleton<IJSRuntime>(DesktopJSRuntime);
             serviceCollection.AddSingleton<INavigationInterception, DesktopNavigationInterception>();
 
-            photinoWindow.GetType().GetInterfaces().Where(x => x.Name == nameof(IPhotinoWindowBase) | x.GetInterface(nameof(IPhotinoWindowBase)) != null).ToList().ForEach(x => 
+            photinoWindow?.GetType().GetInterfaces().Where(x => x.Name == nameof(IPhotinoWindowBase) | x.GetInterface(nameof(IPhotinoWindowBase)) != null).ToList().ForEach(x => 
                serviceCollection.AddSingleton(x, photinoWindow));
            
             var startup = new ConventionBasedStartup(Activator.CreateInstance(typeof(TStartup)));
@@ -177,9 +179,9 @@ namespace Photino.Blazor
 
             await PerformHandshakeAsync(ipc);
 
-            foreach (var rootComponent in builder.Entries)
+            foreach (var (componentType, domElementSelector) in builder.Entries)
             {
-                await Dispatcher.InvokeAsync(async () => await DesktopRenderer.AddComponentAsync(rootComponent.componentType, rootComponent.domElementSelector));
+                await Dispatcher.InvokeAsync(async () => await DesktopRenderer.AddComponentAsync(componentType, domElementSelector));
             }
 
             // TODO this was in BlazorDesktopToBrowser
@@ -199,9 +201,10 @@ namespace Photino.Blazor
 
         private static async Task PerformHandshakeAsync(IPC ipc)
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object?>();
             ipc.Once("components:init", args =>
             {
+                if (args == null) return;
                 var argsArray = (object[])args;
                 InitialUriAbsolute = ((JsonElement)argsArray[0]).GetString();
                 BaseUriAbsolute = ((JsonElement)argsArray[1]).GetString();
@@ -212,7 +215,7 @@ namespace Photino.Blazor
             await tcs.Task;
         }
 
-        private static void AttachJsInterop(IPC ipc, SynchronizationContext synchronizationContext, CancellationToken appLifetime)
+        private static void AttachJsInterop(IPC ipc, SynchronizationContext synchronizationContext, CancellationToken _)
         {
             ipc.On("BeginInvokeDotNetFromJS", args =>
             {
@@ -220,15 +223,17 @@ namespace Photino.Blazor
                 {
                     if (state == null) return;
                     var argsArray = (object[])state;
-                   
+
+                    if (argsArray == null || DesktopJSRuntime == null || argsArray[2] is not JsonElement arg2 || argsArray[4] is not JsonElement arg4) return;
+
                     DotNetDispatcher.BeginInvokeDotNet(
                         DesktopJSRuntime,
                         new DotNetInvocationInfo(
                             assemblyName: ((JsonElement)argsArray[1]).GetString(),
-                            methodIdentifier: ((JsonElement)argsArray[2]).GetString(),
+                            methodIdentifier: arg2.GetString() ?? "",
                             dotNetObjectId: ((JsonElement)argsArray[3]).GetInt64(),
                             callId: ((JsonElement)argsArray[0]).GetString()),
-                        ((JsonElement)argsArray[4]).GetString());
+                            arg4.GetString() ?? "");
                 }, args);
             });
 
@@ -241,7 +246,7 @@ namespace Photino.Blazor
                     if (argsArray == null || DesktopJSRuntime == null || argsArray[2] is not JsonElement arg) return;
                     DotNetDispatcher.EndInvokeJS(
                         DesktopJSRuntime,
-                        arg.GetString());
+                        arg.GetString() ?? "");
                 }, args);
             });
         }

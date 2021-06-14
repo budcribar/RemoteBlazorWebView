@@ -24,7 +24,7 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteBlazorWpf
     {
-        private static List<ChromeDriver> _driver = new List<ChromeDriver>();
+        private static readonly List<ChromeDriver> _driver = new();
         private readonly string url = @"https://localhost/";
         private static GrpcChannel channel;
         private static string[] ids;
@@ -51,7 +51,7 @@ namespace WebdriverTestProject
 
             clients = new List<Process>();
 
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             for (int i=0;i<numClients; i++)
             {
                 clients.Add(CreateClient());
@@ -78,7 +78,7 @@ namespace WebdriverTestProject
             {
                 ids = client.GetIds(new Empty()).Responses.ToArray();
                 Thread.Sleep(200);
-            } while (ids.Count() != num);
+            } while (ids.Length != num);
            
         }
 
@@ -135,10 +135,10 @@ namespace WebdriverTestProject
         {
             Startup(num);
 
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             sw.Start();
 
-            Assert.AreEqual(num, _driver.Count());
+            Assert.AreEqual(num, _driver.Count);
 
             for (int i=0; i<num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
@@ -155,8 +155,8 @@ namespace WebdriverTestProject
 
             Thread.Sleep(1000);
 
-            List<IWebElement> button = new List<IWebElement>();
-            List<IWebElement> para = new List<IWebElement>();
+            List<IWebElement> button = new();
+            List<IWebElement> para = new();
 
             for (int i = 0; i < num; i++)
             {

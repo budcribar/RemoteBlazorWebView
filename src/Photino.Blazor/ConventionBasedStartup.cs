@@ -9,7 +9,7 @@ namespace Photino.Blazor
 {
     internal class ConventionBasedStartup
     {
-        public ConventionBasedStartup(object instance)
+        public ConventionBasedStartup(object? instance)
         {
             Instance = instance ?? throw new ArgumentNullException(nameof(instance));
         }
@@ -39,7 +39,7 @@ namespace Photino.Blazor
             {
                 if (ex is TargetInvocationException)
                 {
-                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    ExceptionDispatchInfo.Capture(ex.InnerException ?? new Exception("No InnerException")).Throw();
                 }
 
                 throw;
@@ -81,14 +81,14 @@ namespace Photino.Blazor
             {
                 if (ex is TargetInvocationException)
                 {
-                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    ExceptionDispatchInfo.Capture(ex.InnerException ?? new Exception("No InnerException")).Throw();
                 }
 
                 throw;
             }
         }
 
-        internal MethodInfo GetConfigureServicesMethod()
+        internal MethodInfo? GetConfigureServicesMethod()
         {
             return Instance.GetType()
                 .GetMethod(

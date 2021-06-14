@@ -95,10 +95,10 @@ namespace Photino.Blazor
             string base64;
             using (var memoryStream = new MemoryStream())
             {
-                object renderBatchWriter = Activator.CreateInstance(_writer, new object[] { memoryStream, false });
+                object? renderBatchWriter = Activator.CreateInstance(_writer, new object[] { memoryStream, false });
                 using (renderBatchWriter as IDisposable)
                 {
-                    _writeMethod.Invoke(renderBatchWriter, new object[] { batch });
+                    _writeMethod?.Invoke(renderBatchWriter, new object[] { batch });
                 }
 
                 var batchBytes = memoryStream.ToArray();
@@ -109,7 +109,7 @@ namespace Photino.Blazor
 
             var pendingRender = new UnacknowledgedRenderBatch(
                 renderId,
-                new TaskCompletionSource<object>());
+                new TaskCompletionSource<object?>());
 
             // Buffer the rendered batches no matter what. We'll send it down immediately when the client
             // is connected or right after the client reconnects.
@@ -200,7 +200,7 @@ namespace Photino.Blazor
             CompleteRender(entry.CompletionSource, errorMessageOrNull);
         }
 
-        private void CompleteRender(TaskCompletionSource<object> pendingRenderInfo, string errorMessageOrNull)
+        private void CompleteRender(TaskCompletionSource<object?> pendingRenderInfo, string errorMessageOrNull)
         {
             if (errorMessageOrNull == null)
             {
@@ -242,7 +242,7 @@ namespace Photino.Blazor
 
         internal readonly struct UnacknowledgedRenderBatch
         {
-            public UnacknowledgedRenderBatch(long batchId, TaskCompletionSource<object> completionSource)
+            public UnacknowledgedRenderBatch(long batchId, TaskCompletionSource<object?> completionSource)
             {
                 BatchId = batchId;
                 CompletionSource = completionSource;
@@ -250,7 +250,7 @@ namespace Photino.Blazor
 
             public long BatchId { get; }
 
-            public TaskCompletionSource<object> CompletionSource { get; }
+            public TaskCompletionSource<object?> CompletionSource { get; }
         }
     }
 }

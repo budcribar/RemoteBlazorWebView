@@ -9,7 +9,7 @@ namespace Photino.Blazor
 {
     internal class IPC
     {
-        private readonly Dictionary<string, List<Action<object>>> _registrations = new Dictionary<string, List<Action<object>>>();
+        private readonly Dictionary<string, List<Action<object?>>> _registrations = new Dictionary<string, List<Action<object?>>>();
         private readonly IPhotinoWindowBase _photinoWindow;
 
         public IPC(IPhotinoWindowBase photinoWindow)
@@ -35,13 +35,13 @@ namespace Photino.Blazor
             }
         }
 
-        public void On(string eventName, Action<object> callback)
+        public void On(string eventName, Action<object?> callback)
         {
             lock (_registrations)
             {
                 if (!_registrations.TryGetValue(eventName, out var group))
                 {
-                    group = new List<Action<object>>();
+                    group = new List<Action<object?>>();
                     _registrations.Add(eventName, group);
                 }
 
@@ -49,9 +49,10 @@ namespace Photino.Blazor
             }
         }
 
-        public void Once(string eventName, Action<object> callback)
+        public void Once(string eventName, Action<object?> callback)
         {
-            Action<object>? callbackOnce = null;
+            Action<object?>? callbackOnce = null;
+
             callbackOnce = arg =>
             {
                 Off(eventName, callbackOnce);
@@ -61,7 +62,7 @@ namespace Photino.Blazor
             On(eventName, callbackOnce);
         }
 
-        public void Off(string eventName, Action<object>? callback)
+        public void Off(string eventName, Action<object?>? callback)
         {
             lock (_registrations)
             {
@@ -87,7 +88,7 @@ namespace Photino.Blazor
                     var argsJson = value.Substring(spacePos + 1);
                     var args = JsonSerializer.Deserialize<object[]>(argsJson);
 
-                    Action<object>[] callbacksCopy;
+                    Action<object?>[] callbacksCopy;
                     lock (_registrations)
                     {
                         if (!_registrations.TryGetValue(eventName, out var callbacks))
