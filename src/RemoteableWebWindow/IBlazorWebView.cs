@@ -5,9 +5,6 @@ namespace RemoteBlazorWebView.Wpf
 {
     public interface IBlazorWebView 
     {
-        public string HostPage { get; set; } 
-        public IServiceProvider Services { get; set; }
-
         public event EventHandler<string> Unloaded;
         public event EventHandler<string> Loaded;
 

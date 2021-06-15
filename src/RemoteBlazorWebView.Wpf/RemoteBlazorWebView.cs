@@ -8,42 +8,17 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using PeakSWC;
 using PeakSWC.RemoteableWebWindows;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Components;
 
 namespace RemoteBlazorWebView.Wpf
 {
-    /// <summary>
-    /// Interaction logic for UserControl1.xaml
-    /// </summary>
-    public partial class RemoteBlazorWebView : UserControl, IBlazorWebView
+   
+    public class RemoteBlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView
     {
-        // private WebView2WebViewManager? manager;
 
-        #region Dependency property definitions
-        /// <summary>
-        /// The backing store for the <see cref="HostPage"/> property.
-        /// </summary>
-        public static readonly DependencyProperty HostPageProperty = DependencyProperty.Register(
-            name: nameof(HostPage),
-            propertyType: typeof(string),
-            ownerType: typeof(RemoteBlazorWebView),
-            typeMetadata: new PropertyMetadata(OnHostPagePropertyChanged));
-
-        /// <summary>
-        /// The backing store for the <see cref="RootComponent"/> property.
-        /// </summary>
-        public static readonly DependencyProperty RootComponentsProperty = DependencyProperty.Register(
-            name: nameof(RootComponents),
-            propertyType: typeof(ObservableCollection<RootComponent>),
-            ownerType: typeof(RemoteBlazorWebView));
-
-        /// <summary>
-        /// The backing store for the <see cref="Services"/> property.
-        /// </summary>
-        public static readonly DependencyProperty ServicesProperty = DependencyProperty.Register(
-            name: nameof(Services),
-            propertyType: typeof(IServiceProvider),
-            ownerType: typeof(RemoteBlazorWebView),
-            typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
+        #region Properties
 
         public static readonly DependencyProperty UriProperty = DependencyProperty.Register(
             name: nameof(ServerUri),
@@ -60,13 +35,13 @@ namespace RemoteBlazorWebView.Wpf
 
         public Uri? ServerUri
         {
-            get => (Uri)GetValue(UriProperty);
+            get => (Uri?)GetValue(UriProperty);
             set => SetValue(UriProperty, value);
         }
         public Guid Id
         {
             get => (Guid)GetValue(IdProperty);
-            set => SetValue(IdProperty, value);
+            set => SetValue(IdProperty, value == Guid.Empty ? Guid.NewGuid() : value);
         }
 
 
@@ -76,7 +51,6 @@ namespace RemoteBlazorWebView.Wpf
             set { SetValue(IsRestartingProperty, value); }
         }
 
-        // Using a DependencyProperty as the backing store for IsRestarting.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty IsRestartingProperty =
             DependencyProperty.Register(nameof(IsRestarting), typeof(bool), typeof(RemoteBlazorWebView), new PropertyMetadata(false));
 
@@ -84,38 +58,7 @@ namespace RemoteBlazorWebView.Wpf
         /// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
-
-        public string HostPage
-        {
-            get => (string)GetValue(HostPageProperty);
-            set => SetValue(HostPageProperty, value);
-        }
-
-        /// <summary>
-        /// A collection of <see cref="RootComponent"/> instances that specify the Blazor <see cref="IComponent"/> types
-        /// to be used directly in the specified <see cref="HostPage"/>.
-        /// </summary>
-        public ObservableCollection<RootComponent> RootComponents =>
-            (ObservableCollection<RootComponent>)GetValue(RootComponentsProperty);
-
-        /// <summary>
-        /// Gets or sets an <see cref="IServiceProvider"/> containing services to be used by this control and also by application code.
-        /// This property must be set to a valid value for the Blazor components to start.
-        /// </summary>
-        public IServiceProvider Services
-        {
-            get => (IServiceProvider)GetValue(ServicesProperty);
-            set => SetValue(ServicesProperty, value);
-        }
-
-        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServicesPropertyChanged(e);
-
-        private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs _) { }
-
-        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnHostPagePropertyChanged(e);
-
-        private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) { }
-
+        /// 
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServerUriPropertyChanged(e);
 
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
@@ -124,11 +67,22 @@ namespace RemoteBlazorWebView.Wpf
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
+       // public Uri? ServerUri { get; set; }
+       // public Guid Id { get; set; }
+        public IWebViewManager? WebViewManager { get; set; }
+
+        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        {
+            WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+            return WebViewManager;
+
+        }
+
         public new event EventHandler<string> Unloaded
         {
             add
             {
-                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnDisconnected += value;
                 //else
                 //    MainBlazorWebView.Unloaded +=  value;
@@ -136,7 +90,7 @@ namespace RemoteBlazorWebView.Wpf
 
             remove
             {
-                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnDisconnected -= value;
                 //else
                 //    MainBlazorWebView.Unloaded -= value;
@@ -147,7 +101,7 @@ namespace RemoteBlazorWebView.Wpf
         {
             add
             {
-                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnConnected += value;
                 //else
                 //MainBlazorWebView.Loaded += value;
@@ -155,7 +109,7 @@ namespace RemoteBlazorWebView.Wpf
 
             remove
             {
-                if (MainBlazorWebView.WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnConnected -= value;
                 //else
                 //    MainBlazorWebView.Loaded -= value;
@@ -171,12 +125,12 @@ namespace RemoteBlazorWebView.Wpf
 
         public RemoteBlazorWebView()
         {
-            SetValue(RootComponentsProperty, new ObservableCollection<RootComponent>());
-            RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
+            //SetValue(RootComponentsProperty, new ObservableCollection<RootComponent>());
+            //RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
             // TODO
 
             model.ShowHyperlink = "Hidden";
-            InitializeComponent();
+         
 
             DataContext = model;
         }
@@ -184,9 +138,9 @@ namespace RemoteBlazorWebView.Wpf
 
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
-            MainBlazorWebView.Services = this.Services;
-            RootComponents.ToList().ForEach(x => MainBlazorWebView.RootComponents.Add(x));
-            MainBlazorWebView.HostPage = HostPage;
+            Services = this.Services;
+            RootComponents.ToList().ForEach(x => RootComponents.Add(x));
+            HostPage = HostPage;
            
             if (ServerUri == null)
             {
@@ -195,9 +149,9 @@ namespace RemoteBlazorWebView.Wpf
             }
             else 
             {
-                MainBlazorWebView.ServerUri = ServerUri;
+                ServerUri = ServerUri;
                 if (Id == default) Id = Guid.NewGuid();
-                MainBlazorWebView.Id = Id;
+                Id = Id;
                 model.Uri = $"{ServerUri}app/{Id}";
                 model.ShowHyperlink = IsRestarting ? "Hidden" : "Visible";
             }
