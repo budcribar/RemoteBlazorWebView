@@ -5,6 +5,7 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <IsShippingPackage>false</IsShippingPackage>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

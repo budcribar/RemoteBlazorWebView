@@ -61,8 +61,8 @@ namespace Remote.WebView.WindowsForms
         private Guid _id;
 
 
-        private List<EventHandler<string>> UnloadedInternal = new();
-        private List<EventHandler<string>> LoadedInternal = new();
+        private readonly List<EventHandler<string>> UnloadedInternal = new();
+        private readonly List<EventHandler<string>> LoadedInternal = new();
         public event EventHandler<string> Unloaded
         {
             add

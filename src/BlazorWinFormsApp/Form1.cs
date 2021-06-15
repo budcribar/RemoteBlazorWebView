@@ -41,7 +41,7 @@ namespace BlazorWinFormsApp
             blazorWebView1.Unloaded += BlazorWebView1_Unloaded;
         }
 
-        private void BlazorWebView1_Unloaded(object sender, string e)
+        private void BlazorWebView1_Unloaded(object? sender, string e)
         {
             blazorWebView1.BeginInvoke((Action)(() => {
                 blazorWebView1.Restart();
