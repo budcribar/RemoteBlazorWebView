@@ -4,6 +4,7 @@
     <TargetFramework>net6-windows</TargetFramework>
     <Description>Build Remoteable Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

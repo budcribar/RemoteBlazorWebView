@@ -11,8 +11,8 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestLocalBlazorForm
     {
-        private static EdgeDriver driver;
-        private static string startingDirectory;
+        private static EdgeDriver? driver;
+        private static string startingDirectory = "";
 
         public virtual string BinaryLocation()
         {
@@ -23,7 +23,7 @@ namespace WebdriverTestProject
         public void Setup()
         {
             startingDirectory = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()));
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? "");
             driver = new EdgeDriver(new EdgeOptions { UseWebView = true, BinaryLocation = Path.GetFileName(this.BinaryLocation()) });
             // Wait for page to load 
             Thread.Sleep(1000);
@@ -53,26 +53,26 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            var link = driver.FindElementByPartialLinkText("Counter");
-            link.Click();
+            var link = driver?.FindElementByPartialLinkText("Counter");
+            link?.Click();
             Thread.Sleep(100);
 
-            var button = driver.FindElement(By.ClassName("btn"));
-            var para = driver.FindElement(By.XPath("//p"));
+            var button = driver?.FindElement(By.ClassName("btn"));
+            var para = driver?.FindElement(By.XPath("//p"));
 
             sw.Restart();
            
             for (int i = 0; i < numClicks; i++)
             {
-                button.Click();
+                button?.Click();
                 Thread.Sleep(30);
             }
 
             Console.WriteLine($"Click {numClicks} times in {sw.Elapsed}");
             Thread.Sleep(1000);
 
-            var res = para.Text;
-            Assert.IsTrue(res.Contains($"{numClicks}"));
+            var res = para?.Text;
+            Assert.IsTrue(res?.Contains($"{numClicks}"));
 
             Cleanup();
         }
@@ -82,7 +82,7 @@ namespace WebdriverTestProject
         {
             Directory.SetCurrentDirectory(startingDirectory);
 
-            driver.Quit();
+            driver?.Quit();
         }
     }
 }

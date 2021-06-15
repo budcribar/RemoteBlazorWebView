@@ -34,7 +34,7 @@ namespace Remote.WebView.WindowsForms
 
         public IWebViewManager? WebViewManager { get; set; }
 
-        private Uri _serverUri;
+        private Uri? _serverUri;
 
         /// <summary>
         /// Uri of the RemoteableWebView service.
@@ -44,7 +44,7 @@ namespace Remote.WebView.WindowsForms
         [TypeConverter(typeof(UriTypeConverter))]
         [Category("Behavior")]
         [Description(@"Uri of the RemoteableWebView service.")]
-        public Uri ServerUri
+        public Uri? ServerUri
         {
             get => _serverUri;
             set

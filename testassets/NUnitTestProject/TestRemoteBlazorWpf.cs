@@ -26,10 +26,10 @@ namespace WebdriverTestProject
     {
         private static readonly List<ChromeDriver> _driver = new();
         private readonly string url = @"https://localhost/";
-        private static GrpcChannel channel;
-        private static string[] ids;
-        private static Process process;
-        private static List<Process> clients;
+        private static GrpcChannel? channel;
+        private static string[] ids = Array.Empty<string>();
+        private static Process? process;
+        private static List<Process> clients = new();
 
         public virtual Process CreateClient()
         {
