@@ -1,9 +1,7 @@
-using PhotinoNET.Structs;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Grpc.Core;

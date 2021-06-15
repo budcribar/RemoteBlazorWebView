@@ -19,7 +19,6 @@ namespace PeakSWC
         {
             if (url != null)
             {
-
                 RemoteableWebView = new RemotableWebWindow
                 {
                     ServerUri = url,
@@ -30,7 +29,6 @@ namespace PeakSWC
                 RemoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
                 RemoteableWebView.Initialize();
             }
-               
         }
 
         private void RemoteOnWebMessageReceived(object? sender, string e)

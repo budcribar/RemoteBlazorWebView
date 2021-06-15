@@ -4,11 +4,11 @@ using Microsoft.Extensions.Primitives;
 using RemoteableWebWindowService.Services;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PeakSwc.StaticFiles
 {
@@ -21,7 +21,7 @@ namespace PeakSwc.StaticFiles
         private Stream? stream = null;
         private readonly ILogger<FileResolver> _logger;
 
-        private Stream? GetStream()
+        private async Task<Stream?> GetStream()
         {    
             if (stream == null)
             {
@@ -43,7 +43,7 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path[1..];
 
-                stream = ProcessFile(guid, path);
+                stream = await ProcessFile(guid, path);
             }
 
             return stream;
@@ -67,9 +67,9 @@ namespace PeakSwc.StaticFiles
             _rootDictionary = rootDictionary;
         }
         
-        public bool Exists => GetStream() != null;
+        public bool Exists => GetStream().Result != null;
 
-        public long Length => GetStream()?.Length ?? -1;
+        public long Length => GetStream().Result?.Length ?? -1;
 
         public string? PhysicalPath => null;
 
@@ -79,7 +79,7 @@ namespace PeakSwc.StaticFiles
 
         public bool IsDirectory => false;
 
-        private Stream? ProcessFile(string id, string appFile)
+        private async Task<Stream?> ProcessFile(string id, string appFile)
         {
             _logger.LogInformation($"Attempting to read {appFile}");
           
@@ -90,7 +90,7 @@ namespace PeakSwc.StaticFiles
             }
                 
             _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
-            _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
+            await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
             
             // TODO
             //_rootDictionary[id].FileCollection.Writer.TryWrite(appFile);
@@ -128,7 +128,7 @@ namespace PeakSwc.StaticFiles
 
         public Stream? CreateReadStream()
         {
-            return GetStream();
+            return GetStream().Result;
         }
     }
 

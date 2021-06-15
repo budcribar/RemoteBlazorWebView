@@ -4,9 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
 using PeakSwc.RemoteableWebWindows;
-using Remote.WebView.WindowsForms;
 
 namespace Microsoft.AspNetCore.Components.WebView.WindowsForms
 {

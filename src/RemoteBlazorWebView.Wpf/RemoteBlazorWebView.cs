@@ -1,23 +1,18 @@
 ﻿using PeakSwc.RemoteableWebWindows;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using PeakSWC;
-using PeakSWC.RemoteableWebWindows;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Components;
 
 namespace RemoteBlazorWebView.Wpf
 {
-   
+
     public class RemoteBlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView
     {
-
         #region Properties
 
         public static readonly DependencyProperty UriProperty = DependencyProperty.Register(
@@ -67,15 +62,12 @@ namespace RemoteBlazorWebView.Wpf
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
-       // public Uri? ServerUri { get; set; }
-       // public Guid Id { get; set; }
         public IWebViewManager? WebViewManager { get; set; }
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
             return WebViewManager;
-
         }
 
         public new event EventHandler<string> Unloaded
@@ -116,10 +108,6 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
-       
-
-        //private IBlazorWebView? innerBlazorWebView;
-        // private RemotableWebWindow? RemotableWebWindow { get; set; } = null;
         private readonly ViewModel model = new();
         static RemoteBlazorWebView() { }
 
@@ -131,7 +119,6 @@ namespace RemoteBlazorWebView.Wpf
 
             model.ShowHyperlink = "Hidden";
          
-
             DataContext = model;
         }
 

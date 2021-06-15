@@ -4,7 +4,6 @@
     <TargetFramework>net6</TargetFramework>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     <OutputType>Exe</OutputType>
-    
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -24,11 +23,6 @@
     <IsPackable>true</IsPackable>
     <Version></Version>
   </PropertyGroup>
-  
-  <!-- 
-  <Platforms>x64</Platforms>
-   <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-  -->
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>

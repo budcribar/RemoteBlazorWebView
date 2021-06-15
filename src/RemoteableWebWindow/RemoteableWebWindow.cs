@@ -5,10 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
-//using BlazorWebView;
-
 using Google.Protobuf;
-//using Microsoft.JSInterop;
 using System.Net;
 using System.Reflection;
 using System.Windows;

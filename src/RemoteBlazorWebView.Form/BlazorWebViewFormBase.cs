@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.FileProviders;
 using PeakSwc.RemoteableWebWindows;
-using Remote.WebView.WindowsForms;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
 namespace PeakSWC

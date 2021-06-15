@@ -8,7 +8,7 @@ namespace HelloRemotePhotino.Blazor
     public class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        static void Main(string[] _)
         {
             //var pw = new PhotinoWindow("Hello Remote Photino Blazor!");
             //var pw = new RemotePhotinoWindow(null, "wwwroot/index.html", "Hello Remote Photino Blazor!", default, (o) => { o.WebMessageReceivedHandler = (s, e) => { Console.WriteLine($"Web Message {e}"); }; });
