@@ -12,9 +12,78 @@ using System.Windows;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
 using RemoteBlazorWebView.Wpf;
+using System.Collections.Generic;
+using System.Xml.Linq;
+using static PeakSwc.RemoteableWebWindows.StaticWebAssetsReader;
+using System.Linq;
+using Microsoft.AspNetCore.Http;
 
 namespace PeakSwc.RemoteableWebWindows
 {
+    internal static class StaticWebAssetsReader
+    {
+        private const string ManifestRootElementName = "StaticWebAssets";
+        private const string VersionAttributeName = "Version";
+        private const string ContentRootElementName = "ContentRoot";
+
+        internal static IEnumerable<ContentRootMapping> Parse(Stream manifest)
+        {
+            var document = XDocument.Load(manifest);
+            if (!string.Equals(document.Root!.Name.LocalName, ManifestRootElementName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Invalid manifest format. Manifest root must be '{ManifestRootElementName}'");
+            }
+
+            var version = document.Root.Attribute(VersionAttributeName);
+            if (version == null)
+            {
+                throw new InvalidOperationException($"Invalid manifest format. Manifest root element must contain a version '{VersionAttributeName}' attribute");
+            }
+
+            if (version.Value != "1.0")
+            {
+                throw new InvalidOperationException($"Unknown manifest version. Manifest version must be '1.0'");
+            }
+
+            foreach (var element in document.Root.Elements())
+            {
+                if (!string.Equals(element.Name.LocalName, ContentRootElementName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Invalid manifest format. Invalid element '{element.Name.LocalName}'. All StaticWebAssetsManifestName child elements must be '{ContentRootElementName}' elements.");
+                }
+                if (!element.IsEmpty)
+                {
+                    throw new InvalidOperationException($"Invalid manifest format. {ContentRootElementName} can't have content.");
+                }
+
+                var basePath = ParseRequiredAttribute(element, "BasePath");
+                var path = ParseRequiredAttribute(element, "Path");
+                yield return new ContentRootMapping(basePath, path);
+            }
+        }
+
+        private static string ParseRequiredAttribute(XElement element, string attributeName)
+        {
+            var attribute = element.Attribute(attributeName);
+            if (attribute == null)
+            {
+                throw new InvalidOperationException($"Invalid manifest format. Missing {attributeName} attribute in '{ContentRootElementName}' element.");
+            }
+            return attribute.Value;
+        }
+
+        internal readonly struct ContentRootMapping
+        {
+            public ContentRootMapping(string basePath, string path)
+            {
+                BasePath = basePath;
+                Path = path;
+            }
+
+            public string BasePath { get; }
+            public string Path { get; }
+        }
+    }
     public class RemotableWebWindow // : IBlazorWebView 
     {
         public static void Restart(IBlazorWebView blazorWebView)
@@ -46,22 +115,39 @@ namespace PeakSwc.RemoteableWebWindows
 
 #region private
 
-private readonly string hostname;
+        private readonly string hostname;
         private readonly object bootLock = new();
         public Dispatcher? Dispacher { get; set; }
         
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
-        private Func<string, Stream?> FrameworkFileResolver { get; } = SupplyFrameworkFile;
-
+        private Func<string, Stream?> FrameworkFileResolver { get; set; }
         // TODO unused
         private readonly CancellationTokenSource cts = new();
+
+        private static List<ContentRootMapping>? rootMap;
+        
+        
         #endregion
 
         public Uri? ServerUri { get; set; }
         public string HostHtmlPath { get; set; } = "";
         public string Id { get; set; } = "";
 
-        public static Stream? SupplyFrameworkFile(string uri)
+        private static string NormalizePath(string path)
+        {
+            path = path.Replace('\\', '/');
+            return path.StartsWith('/') ? path : "/" + path;
+        }
+        private static readonly StringComparison FilePathComparison = OperatingSystem.IsWindows() ?
+                StringComparison.OrdinalIgnoreCase :
+                StringComparison.Ordinal;
+
+        private static bool StartsWithBasePath(string subpath, PathString basePath, out PathString rest)
+        {
+            return new PathString(subpath).StartsWithSegments(basePath, FilePathComparison, out rest);
+        }
+
+        public Stream? SupplyFrameworkFile(string uri)
         {
             try
             {
@@ -70,10 +156,82 @@ private readonly string hostname;
 
                 if (File.Exists(uri))
                     return File.OpenRead(uri);
+
+                else
+                {
+                    if (rootMap == null)
+                    {
+                        var stream = GetManifestStream();
+                        if (stream != null)
+                            rootMap = StaticWebAssetsReader.Parse(stream).ToList();
+                    }
+
+                    if (rootMap == null)
+                        return null;
+
+                    foreach (var m in rootMap)
+                    {
+                        if (NormalizePath(m.BasePath) == "/")
+                        {
+                            var f = m.Path + uri.Substring(uri.IndexOf('/'));
+                            if (File.Exists(f))
+                                return File.OpenRead(f);
+                        }
+                       
+                        if (StartsWithBasePath(uri.Substring(uri.IndexOf('/')), NormalizePath(m.BasePath), out PathString mappedPath))
+                        {
+                            var f = m.Path + mappedPath;
+                        
+                            if (File.Exists(f))
+                                return File.OpenRead(f);
+                        }
+                           
+                    }
+                       
+                }
             }
-            catch (Exception) { return null;  }
+            catch (Exception ex) {
+                var m = ex.Message;
+                return null;  }
                
             return null;
+        }
+
+        private static string? ResolveRelativeToAssembly()
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            if (string.IsNullOrEmpty(assembly?.Location))
+            {
+                return null;
+            }
+
+            var name = Path.GetFileNameWithoutExtension(assembly.Location);
+
+            return Path.Combine(Path.GetDirectoryName(assembly.Location)!, $"{name}.StaticWebAssets.xml");
+        }
+
+        static Stream? GetManifestStream()
+        {
+            try
+            {
+                var filePath = ResolveRelativeToAssembly();
+
+                if (filePath != null && File.Exists(filePath))
+                {
+                    return File.OpenRead(filePath);
+                }
+                else
+                {
+                    // A missing manifest might simply mean that the feature is not enabled, so we simply
+                    // return early. Misconfigurations will be uncommon given that the entire process is automated
+                    // at build time.
+                    return null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         //public IJSRuntime? JSRuntime { get; set; }
@@ -207,6 +365,7 @@ private readonly string hostname;
         public event EventHandler<string>? OnDisconnected;
         public RemotableWebWindow() {
             hostname = Dns.GetHostName();
+            FrameworkFileResolver = SupplyFrameworkFile;
            
         }
 
