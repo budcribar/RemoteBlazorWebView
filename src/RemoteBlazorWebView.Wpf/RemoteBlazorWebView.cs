@@ -103,6 +103,18 @@ namespace RemoteBlazorWebView.Wpf
             }
         }
 
+        private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
+        {
+            Services = this.Services;
+            RootComponents.ToList().ForEach(x => RootComponents.Add(x));
+            HostPage = HostPage;
+
+            if (ServerUri != null)
+                Id = Id;
+                
+        }
+
+
         public void Restart()
         {
             RemotableWebWindow.Restart(this);
