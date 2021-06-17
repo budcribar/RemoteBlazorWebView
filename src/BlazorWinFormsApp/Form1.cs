@@ -25,7 +25,7 @@ namespace BlazorWinFormsApp
             blazorWebView1.IsRestarting = runString.IsRestarting;
             blazorWebView1.HostPage = @"wwwroot\index.html";
             blazorWebView1.Services = serviceCollection.BuildServiceProvider();
-            blazorWebView1.RootComponents.Add(new PeakSWC.RemoteBlazorWebView.WebView.WindowsForms.RootComponent("#app", typeof(App), null));
+            blazorWebView1.RootComponents.Add(new PeakSWC.RemoteBlazorWebView.WindowsForms.RootComponent("#app", typeof(App), null));
             // TODO
             //blazorWebView1.RootComponents.Add<App>("#app");
             if (runString.ServerUri == null)

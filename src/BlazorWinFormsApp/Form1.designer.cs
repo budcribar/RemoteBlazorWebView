@@ -30,7 +30,7 @@ namespace BlazorWinFormsApp
         /// </summary>
         private void InitializeComponent()
         {
-            this.blazorWebView1 = new PeakSWC.RemoteBlazorWebView.WebView.WindowsForms.RemoteBlazorWebView();
+            this.blazorWebView1 = new PeakSWC.RemoteBlazorWebView.WindowsForms.BlazorWebView();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.SuspendLayout();
             // 
@@ -70,7 +70,7 @@ namespace BlazorWinFormsApp
         }
 
         #endregion
-        private PeakSWC.RemoteBlazorWebView.WebView.WindowsForms.RemoteBlazorWebView blazorWebView1;
+        private PeakSWC.RemoteBlazorWebView.WindowsForms.BlazorWebView blazorWebView1;
         private System.Windows.Forms.LinkLabel linkLabel1;
 
         //  this.blazorWebView1.ServerUri = new System.Uri("https://localhost:443", System.UriKind.Absolute);

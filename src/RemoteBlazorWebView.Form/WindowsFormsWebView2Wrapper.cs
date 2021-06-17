@@ -7,7 +7,7 @@ using System;
 using System.Threading.Tasks;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     internal class WindowsFormsWebView2Wrapper : IWebView2Wrapper
     {

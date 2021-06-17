@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     /// <summary>
     /// Provides a set of extension methods for modifying collections of <see cref="IComponent"/> objects.

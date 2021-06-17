@@ -6,9 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
-    public partial class RemoteBlazorWebView : BlazorWebViewFormBase, IBlazorWebView
+    public partial class BlazorWebView : BlazorWebViewFormBase, IBlazorWebView
     {
 
 

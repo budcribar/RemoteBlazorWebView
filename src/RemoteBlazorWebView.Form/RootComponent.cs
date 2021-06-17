@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     /// <summary>
     /// Describes a root component that can be added to a <see cref="BlazorWebView"/>.

@@ -24,4 +24,19 @@ namespace WebdriverTestProject
 
 
     }
+
+    [TestClass]
+    public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm
+    {
+
+        public override Process CreateClient()
+        {
+            return Utilities.StartRemoteBlazorWinFormsDebugApp();
+        }
+
+        public override void KillClient()
+        {
+            Utilities.KillBlazorWinFormsApp();
+        }
+    }
 }

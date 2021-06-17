@@ -27,6 +27,17 @@ namespace WebdriverTestProject
             return process;
         }
 
+        public static string BlazorWinFormsDebugPath()
+        {
+            var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
+            var exePath = @"bin\debug\net6-windows";  
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+        public static string BlazorWinFormsDebugAppExe()
+        {
+            return Path.Combine(BlazorWinFormsDebugPath(), "BlazorWinFormsApp.exe");
+        }
+
         public static string BlazorWinFormsPath()
         {
             var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
@@ -56,6 +67,23 @@ namespace WebdriverTestProject
             Process.GetProcesses().Where(p => p.ProcessName == "BlazorWinFormsApp").ToList().ForEach(x => x.Kill());
         }
 
+        public static Process StartRemoteBlazorWinFormsDebugApp()
+        {
+            var f = BlazorWinFormsDebugAppExe();
+
+            Stopwatch sw = new();
+
+            Process p = new Process();
+            p.StartInfo.FileName = Path.GetFullPath(f);
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.Arguments = @"-u=https://localhost:443";
+            p.StartInfo.WorkingDirectory = BlazorWinFormsPath();
+            p.Start();
+
+            Console.WriteLine($"Clients started in {sw.Elapsed}");
+
+            return p;
+        }
 
 
         public static Process StartRemoteBlazorWinFormsApp()

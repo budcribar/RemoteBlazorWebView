@@ -10,20 +10,20 @@ using System.Windows;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
-    public class RemoteBlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView
+    public class BlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView
     {
         #region Properties
 
         public static readonly DependencyProperty UriProperty = DependencyProperty.Register(
             name: nameof(ServerUri),
             propertyType: typeof(Uri),
-            ownerType: typeof(RemoteBlazorWebView),
+            ownerType: typeof(BlazorWebView),
             typeMetadata: new PropertyMetadata(OnServerUriPropertyChanged));
 
         public static readonly DependencyProperty IdProperty = DependencyProperty.Register(
                    name: nameof(Id),
                    propertyType: typeof(Guid),
-                   ownerType: typeof(RemoteBlazorWebView),
+                   ownerType: typeof(BlazorWebView),
                    typeMetadata: new PropertyMetadata(OnIdPropertyChanged));
         #endregion
 
@@ -46,13 +46,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         }
 
         public static readonly DependencyProperty IsRestartingProperty =
-            DependencyProperty.Register(nameof(IsRestarting), typeof(bool), typeof(RemoteBlazorWebView), new PropertyMetadata(false));
+            DependencyProperty.Register(nameof(IsRestarting), typeof(bool), typeof(BlazorWebView), new PropertyMetadata(false));
 
-        private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnServerUriPropertyChanged(e);
+        private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServerUriPropertyChanged(e);
 
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
-        private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((RemoteBlazorWebView)d).OnIdPropertyChanged(e);
+        private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnIdPropertyChanged(e);
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 

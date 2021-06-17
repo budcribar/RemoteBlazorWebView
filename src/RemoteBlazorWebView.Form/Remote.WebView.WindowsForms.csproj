@@ -1,11 +1,31 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6-windows</TargetFramework>
     <Description>Build Remoteable Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
+
+    <PackageId>PeakSWC.RemoteBlazorWebView.WindowsForms</PackageId>
+    <Authors>Bud Cribar</Authors>
+    <Company>Peak Software Consulting, LLC</Company>
+    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
+      <PackagePath></PackagePath>
+      <Pack>True</Pack>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.4.21253.5" />

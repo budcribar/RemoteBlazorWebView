@@ -14,7 +14,7 @@ using System.Linq;
 using System.Windows.Forms;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     /// <summary>
     /// A Windows Forms control for hosting Blazor web components locally in Windows desktop applications.

@@ -7,7 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     /// <summary>
     /// Dispatcher implementation for Windows Forms that invokes methods on the UI thread. The <see cref="Dispatcher"/>
