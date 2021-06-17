@@ -7,7 +7,7 @@ RemoteBlazorWebView.Wpf.BlazorWebView enables you to interact with the user inte
 RemoteBlazorWebView.Wpf is a drop-in replacement for the Microsoft.AspNetCore.Components.WebView.Wpf.BlazorWebView control and with minimal changes you will be able to remotely control your application.
 
 
-#RemoteBlazorWebView.WindowsForms.BlazorWebView
+# RemoteBlazorWebView.WindowsForms.BlazorWebView
 
 RemoteBlazorWebView.WindowsForms.BlazorWebView is based on the .NET 6 Preview 4 Blazor WebView WinForms Control 
 
