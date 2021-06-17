@@ -1,21 +1,21 @@
 ﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
-using Google.Protobuf;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
-using Microsoft.AspNetCore.Components;
-using System.Diagnostics;
-using System.Collections.Generic;
 using System.Xml.Linq;
 using static PeakSWC.RemoteableWebView.StaticWebAssetsReader;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -96,7 +96,7 @@ namespace PeakSWC.RemoteableWebView
             psi.ArgumentList.Add($"-r=true");
 
             Process.Start(psi);
-           
+
         }
 
         public static void StartBrowser(IBlazorWebView blazorWebView)
@@ -112,20 +112,20 @@ namespace PeakSWC.RemoteableWebView
             }
         }
 
-#region private
+        #region private
 
         private readonly string hostname;
         private readonly object bootLock = new();
         public Dispatcher? Dispacher { get; set; }
-        
+
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
         private Func<string, Stream?> FrameworkFileResolver { get; set; }
         // TODO unused
         private readonly CancellationTokenSource cts = new();
 
         private static List<ContentRootMapping>? rootMap;
-        
-        
+
+
         #endregion
 
         public Uri? ServerUri { get; set; }
@@ -176,23 +176,25 @@ namespace PeakSWC.RemoteableWebView
                             if (File.Exists(f))
                                 return File.OpenRead(f);
                         }
-                       
+
                         if (StartsWithBasePath(uri.Substring(uri.IndexOf('/')), NormalizePath(m.BasePath), out PathString mappedPath))
                         {
                             var f = m.Path + mappedPath;
-                        
+
                             if (File.Exists(f))
                                 return File.OpenRead(f);
                         }
-                           
+
                     }
-                       
+
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 var m = ex.Message;
-                return null;  }
-               
+                return null;
+            }
+
             return null;
         }
 
@@ -235,7 +237,8 @@ namespace PeakSWC.RemoteableWebView
 
         //public IJSRuntime? JSRuntime { get; set; }
 
-        protected  RemoteWebWindow.RemoteWebWindowClient? Client {
+        protected RemoteWebWindow.RemoteWebWindowClient? Client
+        {
             get
             {
                 if (ServerUri == null) return null;
@@ -245,10 +248,10 @@ namespace PeakSWC.RemoteableWebView
                     var channel = GrpcChannel.ForAddress(ServerUri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname=hostname }, cancellationToken: cts.Token); // TODO parameter names
+                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname }, cancellationToken: cts.Token); // TODO parameter names
                     var completed = new ManualResetEventSlim();
                     var createFailed = false;
-                   
+
                     Task.Run(async () =>
                     {
                         try
@@ -276,13 +279,13 @@ namespace PeakSWC.RemoteableWebView
                                                 lock (bootLock)
                                                 {
                                                     Shutdown();
-                                                    
+
                                                     OnDisconnected?.Invoke(this, Id);
                                                 }
                                             }
                                             else if (data == "connected:")
-                                               
-                                                OnConnected?.Invoke(this, Id );
+
+                                                OnConnected?.Invoke(this, Id);
                                             else
                                                 OnWebMessageReceived?.Invoke(this, data);
                                             break;
@@ -291,16 +294,16 @@ namespace PeakSWC.RemoteableWebView
                                 catch (Exception ex)
                                 {
                                     var m = ex.Message;
-                                    
+
                                 }
                             }
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-                            OnDisconnected?.Invoke(this, Id );
+                            OnDisconnected?.Invoke(this, Id);
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
-                    }, cts.Token);             
+                    }, cts.Token);
 
                     completed.Wait();
 
@@ -312,7 +315,7 @@ namespace PeakSWC.RemoteableWebView
                         var files = client.FileReader();
 
                         await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = "Initialize" });
-                        
+
 
                         // TODO Use multiple threads to read files
                         //_ = Task.Run(async () =>
@@ -333,25 +336,25 @@ namespace PeakSWC.RemoteableWebView
                         //            var m = ex.Message;
                         //        }
                         //    }
-                              
+
                         //});
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
-                        try
-                        {
-                            var bytes = FrameworkFileResolver(message.Path) ?? null;
-                            ByteString temp = ByteString.Empty;
-                            if (bytes != null)
-                                temp = ByteString.FromStream(bytes);
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
+                            try
+                            {
+                                var bytes = FrameworkFileResolver(message.Path) ?? null;
+                                ByteString temp = ByteString.Empty;
+                                if (bytes != null)
+                                    temp = ByteString.FromStream(bytes);
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
+                            }
+                            catch (Exception ex)
+                            {
+                                var m = ex.Message;
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            var m = ex.Message;
-                        }
-                    }
-                       
+
                     }, cts.Token);
 
                 }
@@ -362,10 +365,11 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnWebMessageReceived;
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
-        public RemotableWebWindow() {
+        public RemotableWebWindow()
+        {
             hostname = Dns.GetHostName();
             FrameworkFileResolver = SupplyFrameworkFile;
-           
+
         }
 
         //public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
@@ -381,7 +385,7 @@ namespace PeakSWC.RemoteableWebView
 
         public void SendMessage(string message)
         {
-            Client?.SendMessage(new SendMessageRequest { Id=Id, Message = message });
+            Client?.SendMessage(new SendMessageRequest { Id = Id, Message = message });
         }
 
         //public void ShowMessage(string title, string body)
@@ -402,6 +406,6 @@ namespace PeakSWC.RemoteableWebView
         //{
         //    callback.Invoke();
         //}
-      
+
     }
 }

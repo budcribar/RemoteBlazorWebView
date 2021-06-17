@@ -1,6 +1,10 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 #nullable disable
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
+using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -8,10 +12,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.FileProviders;
-using PeakSWC.RemoteableWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms

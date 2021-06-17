@@ -1,9 +1,9 @@
 ﻿using Grpc.Core;
 using System.Drawing;
-using System.Threading.Tasks;
 using System.Text.Json;
-using System.Threading.Channels;
 using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -28,7 +28,8 @@ namespace PeakSWC.RemoteableWebView
         }
 
 
-        public IPC (){
+        public IPC()
+        {
             Task.Run(async () =>
             {
                 await foreach (var m in responseChannel.Reader.ReadAllAsync())

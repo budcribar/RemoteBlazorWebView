@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
-using PeakSWC;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -52,7 +51,7 @@ namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
             }
         }
         private void ResetServerUri() => ServerUri = new Uri("https://localhost:443");
-       
+
         private bool ShouldSerializeServerUri() => ServerUri != null;
 
         private Guid _id;
@@ -68,7 +67,7 @@ namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
                 if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
                     manager.RemoteableWebView.OnDisconnected += value;
                 else
-                    UnloadedInternal.Add(value);       
+                    UnloadedInternal.Add(value);
             }
 
             remove
@@ -87,7 +86,7 @@ namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
                     manager.RemoteableWebView.OnConnected += value;
                 else
                     LoadedInternal.Add(value);
-                
+
             }
 
             remove

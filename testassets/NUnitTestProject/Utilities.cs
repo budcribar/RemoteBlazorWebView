@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace WebdriverTestProject
 {
@@ -12,7 +9,7 @@ namespace WebdriverTestProject
     {
         public static Process StartServer()
         {
-           
+
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -58,7 +55,7 @@ namespace WebdriverTestProject
         {
             Process.GetProcesses().Where(p => p.ProcessName == "BlazorWinFormsApp").ToList().ForEach(x => x.Kill());
         }
-       
+
 
 
         public static Process StartRemoteBlazorWinFormsApp()
@@ -66,14 +63,14 @@ namespace WebdriverTestProject
             var f = BlazorWinFormsAppExe();
 
             Stopwatch sw = new();
-           
+
             Process p = new Process();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";
             p.StartInfo.WorkingDirectory = BlazorWinFormsPath();
             p.Start();
-               
+
             Console.WriteLine($"Clients started in {sw.Elapsed}");
 
             return p;
@@ -118,11 +115,11 @@ namespace WebdriverTestProject
         {
             Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
         }
-       
+
 
         public static Process StartRemoteBlazorWpfApp()
         {
-            var f = BlazorWpfAppExe();   
+            var f = BlazorWpfAppExe();
 
             Stopwatch sw = new();
 

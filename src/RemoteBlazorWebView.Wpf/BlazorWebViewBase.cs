@@ -1,26 +1,26 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
+using PeakSWC.RemoteableWebView;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.AspNetCore.Components;
-using PeakSWC.RemoteableWebView;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public  class BlazorWebViewBaseWpf : Control, IDisposable
+    public class BlazorWebViewBaseWpf : Control, IDisposable
     {
         #region Dependency property definitions
         /// <summary>
@@ -173,7 +173,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 WpfDispatcher.Instance.InvokeAsync(async () =>
                 {
                     var newItems = eventArgs.NewItems?.Cast<RootComponent>() ?? new List<RootComponent>();
-                    var oldItems = eventArgs.OldItems?.Cast<RootComponent>() ?? new List<RootComponent> ();
+                    var oldItems = eventArgs.OldItems?.Cast<RootComponent>() ?? new List<RootComponent>();
 
                     foreach (var item in newItems.Except(oldItems))
                     {

@@ -1,9 +1,9 @@
-using System.Threading.Tasks;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using System.Threading;
 using System.Collections.Concurrent;
-using Google.Protobuf.WellKnownTypes;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -11,12 +11,12 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ILogger<RemoteWebViewService> _logger;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; set; }
-        
+
         private volatile bool shutdown = false;
-       
+
         public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary)
         {
-            _logger = logger;         
+            _logger = logger;
             ServiceDictionary = serviceDictionary;
         }
 

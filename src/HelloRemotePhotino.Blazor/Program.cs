@@ -1,6 +1,5 @@
 ﻿using PeakSWC.RemotePhotinoNET;
 using Photino.Blazor;
-using PhotinoNET;
 using System;
 
 namespace HelloRemotePhotino.Blazor

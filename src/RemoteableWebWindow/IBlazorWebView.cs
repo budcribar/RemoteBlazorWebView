@@ -2,7 +2,7 @@
 
 namespace PeakSWC.RemoteableWebView
 {
-    public interface IBlazorWebView 
+    public interface IBlazorWebView
     {
         public event EventHandler<string> Unloaded;
         public event EventHandler<string> Loaded;

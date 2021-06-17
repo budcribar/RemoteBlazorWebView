@@ -54,7 +54,7 @@ namespace RemoteableWebWindowSite
                     var appAssembly = typeof(AppVersionInfo).Assembly;
                     var temp = appAssembly?.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute)).FirstOrDefault();
                     var infoVerAttr = temp as AssemblyInformationalVersionAttribute ?? null;
-                   
+
                     if (infoVerAttr != null && infoVerAttr.InformationalVersion.Length > 6)
                     {
                         // Hash is embedded in the version after a '+' symbol, e.g. 1.0.0+a34a913742f8845d3da5309b7b17242222d41a21

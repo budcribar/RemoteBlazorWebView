@@ -1,20 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Grpc.Core;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
     public class RemoteWebViewService : RemoteWebWindow.RemoteWebWindowBase
-    { 
+    {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
+        private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteableWebView
                 _webWindowDictionary.TryAdd(request.Id, state);
 
                 var list = new ClientResponseList();
-                _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName=x.Hostname, Id=x.Id, State=x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url=x.Url }));      
+                _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
                 await _serviceStateChannel.Writer.WriteAsync(list);
                 state.IPC.ResponseStream = responseStream;
@@ -66,7 +66,7 @@ namespace PeakSWC.RemoteableWebView
             {
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" });
             }
-            
+
         }
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
@@ -96,7 +96,7 @@ namespace PeakSWC.RemoteableWebView
                                     {
                                         await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
                                     }
-                                    
+
                                 }
                             }
 
@@ -107,27 +107,27 @@ namespace PeakSWC.RemoteableWebView
                     {
                         var bytes = message.Data.ToArray();
                         var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = ( new MemoryStream(bytes), resetEvent);
+                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
 
                         // TODO Further identify file by hash
-                        if(bytes.Length > 0)
-                            _fileCache.TryAdd(message.Path,bytes);
+                        if (bytes.Length > 0)
+                            _fileCache.TryAdd(message.Path, bytes);
                     }
                 }
             }
             catch (Exception)
             {
                 ExShutdown(id);
-               
+
                 // Client has shut down
             }
-           
+
         }
 
         private void ExShutdown(string id)
         {
-            _logger.LogInformation("Shutting down..."  + id);
+            _logger.LogInformation("Shutting down..." + id);
 
             if (_webWindowDictionary.ContainsKey(id))
                 _webWindowDictionary.Remove(id, out var _);
@@ -135,7 +135,7 @@ namespace PeakSWC.RemoteableWebView
             var list = new ClientResponseList();
             _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
-             _serviceStateChannel.Writer.WriteAsync(list);
+            _serviceStateChannel.Writer.WriteAsync(list);
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

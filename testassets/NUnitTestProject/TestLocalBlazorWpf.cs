@@ -1,9 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Edge;
-using System.Threading;
-using System.Diagnostics;
-using System;
 
 namespace WebdriverTestProject
 {

@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
-using System.Threading;
-using System.Diagnostics;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace WebdriverTestProject
 {
@@ -61,7 +61,7 @@ namespace WebdriverTestProject
             var para = driver?.FindElement(By.XPath("//p"));
 
             sw.Restart();
-           
+
             for (int i = 0; i < numClicks; i++)
             {
                 button?.Click();

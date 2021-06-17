@@ -1,16 +1,16 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Rewrite;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using PeakSwc.StaticFiles;
-using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.StaticFiles;
-using System.Threading.Channels;
+using System.Collections.Concurrent;
 using System.Linq;
-using Microsoft.AspNetCore.Rewrite;
-using Microsoft.Extensions.FileProviders;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -20,10 +20,10 @@ namespace PeakSWC.RemoteableWebView
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
 
         public void ConfigureServices(IServiceCollection services)
-        {         
+        {
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
-         
+
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
@@ -36,16 +36,16 @@ namespace PeakSWC.RemoteableWebView
                     builder.AllowAnyOrigin();
                     builder.AllowAnyHeader();
                     builder.AllowAnyMethod();
-                   
+
                     // TODO tighten this up
                     //builder.WithOrigins("localhost:443", "localhost", "YourCustomDomain");
-                   // builder.WithMethods("POST, OPTIONS");
+                    // builder.WithMethods("POST, OPTIONS");
                     //builder.AllowAnyHeader();
                     builder.WithExposedHeaders("Grpc-Status", "Grpc-Message");
                 });
             });
         }
-            
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -81,7 +81,7 @@ namespace PeakSWC.RemoteableWebView
                 FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebViewService).Assembly)),
                 //FileProvider = new CompositeFileProvider(new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly),app.ApplicationServices?.GetService<FileResolver>()),
                 ContentTypeProvider = provider
-            }); 
+            });
 
             app.UseEndpoints(endpoints =>
             {
@@ -100,7 +100,8 @@ namespace PeakSWC.RemoteableWebView
                             context.Response.StatusCode = 400;
                             await context.Response.WriteAsync("Client is currently locked");
 
-                        } else
+                        }
+                        else
                         {
                             rootDictionary[guid].InUse = true;
                             // Update Status
@@ -112,7 +113,7 @@ namespace PeakSWC.RemoteableWebView
 
                             context.Response.Redirect($"/{guid}/{home}");
                         }
-                      
+
                     }
                     else
                     {
@@ -124,7 +125,7 @@ namespace PeakSWC.RemoteableWebView
                 endpoints.MapGet("/restart/{id:guid}", async context =>
                 {
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
-                    
+
                     var text = "<script type='text/javascript'>" +
                     "var xmlHttp = new XMLHttpRequest();" +
                     "xmlHttp.onreadystatechange = function () {" +
@@ -134,31 +135,31 @@ namespace PeakSWC.RemoteableWebView
                     $" xmlHttp.open('GET', '/wait/{guid}', true);" +
                     "  xmlHttp.send(null);" +
                     "</script><h1 class='display-4'>Restarting...</h1>";
-                   
+
                     await context.Response.WriteAsync(text);
 
                 });
 
-                endpoints.MapGet("/wait/{id:guid}",  async context =>
-                {
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                endpoints.MapGet("/wait/{id:guid}", async context =>
+               {
+                   string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
 
-                    for (int i = 0; i < 30; i++)
-                    {
-                        if (rootDictionary.ContainsKey(guid))
-                            break;
-                        await Task.Delay(1000);
-                    }
-                    if (rootDictionary.ContainsKey(guid))
-                        await context.Response.WriteAsync($"Wait completed");
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync($"Unable to restart -> Timed out");
-                    }
-                        
-                    
-                });
+                   for (int i = 0; i < 30; i++)
+                   {
+                       if (rootDictionary.ContainsKey(guid))
+                           break;
+                       await Task.Delay(1000);
+                   }
+                   if (rootDictionary.ContainsKey(guid))
+                       await context.Response.WriteAsync($"Wait completed");
+                   else
+                   {
+                       context.Response.StatusCode = 400;
+                       await context.Response.WriteAsync($"Unable to restart -> Timed out");
+                   }
+
+
+               });
 
                 endpoints.MapGet("/{id:guid}", async context =>
                 {

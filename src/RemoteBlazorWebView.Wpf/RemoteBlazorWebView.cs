@@ -1,12 +1,11 @@
-﻿using PeakSWC.RemoteableWebView;
-using System;
-using System.Linq;
-using System.Windows;
-using System.Collections.Specialized;
-using PeakSWC;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.AspNetCore.Components;
+using PeakSWC.RemoteableWebView;
+using System;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Windows;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -111,7 +110,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
             if (ServerUri != null)
                 Id = Id;
-                
+
         }
 
 

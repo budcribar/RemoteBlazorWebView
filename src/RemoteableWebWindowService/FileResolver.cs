@@ -22,7 +22,7 @@ namespace PeakSwc.StaticFiles
         private readonly ILogger<FileResolver> _logger;
 
         private async Task<Stream?> GetStream()
-        {    
+        {
             if (stream == null)
             {
                 if (string.IsNullOrEmpty(path)) return null;
@@ -47,7 +47,7 @@ namespace PeakSwc.StaticFiles
             }
 
             return stream;
-        } 
+        }
 
         public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<FileResolver> logger)
         {
@@ -58,15 +58,16 @@ namespace PeakSwc.StaticFiles
                 guid = path.Split('/')[1];
                 this.path = path.Remove(0, guid.Length + 1);
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 _logger.LogError($"Illegal File path '{path}'");
-                guid = ""; 
-                this.path = ""; 
+                guid = "";
+                this.path = "";
             }
 
             _rootDictionary = rootDictionary;
         }
-        
+
         public bool Exists => GetStream().Result != null;
 
         public long Length => GetStream().Result?.Length ?? -1;
@@ -82,16 +83,16 @@ namespace PeakSwc.StaticFiles
         private async Task<Stream?> ProcessFile(string id, string appFile)
         {
             _logger.LogInformation($"Attempting to read {appFile}");
-          
+
             if (!_rootDictionary.ContainsKey(id))
             {
                 _logger.LogError($"Cannot process {appFile} id {id} not found...");
                 return null;
             }
-                
+
             _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
-            
+
             // TODO
             //_rootDictionary[id].FileCollection.Writer.TryWrite(appFile);
 
@@ -122,7 +123,7 @@ namespace PeakSwc.StaticFiles
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }
             _logger.LogInformation($"Successfully read {appFile}");
-           
+
             return stream;
         }
 
@@ -133,12 +134,13 @@ namespace PeakSwc.StaticFiles
     }
 
     public class FileResolver : IFileProvider
-    {      
+    {
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private readonly ILogger<FileResolver> _logger;
 
-        public FileResolver (ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<FileResolver> logger) {
-           
+        public FileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<FileResolver> logger)
+        {
+
             _rootDictionary = rootDictionary;
             _logger = logger;
         }

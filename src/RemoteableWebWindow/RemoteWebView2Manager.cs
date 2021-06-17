@@ -2,18 +2,14 @@
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
     public class RemoteWebView2Manager : WebView2WebViewManager, IWebViewManager
     {
-        public RemotableWebWindow? RemoteableWebView { get; set; } 
+        public RemotableWebWindow? RemoteableWebView { get; set; }
         Uri? url;
-       
+
         public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath, Uri? url, Guid id) : base(webview, services, dispatcher, fileProvider, hostPageRelativePath)
         {
             if (url != null)
@@ -33,7 +29,7 @@ namespace PeakSWC.RemoteableWebView
         private void RemoteOnWebMessageReceived(object? sender, string e)
         {
             if (url != null)
-                MessageReceived(url, e);     
+                MessageReceived(url, e);
         }
 
         protected override void NavigateCore(Uri absoluteUri)
@@ -43,7 +39,7 @@ namespace PeakSWC.RemoteableWebView
             if (RemoteableWebView == null)
                 base.NavigateCore(absoluteUri);
             else
-                RemoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri); 
+                RemoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
         }
 
         protected override void SendMessage(string message)

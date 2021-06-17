@@ -1,19 +1,15 @@
+using Google.Protobuf.WellKnownTypes;
+using Grpc.Net.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Edge;
-using System.Collections.Generic;
-using System.Linq;
 //using NUnitTests;
 using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Firefox;
-using System.Threading;
-using Grpc.Net.Client;
 using PeakSWC.RemoteableWebView;
-using Google.Protobuf.WellKnownTypes;
-using System.Diagnostics;
-using System.IO;
-using Google.Protobuf;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 
 namespace WebdriverTestProject
 {
@@ -52,7 +48,7 @@ namespace WebdriverTestProject
             clients = new List<Process>();
 
             Stopwatch sw = new();
-            for (int i=0;i<numClients; i++)
+            for (int i = 0; i < numClients; i++)
             {
                 clients.Add(CreateClient());
             }
@@ -79,14 +75,14 @@ namespace WebdriverTestProject
                 ids = client.GetIds(new Empty()).Responses.ToArray();
                 Thread.Sleep(200);
             } while (ids.Length != num);
-           
+
         }
 
 
         [TestInitialize]
         public void Setup()
         {
-            channel = GrpcChannel.ForAddress(url) ;
+            channel = GrpcChannel.ForAddress(url);
         }
 
         [TestMethod]
@@ -140,13 +136,14 @@ namespace WebdriverTestProject
 
             Assert.AreEqual(num, _driver.Count);
 
-            for (int i=0; i<num; i++) _driver[i].Url = url + $"app/{ids[i]}";
+            for (int i = 0; i < num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
             Thread.Sleep(1000);
             sw.Restart();
 
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < num; i++)
+            {
                 var link = _driver[i].FindElementByPartialLinkText("Counter");
                 link.Click();
             }
@@ -168,12 +165,12 @@ namespace WebdriverTestProject
             int numClicks = 10;
             for (int i = 0; i < numClicks; i++)
             {
-                for (int j=0; j<num; j++)
+                for (int j = 0; j < num; j++)
                 {
                     button[j].Click();
                     Thread.Sleep(30);
                 }
-               
+
             }
 
             Console.WriteLine($"Click {numClicks} times in {sw.Elapsed}");
@@ -185,7 +182,7 @@ namespace WebdriverTestProject
             {
                 var res = para[i].Text;
                 if (res.Contains($"{numClicks}")) passCount++;
-               
+
             }
             Assert.AreEqual(num, passCount);
 
@@ -195,9 +192,11 @@ namespace WebdriverTestProject
         [TestCleanup]
         public void Cleanup()
         {
-            try {
+            try
+            {
                 process?.Kill();
-            } catch (Exception) { }
+            }
+            catch (Exception) { }
 
             try
             {
