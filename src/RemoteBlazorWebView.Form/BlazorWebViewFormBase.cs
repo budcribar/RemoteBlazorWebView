@@ -10,12 +10,11 @@ using System.Linq;
 using System.Windows.Forms;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.FileProviders;
-using PeakSwc.RemoteableWebWindows;
+using PeakSWC.RemoteableWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
-namespace PeakSWC
+namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
 {
     /// <summary>
     /// A Windows Forms control for hosting Blazor web components locally in Windows desktop applications.

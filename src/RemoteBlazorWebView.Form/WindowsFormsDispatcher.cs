@@ -1,12 +1,13 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.AspNetCore.Components;
 using System;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Microsoft.AspNetCore.Components.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
 {
     /// <summary>
     /// Dispatcher implementation for Windows Forms that invokes methods on the UI thread. The <see cref="Dispatcher"/>

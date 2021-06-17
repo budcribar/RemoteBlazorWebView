@@ -1,12 +1,13 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 #nullable disable
+using Microsoft.AspNetCore.Components;
+using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using PeakSwc.RemoteableWebWindows;
 
-namespace Microsoft.AspNetCore.Components.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
 {
     /// <summary>
     /// Describes a root component that can be added to a <see cref="BlazorWebView"/>.

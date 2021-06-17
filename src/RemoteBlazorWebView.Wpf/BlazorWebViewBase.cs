@@ -10,13 +10,12 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
-using PeakSWC.RemoteableWebWindows;
 using System.Collections.Generic;
-using PeakSwc.RemoteableWebWindows;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.AspNetCore.Components;
+using PeakSWC.RemoteableWebView;
 
-namespace PeakSWC
+namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.

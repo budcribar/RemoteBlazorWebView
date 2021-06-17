@@ -1,12 +1,11 @@
 ﻿using Grpc.Core;
-using PeakSwc.RemoteableWebWindows;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading;
 
-namespace RemoteableWebWindowService
+namespace PeakSWC.RemoteableWebView
 {
     public class IPC
     {

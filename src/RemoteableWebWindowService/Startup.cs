@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PeakSwc.StaticFiles;
-using RemoteableWebWindowService.Services;
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.StaticFiles;
@@ -13,7 +12,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public class Startup
     {
@@ -79,14 +78,14 @@ namespace PeakSwc.RemoteableWebWindows
             app.UseStaticFiles(new StaticFileOptions
             {
 
-                FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly)),
+                FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebViewService).Assembly)),
                 //FileProvider = new CompositeFileProvider(new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly),app.ApplicationServices?.GetService<FileResolver>()),
                 ContentTypeProvider = provider
             }); 
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<RemoteWebWindowService>();
+                endpoints.MapGrpcService<RemoteWebViewService>();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb();
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
 

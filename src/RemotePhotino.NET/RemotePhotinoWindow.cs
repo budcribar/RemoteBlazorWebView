@@ -15,7 +15,7 @@ using Microsoft.JSInterop;
 using Photino.Blazor;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using PeakSwc.RemoteableWebWindows;
+using PeakSWC.RemoteableWebView;
 
 namespace PeakSWC.RemotePhotinoNET
 {

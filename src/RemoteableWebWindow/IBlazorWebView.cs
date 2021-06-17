@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RemoteBlazorWebView.Wpf
+namespace PeakSWC.RemoteableWebView
 {
     public interface IBlazorWebView 
     {

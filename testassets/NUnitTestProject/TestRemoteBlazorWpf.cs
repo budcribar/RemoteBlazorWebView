@@ -8,7 +8,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Firefox;
 using System.Threading;
 using Grpc.Net.Client;
-using PeakSwc.RemoteableWebWindows;
+using PeakSWC.RemoteableWebView;
 using Google.Protobuf.WellKnownTypes;
 using System.Diagnostics;
 using System.IO;

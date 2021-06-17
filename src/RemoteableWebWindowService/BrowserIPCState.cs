@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public class BrowserIPCState
     {

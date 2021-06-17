@@ -2,7 +2,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public interface IWebViewManager : IDisposable
     {

@@ -4,18 +4,17 @@ using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Collections.Concurrent;
 using Google.Protobuf.WellKnownTypes;
-using RemoteableWebWindowService.Services;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public class BrowserIPCService : BrowserIPC.BrowserIPCBase
     {
-        private readonly ILogger<RemoteWebWindowService> _logger;
+        private readonly ILogger<RemoteWebViewService> _logger;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; set; }
         
         private volatile bool shutdown = false;
        
-        public BrowserIPCService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary)
+        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary)
         {
             _logger = logger;         
             ServiceDictionary = serviceDictionary;

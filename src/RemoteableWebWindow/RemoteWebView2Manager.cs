@@ -1,14 +1,13 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using PeakSwc.RemoteableWebWindows;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PeakSWC
+namespace PeakSWC.RemoteableWebView
 {
     public class RemoteWebView2Manager : WebView2WebViewManager, IWebViewManager
     {

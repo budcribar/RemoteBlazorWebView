@@ -1,26 +1,27 @@
 ﻿@page "/"
 @inject GrpcChannel Channel
-@using PeakSwc.RemoteableWebWindows
 @using Grpc.Core;
 @using Microsoft.Extensions.Logging
 @using System.Threading
+@using PeakSWC.RemoteableWebView
 @inject ILogger<Index> _logger
 @implements IDisposable
 
 <h3>Active Clients</h3>
 
 <ul>
-    @if(list != null)
+    @if (list != null)
     {
         foreach (var client in list.ClientResponses)
         {
-           if(client.State == ClientState.Connected)
-           {
+            if (client.State == ClientState.Connected)
+            {
                 <li> <a href="@client.Url">@client.HostName</a></li>
-           }
-           else {
+            }
+            else
+            {
                 <li> @client.HostName (in use)</li>
-           }
+            }
         }
     }
 
@@ -33,7 +34,7 @@
     {
         var client = new ClientIPC.ClientIPCClient(Channel);
 
-        var response =  client.GetClients(new());
+        var response = client.GetClients(new());
         var stream = response.ResponseStream;
 
         Task _ = Task.Run(async () =>
@@ -44,7 +45,7 @@
                 list = clientResponseList;
 
                 list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
-             
+
                 await InvokeAsync(StateHasChanged);
 
             }
@@ -52,7 +53,8 @@
 
     }
 
-    public void Dispose() {
+    public void Dispose()
+    {
         tokenSource.Cancel();
     }
 }

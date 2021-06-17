@@ -11,14 +11,13 @@ using System.Reflection;
 using System.Windows;
 using Microsoft.AspNetCore.Components;
 using System.Diagnostics;
-using RemoteBlazorWebView.Wpf;
 using System.Collections.Generic;
 using System.Xml.Linq;
-using static PeakSwc.RemoteableWebWindows.StaticWebAssetsReader;
+using static PeakSWC.RemoteableWebView.StaticWebAssetsReader;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     internal static class StaticWebAssetsReader
     {
@@ -152,7 +151,7 @@ namespace PeakSwc.RemoteableWebWindows
             try
             {
                 if (Path.GetFileName(uri) == "remote.blazor.desktop.js")
-                    return Assembly.GetExecutingAssembly().GetManifestResourceStream("PeakSwc.RemoteableWebWindows.remote.blazor.desktop.js");
+                    return Assembly.GetExecutingAssembly().GetManifestResourceStream("PeakSWC.RemoteableWebView.remote.blazor.desktop.js");
 
                 if (File.Exists(uri))
                     return File.OpenRead(uri);

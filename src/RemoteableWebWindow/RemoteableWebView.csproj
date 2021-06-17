@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6-windows</TargetFramework>
-    <RootNamespace>PeakSwc.RemoteableWebWindows</RootNamespace>
+    <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

@@ -7,21 +7,19 @@ using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IO;
-using RemoteableWebWindowService;
-using RemoteableWebWindowService.Services;
 using System.Threading.Channels;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
-    public class RemoteWebWindowService : RemoteWebWindow.RemoteWebWindowBase
+    public class RemoteWebViewService : RemoteWebWindow.RemoteWebWindowBase
     { 
-        private readonly ILogger<RemoteWebWindowService> _logger;
+        private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;     
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
 
-        public RemoteWebWindowService(ILogger<RemoteWebWindowService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
         {
             _logger = logger;
             _webWindowDictionary = rootDictionary;

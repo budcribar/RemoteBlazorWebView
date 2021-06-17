@@ -7,7 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using static System.Windows.Threading.Dispatcher;
 
-namespace PeakSWC
+namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     internal class WpfDispatcher : Dispatcher
     {

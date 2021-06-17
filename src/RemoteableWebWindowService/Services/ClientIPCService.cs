@@ -6,10 +6,9 @@ using System;
 using System.Collections.Concurrent;
 using Google.Protobuf.WellKnownTypes;
 using System.Threading.Channels;
-using RemoteableWebWindowService.Services;
 using System.Linq;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public class ClientIPCService : ClientIPC.ClientIPCBase
     {

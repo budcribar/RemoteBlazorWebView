@@ -1,14 +1,13 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using PeakSwc.RemoteableWebWindows;
+using PeakSWC.RemoteableWebView;
 using PeakSWC;
-using RemoteBlazorWebView.Wpf;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace Remote.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
 {
     public partial class RemoteBlazorWebView : BlazorWebViewFormBase, IBlazorWebView
     {

@@ -1,4 +1,4 @@
-﻿using PeakSwc.RemoteableWebWindows;
+﻿
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
@@ -8,7 +8,7 @@ namespace System.Runtime.CompilerServices
     // TODO This is a bug in compiler
     public class IsExternalInit { }
 }
-namespace RemoteableWebWindowService.Services
+namespace PeakSWC.RemoteableWebView
 {
     public class ServiceState
     {

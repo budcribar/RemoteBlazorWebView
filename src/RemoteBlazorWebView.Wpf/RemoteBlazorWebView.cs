@@ -1,4 +1,4 @@
-﻿using PeakSwc.RemoteableWebWindows;
+﻿using PeakSWC.RemoteableWebView;
 using System;
 using System.Linq;
 using System.Windows;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Components;
 
-namespace RemoteBlazorWebView.Wpf
+namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
     public class RemoteBlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView

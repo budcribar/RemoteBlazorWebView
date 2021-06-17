@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 using System.Net;
 using System.IO;
 
-namespace PeakSwc.RemoteableWebWindows
+namespace PeakSWC.RemoteableWebView
 {
     public class Program
     {     

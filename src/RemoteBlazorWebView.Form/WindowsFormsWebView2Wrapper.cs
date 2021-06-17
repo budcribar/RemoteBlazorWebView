@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
-namespace Microsoft.AspNetCore.Components.WebView.WindowsForms
+namespace PeakSWC.RemoteBlazorWebView.WebView.WindowsForms
 {
     internal class WindowsFormsWebView2Wrapper : IWebView2Wrapper
     {
