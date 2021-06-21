@@ -4,9 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29319.158
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}"
-	ProjectSection(SolutionItems) = preProject
-		testassets\NUnitTestProject\TestRemoteBlazorForm.cs = testassets\NUnitTestProject\TestRemoteBlazorForm.cs
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}"
 EndProject

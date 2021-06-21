@@ -30,7 +30,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
-            var exePath = @"bin\debug\net6-windows";  
+            var exePath = @"bin\debug\net6.0-windows10.0.19041";  
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe()
