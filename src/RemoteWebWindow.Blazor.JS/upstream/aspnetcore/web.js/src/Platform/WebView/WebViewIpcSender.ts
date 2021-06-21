@@ -1,6 +1,5 @@
 import { EventDescriptor } from '../../Rendering/Events/EventDispatcher';
 import { trySerializeMessage } from './WebViewIpcCommon';
-import { sendMessage } from '../../../../../../src/RemoteWebWindow';
 
 export function sendAttachPage(baseUrl: string, startUrl: string) {
   send('AttachPage', baseUrl, startUrl);
@@ -30,6 +29,6 @@ export function sendLocationChanged(uri: string, intercepted: boolean) {
 function send(messageType: string, ...args: any[]) {
   const serializedMessage = trySerializeMessage(messageType, args);
   if (serializedMessage) {
-    sendMessage(serializedMessage);
+    (window.external as any).sendMessage(serializedMessage);
   }
 }

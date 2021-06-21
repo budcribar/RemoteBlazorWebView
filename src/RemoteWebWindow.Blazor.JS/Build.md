@@ -1,10 +1,15 @@
 ﻿# Building the Javascript
 
+Copy and unzip the preview source files 
+copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebWindow.Blazor.JS\upstream\aspnetcore\web.js
+
+
+
 `
 cd web.js
 yarn add --dev inspectpack
 
-change
+change package.json
 
   "@microsoft/dotnet-js-interop": "link:../../JSInterop/Microsoft.JSInterop.JS/src",
     "@microsoft/signalr": "link:../../SignalR/clients/ts/signalr",
