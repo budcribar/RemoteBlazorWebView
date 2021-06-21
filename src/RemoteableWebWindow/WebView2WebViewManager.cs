@@ -1,19 +1,16 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebView;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Web.WebView2.Core;
-using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
 
-
-namespace PeakSWC
+namespace PeakSWC.RemoteableWebView
 {
     /// <summary>
     /// An implementation of <see cref="WebViewManager"/> that uses the Edge WebView2 browser control
@@ -64,26 +61,26 @@ namespace PeakSWC
 
         private async Task InitializeWebView2()
         {
-            var environment = await CoreWebView2Environment.CreateAsync().ConfigureAwait(true);
-            await _webview.EnsureCoreWebView2Async(environment);
+            await _webview.CreateEnvironmentAsync().ConfigureAwait(true);
+            await _webview.EnsureCoreWebView2Async();
             ApplyDefaultWebViewSettings();
 
-            _webview.CoreWebView2.AddWebResourceRequestedFilter($"{AppOrigin}*", CoreWebView2WebResourceContext.All);
-            _webview.CoreWebView2.WebResourceRequested += (sender, eventArgs) =>
+            _webview.CoreWebView2.AddWebResourceRequestedFilter($"{AppOrigin}*", CoreWebView2WebResourceContextWrapper.All);
+            var removeResourceCallback = _webview.CoreWebView2.AddWebResourceRequestedHandler((s, eventArgs) =>
             {
                 // Unlike server-side code, we get told exactly why the browser is making the request,
                 // so we can be smarter about fallback. We can ensure that 'fetch' requests never result
                 // in fallback, for example.
                 var allowFallbackOnHostPage =
-                    eventArgs.ResourceContext == CoreWebView2WebResourceContext.Document ||
-                    eventArgs.ResourceContext == CoreWebView2WebResourceContext.Other; // e.g., dev tools requesting page source
+                    eventArgs.ResourceContext == CoreWebView2WebResourceContextWrapper.Document ||
+                    eventArgs.ResourceContext == CoreWebView2WebResourceContextWrapper.Other; // e.g., dev tools requesting page source
 
                 if (TryGetResponseContent(eventArgs.Request.Uri, allowFallbackOnHostPage, out var statusCode, out var statusMessage, out var content, out var headers))
                 {
                     var headerString = GetHeaderString(headers);
-                    eventArgs.Response = environment.CreateWebResourceResponse(content, statusCode, statusMessage, headerString);
+                    eventArgs.SetResponse(content, statusCode, statusMessage, headerString);
                 }
-            };
+            });
 
             // The code inside blazor.webview.js is meant to be agnostic to specific webview technologies,
             // so the following is an adaptor from blazor.webview.js conventions to WebView2 APIs
@@ -98,8 +95,17 @@ namespace PeakSWC
                 };
             ").ConfigureAwait(true);
 
-            _webview.CoreWebView2.WebMessageReceived += (sender, eventArgs)
-                => MessageReceived(new Uri(eventArgs.Source), eventArgs.TryGetWebMessageAsString());
+            QueueBlazorStart();
+
+            var removeMessageCallback = _webview.CoreWebView2.AddWebMessageReceivedHandler(e
+                => MessageReceived(new Uri(e.Source), e.WebMessageAsString));
+        }
+
+        /// <summary>
+        /// Override this method to queue a call to Blazor.start(). Not all platforms require this.
+        /// </summary>
+        protected virtual void QueueBlazorStart()
+        {
         }
 
         private static string GetHeaderString(IDictionary<string, string> headers) =>
@@ -116,7 +122,7 @@ namespace PeakSWC
             // Desktop applications don't normally want to enable things like "alt-left to go back"
             // or "ctrl+f to find". Developers should explicitly opt into allowing these.
             // Issues #30511 and #30624 track making an option to control this.
-            _webview.AcceleratorKeyPressed += (sender, eventArgs) =>
+            var removeKeyPressCallback = _webview.AddAcceleratorKeyPressedHandler((sender, eventArgs) =>
             {
                 if (eventArgs.VirtualKey != 0x49) // Allow ctrl+shift+i to open dev tools, at least for now
                 {
@@ -125,7 +131,7 @@ namespace PeakSWC
                     // WinForms. Leaving the code here because it's supposedly fixed in a newer version.
                     eventArgs.Handled = true;
                 }
-            };
+            });
         }
     }
 }

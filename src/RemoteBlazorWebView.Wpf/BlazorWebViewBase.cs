@@ -2,9 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
+//using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,14 +13,17 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public class BlazorWebViewBaseWpf : Control, IDisposable
+    public class BlazorWebViewBase : Control, IDisposable
     {
         #region Dependency property definitions
         /// <summary>
@@ -29,7 +32,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public static readonly DependencyProperty HostPageProperty = DependencyProperty.Register(
             name: nameof(HostPage),
             propertyType: typeof(string),
-            ownerType: typeof(BlazorWebViewBaseWpf),
+            ownerType: typeof(BlazorWebViewBase),
             typeMetadata: new PropertyMetadata(OnHostPagePropertyChanged));
 
         /// <summary>
@@ -38,7 +41,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public static readonly DependencyProperty RootComponentsProperty = DependencyProperty.Register(
             name: nameof(RootComponents),
             propertyType: typeof(ObservableCollection<RootComponent>),
-            ownerType: typeof(BlazorWebViewBaseWpf));
+            ownerType: typeof(BlazorWebViewBase));
 
         /// <summary>
         /// The backing store for the <see cref="Services"/> property.
@@ -46,7 +49,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public static readonly DependencyProperty ServicesProperty = DependencyProperty.Register(
             name: nameof(Services),
             propertyType: typeof(IServiceProvider),
-            ownerType: typeof(BlazorWebViewBaseWpf),
+            ownerType: typeof(BlazorWebViewBase),
             typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
         #endregion
 
@@ -58,7 +61,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         /// <summary>
         /// Creates a new instance of <see cref="BlazorWebView"/>.
         /// </summary>
-        public BlazorWebViewBaseWpf()
+        public BlazorWebViewBase()
         {
             SetValue(RootComponentsProperty, new ObservableCollection<RootComponent>());
             RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
@@ -96,11 +99,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(ServicesProperty, value);
         }
 
-        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBaseWpf)d).OnServicesPropertyChanged(e);
+        private static void OnServicesPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnServicesPropertyChanged(e);
 
         private void OnServicesPropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
-        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBaseWpf)d).OnHostPagePropertyChanged(e);
+        private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnHostPagePropertyChanged(e);
 
         private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs _) => StartWebViewCoreIfPossible();
 
@@ -153,7 +156,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            _webviewManager = this.CreateWebViewManager(new WpfWeb2ViewWrapper(_webview), Services, WpfDispatcher.Instance, fileProvider, hostPageRelativePath);
+            _webviewManager = this.CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, WpfDispatcher.Instance, fileProvider, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously
@@ -208,7 +211,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         /// <summary>
         /// Performs the final cleanup before the garbage collector destroys the object.
         /// </summary>
-        ~BlazorWebViewBaseWpf()
+        ~BlazorWebViewBase()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: false);

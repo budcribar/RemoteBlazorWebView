@@ -10,7 +10,7 @@ using System.Windows;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
-    public class BlazorWebView : BlazorWebViewBaseWpf, IBlazorWebView
+    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
     {
         #region Properties
 

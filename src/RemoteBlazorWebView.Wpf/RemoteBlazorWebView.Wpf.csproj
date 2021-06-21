@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6-windows</TargetFramework>
+    <TargetFramework>net6.0-windows10.0.19041</TargetFramework>
     <UseWPF>true</UseWPF>
     <PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
     <Authors>Bud Cribar</Authors>
@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemoteableWebWindow\RemoteableWebView.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.0-preview.4.21253.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-preview.5.794" />
   </ItemGroup>
 
   <ItemGroup>
