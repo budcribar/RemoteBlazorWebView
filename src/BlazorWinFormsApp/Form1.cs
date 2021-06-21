@@ -35,6 +35,7 @@ namespace BlazorWinFormsApp
             }
             else
             {
+                blazorWebView1.Visible = false;
                 linkLabel1.Visible = !blazorWebView1.IsRestarting;
                 linkLabel1.Text = $"{blazorWebView1.ServerUri}app/{blazorWebView1.Id}";
             }

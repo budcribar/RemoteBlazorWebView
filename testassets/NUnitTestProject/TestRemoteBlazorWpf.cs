@@ -145,6 +145,7 @@ namespace WebdriverTestProject
             for (int i = 0; i < num; i++)
             {
                 var link = _driver[i].FindElementByPartialLinkText("Counter");
+
                 link.Click();
             }
 
