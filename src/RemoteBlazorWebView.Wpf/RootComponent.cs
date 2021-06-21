@@ -10,13 +10,13 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     /// <summary>
-    /// Describes a root component that can be added to a <see cref="BlazorWebView"/>.
+    /// Describes a root component that can be added to a <see cref="BlazorWebViewBase"/>.
     /// </summary>
     public class RootComponent
     {
         /// <summary>
         /// Gets or sets the CSS selector string that specifies where in the document the component should be placed.
-        /// This must be unique among the root components within the <see cref="BlazorWebView"/>.
+        /// This must be unique among the root components within the <see cref="BlazorWebViewBase"/>.
         /// </summary>
         public string? Selector { get; set; }
 

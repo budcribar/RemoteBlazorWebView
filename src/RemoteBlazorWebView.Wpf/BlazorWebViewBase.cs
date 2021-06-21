@@ -3,19 +3,18 @@
 
 using Microsoft.AspNetCore.Components;
 using PeakSWC.RemoteableWebView;
-//using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-
-using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
+using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
@@ -59,7 +58,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private bool _isDisposed;
 
         /// <summary>
-        /// Creates a new instance of <see cref="BlazorWebView"/>.
+        /// Creates a new instance of <see cref="BlazorWebViewBase"/>.
         /// </summary>
         public BlazorWebViewBase()
         {
@@ -71,6 +70,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 VisualTree = new FrameworkElementFactory(typeof(WebView2Control), webViewTemplateChildName)
             };
         }
+
+		/// <summary>
+		/// Returns the inner <see cref="WebView2Control"/> used by this control.
+		/// </summary>
+		/// <remarks>
+		/// Directly using some functionality of the inner web view can cause unexpected results because its behavior
+		/// is controlled by the <see cref="BlazorWebViewBase"/> that is hosting it.
+		/// </remarks>
+		[Browsable(false)]
+		public WebView2Control WebView => _webview;
 
         /// <summary>
         /// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
@@ -134,7 +143,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             base.OnInitialized(e);
             StartWebViewCoreIfPossible();
         }
-
         public virtual IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
@@ -227,7 +235,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             GC.SuppressFinalize(this);
         }
 
-        protected void CheckDisposed()
+        private void CheckDisposed()
         {
             if (_isDisposed)
             {
