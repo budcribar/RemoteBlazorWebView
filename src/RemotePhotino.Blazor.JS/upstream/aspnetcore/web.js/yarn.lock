@@ -3011,9 +3011,9 @@ inherits@2, inherits@~2.0.3:
   resolved "https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
-inspectpack@^4.6.1:
+inspectpack@^4.7.1:
   version "4.7.1"
-  resolved "https://registry.npmjs.org/inspectpack/-/inspectpack-4.7.1.tgz"
+  resolved "https://registry.yarnpkg.com/inspectpack/-/inspectpack-4.7.1.tgz#baf081bae0b5b31bbedd534424e658f32d60f97a"
   integrity sha512-XoDJbKSM9I2KA+8+OLFJHm8m4NM2pMEgsDD2hze6swVfynEed9ngCx36mRR+otzOsskwnxIZWXjI23FTW1uHqA==
   dependencies:
     chalk "^4.1.0"

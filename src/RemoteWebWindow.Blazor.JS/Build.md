@@ -6,7 +6,7 @@ copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebWi
 
 
 `
-cd web.js
+cd RemoteBlazorWebView\src\RemotePhotino.Blazor.JS\upstream\aspnetcore\web.js
 yarn add --dev inspectpack
 
 change package.json
