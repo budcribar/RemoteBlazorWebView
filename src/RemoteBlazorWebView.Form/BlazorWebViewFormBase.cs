@@ -1,10 +1,6 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 #nullable disable
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.FileProviders;
-using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -12,7 +8,12 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.FileProviders;
+using PeakSWC.RemoteableWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
+using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -120,7 +121,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                     ? control.Site
                     : GetSitedParentSite(control.Parent);
 
-        protected virtual bool RequiredStartupPropertiesSet =>
+        private bool RequiredStartupPropertiesSet =>
             Created &&
             _webview != null &&
             HostPage != null &&
@@ -146,7 +147,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, fileProvider, hostPageRelativePath);
+            _webviewManager = new WebView2WebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, fileProvider, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously

@@ -6,6 +6,9 @@ using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Web.WebView2.Core;
+using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
