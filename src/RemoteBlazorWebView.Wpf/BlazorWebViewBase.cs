@@ -79,7 +79,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// is controlled by the <see cref="BlazorWebViewBase"/> that is hosting it.
 		/// </remarks>
 		[Browsable(false)]
-		public WebView2Control WebView => _webview;
+		public WebView2Control? WebView => _webview;
 
         /// <summary>
         /// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.

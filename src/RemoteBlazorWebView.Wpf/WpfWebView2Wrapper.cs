@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
     {
         private readonly WpfCoreWebView2Wrapper _coreWebView2Wrapper;
 
-        public WpfWebView2Wrapper(WebView2Control webView2)
+        public WpfWebView2Wrapper(WebView2Control? webView2)
         {
             if (webView2 is null)
             {
@@ -34,11 +34,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public WebView2Control WebView2 { get; }
 
-        public CoreWebView2Environment Environment { get; set; }
+        public CoreWebView2Environment? Environment { get; set; }
 
         public Action AddAcceleratorKeyPressedHandler(EventHandler<ICoreWebView2AcceleratorKeyPressedEventArgsWrapper> eventHandler)
         {
-            EventHandler<CoreWebView2AcceleratorKeyPressedEventArgs> realHandler = (object sender, CoreWebView2AcceleratorKeyPressedEventArgs e) =>
+            EventHandler<CoreWebView2AcceleratorKeyPressedEventArgs> realHandler = (object? sender, CoreWebView2AcceleratorKeyPressedEventArgs e) =>
             {
                 eventHandler(WebView2, new WpfCoreWebView2AcceleratorKeyPressedEventArgsWrapper(e));
             };

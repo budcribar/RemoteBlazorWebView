@@ -2,7 +2,6 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
-//using NUnitTests;
 using OpenQA.Selenium.Chrome;
 using PeakSWC.RemoteableWebView;
 using System;
@@ -42,6 +41,7 @@ namespace WebdriverTestProject
             KillClient();
 
             process = Utilities.StartServer();
+            
             var ids = new RemoteWebWindow.RemoteWebWindowClient(channel).GetIds(new Empty());
             Assert.AreEqual(0, ids.Responses.Count);
 

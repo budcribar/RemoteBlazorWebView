@@ -9,10 +9,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     internal class WpfCoreWebView2WebResourceRequestedEventArgsWrapper : ICoreWebView2WebResourceRequestedEventArgsWrapper
     {
-        private readonly CoreWebView2Environment _environment;
+        private readonly CoreWebView2Environment? _environment;
         private readonly CoreWebView2WebResourceRequestedEventArgs _webResourceRequestedEventArgs;
 
-        public WpfCoreWebView2WebResourceRequestedEventArgsWrapper(CoreWebView2Environment environment, CoreWebView2WebResourceRequestedEventArgs webResourceRequestedEventArgs)
+        public WpfCoreWebView2WebResourceRequestedEventArgsWrapper(CoreWebView2Environment? environment, CoreWebView2WebResourceRequestedEventArgs webResourceRequestedEventArgs)
         {
             _environment = environment;
             _webResourceRequestedEventArgs = webResourceRequestedEventArgs;
@@ -27,7 +27,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void SetResponse(Stream content, int statusCode, string statusMessage, string headerString)
         {
-            _webResourceRequestedEventArgs.Response = _environment.CreateWebResourceResponse(content, statusCode, statusMessage, headerString);
+            _webResourceRequestedEventArgs.Response = _environment?.CreateWebResourceResponse(content, statusCode, statusMessage, headerString);
         }
     }
 }

@@ -10,7 +10,7 @@ namespace WebdriverTestProject
         public static Process StartServer()
         {
 
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             sw.Start();
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteableWebViewService")?.Kill();
@@ -18,7 +18,7 @@ namespace WebdriverTestProject
             var executable = @"bin\debug\net6\RemoteableWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
 
-            Process process = new Process();
+            Process process = new();
             process.StartInfo.FileName = Path.GetFullPath(f);
             process.StartInfo.UseShellExecute = true;
 
@@ -73,7 +73,7 @@ namespace WebdriverTestProject
 
             Stopwatch sw = new();
 
-            Process p = new Process();
+            Process p = new();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";
@@ -92,7 +92,7 @@ namespace WebdriverTestProject
 
             Stopwatch sw = new();
 
-            Process p = new Process();
+            Process p = new();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";
@@ -122,7 +122,7 @@ namespace WebdriverTestProject
 
             Stopwatch sw = new();
 
-            Process p = new Process();
+            Process p = new();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";
@@ -151,7 +151,7 @@ namespace WebdriverTestProject
 
             Stopwatch sw = new();
 
-            Process p = new Process();
+            Process p = new();
             p.StartInfo.FileName = Path.GetFullPath(f);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";

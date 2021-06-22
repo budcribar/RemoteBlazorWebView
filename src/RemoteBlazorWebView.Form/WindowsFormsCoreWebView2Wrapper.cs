@@ -11,7 +11,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
     internal class WindowsFormsCoreWebView2Wrapper : ICoreWebView2Wrapper
     {
         private readonly WindowsFormsWebView2Wrapper _webView2;
-        private WindowsFormsCoreWebView2SettingsWrapper _settings;
+        private WindowsFormsCoreWebView2SettingsWrapper? _settings;
 
         public WindowsFormsCoreWebView2Wrapper(WindowsFormsWebView2Wrapper webView2)
         {
@@ -42,7 +42,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public Action AddWebMessageReceivedHandler(Action<WebMessageReceivedEventArgs> messageReceivedHandler)
         {
-            void nativeEventHandler(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+            void nativeEventHandler(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
             {
                 messageReceivedHandler(new WebMessageReceivedEventArgs(e.Source, e.TryGetWebMessageAsString()));
             }
@@ -63,9 +63,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public Action AddWebResourceRequestedHandler(EventHandler<ICoreWebView2WebResourceRequestedEventArgsWrapper> webResourceRequestedHandler)
         {
-            void nativeEventHandler(object sender, CoreWebView2WebResourceRequestedEventArgs e)
+            void nativeEventHandler(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
             {
-                webResourceRequestedHandler(_webView2.WebView2, new WindowsFormsCoreWebView2WebResourceRequestedEventArgsWrapper(_webView2.Environment, e));
+                if (_webView2.Environment != null)
+                    webResourceRequestedHandler(_webView2.WebView2, new WindowsFormsCoreWebView2WebResourceRequestedEventArgsWrapper(_webView2.Environment, e));
             }
 
             _webView2.WebView2.CoreWebView2.WebResourceRequested += nativeEventHandler;

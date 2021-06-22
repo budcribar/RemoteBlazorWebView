@@ -34,11 +34,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public WebView2Control WebView2 { get; }
 
-        public CoreWebView2Environment Environment { get; set; }
+        public CoreWebView2Environment? Environment { get; set; }
 
         public Action AddAcceleratorKeyPressedHandler(EventHandler<ICoreWebView2AcceleratorKeyPressedEventArgsWrapper> eventHandler)
         {
-            EventHandler<CoreWebView2AcceleratorKeyPressedEventArgs> realHandler = (object sender, CoreWebView2AcceleratorKeyPressedEventArgs e) =>
+            EventHandler<CoreWebView2AcceleratorKeyPressedEventArgs> realHandler = (object? sender, CoreWebView2AcceleratorKeyPressedEventArgs e) =>
             {
                 eventHandler(WebView2, new WindowsFormsCoreWebView2AcceleratorKeyPressedEventArgsWrapper(e));
             };

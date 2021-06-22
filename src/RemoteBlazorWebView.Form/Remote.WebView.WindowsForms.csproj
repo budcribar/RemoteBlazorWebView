@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0-windows10.0.19041</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <Description>Build Remoteable Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
@@ -30,6 +31,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.5.21301.17" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.100-preview.5.794" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.100-preview.5.794" />
+   
   </ItemGroup>
 
   <ItemGroup>
