@@ -121,7 +121,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                     ? control.Site
                     : GetSitedParentSite(control.Parent);
 
-        private bool RequiredStartupPropertiesSet =>
+        protected virtual bool RequiredStartupPropertiesSet =>
             Created &&
             _webview != null &&
             HostPage != null &&
@@ -136,6 +136,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         {
             // We never start the Blazor code in design time because it doesn't make sense to run
             // a Blazor component in the designer.
+
             if (!IsAncestorSiteInDesignMode && (!RequiredStartupPropertiesSet || _webviewManager != null))
             {
                 return;
@@ -147,7 +148,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
             var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            _webviewManager = new WebView2WebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, fileProvider, hostPageRelativePath);
+            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, fileProvider, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously
