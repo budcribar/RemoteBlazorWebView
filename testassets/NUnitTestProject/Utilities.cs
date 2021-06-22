@@ -7,6 +7,7 @@ namespace WebdriverTestProject
 {
     public class Utilities
     {
+        #region Server
         public static Process StartServer()
         {
 
@@ -26,7 +27,9 @@ namespace WebdriverTestProject
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
         }
+        #endregion
 
+        #region WinForm
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
@@ -49,7 +52,9 @@ namespace WebdriverTestProject
         {
             return Path.Combine(BlazorWinFormsPath(), "BlazorWinFormsApp.exe");
         }
+        #endregion
 
+        #region Wpf
         public static string BlazorWpfAppExe()
         {
             return Path.Combine(BlazorWpfPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
@@ -61,6 +66,7 @@ namespace WebdriverTestProject
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
+        #endregion
 
         public static void KillBlazorWinFormsApp()
         {
