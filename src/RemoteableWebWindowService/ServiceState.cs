@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Channels;
-namespace System.Runtime.CompilerServices
-{
-    // TODO This is a bug in compiler
-    public class IsExternalInit { }
-}
+//namespace System.Runtime.CompilerServices
+//{
+//    // TODO This is a bug in compiler
+//    public class IsExternalInit { }
+//}
 namespace PeakSWC.RemoteableWebView
 {
     public class ServiceState

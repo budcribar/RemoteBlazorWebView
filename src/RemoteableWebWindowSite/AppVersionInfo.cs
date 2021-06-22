@@ -5,10 +5,10 @@ namespace RemoteableWebWindowSite
 {
     public class AppVersionInfo
     {
-        private string _buildNumber = "";
-        private string _buildId = "";
-        private string _gitHash = "";
-        private string _gitShortHash = "";
+        private string _buildNumber = string.Empty;
+        private string _buildId = string.Empty;
+        private string _gitHash = string.Empty;
+        private string _gitShortHash = string.Empty;
 
         public string BuildNumber
         {
@@ -20,7 +20,7 @@ namespace RemoteableWebWindowSite
 
                     var temp = appAssembly?.GetCustomAttributes(typeof(AssemblyMetadataAttribute))?.Where(x => (x as AssemblyMetadataAttribute)?.Key == "BuildNumber")?.FirstOrDefault();
                     var infoVerAttr = temp as AssemblyMetadataAttribute ?? null;
-                    _buildNumber = infoVerAttr == null ? "buildNumber" : infoVerAttr.Value ?? "";
+                    _buildNumber = infoVerAttr == null ? "buildNumber" : infoVerAttr.Value ?? string.Empty;
                 }
 
                 return _buildNumber;

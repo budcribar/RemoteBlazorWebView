@@ -61,8 +61,8 @@ namespace PeakSwc.StaticFiles
             catch (Exception)
             {
                 _logger.LogError($"Illegal File path '{path}'");
-                guid = "";
-                this.path = "";
+                guid = string.Empty;
+                this.path = string.Empty;
             }
 
             _rootDictionary = rootDictionary;

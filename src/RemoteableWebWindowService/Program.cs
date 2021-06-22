@@ -24,7 +24,7 @@ namespace PeakSWC.RemoteableWebView
                         // MUST bind to internal IP address !!
 
                         if (File.Exists("cert.pfx"))
-                            options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps("cert.pfx", ""); });
+                            options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps("cert.pfx", string.Empty); });
                         else
                             options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); });
                     });

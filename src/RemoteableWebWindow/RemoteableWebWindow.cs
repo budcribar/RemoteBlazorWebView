@@ -129,8 +129,8 @@ namespace PeakSWC.RemoteableWebView
         #endregion
 
         public Uri? ServerUri { get; set; }
-        public string HostHtmlPath { get; set; } = "";
-        public string Id { get; set; } = "";
+        public string HostHtmlPath { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
 
         private static string NormalizePath(string path)
         {
@@ -248,7 +248,7 @@ namespace PeakSWC.RemoteableWebView
                     var channel = GrpcChannel.ForAddress(ServerUri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname }, cancellationToken: cts.Token); // TODO parameter names
+                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     var createFailed = false;
 

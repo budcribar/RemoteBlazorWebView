@@ -71,7 +71,7 @@ namespace PeakSWC.RemoteableWebView
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
-            var id = "";
+            var id = string.Empty;
             try
             {
                 await foreach (var message in requestStream.ReadAllAsync())

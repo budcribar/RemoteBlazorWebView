@@ -12,7 +12,7 @@ namespace WebdriverTestProject
     public class TestLocalBlazorForm
     {
         private static EdgeDriver? driver;
-        private static string startingDirectory = "";
+        private static string startingDirectory = string.Empty;
 
         public virtual string BinaryLocation()
         {
@@ -23,7 +23,7 @@ namespace WebdriverTestProject
         public void Setup()
         {
             startingDirectory = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? "");
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
             driver = new EdgeDriver(new EdgeOptions { UseWebView = true, BinaryLocation = Path.GetFileName(this.BinaryLocation()) });
             // Wait for page to load 
             Thread.Sleep(1000);

@@ -91,7 +91,7 @@ namespace PeakSWC.RemoteableWebView
 
                 endpoints.MapGet("/app/{id:guid}", async context =>
                 {
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
                     if (rootDictionary.ContainsKey(guid))
                     {
@@ -124,7 +124,7 @@ namespace PeakSWC.RemoteableWebView
 
                 endpoints.MapGet("/restart/{id:guid}", async context =>
                 {
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
                     var text = "<script type='text/javascript'>" +
                     "var xmlHttp = new XMLHttpRequest();" +
@@ -142,7 +142,7 @@ namespace PeakSWC.RemoteableWebView
 
                 endpoints.MapGet("/wait/{id:guid}", async context =>
                {
-                   string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                   string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
                    for (int i = 0; i < 30; i++)
                    {
@@ -165,7 +165,7 @@ namespace PeakSWC.RemoteableWebView
                 {
                     // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
 
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
                     if (rootDictionary.ContainsKey(guid))
                     {
@@ -183,7 +183,7 @@ namespace PeakSWC.RemoteableWebView
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
                 {
                     // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? "";
+                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
                     if (rootDictionary.ContainsKey(guid))
                     {
