@@ -7,19 +7,17 @@ using System.Threading;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Google.Protobuf;
-using PhotinoNET;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Net;
 using Microsoft.JSInterop;
-using Photino.Blazor;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PeakSWC.RemoteableWebView;
 
-namespace PeakSWC.RemotePhotinoNET
+namespace PeakSWC.RemoteBlazorWebView.Windows
 {
-    public class RemotePhotinoWindow : IPhotinoWindow, IDisposable
+    public class RemoteBlazorWebWindow : IBlazorWebWindow, IDisposable
     {
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
         private readonly Uri uri;
@@ -154,7 +152,7 @@ namespace PeakSWC.RemotePhotinoNET
                                                   var size = new Size(jo?["Width"]?.Value<int>() ?? 0, jo?["Height"]?.Value<int>() ?? 0);
                                                   this.InitSize = size;
                                                   // TODO don't throw size changed on initial set
-                                                  IDispatcher? pd = PlatformDispatcher as PlatformDispatcher;
+                                                  IDispatcher? pd = PlatformDispatcher as DesktopDispatcher;
                                                   if (pd != null)
                                                       await pd.InvokeAsync(() => {
                                                           SizeChangedEvent?.Invoke(null, size);
@@ -169,7 +167,7 @@ namespace PeakSWC.RemotePhotinoNET
                                                   var jo = JsonConvert.DeserializeObject<JObject>(data.Replace("location:", ""));
                                                   var location = new Point(jo?["X"]?.Value<int>() ?? 0, jo?["Y"]?.Value<int>() ?? 0);
                                                   InitLocation = location;
-                                                  PlatformDispatcher? pd = PlatformDispatcher as PlatformDispatcher;
+                                                  DesktopDispatcher? pd = PlatformDispatcher as DesktopDispatcher;
                                                   if (pd != null)
                                                       await pd.InvokeAsync(() => {
                                                           LocationChangedEvent?.Invoke(null, location);
@@ -238,7 +236,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow SendWebMessage(string message)
+        public IBlazorWebWindow SendWebMessage(string message)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".SendWebMessage(string message)");
@@ -248,13 +246,13 @@ namespace PeakSWC.RemotePhotinoNET
 
         public IntPtr WindowHandle => throw new NotImplementedException();
 
-        public IPhotinoWindow Parent => throw new NotImplementedException();
+        public IBlazorWebWindow Parent => throw new NotImplementedException();
 
-        public IReadOnlyList<PhotinoNET.Structs.Monitor> Monitors => new List<PhotinoNET.Structs.Monitor>();
+        public IReadOnlyList<Structs.Monitor> Monitors => new List<Structs.Monitor>();
 
-        public PhotinoNET.Structs.Monitor MainMonitor => throw new NotImplementedException();
+        public Structs.Monitor MainMonitor => throw new NotImplementedException();
 
-        public List<IPhotinoWindow> Children => throw new NotImplementedException();
+        public List<IBlazorWebWindow> Children => throw new NotImplementedException();
 
         public uint ScreenDpi => 0;
 
@@ -393,7 +391,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Shows the current IPhotinoWindow instance window.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Show()
+        public IBlazorWebWindow Show()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Show()");
@@ -420,7 +418,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="isResizable">Let user resize window</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow UserCanResize(bool isResizable = true)
+        public IBlazorWebWindow UserCanResize(bool isResizable = true)
         {
             return this;
         }
@@ -430,7 +428,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="child">The IPhotinoWindow child instance to be added</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow AddChild(IPhotinoWindow child)
+        public IBlazorWebWindow AddChild(IBlazorWebWindow child)
         {
             throw new NotImplementedException();
         }
@@ -439,7 +437,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="child">The IPhotinoWindow child instance to be removed</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow RemoveChild(IPhotinoWindow child, bool childIsDisposing = false)
+        public IBlazorWebWindow RemoveChild(IBlazorWebWindow child, bool childIsDisposing = false)
         {
             throw new NotImplementedException();
         }
@@ -448,7 +446,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="id">The Id of the IPhotinoWindow child instance to be removed</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow RemoveChild(Guid id, bool childIsDisposing = false)
+        public IBlazorWebWindow RemoveChild(Guid id, bool childIsDisposing = false)
         {
             throw new NotImplementedException();
         }
@@ -457,7 +455,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="path">The path to the icon file</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow SetIconFile(string path)
+        public IBlazorWebWindow SetIconFile(string path)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".SetIconFile(string path)");
@@ -475,7 +473,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Hides the current IPhotinoWindow instance window.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Hide()
+        public IBlazorWebWindow Hide()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Hide()");
@@ -490,7 +488,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="size">The Size struct for the window containing width and height</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Resize(Size size)
+        public IBlazorWebWindow Resize(Size size)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Resize(Size size)");
@@ -529,7 +527,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="height">The height for the window</param>
         /// <param name="unit">Unit of the given dimensions: px (default), %, percent</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Resize(int width, int height, string unit = "px")
+        public IBlazorWebWindow Resize(int width, int height, string unit = "px")
         {
             // TODO bad log message
             if (this.LogVerbosity > 1)
@@ -578,7 +576,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Minimizes the window into the system tray.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Minimize()
+        public IBlazorWebWindow Minimize()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Minimize()");
@@ -589,7 +587,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Maximizes the window to fill the work area.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Maximize()
+        public IBlazorWebWindow Maximize()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Maximize()");
@@ -608,7 +606,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// without borders or OS interface.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Fullscreen()
+        public IBlazorWebWindow Fullscreen()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Fullscreen()");
@@ -619,7 +617,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Restores the previous window size and position.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Restore()
+        public IBlazorWebWindow Restore()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Restore()");
@@ -650,7 +648,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="location">The Point struct defining the window location</param>
         /// <param name="allowOutsideWorkArea">Allow the window to move outside the work area of the monitor</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow MoveTo(Point location, bool allowOutsideWorkArea = false)
+        public IBlazorWebWindow MoveTo(Point location, bool allowOutsideWorkArea = false)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Move(Point location)");
@@ -697,7 +695,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="offset">The Point struct defining the location offset</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Offset(Point offset)
+        public IBlazorWebWindow Offset(Point offset)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Offset(Point offset)");
@@ -717,7 +715,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="left">The location offset from the left</param>
         /// <param name="top">The location offset from the top</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Offset(int left, int top)
+        public IBlazorWebWindow Offset(int left, int top)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Offset(int left, int top)");
@@ -779,12 +777,12 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="top">The position from the top side of the screen</param>
         /// <param name="fullscreen">Open window in fullscreen mode</param>
         
-        public RemotePhotinoWindow(
+        public RemoteBlazorWebWindow(
             Uri uri,
             string hostHtmlPath,
             string title,
             Guid id = default,
-            Action<PhotinoWindowOptions>? configure = null,
+            Action<WebWindowOptions>? configure = null,
             int width = 800,
             int height = 600,
             int left = 20,
@@ -798,7 +796,7 @@ namespace PeakSWC.RemotePhotinoNET
            
 
             // Configure Photino instance
-            var options = new PhotinoWindowOptions();
+            var options = new WebWindowOptions();
             configure?.Invoke(options);
 
             this.RegisterEventHandlersFromOptions(options);
@@ -833,7 +831,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="top">The location from the top of the screen</param>
         /// <param name="allowOutsideWorkArea">Allow the window to move outside the work area of the monitor</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow MoveTo(int left, int top, bool allowOutsideWorkArea = false)
+        public IBlazorWebWindow MoveTo(int left, int top, bool allowOutsideWorkArea = false)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Move(int left, int top)");
@@ -846,7 +844,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// Centers the window on the main monitor work area.
         /// </summary>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Center()
+        public IBlazorWebWindow Center()
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Center()");
@@ -866,7 +864,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="uri">The URI to the resource</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Load(Uri uri)
+        public IBlazorWebWindow Load(Uri uri)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Load(Uri uri)");
@@ -891,7 +889,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="path">The path to the resource</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow Load(string path)
+        public IBlazorWebWindow Load(string path)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".Load(string path)");
@@ -932,7 +930,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="content">The raw string resource</param>
         /// <returns>The current IPhotinoWindow instance</returns>
-        public IPhotinoWindow LoadRawString(string content)
+        public IBlazorWebWindow LoadRawString(string content)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".LoadRawString(string content)");
@@ -954,7 +952,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="title">The window title.</param>
         /// <param name="message">The window message body.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow OpenAlertWindow(string title, string message)
+        public IBlazorWebWindow OpenAlertWindow(string title, string message)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".OpenAlertWindow(string title, string message)");
@@ -976,7 +974,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// both publicly accessible and private handlers can be registered.
         /// </summary>
         /// <param name="options"></param>
-        private void RegisterEventHandlersFromOptions(PhotinoWindowOptions options)
+        private void RegisterEventHandlersFromOptions(WebWindowOptions options)
         {
             if (options.WindowCreatingHandler != null)
             {
@@ -1016,7 +1014,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow RegisterWindowClosingHandler(EventHandler handler)
+        public IBlazorWebWindow RegisterWindowClosingHandler(EventHandler handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterWindowClosingHandler(EventHandler handler)");
@@ -1034,7 +1032,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        private IPhotinoWindow RegisterWindowCreatingHandler(EventHandler handler)
+        private IBlazorWebWindow RegisterWindowCreatingHandler(EventHandler handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterWindowCreatingHandler(EventHandler handler)");
@@ -1050,7 +1048,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        private IPhotinoWindow RegisterWindowCreatedHandler(EventHandler handler)
+        private IBlazorWebWindow RegisterWindowCreatedHandler(EventHandler handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterWindowCreatedHandler(EventHandler handler)");
@@ -1074,7 +1072,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// <param name="scheme">Name of the scheme, like "app".</param>
         /// <param name="handler">Handler that processes a request path.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        private IPhotinoWindow RegisterCustomSchemeHandler(string scheme, CustomSchemeDelegate handler)
+        private IBlazorWebWindow RegisterCustomSchemeHandler(string scheme, CustomSchemeDelegate handler)
         {
             // Because of WKWebView limitations, this can only be called during the constructor
             // before the first call to Show. To enforce this, it's private and is only called
@@ -1121,7 +1119,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow and Size argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow RegisterSizeChangedHandler(EventHandler<Size> handler)
+        public IBlazorWebWindow RegisterSizeChangedHandler(EventHandler<Size> handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterSizeChangedHandler(EventHandler<Size> handler)");
@@ -1136,7 +1134,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow and Point argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow RegisterLocationChangedHandler(EventHandler<Point> handler)
+        public IBlazorWebWindow RegisterLocationChangedHandler(EventHandler<Point> handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterLocationChangedHandler(EventHandler<Point> handler)");
@@ -1151,7 +1149,7 @@ namespace PeakSWC.RemotePhotinoNET
         /// </summary>
         /// <param name="handler">A handler that accepts a IPhotinoWindow argument.</param>
         /// <returns>The current IPhotinoWindow instance.</returns>
-        public IPhotinoWindow RegisterWebMessageReceivedHandler(EventHandler<string> handler)
+        public IBlazorWebWindow RegisterWebMessageReceivedHandler(EventHandler<string> handler)
         {
             if (this.LogVerbosity > 1)
                 Console.WriteLine($"Executing: \"{this.Title ?? "RemotePhotinoWindow"}\".RegisterWebMessageReceivedHandler(EventHandler<string> handler)");
@@ -1220,17 +1218,17 @@ namespace PeakSWC.RemotePhotinoNET
             this.WebMessageReceived?.Invoke(this, message);
         }
 
-        public IPhotinoWindowBase OpenAlertWindowBase(string title, string message)
+        public IBlazorWebWindowBase OpenAlertWindowBase(string title, string message)
         {
             return OpenAlertWindow(title, message);
         }
 
-        public IPhotinoWindowBase SendWebMessageBase(string message)
+        public IBlazorWebWindowBase SendWebMessageBase(string message)
         {
             return SendWebMessage(message);
         }
 
-        public IPhotinoWindowBase LoadBase(string path)
+        public IBlazorWebWindowBase LoadBase(string path)
         {
             return Load(path);
         }

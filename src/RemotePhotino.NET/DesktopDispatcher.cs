@@ -3,21 +3,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 
-
-namespace Photino.Blazor
+namespace PeakSWC.RemoteBlazorWebView.Windows
 {
     /// <summary>
     /// A dispatcher that does not dispatch but invokes directly.
     /// </summary>
-    public class PlatformDispatcher : Dispatcher, IDispatcher
+    public class DesktopDispatcher : Dispatcher, IDispatcher
     {
         private readonly DesktopSynchronizationContext context;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PlatformDispatcher"/> class.
+        /// Initializes a new instance of the <see cref="DesktopDispatcher"/> class.
         /// </summary>
         /// <param name="cancellationToken">The cancellation token to pass to the synchronizationcontext.</param>
-        public PlatformDispatcher(CancellationToken cancellationToken)
+        public DesktopDispatcher(CancellationToken cancellationToken)
         {
             this.context = new DesktopSynchronizationContext(cancellationToken);
             this.context.UnhandledException += (sender, e) =>

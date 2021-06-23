@@ -13,18 +13,18 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
-using PeakSWC.RemoteBlazorWebView.Windows;
 
-namespace Photino.Blazor
+
+namespace PeakSWC.RemoteBlazorWebView.Windows
 {
     public static class ComponentsDesktop
     {
         internal static string? InitialUriAbsolute { get; private set; }
         internal static string? BaseUriAbsolute { get; private set; }
-        internal static DesktopJSRuntime? DesktopJSRuntime { get; private set; }
-        internal static DesktopRenderer? DesktopRenderer { get; private set; }
+        internal static WebViewJSRuntime? DesktopJSRuntime { get; private set; }
+        internal static WebViewRenderer? DesktopRenderer { get; private set; }
         internal static IBlazorWebWindowBase? photinoWindow { get; private set; }
-        internal static PlatformDispatcher? Dispatcher { get; private set; }
+        internal static DesktopDispatcher? Dispatcher { get; private set; }
 
         public static void Run<TStartup>(IBlazorWebWindowBase iphotinoWindow)
         {
@@ -67,7 +67,7 @@ namespace Photino.Blazor
 
 
 
-        public static Action<PhotinoWindowOptions> StandardOptions(string hostHtmlPath)
+        public static Action<WebWindowOptions> StandardOptions(string hostHtmlPath)
         {
             return (options) => { 
                 var contentRootAbsolute = Path.GetDirectoryName(Path.GetFullPath(hostHtmlPath));
@@ -97,7 +97,7 @@ namespace Photino.Blazor
 
         public static void Run<TStartup>(string windowTitle, string hostHtmlPath, bool fullscreen = false, int x = 0, int y = 0, int width = 800, int height = 600)
         {
-            photinoWindow = new PhotinoWindow(windowTitle, StandardOptions(hostHtmlPath), width, height, x, y, fullscreen);
+            photinoWindow = new WebWindow(windowTitle, StandardOptions(hostHtmlPath), width, height, x, y, fullscreen);
 
             Run<TStartup>(photinoWindow);
         }
@@ -133,13 +133,14 @@ namespace Photino.Blazor
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true);
 
-            Dispatcher = new PlatformDispatcher(appLifetime);
+            Dispatcher = new DesktopDispatcher(appLifetime);
 
             Dispatcher.Context.UnhandledException += (sender, exception) =>
             {
                 UnhandledException(exception);
             };
-            DesktopJSRuntime = new DesktopJSRuntime(ipc);
+            DesktopJSRuntime = new WebViewJSRuntime(); 
+            // TODO DesktopJSRuntime(ipc);
 
             if (photinoWindow != null)
             {
@@ -155,9 +156,10 @@ namespace Photino.Blazor
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<IConfiguration>(configurationBuilder.Build());
             serviceCollection.AddLogging(configure => configure.AddConsole());
-            serviceCollection.AddSingleton<NavigationManager>(DesktopNavigationManager.Instance);
+            serviceCollection.AddSingleton<NavigationManager>(new WebViewNavigationManager());
+            // TODO attach to webview
             serviceCollection.AddSingleton<IJSRuntime>(DesktopJSRuntime);
-            serviceCollection.AddSingleton<INavigationInterception, DesktopNavigationInterception>();
+            serviceCollection.AddSingleton<INavigationInterception, WebViewNavigationInterception>();
 
             photinoWindow?.GetType().GetInterfaces().Where(x => x.Name == nameof(IBlazorWebWindowBase) | x.GetInterface(nameof(IBlazorWebWindowBase)) != null).ToList().ForEach(x => 
                serviceCollection.AddSingleton(x, photinoWindow));
@@ -171,17 +173,19 @@ namespace Photino.Blazor
 
             var loggerFactory = services.GetRequiredService<ILoggerFactory>();
 
-            DesktopRenderer = new DesktopRenderer(services, ipc, loggerFactory, DesktopJSRuntime, Dispatcher);
-            DesktopRenderer.UnhandledException += (sender, exception) =>
-            {
-                Console.Error.WriteLine(exception);
-            };
+            var ipcs = new IpcSender(Dispatcher, (a)=> { });
+            DesktopRenderer = new WebViewRenderer(services, Dispatcher,  ipcs, loggerFactory, null);
+
+            //DesktopRenderer.UnhandledException += (sender, exception) =>
+            //{
+            //    Console.Error.WriteLine(exception);
+            //};
 
             await PerformHandshakeAsync(ipc);
 
             foreach (var (componentType, domElementSelector) in builder.Entries)
             {
-                await Dispatcher.InvokeAsync(async () => await DesktopRenderer.AddComponentAsync(componentType, domElementSelector));
+                await Dispatcher.InvokeAsync(async () => await DesktopRenderer.AddRootComponentAsync(componentType, domElementSelector,new ParameterView())); // TODO
             }
 
             // TODO this was in BlazorDesktopToBrowser

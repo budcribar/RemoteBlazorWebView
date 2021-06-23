@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 
-namespace PhotinoNET
+namespace PeakSWC.RemoteBlazorWebView.Windows
 {
-    public class PhotinoWindowOptions
+    public class WebWindowOptions
     {
-        public PhotinoWindow? Parent { get; set; }
+        public WebWindow? Parent { get; set; }
         public IDictionary<string, CustomSchemeDelegate> CustomSchemeHandlers { get; }
             = new Dictionary<string, CustomSchemeDelegate>();
         

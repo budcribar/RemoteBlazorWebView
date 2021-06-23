@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Photino.Blazor\Photino.Blazor.csproj" />
-    <ProjectReference Include="..\RemotePhotino.NET\RemotePhotino.NET.csproj" />
+    <ProjectReference Include="..\RemotePhotino.NET\Remote.WebView.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

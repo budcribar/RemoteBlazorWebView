@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace PhotinoNET.Structs
+namespace PeakSWC.RemoteBlazorWebView.Windows.Structs
 {
     [StructLayout(LayoutKind.Sequential)]
     struct NativeRect

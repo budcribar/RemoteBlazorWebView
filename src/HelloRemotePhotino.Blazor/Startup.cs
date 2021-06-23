@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Photino.Blazor;
+using PeakSWC.RemoteBlazorWebView.Windows;
 
 namespace HelloRemotePhotino.Blazor
 {

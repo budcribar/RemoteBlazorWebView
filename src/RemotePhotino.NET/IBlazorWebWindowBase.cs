@@ -1,24 +1,22 @@
 using Microsoft.JSInterop;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Threading.Tasks;
 
-namespace PhotinoNET
+namespace PeakSWC.RemoteBlazorWebView.Windows
 {
     public interface IDispatcher
     {
         public Task InvokeAsync(Action workItem);
     }
 
-    public interface IPhotinoWindowBase
+    public interface IBlazorWebWindowBase
     {
         void WaitForClose();
         IDispatcher? PlatformDispatcher { get; set; }
         IJSRuntime? JSRuntime { get; set; }
         event EventHandler<string> WebMessageReceived;
-        IPhotinoWindowBase LoadBase(string path);
-        IPhotinoWindowBase OpenAlertWindowBase(string title, string message);
-        IPhotinoWindowBase SendWebMessageBase(string message);
+        IBlazorWebWindowBase LoadBase(string path);
+        IBlazorWebWindowBase OpenAlertWindowBase(string title, string message);
+        IBlazorWebWindowBase SendWebMessageBase(string message);
     }
 }
