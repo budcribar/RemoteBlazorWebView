@@ -6,10 +6,10 @@
     <TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
     <DefaultItemExcludes>${DefaultItemExcludes};node_modules\**</DefaultItemExcludes>
     <IsPackable>false</IsPackable>
-    
+
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <!-- VS's FastUpToDateCheck doesn't consider .ts file changes, so it's necessary to disable it to get incremental builds to work correctly (albeit not as fast as if FastUpToDateCheck did work for them) -->
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
-    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,14 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="package-lock.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <WebpackInputs Remove="src\RemoteWebWindow.ts" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="dist\" />
   </ItemGroup>
 
@@ -40,7 +32,7 @@
     <Exec Command="npm install" />
   </Target>
 
-  <Target Name="RunWebpack" AfterTargets="ResolveReferences" Inputs="@(WebpackInputs)" Outputs="dist\blazor.desktop.js" DependsOnTargets="EnsureNpmRestored">
+  <Target Name="RunWebpack" AfterTargets="ResolveReferences" Inputs="@(WebpackInputs)" Outputs="dist\remote.blazor.desktop.js" DependsOnTargets="EnsureNpmRestored">
     <Exec Command="npm run build:debug" Condition="'$(Configuration)' == 'Debug'" />
     <Exec Command="npm run build:production" Condition="'$(Configuration)' != 'Debug'" />
   </Target>
