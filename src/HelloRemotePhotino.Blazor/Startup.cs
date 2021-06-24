@@ -11,7 +11,7 @@ namespace HelloRemotePhotino.Blazor
 
         public void Configure(DesktopApplicationBuilder app)
         {
-            app.AddComponent<App>("app");
+            app.AddComponent<App>("#app");
         }
     }
 }

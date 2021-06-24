@@ -1,3 +1,4 @@
+#nullable disable
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
