@@ -37,7 +37,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
         private static readonly Dictionary<string, RootComponent> _rootComponentsBySelector = new();
         private static  IpcReceiver? _ipcReceiver;
         private static  IpcSender? _ipcSender;
-        private static readonly Uri? _appBaseUri;
+        private static  Uri? _appBaseUri;
         private static  IServiceProvider _provider;
 
         /// <summary>
@@ -69,12 +69,16 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 
         private static void SendMessage(string message)
         {
-
+            BlazorWebWindow?.SendWebMessageBase(message);
         }
 
         public static void Run<TStartup>(IBlazorWebWindowBase blazorWebWindow)
         {
+            var rbww = blazorWebWindow as RemoteBlazorWebWindow;
+            _appBaseUri = rbww == null ? null : rbww.Uri;
             BlazorWebWindow = blazorWebWindow;
+
+            blazorWebWindow.WebMessageReceived += BlazorWebWindow_WebMessageReceived;
 
             CancellationTokenSource appLifetimeCts = new CancellationTokenSource();
 
@@ -87,11 +91,16 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 
             // _root
 
+            DesktopJSRuntime = new WebViewJSRuntime();
+
             _ipcSender = new IpcSender(Dispatcher, SendMessage);
             _ipcReceiver = new IpcReceiver(AttachToPageAsync);
 
-            DesktopJSRuntime = new WebViewJSRuntime();
+            
             DesktopJSRuntime.AttachToWebView(_ipcSender);
+
+            BlazorWebWindow.PlatformDispatcher = Dispatcher;
+            BlazorWebWindow.JSRuntime = DesktopJSRuntime;
 
             var configurationBuilder = new ConfigurationBuilder()
                .SetBasePath(Directory.GetCurrentDirectory())
@@ -116,26 +125,13 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             var builder = new DesktopApplicationBuilder(_provider);
             startup.Configure(builder, _provider);
 
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    
-                    await RunAsync<TStartup>(_ipcSender, appLifetimeCts.Token);
-                }
-                catch (Exception ex)
-                {
-                    UnhandledException(ex);
-                    throw;
-                }
-            });
+            builder.Entries.ForEach(x => AddRootComponentAsync(x.componentType, x.domElementSelector, ParameterView.Empty));
 
             try
             {
                 
-                BlazorWebWindow.LoadBase(BlazorAppScheme + "://app/");
-                BlazorWebWindow.WaitForClose();
+                BlazorWebWindow?.LoadBase(BlazorAppScheme + "://app/");
+                BlazorWebWindow?.WaitForClose();
             }
             finally
             {
@@ -143,7 +139,11 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             }
         }
 
-
+        private static void BlazorWebWindow_WebMessageReceived(object? sender, string e)
+        {
+            // TODO Need the real url
+            MessageReceived(_appBaseUri, e);
+        }
 
         public static Action<WebWindowOptions> StandardOptions(string hostHtmlPath)
         {
@@ -257,27 +257,14 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             }
         }
 
-        private static async Task RunAsync<TStartup>(IpcSender ipcSender, CancellationToken appLifetime)
-        {
-            if (BlazorWebWindow != null)
-            {
-                BlazorWebWindow.PlatformDispatcher = Dispatcher;
-                BlazorWebWindow.JSRuntime = DesktopJSRuntime;
-            }
-               
+        //private static async Task RunAsync<TStartup>(IpcSender ipcSender, CancellationToken appLifetime)
+        //{
            
-            var loggerFactory = _provider.GetRequiredService<ILoggerFactory>();
+        //    var loggerFactory = _provider.GetRequiredService<ILoggerFactory>();
 
-            DesktopRenderer = new WebViewRenderer(_provider, Dispatcher,  _ipcSender, loggerFactory, null);
+        //    DesktopRenderer = new WebViewRenderer(_provider, Dispatcher,  _ipcSender, loggerFactory, null);
 
-            //foreach (var (componentType, domElementSelector) in builder.Entries)
-            //{
-            //    await Dispatcher.InvokeAsync(async () => await DesktopRenderer.AddRootComponentAsync(componentType, domElementSelector,new ParameterView())); // TODO
-            //}
-
-            // TODO this was in BlazorDesktopToBrowser
-            //DesktopNavigationManager.Instance.NavigateTo("/");
-        }
+        //}
 
         private static Stream? SupplyFrameworkFile(string uri)
         {

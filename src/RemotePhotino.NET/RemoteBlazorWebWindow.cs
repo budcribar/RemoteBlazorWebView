@@ -19,8 +19,8 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 {
     public class RemoteBlazorWebWindow : IBlazorWebWindow, IDisposable
     {
-        private RemoteWebWindow.RemoteWebWindowClient? client = null;
-        private readonly Uri uri;
+        private RemoteWebWindow.RemoteWebWindowClient? client { get; set; } = null;
+        public  Uri Uri {get; set; }
         private readonly CancellationTokenSource cts = new();
 
         // TODO
@@ -113,7 +113,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             {
                 if (client == null)
                 {
-                    var channel = GrpcChannel.ForAddress(uri);
+                    var channel = GrpcChannel.ForAddress(Uri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
                     var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id.ToString(), HtmlHostPath = hostHtmlPath, Hostname = hostname }, cancellationToken: cts.Token); // TODO parameter names
@@ -789,7 +789,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             int top = 20,
             bool fullscreen = false)
         {
-            this.uri = uri;
+            this.Uri = uri;
             this.Id = id == default ? Guid.NewGuid() : id;
             this.hostHtmlPath = hostHtmlPath;
             this.hostname = Dns.GetHostName();

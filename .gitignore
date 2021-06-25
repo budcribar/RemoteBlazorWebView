@@ -25,3 +25,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteableWebWindowSite/publish
 /src/BlazorWinFormsApp/publish/BlazorWinFormsApp.exe.WebView2/EBWebView
 /src/BlazorWinFormsApp/publish
+/src/RemotePhotino.Blazor.JS
