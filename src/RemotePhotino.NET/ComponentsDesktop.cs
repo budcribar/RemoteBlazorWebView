@@ -257,15 +257,6 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             }
         }
 
-        //private static async Task RunAsync<TStartup>(IpcSender ipcSender, CancellationToken appLifetime)
-        //{
-           
-        //    var loggerFactory = _provider.GetRequiredService<ILoggerFactory>();
-
-        //    DesktopRenderer = new WebViewRenderer(_provider, Dispatcher,  _ipcSender, loggerFactory, null);
-
-        //}
-
         private static Stream? SupplyFrameworkFile(string uri)
         {
             switch (uri)
@@ -276,58 +267,6 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
                     throw new ArgumentException($"Unknown framework file: {uri}");
             }
         }
-
-        //private static async Task PerformHandshakeAsync(IPC ipc)
-        //{
-        //    var tcs = new TaskCompletionSource<object?>();
-        //    ipc.Once("components:init", args =>
-        //    {
-        //        if (args == null) return;
-        //        var argsArray = (object[])args;
-        //        InitialUriAbsolute = ((JsonElement)argsArray[0]).GetString();
-        //        BaseUriAbsolute = ((JsonElement)argsArray[1]).GetString();
-
-        //        tcs.SetResult(null);
-        //    });
-
-        //    await tcs.Task;
-        //}
-
-        //private static void AttachJsInterop(IPC ipc, SynchronizationContext synchronizationContext, CancellationToken _)
-        //{
-        //    ipc.On("BeginInvokeDotNetFromJS", args =>
-        //    {
-        //        synchronizationContext.Send(state =>
-        //        {
-        //            if (state == null) return;
-        //            var argsArray = (object[])state;
-
-        //            if (argsArray == null || DesktopJSRuntime == null || argsArray[2] is not JsonElement arg2 || argsArray[4] is not JsonElement arg4) return;
-
-        //            DotNetDispatcher.BeginInvokeDotNet(
-        //                DesktopJSRuntime,
-        //                new DotNetInvocationInfo(
-        //                    assemblyName: ((JsonElement)argsArray[1]).GetString(),
-        //                    methodIdentifier: arg2.GetString() ?? "",
-        //                    dotNetObjectId: ((JsonElement)argsArray[3]).GetInt64(),
-        //                    callId: ((JsonElement)argsArray[0]).GetString()),
-        //                    arg4.GetString() ?? "");
-        //        }, args);
-        //    });
-
-        //    ipc.On("EndInvokeJSFromDotNet", args =>
-        //    {
-        //        synchronizationContext.Send(state =>
-        //        {
-        //            var argsArray = state as object[];
-                  
-        //            if (argsArray == null || DesktopJSRuntime == null || argsArray[2] is not JsonElement arg) return;
-        //            DotNetDispatcher.EndInvokeJS(
-        //                DesktopJSRuntime,
-        //                arg.GetString() ?? "");
-        //        }, args);
-        //    });
-        //}
 
         private static void Log(string message)
         {
