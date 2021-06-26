@@ -7,7 +7,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 {
     public class WebWindowOptions
     {
-        public WebWindow? Parent { get; set; }
+        public BlazorWebWindow? Parent { get; set; }
         public IDictionary<string, CustomSchemeDelegate> CustomSchemeHandlers { get; }
             = new Dictionary<string, CustomSchemeDelegate>();
         

@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace PeakSWC.RemoteBlazorWebView.Windows
 {
-    public class WebWindow : IBlazorWebWindow, IDisposable
+    public class BlazorWebWindow : IBlazorWebWindow, IDisposable
     {
         // Native Interop
         private readonly IntPtr _nativeInstance;
@@ -299,7 +299,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
         /// <param name="left">The position from the left side of the screen</param>
         /// <param name="top">The position from the top side of the screen</param>
         /// <param name="fullscreen">Open window in fullscreen mode</param>
-        public WebWindow(
+        public BlazorWebWindow(
             string title,
             Action<WebWindowOptions>? configure = null,
             int width = 800,
@@ -337,7 +337,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 
             _id = Guid.NewGuid();
             _parent = options.Parent;
-            _nativeInstance = Photino_ctor(_title, (_parent as WebWindow)?._nativeInstance ?? default, onWebMessageReceivedDelegate, fullscreen, left, top, width, height);
+            _nativeInstance = Photino_ctor(_title, (_parent as BlazorWebWindow)?._nativeInstance ?? default, onWebMessageReceivedDelegate, fullscreen, left, top, width, height);
 
             // Register handlers that depend on an existing
             // Photino.Native instance.
@@ -361,7 +361,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             this.OnWindowCreated();
         }
 
-        static WebWindow()
+        static BlazorWebWindow()
         {
             // Workaround for a crashing issue on Linux. Without this, applications
             // are crashing when running in Debug mode (but not Release) if the very
@@ -369,12 +369,12 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
             // It's unclear why.
             Thread.Sleep(1);
 
-            if (WebWindow.IsWindowsPlatform)
+            if (BlazorWebWindow.IsWindowsPlatform)
             {
-                var hInstance = Marshal.GetHINSTANCE(typeof(WebWindow).Module);
+                var hInstance = Marshal.GetHINSTANCE(typeof(BlazorWebWindow).Module);
                 Photino_register_win32(hInstance);
             }
-            else if (WebWindow.IsMacOsPlatform)
+            else if (BlazorWebWindow.IsMacOsPlatform)
             {
                 Photino_register_mac();
             }
@@ -383,7 +383,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
         /// <summary>
         /// PhotinoWindow Destructor
         /// </summary>
-        ~WebWindow()
+        ~BlazorWebWindow()
         {
             this.Dispose();
         }

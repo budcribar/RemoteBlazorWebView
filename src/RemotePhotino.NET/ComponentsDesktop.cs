@@ -175,7 +175,7 @@ namespace PeakSWC.RemoteBlazorWebView.Windows
 
         public static void Run<TStartup>(string windowTitle, string hostHtmlPath, bool fullscreen = false, int x = 0, int y = 0, int width = 800, int height = 600)
         {
-            BlazorWebWindow = new WebWindow(windowTitle, StandardOptions(hostHtmlPath), width, height, x, y, fullscreen);
+            BlazorWebWindow = new BlazorWebWindow(windowTitle, StandardOptions(hostHtmlPath), width, height, x, y, fullscreen);
 
             Run<TStartup>(BlazorWebWindow);
         }
