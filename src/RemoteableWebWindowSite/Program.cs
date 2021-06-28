@@ -23,8 +23,8 @@ namespace RemoteableWebWindowSite
             {
                 var baseUri = services.GetRequiredService<NavigationManager>().BaseUri;
                 // Get the service address from appsettings.json
-                var config = services.GetRequiredService<IConfiguration>();
-                var backendUrl = config.GetValue<string>("BaseAddress");
+                //var config = services.GetRequiredService<IConfiguration>();
+                //var backendUrl = config.GetValue<string>("BaseAddress");
                 //var backendUrl = "https://127.0.0.1:443";
                 //var backendUrl = "https://localhost:443";
                 // Create a channel with a GrpcWebHandler that is addressed to the backend server.
@@ -39,6 +39,10 @@ namespace RemoteableWebWindowSite
             builder.Services.AddMsalAuthentication(options =>
             {
                 builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+                options.ProviderOptions.Authentication.Authority = "https://login.microsoftonline.com/22222222-2222-2222-2222-222222222222";
+                options.ProviderOptions.Authentication.ClientId = "33333333-3333-3333-33333333333333333";
+                options.ProviderOptions.Authentication.ValidateAuthority = true;
+              
 
                 //builder.Configuration.Bind("AzureAdB2C", options.ProviderOptions.Authentication);
                 //options.ProviderOptions.DefaultAccessTokenScopes.Add("openid");

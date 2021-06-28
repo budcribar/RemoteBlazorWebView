@@ -5,6 +5,7 @@
     <SupportedPlatform>browser</SupportedPlatform>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,9 +26,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.0-preview.5.21301.17" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.0-preview.4.21253.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.0-preview.5.21301.17" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="6.0.0-preview.4.21253.5" />
+    <!--
+    
+     <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="6.0.0-preview.5.21301.17" />
+    -->
+   
 
     <PackageReference Include="Google.Protobuf" Version="3.15.6" />
     <!--
@@ -41,5 +47,7 @@
       <Link>Protos\webwindow.proto</Link>
     </Protobuf>
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties wwwroot_4appsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
 
 </Project>
