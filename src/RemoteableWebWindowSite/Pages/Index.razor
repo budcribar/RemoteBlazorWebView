@@ -5,7 +5,6 @@
 @using System.Threading
 @using PeakSWC.RemoteableWebView
 @inject ILogger<Index> _logger
-@implements IDisposable
 
 <h3>Active Clients</h3>
 
@@ -29,32 +28,24 @@
 @code {
     private ClientResponseList? list;
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var client = new ClientIPC.ClientIPCClient(Channel);
 
         var response = client.GetClients(new());
         var stream = response.ResponseStream;
 
-        Task _ = Task.Run(async () =>
+        await foreach (var clientResponseList in response.ResponseStream.ReadAllAsync())
         {
-            tokenSource.Token.ThrowIfCancellationRequested();
-            await foreach (var clientResponseList in response.ResponseStream.ReadAllAsync())
-            {
-                list = clientResponseList;
+            list = clientResponseList;
 
-                list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
+            list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
 
-                await InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
 
-            }
-        }, tokenSource.Token);
+        }
 
+        await base.OnInitializedAsync();
     }
 
-    public void Dispose()
-    {
-        tokenSource.Cancel();
-    }
 }
