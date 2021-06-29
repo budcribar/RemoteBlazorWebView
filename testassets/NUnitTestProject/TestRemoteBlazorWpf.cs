@@ -19,12 +19,12 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteBlazorWpf
     {
-        private static readonly List<ChromeDriver> _driver = new();
+        protected static readonly List<ChromeDriver> _driver = new();
         private readonly string url = @"https://localhost/";
-        private static GrpcChannel? channel;
+        protected static GrpcChannel? channel;
         private static string[] ids = Array.Empty<string>();
-        private static Process? process;
-        private static List<Process> clients = new();
+        protected static Process? process;
+        protected static List<Process> clients = new();
 
         public virtual Process CreateClient()
         {
@@ -36,7 +36,7 @@ namespace WebdriverTestProject
             Utilities.KillRemoteBlazorWpfApp();
         }
 
-        public void Startup(int numClients)
+        public virtual void Startup(int numClients)
         {
             KillClient();
 
@@ -66,7 +66,7 @@ namespace WebdriverTestProject
         }
 
 
-        private static void StartClient(int num)
+        protected static void StartClient(int num)
         {
             var client = new RemoteWebWindow.RemoteWebWindowClient(channel);
 
@@ -127,7 +127,7 @@ namespace WebdriverTestProject
             // Slow network detected on index.html (but passed)
         }
 
-        private void TestClient(int num)
+        protected virtual void TestClient(int num)
         {
             Startup(num);
 

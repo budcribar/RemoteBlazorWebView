@@ -30,27 +30,29 @@ namespace WebdriverTestProject
         #endregion
 
         #region WinForm
+        public static Process StartRemoteBlazorWinFormsDebugApp() => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath());
+
+        public static Process StartRemoteBlazorWinFormsApp() => StartProcess(BlazorWinFormsAppExe(), BlazorWinFormsPath());
+
         public static string BlazorWinFormsDebugPath()
         {
-            var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
             var exePath = @"bin\debug\net6.0-windows10.0.19041";  
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
-        public static string BlazorWinFormsDebugAppExe()
-        {
-            return Path.Combine(BlazorWinFormsDebugPath(), "BlazorWinFormsApp.exe");
-        }
+        public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
 
         public static string BlazorWinFormsPath()
         {
-            var relative = @"..\..\..\..\..\src\BlazorWinFormsApp";
-            //var exePath = @"bin\debug\net6-windows";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
-        public static string BlazorWinFormsAppExe()
+        public static string BlazorWinFormsAppExe() => Path.Combine(BlazorWinFormsPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
+
+        public static void KillBlazorWinFormsApp()
         {
-            return Path.Combine(BlazorWinFormsPath(), "BlazorWinFormsApp.exe");
+            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WinFormsApp").ToList().ForEach(x => x.Kill());
         }
         #endregion
 
@@ -66,50 +68,13 @@ namespace WebdriverTestProject
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
+
+        public static Process StartRemoteBlazorWpfApp() => StartProcess(BlazorWpfAppExe(), BlazorWpfPath());
+
+        public static void KillRemoteBlazorWpfApp() => Kill("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
 
-        public static void KillBlazorWinFormsApp()
-        {
-            Process.GetProcesses().Where(p => p.ProcessName == "BlazorWinFormsApp").ToList().ForEach(x => x.Kill());
-        }
-
-        public static Process StartRemoteBlazorWinFormsDebugApp()
-        {
-            var f = BlazorWinFormsDebugAppExe();
-
-            Stopwatch sw = new();
-
-            Process p = new();
-            p.StartInfo.FileName = Path.GetFullPath(f);
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.Arguments = @"-u=https://localhost:443";
-            p.StartInfo.WorkingDirectory = BlazorWinFormsPath();
-            p.Start();
-
-            Console.WriteLine($"Clients started in {sw.Elapsed}");
-
-            return p;
-        }
-
-
-        public static Process StartRemoteBlazorWinFormsApp()
-        {
-            var f = BlazorWinFormsAppExe();
-
-            Stopwatch sw = new();
-
-            Process p = new();
-            p.StartInfo.FileName = Path.GetFullPath(f);
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.Arguments = @"-u=https://localhost:443";
-            p.StartInfo.WorkingDirectory = BlazorWinFormsPath();
-            p.Start();
-
-            Console.WriteLine($"Clients started in {sw.Elapsed}");
-
-            return p;
-        }
-
+        #region WebView
         public static string BlazorWebViewPath()
         {
             var relative = @"..\..\..\..\..\src\HelloRemotePhotino.Blazor";
@@ -122,52 +87,29 @@ namespace WebdriverTestProject
             return Path.Combine(BlazorWebViewPath(), "HelloRemotePhotino.Blazor.exe");
         }
 
-        public static Process StartRemoteBlazorWebViewApp()
-        {
-            var f = BlazorWebViewAppExe();
+        public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
 
+        public static void KillRemoteBlazorWebViewApp() => Kill("HelloRemotePhotino.Blazor");
+
+        #endregion
+
+        #region Common
+        public static Process StartProcess(string executable, string directory)
+        {
             Stopwatch sw = new();
 
             Process p = new();
-            p.StartInfo.FileName = Path.GetFullPath(f);
+            p.StartInfo.FileName = Path.GetFullPath(executable);
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = @"-u=https://localhost:443";
-            p.StartInfo.WorkingDirectory = BlazorWebViewPath();
+            p.StartInfo.WorkingDirectory = directory;
             p.Start();
 
             Console.WriteLine($"Clients started in {sw.Elapsed}");
 
             return p;
         }
-
-        public static void KillRemoteBlazorWebViewApp()
-        {
-            Process.GetProcesses().Where(p => p.ProcessName == "HelloRemotePhotino.Blazor").ToList().ForEach(x => x.Kill());
-        }
-
-        public static void KillRemoteBlazorWpfApp()
-        {
-            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
-        }
-
-
-        public static Process StartRemoteBlazorWpfApp()
-        {
-            var f = BlazorWpfAppExe();
-
-            Stopwatch sw = new();
-
-            Process p = new();
-            p.StartInfo.FileName = Path.GetFullPath(f);
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.Arguments = @"-u=https://localhost:443";
-            p.StartInfo.WorkingDirectory = BlazorWpfPath();
-            p.Start();
-
-            Console.WriteLine($"Clients started in {sw.Elapsed}");
-
-            return p;
-        }
-
+        public static void Kill(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).ToList().ForEach(x => x.Kill());
+        #endregion
     }
 }
