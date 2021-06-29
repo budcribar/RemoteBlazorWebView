@@ -2,7 +2,6 @@
 @inject GrpcChannel Channel
 @using Grpc.Core;
 @using Microsoft.Extensions.Logging
-@using System.Threading
 @using PeakSWC.RemoteableWebView
 @inject ILogger<Index> _logger
 
@@ -27,9 +26,11 @@
 </ul>
 @code {
     private ClientResponseList? list;
-    private CancellationTokenSource tokenSource = new CancellationTokenSource();
+    
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         var client = new ClientIPC.ClientIPCClient(Channel);
 
         var response = client.GetClients(new());
@@ -44,8 +45,6 @@
             await InvokeAsync(StateHasChanged);
 
         }
-
-        await base.OnInitializedAsync();
     }
 
 }
