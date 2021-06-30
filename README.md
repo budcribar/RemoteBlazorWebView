@@ -1,6 +1,6 @@
 # RemoteBlazorWebView.Wpf.BlazorWebView
 
-RemoteBlazorWebView.Wpf.BlazorWebView is based on the .NET 6 Preview 4 Blazor WebView Control for WPF
+RemoteBlazorWebView.Wpf.BlazorWebView is based on the .NET 6 Preview 5 Blazor WebView Control for WPF
 
 RemoteBlazorWebView.Wpf.BlazorWebView enables you to interact with the user interface of a program developed with the BlazorWebView WPF control using a web browser. This is accomplished by setting up a server (RemoteableWebViewService) in the cloud and pointing your browser to it.
 
@@ -9,7 +9,7 @@ RemoteBlazorWebView.Wpf is a drop-in replacement for the Microsoft.AspNetCore.Co
 
 # RemoteBlazorWebView.WindowsForms.BlazorWebView
 
-RemoteBlazorWebView.WindowsForms.BlazorWebView is based on the .NET 6 Preview 4 Blazor WebView WinForms Control 
+RemoteBlazorWebView.WindowsForms.BlazorWebView is based on the .NET 6 Preview 5 Blazor WebView WinForms Control 
 
 RemoteBlazorWebView.WindowsForms.BlazorWebView enables you to interact with the user interface of a program developed with the BlazorWebView WinForms control using a web browser. This is accomplished by setting up a server (RemoteableWebViewService) in the cloud and pointing your browser to it.
 
