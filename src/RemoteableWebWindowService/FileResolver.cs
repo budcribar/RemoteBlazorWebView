@@ -49,37 +49,6 @@ namespace PeakSwc.StaticFiles
             return stream;
         }
 
-        public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<FileResolver> logger)
-        {
-            _logger = logger;
-
-            try
-            {
-                guid = path.Split('/')[1];
-                this.path = path.Remove(0, guid.Length + 1);
-            }
-            catch (Exception)
-            {
-                _logger.LogError($"Illegal File path '{path}'");
-                guid = string.Empty;
-                this.path = string.Empty;
-            }
-
-            _rootDictionary = rootDictionary;
-        }
-
-        public bool Exists => GetStream().Result != null;
-
-        public long Length => GetStream().Result?.Length ?? -1;
-
-        public string? PhysicalPath => null;
-
-        public string Name => Path.GetFileName(path);
-
-        public DateTimeOffset LastModified => DateTime.Now;
-
-        public bool IsDirectory => false;
-
         private async Task<Stream?> ProcessFile(string id, string appFile)
         {
             _logger.LogInformation($"Attempting to read {appFile}");
@@ -126,6 +95,37 @@ namespace PeakSwc.StaticFiles
 
             return stream;
         }
+
+        public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<FileResolver> logger)
+        {
+            _logger = logger;
+
+            try
+            {
+                guid = path.Split('/')[1];
+                this.path = path.Remove(0, guid.Length + 1);
+            }
+            catch (Exception)
+            {
+                _logger.LogError($"Illegal File path '{path}'");
+                guid = string.Empty;
+                this.path = string.Empty;
+            }
+
+            _rootDictionary = rootDictionary;
+        }
+
+        public bool Exists => GetStream().Result != null;
+
+        public long Length => GetStream().Result?.Length ?? -1;
+
+        public string? PhysicalPath => null;
+
+        public string Name => Path.GetFileName(path);
+
+        public DateTimeOffset LastModified => DateTime.Now;
+
+        public bool IsDirectory => false;
 
         public Stream? CreateReadStream()
         {
