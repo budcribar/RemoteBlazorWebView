@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <DebugType Condition="'$(Configuration)' == 'Release'" >None</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'" >False</DebugSymbols>
     <TargetFramework>net6.0-windows10.0.19041</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
@@ -49,6 +51,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Manifest\" />
   </ItemGroup>
 
 

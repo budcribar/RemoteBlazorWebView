@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+  <PropertyGroup> 
+    <DebugType Condition="'$(Configuration)' == 'Release'" >None</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'" >False</DebugSymbols>
     <TargetFramework>net6.0-windows10.0.19041</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <Description>Build Remoteable Windows Forms applications with Blazor and WebView2.</Description>

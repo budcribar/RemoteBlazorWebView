@@ -7,6 +7,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
+
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -146,9 +148,22 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             // unclear there's any other use case. We can add more options later if so.
             var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
-            var fileProvider = new PhysicalFileProvider(contentRootDir);
+            IFileProvider provider;
 
-            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, fileProvider, hostPageRelativePath);
+            
+            var root = Path.GetDirectoryName(HostPage);
+            EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
+            var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+            if (dir != null)
+            {
+                var manifestRoot = Path.Combine(dir.Name, root);
+                provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+            }
+            else provider = new PhysicalFileProvider(contentRootDir);
+
+            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, provider, hostPageRelativePath);
+          
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously
