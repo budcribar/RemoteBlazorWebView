@@ -6,7 +6,7 @@ module.exports = (env, args) => ({
         extensions: ['.ts', '.js'],
         plugins: [new TsconfigPathsPlugin()]
     },
-    devtool: 'inline-source-map',
+    devtool: 'source-map',
     module: {
         rules: [{ test: /\.ts?$/, loader: 'ts-loader' }]
     },

@@ -230,6 +230,9 @@ export class SendSequenceMessageRequest extends jspb.Message {
   getMessage(): string;
   setMessage(value: string): void;
 
+  getUrl(): string;
+  setUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): SendSequenceMessageRequest.AsObject;
   static toObject(includeInstance: boolean, msg: SendSequenceMessageRequest): SendSequenceMessageRequest.AsObject;
@@ -245,6 +248,7 @@ export namespace SendSequenceMessageRequest {
     id: string,
     sequence: number,
     message: string,
+    url: string,
   }
 }
 

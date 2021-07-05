@@ -1,7 +1,8 @@
 import { receiveMessage, send } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webwindow_pb_service";
-import { SendSequenceMessageRequest,StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
+import { SendSequenceMessageRequest, StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
+import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 
 var sequenceNum: number = 1;
 
@@ -11,6 +12,7 @@ export function sendMessage(message: string) {
     req.setId(id);
     req.setMessage(message);
     req.setSequence(sequenceNum++);
+    req.setUrl(navigationManagerFunctions.getLocationHref())
     grpc.invoke(BrowserIPC.SendMessage, {
         request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {

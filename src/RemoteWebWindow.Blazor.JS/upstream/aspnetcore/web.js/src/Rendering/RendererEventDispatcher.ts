@@ -1,4 +1,5 @@
-import { EventDescriptor } from './BrowserRenderer';
+////import { EventDescriptor } from './BrowserRenderer';
+import { EventDescriptor } from '../Rendering/Events/EventDispatcher'
 import { UIEventArgs } from './EventForDotNet';
 
 type EventDispatcher = (eventDescriptor: EventDescriptor, eventArgs: UIEventArgs) => void;

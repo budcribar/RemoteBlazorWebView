@@ -1773,7 +1773,8 @@ proto.webwindow.SendSequenceMessageRequest.toObject = function(includeInstance, 
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     sequence: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    message: jspb.Message.getFieldWithDefault(msg, 3, "")
+    message: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    url: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -1822,6 +1823,10 @@ proto.webwindow.SendSequenceMessageRequest.deserializeBinaryFromReader = functio
       var value = /** @type {string} */ (reader.readString());
       msg.setMessage(value);
       break;
+    case 4:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setUrl(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1869,6 +1874,13 @@ proto.webwindow.SendSequenceMessageRequest.serializeBinaryToWriter = function(me
   if (f.length > 0) {
     writer.writeString(
       3,
+      f
+    );
+  }
+  f = message.getUrl();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
       f
     );
   }
@@ -1926,6 +1938,24 @@ proto.webwindow.SendSequenceMessageRequest.prototype.getMessage = function() {
  */
 proto.webwindow.SendSequenceMessageRequest.prototype.setMessage = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional string url = 4;
+ * @return {string}
+ */
+proto.webwindow.SendSequenceMessageRequest.prototype.getUrl = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.webwindow.SendSequenceMessageRequest} returns this
+ */
+proto.webwindow.SendSequenceMessageRequest.prototype.setUrl = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 
