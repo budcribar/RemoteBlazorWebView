@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteableWebView
                     {
 
                         // Webwindow.westus.cloudapp.azure.com Private IP address
-                        // Unable to start Kestrel Socket Exception (10013) - need to stop IIS
+                        //  Unable to start Kestrel Socket Exception(10013) - need to stop IIS
                         // MUST bind to internal IP address !!
 
                         if (File.Exists("cert.pfx"))
@@ -28,7 +28,13 @@ namespace PeakSWC.RemoteableWebView
                         else
                             options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); });
                     });
-                    //webBuilder.UseStaticWebAssets();
+
+                    // Comment out for App Service
+                    webBuilder.UseKestrel();
+                    
+                    // Uncomment for App Service
+                    // webBuilder.UseIISIntegration();
+                   
                     webBuilder.UseStartup<Startup>();
                 });
     }

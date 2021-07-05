@@ -24,8 +24,11 @@ namespace PeakSWC.RemoteableWebView
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
 
+#if NET5
+            services.AddResponseCompression(options => { options.MimeTypes = new[] { "application/octet-stream", "application/wasm" }; });
+#else
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
-
+#endif
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
             services.AddTransient<FileResolver>();
 
