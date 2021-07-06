@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteableWebView
             {
                 if (request.Sequence == state.SequenceNum)
                 {
-                    ServiceDictionary[request.Id].IPC.ReceiveMessage(request.Message);
+                    ServiceDictionary[request.Id].IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url });
                     state.SequenceNum++;
                 }
                 else
@@ -56,7 +56,7 @@ namespace PeakSWC.RemoteableWebView
 
                 while (state.MessageDictionary.ContainsKey(state.SequenceNum))
                 {
-                    ServiceDictionary[request.Id].IPC.ReceiveMessage(state.MessageDictionary[state.SequenceNum].Message);
+                    ServiceDictionary[request.Id].IPC.ReceiveMessage(new WebMessageResponse { Response = state.MessageDictionary[state.SequenceNum].Message, Url = state.MessageDictionary[state.SequenceNum].Url });
                     state.SequenceNum++;
                 }
             }

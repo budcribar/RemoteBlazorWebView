@@ -50,9 +50,9 @@ namespace PeakSWC.RemoteableWebView
 
         }
 
-        public async void ReceiveMessage(string message)
+        public async void ReceiveMessage(WebMessageResponse message)
         {
-            await responseChannel.Writer.WriteAsync(new WebMessageResponse { Response = "webmessage:" + message });
+            await responseChannel.Writer.WriteAsync(message);
         }
 
         public void Shutdown()

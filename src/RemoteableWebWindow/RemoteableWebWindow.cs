@@ -273,6 +273,10 @@ namespace PeakSWC.RemoteableWebView
                                             completed.Set();
                                             break;
 
+                                        case "__bwv":
+                                            OnWebMessageReceived?.Invoke(message.Url, message.Response);
+                                            break;
+
                                         case "webmessage":
                                             if (data == "booted:")
                                             {
@@ -286,8 +290,7 @@ namespace PeakSWC.RemoteableWebView
                                             else if (data == "connected:")
 
                                                 OnConnected?.Invoke(this, Id);
-                                            else
-                                                OnWebMessageReceived?.Invoke(this, data);
+                                              
                                             break;
                                     }
                                 }

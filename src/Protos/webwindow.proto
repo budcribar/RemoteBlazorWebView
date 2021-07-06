@@ -30,6 +30,7 @@ message CreateWebWindowRequest {
 
 message WebMessageResponse {
     string response = 1;
+    string url = 2;
 }
 
 message IdArrayResponse {

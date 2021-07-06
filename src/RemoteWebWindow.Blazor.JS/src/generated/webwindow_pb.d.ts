@@ -104,6 +104,9 @@ export class WebMessageResponse extends jspb.Message {
   getResponse(): string;
   setResponse(value: string): void;
 
+  getUrl(): string;
+  setUrl(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): WebMessageResponse.AsObject;
   static toObject(includeInstance: boolean, msg: WebMessageResponse): WebMessageResponse.AsObject;
@@ -117,6 +120,7 @@ export class WebMessageResponse extends jspb.Message {
 export namespace WebMessageResponse {
   export type AsObject = {
     response: string,
+    url: string,
   }
 }
 

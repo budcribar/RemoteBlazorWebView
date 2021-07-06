@@ -172,7 +172,7 @@ namespace PeakSWC.RemoteableWebView
 
                     if (rootDictionary.ContainsKey(guid))
                     {
-                        rootDictionary[guid].IPC.ReceiveMessage("booted:");
+                        rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
                         context.Response.Redirect($"/restart/{guid}");
                         await Task.CompletedTask;
                     }
@@ -190,7 +190,7 @@ namespace PeakSWC.RemoteableWebView
 
                     if (rootDictionary.ContainsKey(guid))
                     {
-                        rootDictionary[guid].IPC.ReceiveMessage("booted:");
+                        rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
                         context.Response.Redirect($"/restart/{guid}");
                         await Task.CompletedTask;
                     }

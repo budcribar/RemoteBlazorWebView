@@ -25,8 +25,16 @@ namespace PeakSWC.RemoteableWebView
 
         private void RemoteOnWebMessageReceived(object? sender, string e)
         {
-        
-            MessageReceived(this.url, e);
+            var url = sender?.ToString() ?? "";
+            if (RemoteableWebView.ServerUri != null && url.StartsWith(RemoteableWebView.ServerUri.ToString()))
+            {
+                url = url.Replace(RemoteableWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
+                url = url.Replace(RemoteableWebView.Id.ToString() + $"/", "");
+                if (url.EndsWith(RemoteableWebView.HostHtmlPath)) url = url.Replace(RemoteableWebView.HostHtmlPath, "");
+                MessageReceived(new Uri(url), e);
+            }
+            else
+                MessageReceived(new Uri(sender?.ToString() ?? ""), e);
         }
 
         protected override void NavigateCore(Uri absoluteUri)
