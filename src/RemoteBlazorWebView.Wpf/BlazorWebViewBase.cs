@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
+using System.Reflection;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -162,9 +163,27 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
             if (contentRootDir == null) throw new Exception("No root directory found");
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
-            var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            _webviewManager = this.CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, WpfDispatcher.Instance, fileProvider, hostPageRelativePath);
+            // TODO Extract to method
+            IFileProvider provider;
+
+            var root = Path.GetDirectoryName(HostPage);
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+                }
+                else provider = new PhysicalFileProvider(contentRootDir);
+            }
+            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+
+
+            _webviewManager = this.CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, WpfDispatcher.Instance, provider, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously

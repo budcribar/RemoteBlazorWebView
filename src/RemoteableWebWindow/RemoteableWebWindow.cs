@@ -4,6 +4,7 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -119,12 +120,12 @@ namespace PeakSWC.RemoteableWebView
         public Dispatcher? Dispacher { get; set; }
 
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
-        private Func<string, Stream?> FrameworkFileResolver { get; set; }
+        //private Func<string, Stream?> FrameworkFileResolver { get; set; }
         // TODO unused
         private readonly CancellationTokenSource cts = new();
 
         private static List<ContentRootMapping>? rootMap;
-
+        public  IFileProvider FileProvider { get; set; }
 
         #endregion
 
@@ -146,6 +147,7 @@ namespace PeakSWC.RemoteableWebView
             return new PathString(subpath).StartsWithSegments(basePath, FilePathComparison, out rest);
         }
 
+        
         public Stream? SupplyFrameworkFile(string uri)
         {
             try
@@ -319,42 +321,21 @@ namespace PeakSWC.RemoteableWebView
 
                         await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = "Initialize" });
 
-
-                        // TODO Use multiple threads to read files
-                        //_ = Task.Run(async () =>
-                        //{
-                        //    await foreach (var message in files.ResponseStream.ReadAllAsync())
-                        //    {
-                        //        try
-                        //        {
-                        //            // TODO Missing file
-                        //            var bytes = FrameworkFileResolver(message.Path) ?? null;
-                        //            ByteString temp = ByteString.Empty;
-                        //            if (bytes != null)
-                        //                temp = ByteString.FromStream(bytes);
-                        //            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
-                        //        }
-                        //        catch (Exception ex)
-                        //        {
-                        //            var m = ex.Message;
-                        //        }
-                        //    }
-
-                        //});
-
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
                             try
                             {
-                                var bytes = FrameworkFileResolver(message.Path) ?? null;
+                                var path = message.Path.Substring(message.Path.IndexOf("/")+1);
+
+                                var bytes = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
                                 ByteString temp = ByteString.Empty;
                                 if (bytes != null)
                                     temp = ByteString.FromStream(bytes);
                                 await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
-                                var m = ex.Message;
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = ByteString.Empty });
                             }
                         }
 
@@ -365,14 +346,37 @@ namespace PeakSWC.RemoteableWebView
             }
         }
 
+        // TODO Remove
+        private IFileProvider BuildFileProvider(string hostPage, string contentRootDir)
+        {
+            IFileProvider provider;
+            var root = Path.GetDirectoryName(hostPage);
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+                }
+                else provider = new PhysicalFileProvider(contentRootDir);
+            }
+            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+
+            return StaticWebAssetsLoader.UseStaticWebAssets(new CompositeFileProvider(provider, new EmbeddedFileProvider(Assembly.GetExecutingAssembly())));
+        }
+
         public event EventHandler<string>? OnWebMessageReceived;
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
         public RemotableWebWindow()
         {
             hostname = Dns.GetHostName();
-            FrameworkFileResolver = SupplyFrameworkFile;
+            //FrameworkFileResolver = SupplyFrameworkFile;
 
+            //fileProvider = BuildFileProvider(this.HostHtmlPath, Directory.GetCurrentDirectory());
         }
 
         //public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))

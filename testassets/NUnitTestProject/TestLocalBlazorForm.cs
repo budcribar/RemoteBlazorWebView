@@ -53,9 +53,20 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            var link = driver?.FindElementByPartialLinkText("Counter");
-            link?.Click();
-            Thread.Sleep(100);
+            // TODO Why the slow down?
+            for (int i=0;i<100; i++)
+            {
+                try
+                {
+                    var link = driver?.FindElementByPartialLinkText("Counter");
+                    link?.Click();
+                    Thread.Sleep(100);
+                    break;
+                }
+                catch (Exception) { }
+                Thread.Sleep(100);
+            }
+            
 
             var button = driver?.FindElement(By.ClassName("btn"));
             var para = driver?.FindElement(By.XPath("//p"));

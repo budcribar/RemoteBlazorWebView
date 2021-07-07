@@ -142,16 +142,28 @@ namespace WebdriverTestProject
             Thread.Sleep(1000);
             sw.Restart();
 
+          
+
+            // TODO Why the slow down
             for (int i = 0; i < num; i++)
             {
-                var link = _driver[i].FindElementByPartialLinkText("Counter");
-
-                link.Click();
+                for (int j = 0; j < 100; j++)
+                {
+                    try
+                    {
+                        var link = _driver[i].FindElementByPartialLinkText("Counter");
+                        link?.Click();
+                        Thread.Sleep(100);
+                        break;
+                    }
+                    catch (Exception) { }
+                    Thread.Sleep(100);
+                }
             }
 
             Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
 
-            Thread.Sleep(1000);
+            Thread.Sleep(3000);
 
             List<IWebElement> button = new();
             List<IWebElement> para = new();

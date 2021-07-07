@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using System;
+using System.Reflection;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -17,7 +18,8 @@ namespace PeakSWC.RemoteableWebView
                 ServerUri = url,
                 HostHtmlPath = hostPageRelativePath,
                 Id = id == default ? Guid.NewGuid().ToString() : id.ToString(),
-                Dispacher = dispatcher
+                Dispacher = dispatcher,
+                FileProvider =  new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
             };
             RemoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
             RemoteableWebView.Initialize();
