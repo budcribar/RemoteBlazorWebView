@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <DebugType Condition="'$(Configuration)' == 'Release'" >None</DebugType>
-    <DebugSymbols Condition="'$(Configuration)' == 'Release'" >False</DebugSymbols>
+    <DebugType Condition="'$(Configuration)' != 'Debug'" >None</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' != 'Debug'" >False</DebugSymbols>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <TargetFramework>net5</TargetFramework>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
