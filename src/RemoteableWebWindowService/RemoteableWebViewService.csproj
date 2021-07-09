@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <DebugType Condition="'$(Configuration)' != 'Debug'" >None</DebugType>
-    <DebugSymbols Condition="'$(Configuration)' != 'Debug'" >False</DebugSymbols>
+    <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <TargetFramework>net5</TargetFramework>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
@@ -28,9 +28,14 @@
     <Version></Version>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <DefineConstants Condition=" '$(TargetFramework)' == 'net5' ">NET5</DefineConstants>
+    <Configurations>Debug;Release;Embedded</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Embedded|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 

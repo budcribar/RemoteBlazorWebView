@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <DebugType Condition="'$(Configuration)' != 'Debug'" >None</DebugType>
-    <DebugSymbols Condition="'$(Configuration)' != 'Debug'" >False</DebugSymbols>
+    <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <TargetFramework>net6.0-windows10.0.19041</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
@@ -23,10 +23,7 @@
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteableWebView</AssemblyName>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <OutputPath>$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib</OutputPath>
+    <Configurations>Debug;Release;Embedded</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

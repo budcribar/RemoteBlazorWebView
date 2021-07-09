@@ -34,6 +34,8 @@ namespace WebdriverTestProject
 
         public static Process StartRemoteBlazorWinFormsApp() => StartProcess(BlazorWinFormsAppExe(), BlazorWinFormsPath());
 
+        public static Process StartRemoteEmbeddedBlazorWinFormsApp() => StartProcess(BlazorWinFormsEmbeddedAppExe(), BlazorWinFormsEmbeddedPath());
+
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
@@ -48,7 +50,17 @@ namespace WebdriverTestProject
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
+
+        public static string BlazorWinFormsEmbeddedPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
+            var exePath = "publishEmbedded";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+
         public static string BlazorWinFormsAppExe() => Path.Combine(BlazorWinFormsPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
+
+        public static string BlazorWinFormsEmbeddedAppExe() => Path.Combine(BlazorWinFormsEmbeddedPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
 
         public static void KillBlazorWinFormsApp()
         {

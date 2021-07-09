@@ -154,17 +154,31 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             var root = Path.GetDirectoryName(HostPage);
             try
             {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly());
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
                 var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
 
                 if (dir != null)
                 {
                     var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly(), manifestRoot);
+                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
                 }
                 else provider = new PhysicalFileProvider(contentRootDir);
             }
-            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+            catch (Exception) {
+                try
+                {
+                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
+                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                    if (dir != null)
+                    {
+                        var manifestRoot = Path.Combine(dir.Name, root);
+                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
+                    }
+                    else provider = new PhysicalFileProvider(contentRootDir);
+                }
+                catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+            }
            
             _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, provider, hostPageRelativePath);
           
