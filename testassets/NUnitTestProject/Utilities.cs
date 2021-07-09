@@ -81,6 +81,21 @@ namespace WebdriverTestProject
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
+        public static string BlazorWpfEmbeddedPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            //var exePath = @"bin\debug\net6-windows";
+            var exePath = "publishEmbedded";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+
+        public static string BlazorWpfAppEmbeddedExe()
+        {
+            return Path.Combine(BlazorWpfEmbeddedPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
+        }
+
+        public static Process  StartRemoteBlazorWpfEmbeddedApp() => StartProcess(BlazorWpfAppEmbeddedExe(), BlazorWpfEmbeddedPath());
+
         public static Process StartRemoteBlazorWpfApp() => StartProcess(BlazorWpfAppExe(), BlazorWpfPath());
 
         public static void KillRemoteBlazorWpfApp() => Kill("RemoteBlazorWebViewTutorial.WpfApp");

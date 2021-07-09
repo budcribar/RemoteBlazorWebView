@@ -37,7 +37,7 @@ namespace WebdriverTestProject
     }
 
     [TestClass]
-    public class TestRemoteEmbeddedBlazorDebugForm : TestRemoteBlazorForm
+    public class TestRemoteEmbeddedBlazorForm : TestRemoteBlazorForm
     {
 
         public override Process CreateClient()

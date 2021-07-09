@@ -10,4 +10,13 @@ namespace WebdriverTestProject
             return Utilities.BlazorWpfAppExe();
         }
     }
+
+    [TestClass]
+    public class TestLocalEmbeddedBlazorWpf : TestLocalBlazorForm
+    {
+        public override string BinaryLocation()
+        {
+            return Utilities.BlazorWpfAppEmbeddedExe();
+        }
+    }
 }
