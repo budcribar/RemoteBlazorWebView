@@ -11,8 +11,9 @@ dotnet publish .\src\RemoteableWebWindowSite -o src\RemoteableWebWindowSite\publ
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\publish
 
 # Delete all files except the executable and wwwroot
-Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\publish\* -Exclude *.exe, wwwroot -Recurse
+Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\publish\* -Exclude *.exe, wwwroot
 
+# created the embedded files
 Copy-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\publish\wwwroot -Recurse ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\embedded\wwwroot
 
 
@@ -28,7 +29,7 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsA
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\publish
 
 # Delete all files except the executable and wwwroot
-Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\publish\* -Exclude *.exe, wwwroot -Recurse
+Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\publish\* -Exclude *.exe, wwwroot 
 
 
 # created the embedded files
@@ -41,7 +42,7 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\publishEmbedded\* -Exclude *.exe -Recurse
 
 
-dotnet build RemoteBlazorWebView.sln
+dotnet build -c Debug RemoteBlazorWebView.sln
 
 
 dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj
