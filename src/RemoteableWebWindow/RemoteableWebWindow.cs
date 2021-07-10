@@ -3,87 +3,16 @@ using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Xml.Linq;
-using static PeakSWC.RemoteableWebView.StaticWebAssetsReader;
 
 namespace PeakSWC.RemoteableWebView
 {
-    internal static class StaticWebAssetsReader
-    {
-        private const string ManifestRootElementName = "StaticWebAssets";
-        private const string VersionAttributeName = "Version";
-        private const string ContentRootElementName = "ContentRoot";
-
-        internal static IEnumerable<ContentRootMapping> Parse(Stream manifest)
-        {
-            var document = XDocument.Load(manifest);
-            if (!string.Equals(document.Root!.Name.LocalName, ManifestRootElementName, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Invalid manifest format. Manifest root must be '{ManifestRootElementName}'");
-            }
-
-            var version = document.Root.Attribute(VersionAttributeName);
-            if (version == null)
-            {
-                throw new InvalidOperationException($"Invalid manifest format. Manifest root element must contain a version '{VersionAttributeName}' attribute");
-            }
-
-            if (version.Value != "1.0")
-            {
-                throw new InvalidOperationException($"Unknown manifest version. Manifest version must be '1.0'");
-            }
-
-            foreach (var element in document.Root.Elements())
-            {
-                if (!string.Equals(element.Name.LocalName, ContentRootElementName, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Invalid manifest format. Invalid element '{element.Name.LocalName}'. All StaticWebAssetsManifestName child elements must be '{ContentRootElementName}' elements.");
-                }
-                if (!element.IsEmpty)
-                {
-                    throw new InvalidOperationException($"Invalid manifest format. {ContentRootElementName} can't have content.");
-                }
-
-                var basePath = ParseRequiredAttribute(element, "BasePath");
-                var path = ParseRequiredAttribute(element, "Path");
-                yield return new ContentRootMapping(basePath, path);
-            }
-        }
-
-        private static string ParseRequiredAttribute(XElement element, string attributeName)
-        {
-            var attribute = element.Attribute(attributeName);
-            if (attribute == null)
-            {
-                throw new InvalidOperationException($"Invalid manifest format. Missing {attributeName} attribute in '{ContentRootElementName}' element.");
-            }
-            return attribute.Value;
-        }
-
-        internal readonly struct ContentRootMapping
-        {
-            public ContentRootMapping(string basePath, string path)
-            {
-                BasePath = basePath;
-                Path = path;
-            }
-
-            public string BasePath { get; }
-            public string Path { get; }
-        }
-    }
     public class RemotableWebWindow // : IBlazorWebView 
     {
         public static void Restart(IBlazorWebView blazorWebView)
@@ -120,122 +49,14 @@ namespace PeakSWC.RemoteableWebView
         public Dispatcher? Dispacher { get; set; }
 
         private RemoteWebWindow.RemoteWebWindowClient? client = null;
-        //private Func<string, Stream?> FrameworkFileResolver { get; set; }
-        // TODO unused
         private readonly CancellationTokenSource cts = new();
-
-        private static List<ContentRootMapping>? rootMap;
-        public  IFileProvider FileProvider { get; set; }
 
         #endregion
 
+        public IFileProvider FileProvider { get; set; }
         public Uri? ServerUri { get; set; }
         public string HostHtmlPath { get; set; } = string.Empty;
         public string Id { get; set; } = string.Empty;
-
-        private static string NormalizePath(string path)
-        {
-            path = path.Replace('\\', '/');
-            return path.StartsWith('/') ? path : "/" + path;
-        }
-        private static readonly StringComparison FilePathComparison = OperatingSystem.IsWindows() ?
-                StringComparison.OrdinalIgnoreCase :
-                StringComparison.Ordinal;
-
-        private static bool StartsWithBasePath(string subpath, PathString basePath, out PathString rest)
-        {
-            return new PathString(subpath).StartsWithSegments(basePath, FilePathComparison, out rest);
-        }
-
-        
-        public Stream? SupplyFrameworkFile(string uri)
-        {
-            try
-            {
-                if (Path.GetFileName(uri) == "remote.blazor.desktop.js")
-                    return Assembly.GetExecutingAssembly().GetManifestResourceStream("PeakSWC.RemoteableWebView.remote.blazor.desktop.js");
-
-                if (File.Exists(uri))
-                    return File.OpenRead(uri);
-
-                else
-                {
-                    if (rootMap == null)
-                    {
-                        var stream = GetManifestStream();
-                        if (stream != null)
-                            rootMap = StaticWebAssetsReader.Parse(stream).ToList();
-                    }
-
-                    if (rootMap == null)
-                        return null;
-
-                    foreach (var m in rootMap)
-                    {
-                        if (NormalizePath(m.BasePath) == "/")
-                        {
-                            var f = m.Path + uri.Substring(uri.IndexOf('/'));
-                            if (File.Exists(f))
-                                return File.OpenRead(f);
-                        }
-
-                        if (StartsWithBasePath(uri.Substring(uri.IndexOf('/')), NormalizePath(m.BasePath), out PathString mappedPath))
-                        {
-                            var f = m.Path + mappedPath;
-
-                            if (File.Exists(f))
-                                return File.OpenRead(f);
-                        }
-
-                    }
-
-                }
-            }
-            catch (Exception ex)
-            {
-                var m = ex.Message;
-                return null;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveRelativeToAssembly()
-        {
-            var assembly = Assembly.GetEntryAssembly();
-            if (string.IsNullOrEmpty(assembly?.Location))
-            {
-                return null;
-            }
-
-            var name = Path.GetFileNameWithoutExtension(assembly.Location);
-
-            return Path.Combine(Path.GetDirectoryName(assembly.Location)!, $"{name}.StaticWebAssets.xml");
-        }
-
-        static Stream? GetManifestStream()
-        {
-            try
-            {
-                var filePath = ResolveRelativeToAssembly();
-
-                if (filePath != null && File.Exists(filePath))
-                {
-                    return File.OpenRead(filePath);
-                }
-                else
-                {
-                    // A missing manifest might simply mean that the feature is not enabled, so we simply
-                    // return early. Misconfigurations will be uncommon given that the entire process is automated
-                    // at build time.
-                    return null;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
 
         //public IJSRuntime? JSRuntime { get; set; }
 
@@ -346,47 +167,13 @@ namespace PeakSWC.RemoteableWebView
             }
         }
 
-        // TODO Remove
-        private IFileProvider BuildFileProvider(string hostPage, string contentRootDir)
-        {
-            IFileProvider provider;
-            var root = Path.GetDirectoryName(hostPage);
-            try
-            {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                if (dir != null)
-                {
-                    var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
-                }
-                else provider = new PhysicalFileProvider(contentRootDir);
-            }
-            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
-
-            return StaticWebAssetsLoader.UseStaticWebAssets(new CompositeFileProvider(provider, new EmbeddedFileProvider(Assembly.GetExecutingAssembly())));
-        }
-
         public event EventHandler<string>? OnWebMessageReceived;
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
         public RemotableWebWindow()
         {
             hostname = Dns.GetHostName();
-            //FrameworkFileResolver = SupplyFrameworkFile;
-
-            //fileProvider = BuildFileProvider(this.HostHtmlPath, Directory.GetCurrentDirectory());
         }
-
-        //public RemotableWebWindow(Uri uri, string hostHtmlPath, Guid id = default(Guid))
-        //{
-        //    Id = id == default(Guid) ? Guid.NewGuid().ToString() : id.ToString();
-        //    this.uri = uri;
-        //    this.hostHtmlPath = hostHtmlPath;
-        //    _ = Client;
-
-        //}
 
         public void NavigateToUrl(string _) { }
 
