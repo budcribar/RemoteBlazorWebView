@@ -167,16 +167,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             // TODO Extract to method
             IFileProvider provider;
 
-            var root = Path.GetDirectoryName(HostPage);
+            var root = Path.GetDirectoryName(HostPage) ?? string.Empty;
             try
             {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(  Assembly.GetEntryAssembly()));
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(  Assembly.GetEntryAssembly()!));
+                var dir = manifest._rootDirectory.Children.Where(x => (x as ManifestDirectory)?.Children.Any(y => y.Name == root) ?? false).FirstOrDefault();
 
                 if (dir != null)
                 {
                     var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
+                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!), manifestRoot);
                 }
                 else provider = new PhysicalFileProvider(contentRootDir);
             }

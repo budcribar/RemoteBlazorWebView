@@ -21,12 +21,11 @@ namespace PeakSWC.RemoteableWebView
 
         public FixedManifestEmbeddedAssembly(Assembly inner) => _inner = inner;
 
-        [SuppressMessage("Publish", "IL3000", Justification = "Handled by caller.")]
         public override string Location => _inner.Location;
 
         public override AssemblyName GetName() => _inner.GetName();
 
-        public override Stream GetManifestResourceStream(string name)
+        public override Stream? GetManifestResourceStream(string name)
         {
             var stream = _inner.GetManifestResourceStream(name);
 

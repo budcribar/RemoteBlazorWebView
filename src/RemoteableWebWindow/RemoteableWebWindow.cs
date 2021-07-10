@@ -146,7 +146,7 @@ namespace PeakSWC.RemoteableWebView
                         {
                             try
                             {
-                                var path = message.Path.Substring(message.Path.IndexOf("/")+1);
+                                var path = message.Path[(message.Path.IndexOf("/") + 1)..];
 
                                 var bytes = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
                                 ByteString temp = ByteString.Empty;
@@ -170,8 +170,14 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnWebMessageReceived;
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
-        public RemotableWebWindow()
+
+        public RemotableWebWindow(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, Guid id = default)
         {
+            ServerUri = uri;
+            HostHtmlPath = hostHtmlPath;
+            Dispacher = dispatcher;
+            FileProvider = fileProvider;
+            Id = id == default ? Guid.NewGuid().ToString() : id.ToString();
             hostname = Dns.GetHostName();
         }
 
