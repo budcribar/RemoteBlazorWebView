@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Net;
+using System.Reflection;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -23,8 +24,10 @@ namespace PeakSWC.RemoteableWebView
                         //  Unable to start Kestrel Socket Exception(10013) - need to stop IIS
                         // MUST bind to internal IP address !!
 
-                        if (File.Exists("cert.pfx"))
-                            options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps("cert.pfx", string.Empty); });
+                        var certFile = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly()?.Location) ?? string.Empty, "cert.pfx");
+
+                        if (File.Exists(certFile))
+                            options.Listen(IPAddress.Parse("10.1.0.4"), 443, lo => { lo.UseHttps(certFile, string.Empty); });
                         else
                             options.Listen(IPAddress.Loopback, 443, listenOptions => { listenOptions.UseHttps(); });
                     });
