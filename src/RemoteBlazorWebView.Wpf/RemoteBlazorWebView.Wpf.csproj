@@ -29,7 +29,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemoteableWebWindow\RemoteableWebView.csproj" />
+    <!--
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-preview.5.794" />
+    -->
   </ItemGroup>
 
   <ItemGroup>
@@ -41,6 +43,15 @@
 
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.AspNetCore.Components.WebView.WebView2">
+      <HintPath>..\microsoft\Microsoft.AspNetCore.Components.WebView.WebView2.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.AspNetCore.Components.WebView.Wpf">
+      <HintPath>..\microsoft\Microsoft.AspNetCore.Components.WebView.Wpf.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

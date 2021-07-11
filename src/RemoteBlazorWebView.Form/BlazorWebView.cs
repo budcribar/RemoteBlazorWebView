@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
@@ -8,7 +9,7 @@ using System.ComponentModel;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
-    public partial class BlazorWebView : BlazorWebViewFormBase, IBlazorWebView
+    public partial class BlazorWebView : Microsoft.AspNetCore.Components.WebView.WindowsForms.BlazorWebView, IBlazorWebView
     {
 
 
@@ -122,10 +123,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetId() => Id = Guid.Empty;
         private bool ShouldSerializeId() => Id != Guid.Empty;
 
-        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        protected override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             if (ServerUri == null)
-                WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
                 WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
 

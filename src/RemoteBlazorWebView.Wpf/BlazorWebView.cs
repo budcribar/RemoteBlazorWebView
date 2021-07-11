@@ -10,7 +10,7 @@ using System.Windows;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
-    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
+    public class BlazorWebView : Microsoft.AspNetCore.Components.WebView.Wpf.BlazorWebView, IBlazorWebView
     {
         #region Properties
 
@@ -61,7 +61,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             if (ServerUri == null)
-                WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
                 WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
 
