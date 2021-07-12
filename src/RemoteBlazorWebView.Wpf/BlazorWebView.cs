@@ -4,7 +4,9 @@ using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
@@ -58,12 +60,36 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public IWebViewManager? WebViewManager { get; set; }
 
-        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
         {
+            // We assume the host page is always in the root of the content directory, because it's
+            // unclear there's any other use case. We can add more options later if so.
+            var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
+            if (contentRootDir == null) throw new Exception("No root directory found");
+            var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
+
+            // TODO Extract to method
+            IFileProvider provider;
+
+            var root = Path.GetDirectoryName(HostPage) ?? string.Empty;
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!));
+                var dir = manifest._rootDirectory.Children.Where(x => (x as ManifestDirectory)?.Children.Any(y => y.Name == root) ?? false).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!), manifestRoot);
+                }
+                else provider = new PhysicalFileProvider(contentRootDir);
+            }
+            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+
             if (ServerUri == null)
-                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, provider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, provider, hostPageRelativePath, ServerUri, Id);
 
             return WebViewManager;
         }

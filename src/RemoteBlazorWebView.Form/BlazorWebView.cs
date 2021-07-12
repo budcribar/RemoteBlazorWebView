@@ -6,6 +6,9 @@ using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -123,12 +126,49 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetId() => Id = Guid.Empty;
         private bool ShouldSerializeId() => Id != Guid.Empty;
 
-        protected override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        protected override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
         {
+            // We assume the host page is always in the root of the content directory, because it's
+            // unclear there's any other use case. We can add more options later if so.
+            var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
+            var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
+            IFileProvider provider;
+
+
+            var root = Path.GetDirectoryName(HostPage);
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+                }
+                else provider = new PhysicalFileProvider(contentRootDir);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
+                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                    if (dir != null)
+                    {
+                        var manifestRoot = Path.Combine(dir.Name, root);
+                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
+                    }
+                    else provider = new PhysicalFileProvider(contentRootDir);
+                }
+                catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+            }
+
             if (ServerUri == null)
-                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+                WebViewManager = new WebView2WebViewManager(webview, services, dispatcher, provider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, provider, hostPageRelativePath, ServerUri, Id);
 
             return WebViewManager;
         }
