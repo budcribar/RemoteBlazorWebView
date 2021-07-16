@@ -134,7 +134,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
         }
 
-        protected virtual void StartWebViewCoreIfPossible()
+        protected void StartWebViewCoreIfPossible()
         {
             // We never start the Blazor code in design time because it doesn't make sense to run
             // a Blazor component in the designer.
@@ -217,13 +217,13 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         /// <inheritdoc />
         protected override void Dispose(bool disposing)
         {
-            base.Dispose(disposing);
-
             if (disposing)
             {
+                // Dispose this component's contents before calling base.Dispose() because that will dispose the WebView2 control, likely
+                // preventing user-written disposal logic from working (because it might try to use Blazor stuff, which wouldn't work anymore).
                 _webviewManager?.Dispose();
-                _webview?.Dispose();
             }
+            base.Dispose(disposing);
         }
 
         /// <inheritdoc />

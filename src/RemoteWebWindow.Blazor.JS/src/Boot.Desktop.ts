@@ -3,7 +3,7 @@ import { Blazor } from '../upstream/aspnetcore/web.js/src/GlobalExports';
 import { shouldAutoStart } from '../upstream/aspnetcore/web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
-import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged  } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
 import { InputFile } from '../upstream/aspnetcore/web.js/src//InputFile';
 import { initializeRemoteWebWindow } from './RemoteWebWindow';
 
@@ -21,6 +21,7 @@ async function boot(): Promise<void> {
     DotNet.attachDispatcher({
         beginInvokeDotNetFromJS: sendBeginInvokeDotNetFromJS,
         endInvokeJSFromDotNet: sendEndInvokeJSFromDotNet,
+        sendByteArray: sendByteArray,
     });
 
     Blazor._internal.InputFile = InputFile;

@@ -108,6 +108,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
+            // TODO wtf?
             Services = this.Services;
             RootComponents.ToList().ForEach(x => RootComponents.Add(x));
             HostPage = HostPage;

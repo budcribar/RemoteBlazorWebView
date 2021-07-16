@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
-    <VersionPrefix>6.0.10</VersionPrefix>
-    <VersionSuffix>preview5</VersionSuffix>
+    <VersionPrefix>6.0.11</VersionPrefix>
+    <VersionSuffix>preview6</VersionSuffix>
   </PropertyGroup>
 </Project>

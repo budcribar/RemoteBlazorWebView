@@ -151,7 +151,7 @@ namespace WebdriverTestProject
                 {
                     try
                     {
-                        var link = _driver[i].FindElementByPartialLinkText("Counter");
+                        var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
                         link?.Click();
                         Thread.Sleep(100);
                         break;

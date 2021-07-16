@@ -30,7 +30,7 @@ namespace WebdriverTestProject
             List<string> links = new();
             while (sw.ElapsedMilliseconds < 30000)
             {
-                links = _driver[0].FindElementsByTagName("a").Select(x => x.GetAttribute("href")).Where(x => x?.Contains("/app/") ?? false).ToList();
+                links = _driver[0].FindElements(By.TagName("a")).Select(x => x.GetAttribute("href")).Where(x => x?.Contains("/app/") ?? false).ToList();
                 if (links.Count == num) break;
             }
 
@@ -44,7 +44,7 @@ namespace WebdriverTestProject
 
             for (int i = 0; i < num; i++)
             {
-                var link = _driver[i].FindElementByPartialLinkText("Counter");
+                var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
 
                 link.Click();
             }
