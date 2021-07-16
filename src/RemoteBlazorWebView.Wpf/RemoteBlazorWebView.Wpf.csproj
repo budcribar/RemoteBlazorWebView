@@ -29,7 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RemoteableWebWindow\RemoteableWebView.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-preview.5.794" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-preview.6.1003" />
   </ItemGroup>
 
   <ItemGroup>
