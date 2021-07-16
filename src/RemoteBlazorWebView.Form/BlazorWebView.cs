@@ -32,7 +32,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             }
         }
 
-        public IWebViewManager? WebViewManager { get; set; }
+        public WebView2WebViewManager? WebViewManager { get; set; }
 
         private Uri? _serverUri;
 
@@ -126,7 +126,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetId() => Id = Guid.Empty;
         private bool ShouldSerializeId() => Id != Guid.Empty;
 
-        protected override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
+        protected override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
         {
             // We assume the host page is always in the root of the content directory, because it's
             // unclear there's any other use case. We can add more options later if so.

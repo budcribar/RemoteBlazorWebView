@@ -58,9 +58,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
-        public IWebViewManager? WebViewManager { get; set; }
+        public WebView2WebViewManager? WebViewManager { get; set; }
 
-        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
+        public override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher)
         {
             // We assume the host page is always in the root of the content directory, because it's
             // unclear there's any other use case. We can add more options later if so.
