@@ -14,10 +14,10 @@
   dependencies:
     browser-headers "^0.4.1"
 
-"@microsoft/dotnet-js-interop@6.0.0-preview.5.21301.17":
-  version "6.0.0-preview.5.21301.17"
-  resolved "https://registry.npmjs.org/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.0-preview.5.21301.17.tgz"
-  integrity sha512-xUWUHZLhhDpxyF3vGvcIeTWF2knMV0jqzaVDylYWQxMCvrN0IWz0N6ILA2Dz1uRds2DrUx5osVtFf5KZqIqVQQ==
+"@microsoft/dotnet-js-interop@6.0.0-preview.6.21355.2":
+  version "6.0.0-preview.6.21355.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.0-preview.6.21355.2.tgz#7c6eb884b02aca95907723e74c264c1574a6013c"
+  integrity sha512-gylGhAdiyz/UUO7sQ8ffCiK6wXQO4rW+QpUvQFedpuwGHYqBR5s/UW//K0wfJAKQZG4Un6BM9BL5orykqakyYw==
 
 "@types/base64-arraybuffer@^0.1.0":
   version "0.1.0"
