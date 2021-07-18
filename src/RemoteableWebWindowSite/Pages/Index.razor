@@ -5,28 +5,36 @@
 @using PeakSWC.RemoteableWebView
 @inject ILogger<Index> _logger
 
-<h3>Active Clients</h3>
+<h3>Connected Clients</h3>
 
-<ul>
-    @if (list != null)
-    {
-        foreach (var client in list.ClientResponses)
-        {
-            if (client.State == ClientState.Connected)
+@*<AuthorizeView>
+    <Authorized>*@
+        <ul>
+            @if (list != null)
             {
-                <li> <a href="@client.Url">@client.HostName</a></li>
+                foreach (var client in list.ClientResponses)
+                {
+                    if (client.State == ClientState.Connected)
+                    {
+                        <li> <a href="@client.Url">@client.HostName</a></li>
+                    }
+                    else
+                    {
+                        <li> @client.HostName (in use)</li>
+                    }
+                }
             }
-            else
-            {
-                <li> @client.HostName (in use)</li>
-            }
-        }
-    }
+        </ul>
+  @*  </Authorized>
+    <NotAuthorized>
+        <a href="authentication/login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>*@
 
-</ul>
+
 @code {
     private ClientResponseList? list;
-    
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();

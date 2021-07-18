@@ -1,11 +1,14 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -18,6 +21,12 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
+        private IConfiguration Configuration;
+
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -29,6 +38,9 @@ namespace PeakSWC.RemoteableWebView
 #else
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 #endif
+         
+            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureAdB2C"));
+            //services.AddAuthorization();
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
             services.AddTransient<FileResolver>();
 
@@ -44,7 +56,7 @@ namespace PeakSWC.RemoteableWebView
                     //builder.WithOrigins("localhost:443", "localhost", "YourCustomDomain");
                     // builder.WithMethods("POST, OPTIONS");
                     //builder.AllowAnyHeader();
-                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message");
+                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message","Grpc-Encoding", "Grpc-Accept-Encoding", "X-Grpc-Web", "User-Agent");
                 });
             });
         }
@@ -57,12 +69,17 @@ namespace PeakSWC.RemoteableWebView
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.UseCors("CorPolicy");
+            
+            
 
             app.UseResponseCompression();
             app.UseRouting();
 
+            // Must be between UseRouting() and UseEndPoints()
+            app.UseCors("CorPolicy");
+
+            //app.UseAuthentication();
+            //app.UseAuthorization();
             app.UseGrpcWeb();
 
             var provider = new FileExtensionContentTypeProvider();
@@ -88,10 +105,9 @@ namespace PeakSWC.RemoteableWebView
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<RemoteWebViewService>();
-                endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb();
-                endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb();
-
+                endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
+                endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGet("/app/{id:guid}", async context =>
                 {
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;

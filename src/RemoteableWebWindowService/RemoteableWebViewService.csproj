@@ -12,7 +12,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackAsTool>false</PackAsTool>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' != 'Debug'">true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteableWebViewService</PackageId>
     <ToolCommandName>RemoteableWebViewService</ToolCommandName>
     <Authors>Bud Cribar</Authors>
@@ -54,6 +54,7 @@
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="6.0.0-preview.6.21355.2" />
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="5.0.7" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.14.1" />
   </ItemGroup>
 
   <ItemGroup>
