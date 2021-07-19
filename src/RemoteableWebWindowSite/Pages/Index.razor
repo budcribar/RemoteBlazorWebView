@@ -3,56 +3,68 @@
 @using Grpc.Core;
 @using Microsoft.Extensions.Logging
 @using PeakSWC.RemoteableWebView
+@using Microsoft.AspNetCore.Authorization
 @inject ILogger<Index> _logger
-
+@attribute [Authorize]
 <h3>Connected Clients</h3>
 
-@*<AuthorizeView>
-    <Authorized>*@
-        <ul>
-            @if (list != null)
-            {
-                foreach (var client in list.ClientResponses)
-                {
-                    if (client.State == ClientState.Connected)
-                    {
-                        <li> <a href="@client.Url">@client.HostName</a></li>
-                    }
-                    else
-                    {
-                        <li> @client.HostName (in use)</li>
-                    }
-                }
-            }
-        </ul>
-  @*  </Authorized>
-    <NotAuthorized>
-        <a href="authentication/login">Log in</a>
-    </NotAuthorized>
-</AuthorizeView>*@
+@if (list == null)
+{
+    <h4>Connecting to Remote WebView Server...</h4>
+    if (Message != null)
+    {
+        <div class="error">@Message</div>
+    }
+    
+}
+else
+{
+    <ul>
+    @foreach (var client in list.ClientResponses)
+    {
+        @if (client.State == ClientState.Connected)
+        {
+            <li> <a href="@client.Url">@client.HostName</a></li>
+        }
+        else
+        {
+            <li> @client.HostName (in use)</li>
+        }
+    }
+    </ul>
+}
 
 
 @code {
     private ClientResponseList? list;
+    private string? Message;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        var client = new ClientIPC.ClientIPCClient(Channel);
-
-        var response = client.GetClients(new());
-        var stream = response.ResponseStream;
-
-        await foreach (var clientResponseList in response.ResponseStream.ReadAllAsync())
+        try
         {
-            list = clientResponseList;
+            var client = new ClientIPC.ClientIPCClient(Channel);
 
-            list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
+            var response = client.GetClients(new());
+            var stream = response.ResponseStream;
 
-            await InvokeAsync(StateHasChanged);
+            await foreach (var clientResponseList in response.ResponseStream.ReadAllAsync())
+            {
+                list = clientResponseList;
 
+                list.ClientResponses.ToList().ForEach(x => _logger.LogInformation($"Client Id:{x.Id} State:{x.State}"));
+
+                await InvokeAsync(StateHasChanged);
+
+            }
         }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+
     }
 
 }
