@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <BlazorCacheBootResources>false</BlazorCacheBootResources>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <TargetFramework>net6</TargetFramework>
-    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <GenerateEmbeddedFilesManifest>false</GenerateEmbeddedFilesManifest>
     <OutputType>Exe</OutputType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
@@ -44,17 +45,17 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <EmbeddedResource Include="..\RemoteableWebWindowSite\publish\**\*" />
     <Compile Remove="publish\**" />
     <Content Remove="publish\**" />
-    <EmbeddedResource Remove="publish\**" />
     <None Remove="publish\**" />
-    <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="6.0.0-preview.6.21355.2" />
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="5.0.7" />
+    <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.0-preview.6.21355.2" />
+     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.0-preview.6.21355.2" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.0-preview.6.21355.2" NoWarn="NU1605" />    
     <PackageReference Include="Microsoft.Identity.Web" Version="1.14.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.14.1" />
   </ItemGroup>
 
   <ItemGroup>

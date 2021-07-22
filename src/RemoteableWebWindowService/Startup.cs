@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -9,9 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 using PeakSwc.StaticFiles;
+using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -21,7 +26,7 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
-        private IConfiguration Configuration;
+        private readonly IConfiguration Configuration;
 
         public Startup(IConfiguration configuration)
         {
@@ -30,6 +35,7 @@ namespace PeakSWC.RemoteableWebView
 
         public void ConfigureServices(IServiceCollection services)
         {
+           
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
 
@@ -38,9 +44,63 @@ namespace PeakSWC.RemoteableWebView
 #else
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 #endif
-         
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureAdB2C"));
+
+            services.Configure<CookiePolicyOptions>(options =>
+            {
+                // This lambda determines whether user consent for non-essential cookies is needed for a given request.
+                options.CheckConsentNeeded = context => true;
+                options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+                // Handling SameSite cookie according to https://docs.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-3.1
+                options.HandleSameSiteCookieCompatibility();
+            });
+
+            // Configuration to sign-in users with Azure AD B2C
+            services.AddMicrosoftIdentityWebAppAuthentication(Configuration, "AzureAdB2C");
+
+            services.AddControllersWithViews()
+                .AddMicrosoftIdentityUI();
+
+            services.AddRazorPages();
+
+            //Configuring appsettings section AzureAdB2C, into IOptions
+            services.AddOptions();
+            services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
+
+
+            //services.AddMicrosoftIdentityWebAppAuthentication(Configuration, "AzureAdB2C");
+
+            //services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+            //    .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAd"));
+
+            //services.AddControllersWithViews().AddMicrosoftIdentityUI();
             //services.AddAuthorization();
+            //services.AddAuthorization(options =>
+            //{
+            //    // By default, all incoming requests will be authorized according to the default policy
+            //    //options.FallbackPolicy = options.            // options.DefaultPolicy;
+            //    options.AddPolicy("MyCustomPolicy",
+            //policyBuilder => policyBuilder.Build());
+            //});
+
+            //services.AddAuthorization();
+            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureAdB2C"));
+
+            //Configuring appsettings section AzureAdB2C, into IOptions
+            //services.AddOptions();
+            //services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAd"));
+
+
+            // Adds Microsoft Identity platform (AAD v2.0) support to protect this Api
+            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            //        .AddMicrosoftIdentityWebApi(options =>
+            //        {
+            //            Configuration.Bind("AzureAdB2C", options);
+
+            //            options.TokenValidationParameters.NameClaimType = "name";
+            //        },
+            //options => { Configuration.Bind("AzureAdB2C", options); });
+            //services.AddAuthorization();
+
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
             services.AddTransient<FileResolver>();
 
@@ -68,9 +128,16 @@ namespace PeakSWC.RemoteableWebView
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseWebAssemblyDebugging();
             }
-            
-            
+            else
+            {
+                //app.UseExceptionHandler("/Error");
+                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                //app.UseHsts();
+            }
+
+            //app.UseHttpsRedirection();
 
             app.UseResponseCompression();
             app.UseRouting();
@@ -78,8 +145,9 @@ namespace PeakSWC.RemoteableWebView
             // Must be between UseRouting() and UseEndPoints()
             app.UseCors("CorPolicy");
 
-            //app.UseAuthentication();
-            //app.UseAuthorization();
+            app.UseCookiePolicy();
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseGrpcWeb();
 
             var provider = new FileExtensionContentTypeProvider();
@@ -93,21 +161,37 @@ namespace PeakSWC.RemoteableWebView
             provider.Mappings[".woff2"] = "application/font-woff";
             provider.Mappings[".ico"] = "image/x-icon";
 
-            app.UseRewriter(new Microsoft.AspNetCore.Rewrite.RewriteOptions().AddRewrite("^wwwroot$", "wwwroot/index.html", false));
+            //app.UseRewriter(new Microsoft.AspNetCore.Rewrite.RewriteOptions().AddRewrite("^wwwroot$", "index.html", false));
+            app.UseBlazorFrameworkFiles();
+            var root = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!, "wwwroot");
+            Console.WriteLine($"Root is '{root}'");
+
+            app.UseStaticFiles();
 
             app.UseStaticFiles(new StaticFileOptions
             {
-
-                FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebViewService).Assembly)),
-                //FileProvider = new CompositeFileProvider(new ManifestEmbeddedFileProvider(typeof(RemoteWebWindowService).Assembly),app.ApplicationServices?.GetService<FileResolver>()),
+                FileProvider = app.ApplicationServices?.GetService<FileResolver>(),
                 ContentTypeProvider = provider
             });
+
+            //app.UseStaticFiles(new StaticFileOptions
+            //{
+
+            //    //FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebViewService).Assembly, "wwwroot")),
+            //    FileProvider = new CompositeFileProvider(new PhysicalFileProvider(root), app.ApplicationServices?.GetService<FileResolver>()),
+            //    ContentTypeProvider = provider
+            //});
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+
+                endpoints.MapGet("/home", async context =>
+                    await context.Response.WriteAsync("Hello world")
+            ).RequireAuthorization();
+
                 endpoints.MapGet("/app/{id:guid}", async context =>
                 {
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
@@ -139,7 +223,7 @@ namespace PeakSWC.RemoteableWebView
                         context.Response.StatusCode = 400;
                         await context.Response.WriteAsync("Invalid Guid");
                     }
-                });
+                });//.RequireAuthorization();
 
                 endpoints.MapGet("/restart/{id:guid}", async context =>
                 {
@@ -218,11 +302,13 @@ namespace PeakSWC.RemoteableWebView
 
                 });
 
-                endpoints.MapGet("/", async context =>
-                {
-                    context.Response.Redirect("wwwroot");
-                    await Task.CompletedTask;
-                });
+                endpoints.MapFallbackToFile("index.html");
+
+                //endpoints.MapGet("/", async context =>
+                //{
+                //    context.Response.Redirect("index.html");
+                //    await Task.CompletedTask;
+                //});
 
             });
         }
