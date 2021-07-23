@@ -45,7 +45,11 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <Compile Remove="publish\**" />
+    <!--
+    <Content Include="..\RemoteableWebWindowSite\publish\wwwroot\**" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
+   -->
+   
+   <Compile Remove="publish\**" />
     <Content Remove="publish\**" />
     <None Remove="publish\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.38.0" />
@@ -66,9 +70,7 @@
       <Pack>True</Pack>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\RemoteableWebWindowSite\RemoteableWebWindowSite.csproj" />
   </ItemGroup>
-
 </Project>
