@@ -42,12 +42,14 @@ public class ProtectedApiCallHelper
     /// </summary>
     /// <param name="httpClient">HttpClient used to 
     /// call the protected API</param>
-    public ProtectedApiCallHelper(HttpClient httpClient)
+    public ProtectedApiCallHelper(HttpClient httpClient, string accessToken)
     {
         HttpClient = httpClient;
+        AccessToken = accessToken;
     }
 
     protected HttpClient HttpClient { get; private set; }
+    protected string AccessToken { get; private set;  }
 
     /// <summary>
     /// Calls the protected Web API and processes the result
@@ -58,12 +60,9 @@ public class ProtectedApiCallHelper
     /// security token to call the Web API</param>
     /// <param name="processResult">Callback used to process the result 
     /// of the call to the Web API</param>
-    public async Task CallWebApiAndProcessResultASync(
-        string webApiUrl,
-        string accessToken,
-        Action<JObject> processResult)
+    public async Task<JObject?> CallWebApiAndProcessResultASync(string webApiUrl)
     {
-        if (!string.IsNullOrEmpty(accessToken))
+        if (!string.IsNullOrEmpty(AccessToken))
         {
             var defaultRequetHeaders = HttpClient.DefaultRequestHeaders;
 
@@ -71,26 +70,27 @@ public class ProtectedApiCallHelper
             {
                 HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             }
-            defaultRequetHeaders.Authorization = new AuthenticationHeaderValue("bearer", accessToken);
+            defaultRequetHeaders.Authorization = new AuthenticationHeaderValue("bearer", AccessToken);
 
             HttpResponseMessage response = await HttpClient.GetAsync(webApiUrl);
             if (response.IsSuccessStatusCode)
             {
                 string json = await response.Content.ReadAsStringAsync();
                 JObject result = JsonConvert.DeserializeObject<JObject>(json);
-                processResult(result);
+                return result;
             }
             else
             {
-                string content =
-                await response.Content.ReadAsStringAsync();
+                string content = await response.Content.ReadAsStringAsync();
 
                 // Note that if you got reponse.Code == 403 
                 // and reponse.content.code == "Authorization_RequestDenied"
                 // this is because the tenant admin as not granted 
                 // consent for the application to call the Web API
                 Console.WriteLine($"Content: {content}");
+                return null;
             }
         }
+        return null;
     }
 }
