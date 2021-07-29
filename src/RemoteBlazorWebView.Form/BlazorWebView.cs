@@ -50,11 +50,26 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 StartWebViewCoreIfPossible();
             }
         }
+
+        public Guid Id
+        {
+            get
+            {
+                string? id = (WebViewManager as RemoteWebView2Manager)?.RemoteableWebView?.Id;
+                return (id == null) ? Guid.Empty : new Guid(id);
+            }
+            set
+            {
+                var rww = (WebViewManager as RemoteWebView2Manager)?.RemoteableWebView;
+                if (rww != null) rww.Id = value.ToString();
+            }
+        }
+
         private void ResetServerUri() => ServerUri = new Uri("https://localhost:443");
 
         private bool ShouldSerializeServerUri() => ServerUri != null;
 
-        private Guid _id;
+        private string _group = "test";
 
 
         private readonly List<EventHandler<string>> UnloadedInternal = new();
@@ -98,20 +113,18 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 
         /// <summary>
-        /// Optional Id associated with the client
+        /// Group that the user is a member of when signed in
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
-        [TypeConverter(typeof(GuidConverter))]
+       
         [Category("Behavior")]
-        [Description(@"Optional Id associated with the client.")]
-        public Guid Id
+        [Description(@"Group associated with the user.")]
+        public string Group
         {
-            get => _id;
+            get => _group;
             set
-            {
-                if (value == Guid.Empty)
-                    value = Guid.NewGuid();
-                _id = value;
+            {            
+                _group = value;
                 Invalidate();
                 StartWebViewCoreIfPossible();
             }
@@ -119,15 +132,15 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public bool IsRestarting { get; set; }
 
-        private void ResetId() => Id = Guid.Empty;
-        private bool ShouldSerializeId() => Id != Guid.Empty;
+        private void ResetGroup() => _group = "test";
+        private bool ShouldSerializeId() => _group != "test";
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             if (ServerUri == null)
                 WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Group);
 
             return WebViewManager;
         }

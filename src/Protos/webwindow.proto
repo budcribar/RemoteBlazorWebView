@@ -26,6 +26,7 @@ message CreateWebWindowRequest {
   string id = 1;
   string htmlHostPath = 2;
   string hostname = 3;
+  string group = 4;
 }
 
 message WebMessageResponse {
@@ -88,6 +89,10 @@ message ClientResponseList {
     repeated ClientResponse clientResponses = 1;
 }
 
+message UserMessageRequest {
+    string oid = 1;
+}
+
 service ClientIPC {
-    rpc GetClients(google.protobuf.Empty) returns (stream ClientResponseList);
+    rpc GetClients(UserMessageRequest) returns (stream ClientResponseList);
 }

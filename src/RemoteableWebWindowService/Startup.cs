@@ -2,20 +2,35 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Azure.ActiveDirectory.GraphClient;
+using Microsoft.Azure.ActiveDirectory.GraphClient.Internal;
+//using Microsoft.Azure.ActiveDirectory.GraphClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Graph;
+using Microsoft.Identity.Client;
+//using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+//using Microsoft.IdentityModel.Clients.ActiveDirectory;
+//using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using PeakSwc.StaticFiles;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Channel = System.Threading.Channels.Channel;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -30,9 +45,130 @@ namespace PeakSWC.RemoteableWebView
             Configuration = configuration;
         }
 
-        public void ConfigureServices(IServiceCollection services)
+        //private async Task<String> GetAppTokenAsync()
+        //{
+        //    // this doesn't work for desktop apps, 
+        //    // and PublicClientApplication throws a NotImplementedException
+        //    var cca = new Microsoft.Identity.Client.ConfidentialClientApplication(
+        //        Configuration.GetValue<string>("AzureAdB2C:ClientId"), 
+
+        //        authString,
+        //        "http://www.example.com/", // no redirect
+        //        new ClientCredential(Configuration.GetValue<string>("Secret")),
+        //        new TokenCache(),
+        //        new TokenCache());
+
+        //    var authResult = cca.AcquireTokenForClient(new[] { $"https://graph.microsoft.com/.default" });
+        //    return authResult.AccessToken;
+        //}
+        //public GraphServiceClient GetAuthenticatedClient()
+        //{
+        //    var delegateAuthenticationProvider = new DelegateAuthenticationProvider(
+        //        async (requestMessage) =>
+        //        {
+        //            var accessToken = await GetAppTokenAsync();
+        //            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("bearer", accessToken);
+        //        }
+        //    );
+
+        //    return new GraphServiceClient(delegateAuthenticationProvider);
+        //}
+
+
+        //private async Task<string> AcquireTokenAsyncForApplication()
+        //{
+        //    // https://jan-v.nl/post/how-to-search-for-users-inside-your-azure-active-directory-aad/
+        //    AuthenticationContext authenticationContext = new("https://login.microsoftonline.com/" + Configuration.GetValue<string>("AzureAdB2C:Domain"), false);
+
+        //    // value Ej-Mq~Bz8dYWC4R9T6.69FDFCdQq-6Gj9_ secretid e124078d-4506-466c-af63-fcbeb7f35729
+        //    Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential clientCred = new Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential(Configuration.GetValue<string>("AzureAdB2C:ClientId"), Configuration.GetValue<string>("Secret"));
+        //    Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationResult authenticationResult =
+        //        await authenticationContext.AcquireTokenAsync(
+        //            Configuration.GetValue<string>("ResourceUrl"),
+        //            clientCred);
+        //    string token = authenticationResult.AccessToken;
+        //    return token;
+
+        //}
+        string token;
+        private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
+            IConfidentialClientApplication confidentialClientApplication =
+               ConfidentialClientApplicationBuilder
+               .Create(Configuration.GetValue<string>("AzureAdB2C:ClientId"))
+               .WithTenantId(Configuration.GetValue<string>("AzureAdB2C:DirectoryId")) 
+               .WithClientSecret(Configuration.GetValue<string>("Secret"))
+               .Build();
+
+            string[] scopes = new string[] { "https://graph.microsoft.com/.default" };
+            AuthenticationResult result = null;
+            result = await confidentialClientApplication.AcquireTokenForClient(scopes).ExecuteAsync();
+            token = result.AccessToken;
+            var httpClient = new HttpClient();
+            return new ProtectedApiCallHelper(httpClient);
+        }
+
+        static Dictionary<string, string> groups = new();
+        static List<string> userGroups = new();
+        private static void GetGroups(JObject result)
+        {
+            var list = result.Property("value").Value;
+            foreach (var group in list)
+            {
+                var name = group["displayName"].ToString();
+                var id = group["id"].ToString();
+                groups[id] = name;
+            }
+
+        }
+
+        private static void GetMembersForGroup(string groupId, string userId, JObject result)
+        {
+            var list = result.Property("value").Value;
+            foreach (var members in list)
+            {
+               
+                var id = members["id"].ToString();
+                if (id == userId)
+                    userGroups.Add(groups[groupId]);
+            }
+
+        }
+
+        public void ConfigureServices(IServiceCollection services)
+        {       
+            Uri servicePointUri = new Uri(Configuration.GetValue<string>("ResourceUrl"));
+            Uri serviceRoot = new Uri(servicePointUri, Configuration.GetValue<string>("AzureAdB2C:DirectoryId"));
+            //ActiveDirectoryClient activeDirectoryClient = new ActiveDirectoryClient(serviceRoot,  async () => await AcquireTokenAsyncForApplication());
+            var helper = CreateApiHelper().Result;
+
+
+
+            services.AddSingleton(helper);
+
+            //JObject j;
+
            
+
+            helper.CallWebApiAndProcessResultASync(
+                    $"https://graph.microsoft.com/v1.0/groups",
+                    token,
+                    GetGroups
+                    ).Wait();
+
+            foreach (var groupId in groups.Keys)
+            {
+               
+                helper.CallWebApiAndProcessResultASync(
+                    
+                    $"https://graph.microsoft.com/v1.0/groups/"+groupId+$"/members",
+                    token,
+                    (jo) => GetMembersForGroup(groupId, "e849a3ef-0dc9-49a6-b5b0-a609c121a655", jo)
+                    ).Wait();
+            }
+
+
+            //services.AddSingleton(activeDirectoryClient);
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
 

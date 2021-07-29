@@ -20,9 +20,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             ownerType: typeof(BlazorWebView),
             typeMetadata: new PropertyMetadata(OnServerUriPropertyChanged));
 
-        public static readonly DependencyProperty IdProperty = DependencyProperty.Register(
-                   name: nameof(Id),
-                   propertyType: typeof(Guid),
+        public static readonly DependencyProperty GroupProperty = DependencyProperty.Register(
+                   name: nameof(Group),
+                   propertyType: typeof(string),
                    ownerType: typeof(BlazorWebView),
                    typeMetadata: new PropertyMetadata(OnIdPropertyChanged));
         #endregion
@@ -32,10 +32,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             get => (Uri?)GetValue(UriProperty);
             set => SetValue(UriProperty, value);
         }
-        public Guid Id
+
+        public string Group
         {
-            get => (Guid)GetValue(IdProperty);
-            set => SetValue(IdProperty, value == Guid.Empty ? Guid.NewGuid() : value);
+            get => (string)GetValue(GroupProperty);
+            set => SetValue(GroupProperty, value);
         }
 
 
@@ -58,12 +59,23 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public IWebViewManager? WebViewManager { get; set; }
 
+        public Guid Id
+        {
+            get
+            {
+                if (WebViewManager is RemoteWebView2Manager wvm)
+                    return wvm.Id;
+                else
+                    return Guid.Empty;
+            }
+        }
+
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             if (ServerUri == null)
                 WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Group);
 
             return WebViewManager;
         }
@@ -112,9 +124,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             Services = this.Services;
             RootComponents.ToList().ForEach(x => RootComponents.Add(x));
             HostPage = HostPage;
+            Group = Group;
 
-            if (ServerUri != null)
-                Id = Id;
+            // TODO
+            //if (ServerUri != null)
+            //    Id = Id;
 
         }
 

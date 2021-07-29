@@ -57,6 +57,7 @@ namespace PeakSWC.RemoteableWebView
         public Uri? ServerUri { get; set; }
         public string HostHtmlPath { get; set; } = string.Empty;
         public string Id { get; set; } = string.Empty;
+        private string Group { get; init; }
 
         //public IJSRuntime? JSRuntime { get; set; }
 
@@ -71,7 +72,8 @@ namespace PeakSWC.RemoteableWebView
                     var channel = GrpcChannel.ForAddress(ServerUri);
 
                     client = new RemoteWebWindow.RemoteWebWindowClient(channel);
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname }, cancellationToken: cts.Token); 
+                   
+                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     var createFailed = false;
 
@@ -171,14 +173,15 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
 
-        public RemotableWebWindow(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, Guid id = default)
+        public RemotableWebWindow(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider,  string group)
         {
             ServerUri = uri;
             HostHtmlPath = hostHtmlPath;
             Dispacher = dispatcher;
             FileProvider = fileProvider;
-            Id = id == default ? Guid.NewGuid().ToString() : id.ToString();
+            Id = Guid.NewGuid().ToString();
             hostname = Dns.GetHostName();
+            Group = group;
         }
 
         public void NavigateToUrl(string _) { }

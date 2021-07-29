@@ -43,7 +43,8 @@ namespace PeakSWC.RemoteableWebView
                     InUse = false,
                     Url = $"https://{context.Host}/app/{request.Id}",
                     Id = request.Id,
-                    IPC = new IPC()
+                    IPC = new IPC(),
+                    Group = request.Group
                 };
 
                 // Let home page know client is available
