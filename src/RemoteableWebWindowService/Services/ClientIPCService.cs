@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteableWebView
         private readonly ILogger<ClientIPCService> _logger;
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
-        private ProtectedApiCallHelper _graphApi;
+        private readonly ProtectedApiCallHelper _graphApi;
 
         private Dictionary<string, string> GetGroups(JObject result)
         {

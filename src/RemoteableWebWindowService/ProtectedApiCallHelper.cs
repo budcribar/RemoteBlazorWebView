@@ -76,7 +76,7 @@ public class ProtectedApiCallHelper
             if (response.IsSuccessStatusCode)
             {
                 string json = await response.Content.ReadAsStringAsync();
-                JObject result = JsonConvert.DeserializeObject<JObject>(json);
+                JObject? result = JsonConvert.DeserializeObject<JObject>(json);
                 return result;
             }
             else
