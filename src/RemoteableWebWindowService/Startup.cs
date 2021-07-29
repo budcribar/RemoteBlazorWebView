@@ -2,35 +2,21 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Azure.ActiveDirectory.GraphClient;
-using Microsoft.Azure.ActiveDirectory.GraphClient.Internal;
-//using Microsoft.Azure.ActiveDirectory.GraphClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Graph;
 using Microsoft.Identity.Client;
-//using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-//using Microsoft.IdentityModel.Clients.ActiveDirectory;
-//using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using PeakSwc.StaticFiles;
-using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Channel = System.Threading.Channels.Channel;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -63,60 +49,13 @@ namespace PeakSWC.RemoteableWebView
         }
 
        
-        static List<string> userGroups = new();
+        //static List<string> userGroups = new();
 
-        private Dictionary<string, string> GetGroups(JObject result)
-        {
-            Dictionary<string, string> groups = new();
-            var list = result.Property("value").Value;
-            foreach (var group in list)
-            {
-                var name = group["displayName"].ToString();
-                var id = group["id"].ToString();
-                groups[id] = name;
-            }
-            return groups;
-        }
-
-        private List<string> GetMembersForGroup(string groupId, string userId, Dictionary<string,string> groupDict, JObject result)
-        {
-            List<string> results = new();
-            var list = result.Property("value").Value;
-            foreach (var members in list)
-            {
-               
-                var id = members["id"].ToString();
-                if (id == userId)
-                    results.Add(groupDict[groupId]);
-            }
-            return results;
-        }
+       
 
         public void ConfigureServices(IServiceCollection services)
         {
-            Uri servicePointUri = new Uri(Configuration.GetValue<string>("ResourceUrl"));
-            Uri serviceRoot = new Uri(servicePointUri, Configuration.GetValue<string>("AzureAdB2C:DirectoryId"));
-            ProtectedApiCallHelper? helper;
-            try
-            {
-                helper = CreateApiHelper().Result;
-                services.AddSingleton(helper);
-                var groupText = helper.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;
-                var groupDict = GetGroups(groupText);
-
-                List<string> groups = new();
-                foreach (var groupId in groupDict.Keys)
-                {
-                    var members = helper.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").Result;
-                    groups.AddRange(GetMembersForGroup(groupId, "e849a3ef-0dc9-49a6-b5b0-a609c121a655", groupDict, members));
-                }
-
-            }
-            catch (Exception ex) {
-                var m = ex.Message; }
-            
-
-            
+            services.AddSingleton(CreateApiHelper().Result);
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
 

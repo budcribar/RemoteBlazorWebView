@@ -3,8 +3,10 @@ using Grpc.Core;
 using Microsoft.Azure.ActiveDirectory.GraphClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -17,23 +19,55 @@ namespace PeakSWC.RemoteableWebView
         private readonly ILogger<ClientIPCService> _logger;
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
-        private ActiveDirectoryClient _activeDirectoryClient;
+        private ProtectedApiCallHelper _graphApi;
 
-        public ClientIPCService(ILogger<ClientIPCService> logger, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ActiveDirectoryClient activeDirectoryClient)
+        private Dictionary<string, string> GetGroups(JObject result)
+        {
+            Dictionary<string, string> groups = new();
+            var list = result.Property("value")?.Value;
+            if (list != null)
+                foreach (var group in list)
+                {
+                    var name = group["displayName"]?.ToString() ?? string.Empty;
+                    var id = group["id"]?.ToString() ?? string.Empty;
+
+                    if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(name))
+                        continue;
+
+                    groups[id] = name;
+                }
+            return groups;
+        }
+
+        private List<string> GetMembersForGroup(string groupId, string userId, Dictionary<string, string> groupDict, JObject result)
+        {
+            List<string> results = new();
+            var list = result.Property("value")?.Value;
+            if (list != null)
+                foreach (var members in list)
+                {
+
+                    var id = members["id"]?.ToString() ?? string.Empty;
+                    if (id == userId)
+                        results.Add(groupDict[groupId]);
+                }
+            return results;
+        }
+
+        public ClientIPCService(ILogger<ClientIPCService> logger, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
             _rootDictionary = rootDictionary;
-            _activeDirectoryClient = activeDirectoryClient;
+            _graphApi = graphApi;
         }
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
             // https://stackoverflow.com/questions/48385996/platformnotsupported-exception-when-calling-adduserasync-net-core-2-0
             var list = new ClientResponseList();
-            var user = _activeDirectoryClient.Users.GetByObjectId(request.Oid);
-            
-            var groups = (await user.GetMemberGroupsAsync(false)).ToList();
+           
+            var groups = GetUserGroups(request.Oid);
 
             // If a user is not in any groups then they are defaulted to the "test" group
             if (!groups.Any()) groups.Add("test");
@@ -47,6 +81,20 @@ namespace PeakSWC.RemoteableWebView
             }
         }
 
+        public List<string> GetUserGroups (string oid)
+        {
+            List<string> groups = new();
+            var groupText = _graphApi.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;
+            if (groupText == null) { return groups; }
+            var groupDict = GetGroups(groupText);
 
+            foreach (var groupId in groupDict.Keys)
+            {
+                var members = _graphApi.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").Result;
+                if (members != null)
+                    groups.AddRange(GetMembersForGroup(groupId, oid, groupDict, members));
+            }
+            return groups;
+        }
     }
 }
