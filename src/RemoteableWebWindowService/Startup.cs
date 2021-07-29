@@ -30,9 +30,7 @@ namespace PeakSWC.RemoteableWebView
         {
             Configuration = configuration;
         }
-
-      
-       
+   
         private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
             IConfidentialClientApplication confidentialClientApplication =
@@ -47,11 +45,6 @@ namespace PeakSWC.RemoteableWebView
             var httpClient = new HttpClient();
             return new ProtectedApiCallHelper(httpClient,result.AccessToken);
         }
-
-       
-        //static List<string> userGroups = new();
-
-       
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -133,38 +126,9 @@ namespace PeakSWC.RemoteableWebView
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseGrpcWeb();
-
-            var provider = new FileExtensionContentTypeProvider();
-            // Add new mappings
-            provider.Mappings[".blat"] = "application/octet-stream";
-            provider.Mappings[".dll"] = "application/octet-stream";
-            provider.Mappings[".dat"] = "application/octet-stream";
-            provider.Mappings[".json"] = "application/json";
-            provider.Mappings[".wasm"] = "application/wasm";
-            provider.Mappings[".woff"] = "application/font-woff";
-            provider.Mappings[".woff2"] = "application/font-woff";
-            provider.Mappings[".ico"] = "image/x-icon";
-
-           
             app.UseBlazorFrameworkFiles();
-            //var root = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!, "wwwroot");
-            //Console.WriteLine($"Root is '{root}'");
-
             app.UseStaticFiles();
-
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = app.ApplicationServices?.GetService<FileResolver>(),
-                //ContentTypeProvider = provider
-            });
-
-            //app.UseStaticFiles(new StaticFileOptions
-            //{
-
-            //    //FileProvider = new CompositeFileProvider(app.ApplicationServices?.GetService<FileResolver>(), new ManifestEmbeddedFileProvider(typeof(RemoteWebViewService).Assembly, "wwwroot")),
-            //    FileProvider = new CompositeFileProvider(new PhysicalFileProvider(root), app.ApplicationServices?.GetService<FileResolver>()),
-            //    ContentTypeProvider = provider
-            //});
+            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetService<FileResolver>() });
 
             app.UseEndpoints(endpoints =>
             {
@@ -283,13 +247,6 @@ namespace PeakSWC.RemoteableWebView
                 });
 
                 endpoints.MapFallbackToFile("index.html");
-
-                //endpoints.MapGet("/", async context =>
-                //{
-                //    context.Response.Redirect("index.html");
-                //    await Task.CompletedTask;
-                //});
-
             });
         }
     }
