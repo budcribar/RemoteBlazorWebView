@@ -13,7 +13,7 @@ using System.Windows;
 
 namespace PeakSWC.RemoteableWebView
 {
-    public class RemotableWebWindow // : IBlazorWebView 
+    public class RemoteableWebView // : IBlazorWebView 
     {
         public static void Restart(IBlazorWebView blazorWebView)
         {
@@ -56,7 +56,7 @@ namespace PeakSWC.RemoteableWebView
         public IFileProvider FileProvider { get; set; }
         public Uri? ServerUri { get; set; }
         public string HostHtmlPath { get; set; } = string.Empty;
-        public string Id { get; set; } = string.Empty;
+        public string Id { get; }
         private string Group { get; init; }
 
         //public IJSRuntime? JSRuntime { get; set; }
@@ -93,6 +93,7 @@ namespace PeakSWC.RemoteableWebView
                                         case "created":
                                             completed.Set();
                                             break;
+
                                         case "createFailed":
                                             createFailed = true;
                                             completed.Set();
@@ -102,20 +103,17 @@ namespace PeakSWC.RemoteableWebView
                                             OnWebMessageReceived?.Invoke(message.Url, message.Response);
                                             break;
 
-                                        case "webmessage":
-                                            if (data == "booted:")
+                                        case "booted":
+                                            lock (bootLock)
                                             {
-                                                lock (bootLock)
-                                                {
-                                                    Shutdown();
+                                                Shutdown();
 
-                                                    OnDisconnected?.Invoke(this, Id);
-                                                }
+                                                OnDisconnected?.Invoke(this, Id);
                                             }
-                                            else if (data == "connected:")
+                                            break;
 
-                                                OnConnected?.Invoke(this, Id);
-                                              
+                                        case "connected":
+                                            OnConnected?.Invoke(this, Id);
                                             break;
                                     }
                                 }
@@ -173,13 +171,13 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
 
-        public RemotableWebWindow(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider,  string group)
+        public RemoteableWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group)
         {
             ServerUri = uri;
             HostHtmlPath = hostHtmlPath;
             Dispacher = dispatcher;
             FileProvider = fileProvider;
-            Id = Guid.NewGuid().ToString();
+            Id = id;
             hostname = Dns.GetHostName();
             Group = group;
         }

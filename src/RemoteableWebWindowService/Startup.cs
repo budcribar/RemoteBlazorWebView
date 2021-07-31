@@ -173,6 +173,20 @@ namespace PeakSWC.RemoteableWebView
                 {
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
+                    // wait until client shuts down
+                    for (int i = 0; i < 30; i++)
+                    {
+                        if (!rootDictionary.ContainsKey(guid))
+                            break;
+                        await Task.Delay(1000);
+                    }
+                    if (rootDictionary.ContainsKey(guid))
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync($"Unable to restart -> Client did not shut down");
+                        return;
+                    }
+
                     var text = "<script type='text/javascript'>" +
                     "var xmlHttp = new XMLHttpRequest();" +
                     "xmlHttp.onreadystatechange = function () {" +

@@ -9,15 +9,16 @@ namespace PeakSWC.RemoteableWebView
     public class RemoteWebView2Manager : WebView2WebViewManager, IWebViewManager
     {
         Uri url;
-        public RemotableWebWindow RemoteableWebView { get; set; }
+        public RemoteableWebView RemoteableWebView { get; set; }
        
-        public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath, Uri url, string group) : base(webview, services, dispatcher, fileProvider, hostPageRelativePath)
+        public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath, Uri url, string id, string group) : base(webview, services, dispatcher, fileProvider, hostPageRelativePath)
         {
-            RemoteableWebView = new RemotableWebWindow(
+            RemoteableWebView = new RemoteableWebView(
                 url,
                 hostPageRelativePath,
                 dispatcher,
                 new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(Assembly.GetExecutingAssembly())),
+                id,
                 group
                 );
 
@@ -25,9 +26,6 @@ namespace PeakSWC.RemoteableWebView
             RemoteableWebView.Initialize();
             this.url = new Uri("https://0.0.0.0/");
         }
-
-        public Guid Id { get { return new Guid(RemoteableWebView.Id); } }
-
         private void RemoteOnWebMessageReceived(object? sender, string e)
         {
             var url = sender?.ToString() ?? "";

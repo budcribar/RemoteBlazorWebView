@@ -34,6 +34,7 @@ namespace PeakSWC.RemoteableWebView
         }
         public override async Task CreateWebWindow(CreateWebWindowRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
+            _logger.LogInformation($"CreateWebWindow Id:{request.Id}");
             if (!_webWindowDictionary.ContainsKey(request.Id))
             {
                 ServiceState state = new()

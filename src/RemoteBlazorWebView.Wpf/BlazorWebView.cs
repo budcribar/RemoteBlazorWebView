@@ -58,15 +58,22 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         public IWebViewManager? WebViewManager { get; set; }
-
+        private Guid id = Guid.Empty;
         public Guid Id
         {
             get
             {
-                if (WebViewManager is RemoteWebView2Manager wvm)
-                    return wvm.Id;
+                if (id == Guid.Empty)
+                    id = Guid.NewGuid();
+
+                return id;
+            }
+            set
+            {
+                if (value == Guid.Empty)
+                    id = Guid.NewGuid();
                 else
-                    return Guid.Empty;
+                    id = value;
             }
         }
 
@@ -75,7 +82,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             if (ServerUri == null)
                 WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Group);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group);
 
             return WebViewManager;
         }
@@ -127,20 +134,20 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             Group = Group;
 
             // TODO
-            //if (ServerUri != null)
-            //    Id = Id;
+            if (ServerUri != null)
+               Id = Id;
 
         }
 
 
         public void Restart()
         {
-            RemotableWebWindow.Restart(this);
+            RemoteableWebView.RemoteableWebView.Restart(this);
         }
 
         public void StartBrowser()
         {
-            RemotableWebWindow.StartBrowser(this);
+            RemoteableWebView.RemoteableWebView.StartBrowser(this);
         }
     }
 }
