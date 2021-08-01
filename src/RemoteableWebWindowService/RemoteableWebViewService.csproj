@@ -1,19 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <BlazorCacheBootResources>false</BlazorCacheBootResources>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <TargetFramework>net6</TargetFramework>
-    <GenerateEmbeddedFilesManifest>false</GenerateEmbeddedFilesManifest>
     <OutputType>Exe</OutputType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <PackAsTool>false</PackAsTool>
-    <GeneratePackageOnBuild Condition="'$(Configuration)' != 'Debug'">true</GeneratePackageOnBuild>
+    <PackAsTool Condition="'$(Configuration)' != 'Authorization'">true</PackAsTool>
+    <PackAsTool Condition="'$(Configuration)' == 'Authorization'">false</PackAsTool>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteableWebViewService</PackageId>
     <ToolCommandName>RemoteableWebViewService</ToolCommandName>
     <Authors>Bud Cribar</Authors>
@@ -24,14 +23,16 @@
     <PackageIcon>favicon-32x32.png</PackageIcon>
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <IsPackable>true</IsPackable>
-    <Version></Version>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <DefineConstants Condition=" '$(TargetFramework)' == 'net5' ">NET5</DefineConstants>
     <Configurations>Debug;Release;Authorization</Configurations>
-    <PublishSingleFile>True</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' != 'Authorization'">False</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">True</PublishSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

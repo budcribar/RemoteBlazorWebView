@@ -18,7 +18,7 @@
     <PackageIcon>favicon-32x32.png</PackageIcon>
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+    <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
     <Configurations>Debug;Release;Embedded</Configurations>
