@@ -71,7 +71,7 @@ namespace PeakSWC.RemoteableWebView
             // If a user is not in any groups then they are defaulted to the "test" group
             if (!groups.Any()) groups.Add("test");
 
-            _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+            _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url, Group=x.Group }));
             await responseStream.WriteAsync(list);
 
             await foreach (var state in _serviceStateChannel.Reader.ReadAllAsync())
@@ -80,7 +80,7 @@ namespace PeakSWC.RemoteableWebView
             }
         }
 
-        public List<string> GetUserGroups (string oid)
+        private List<string> GetUserGroups (string oid)
         {
             List<string> groups = new();
             var groupText = _graphApi.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;

@@ -83,6 +83,7 @@ message ClientResponse {
     string hostName = 2;
     string url = 3;
     ClientState state = 4;
+    string group = 5;
 }
 
 message ClientResponseList {
