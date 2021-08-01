@@ -35,8 +35,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Remote.WebView.WindowsForms
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.WinFormsApp", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj", "{07464107-56ED-4C5F-B434-5A80D82682DD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteableWebWindowSite", "src\RemoteableWebWindowSite\RemoteableWebWindowSite.csproj", "{578BC625-1FA0-4419-9765-587578D135ED}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Authorization|Any CPU = Authorization|Any CPU
@@ -370,41 +368,6 @@ Global
 		{07464107-56ED-4C5F-B434-5A80D82682DD}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
 		{07464107-56ED-4C5F-B434-5A80D82682DD}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
 		{07464107-56ED-4C5F-B434-5A80D82682DD}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Authorization|Any CPU.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Authorization|x64.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Authorization|x64.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Authorization|x86.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Authorization|x86.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|x64.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Debug|x86.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|Any CPU.ActiveCfg = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|Any CPU.Build.0 = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|x64.ActiveCfg = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|x64.Build.0 = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|x86.ActiveCfg = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Embedded|x86.Build.0 = Embedded|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|Any CPU.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|Any CPU.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|x64.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|x64.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|x86.ActiveCfg = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.MinSizeRel|x86.Build.0 = Debug|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|Any CPU.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|x64.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|x64.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|x86.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.Release|x86.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|Any CPU.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|Any CPU.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|x64.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|x64.Build.0 = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|x86.ActiveCfg = Release|Any CPU
-		{578BC625-1FA0-4419-9765-587578D135ED}.RelWithDebInfo|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
