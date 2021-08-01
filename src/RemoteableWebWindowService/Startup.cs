@@ -48,16 +48,14 @@ namespace PeakSWC.RemoteableWebView
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(CreateApiHelper().Result);
-            services.AddSingleton(rootDictionary);
-            services.AddSingleton(serviceStateChannel);
-
 #if NET5
             services.AddResponseCompression(options => { options.MimeTypes = new[] { "application/octet-stream", "application/wasm" }; });
 #else
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 #endif
 
+#if AUTHORIZATION
+            services.AddSingleton(CreateApiHelper().Result);
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
@@ -66,19 +64,19 @@ namespace PeakSWC.RemoteableWebView
                 // Handling SameSite cookie according to https://docs.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-3.1
                 options.HandleSameSiteCookieCompatibility();
             });
-
             // Configuration to sign-in users with Azure AD B2C
             services.AddMicrosoftIdentityWebAppAuthentication(Configuration, "AzureAdB2C");
-
             services.AddControllersWithViews().AddMicrosoftIdentityUI();
-
             services.AddRazorPages();
 
             //Configuring appsettings section AzureAdB2C, into IOptions
             services.AddOptions();
             services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
-
             services.AddAuthorization();
+#endif 
+            services.AddSingleton(rootDictionary);
+            services.AddSingleton(serviceStateChannel);
+
             services.AddGrpc(options => { options.EnableDetailedErrors = true; });
             services.AddTransient<FileResolver>();
 
@@ -116,6 +114,7 @@ namespace PeakSWC.RemoteableWebView
                 //app.UseHsts();
             }
 
+            // TODO Is this needed or does UseBlazorFrameworkFiles take care of it?
             app.UseResponseCompression();
             app.UseRouting();
 
@@ -123,8 +122,10 @@ namespace PeakSWC.RemoteableWebView
             app.UseCors("CorPolicy");
 
             app.UseCookiePolicy();
+#if AUTHORIZATION
             app.UseAuthentication();
             app.UseAuthorization();
+#endif
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
@@ -167,8 +168,11 @@ namespace PeakSWC.RemoteableWebView
                         context.Response.StatusCode = 400;
                         await context.Response.WriteAsync("Invalid Guid");
                     }
-                }).RequireAuthorization();
-
+                })
+#if AUTHORIZATION     
+                .RequireAuthorization()
+#endif
+                ;
                 endpoints.MapGet("/restart/{id:guid}", async context =>
                 {
                     string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;

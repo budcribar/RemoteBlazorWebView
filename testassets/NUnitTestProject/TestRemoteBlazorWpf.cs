@@ -85,6 +85,7 @@ namespace WebdriverTestProject
             channel = GrpcChannel.ForAddress(url);
         }
 
+        
         [TestMethod]
         public void Test1Client()
         {
@@ -108,23 +109,6 @@ namespace WebdriverTestProject
         public void Test5Client()
         {
             TestClient(5);
-        }
-
-        [Ignore("Not enough resources")]
-        [TestMethod]
-        public void Test50Client()
-        {
-            TestClient(50);
-
-            // 37 minutes
-            // 10 failed
-            // bootstrap.min.css + site.css 5
-            // // bootstrap.min.css + site.css + GET ERR_ABORTED 404 2
-
-            // ERR_HTTP2_PING_FAILED webindow.BrowserIPC/ReceiveMessage  1
-
-
-            // Slow network detected on index.html (but passed)
         }
 
         protected virtual void TestClient(int num)

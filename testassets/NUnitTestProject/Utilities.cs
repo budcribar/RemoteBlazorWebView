@@ -16,7 +16,7 @@ namespace WebdriverTestProject
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteableWebViewService")?.Kill();
             var relative = @"..\..\..\..\..\src\RemoteableWebWindowService";
-            var executable = @"bin\debug\net6\RemoteableWebViewService.exe";
+            var executable = @"publish\RemoteableWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
 
             Process process = new();

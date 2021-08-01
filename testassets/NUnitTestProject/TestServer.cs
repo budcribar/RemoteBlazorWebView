@@ -13,9 +13,10 @@ using System.Linq;
 
 namespace WebdriverTestProject
 {
-    [TestClass]
+    //[TestClass]
     public class TestServer : TestRemoteBlazorWpf
     {
+       
         protected override void TestClient(int num)
         {
             Startup(num);
