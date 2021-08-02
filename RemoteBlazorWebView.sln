@@ -25,7 +25,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.Shared", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.Shared\RemoteBlazorWebViewTutorial.Shared.csproj", "{1B1EB835-22D9-45AA-939E-521262D6EC61}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Remote.WebView.WindowsForms", "src\RemoteBlazorWebView.Form\Remote.WebView.WindowsForms.csproj", "{56B35F59-356F-446C-B6B1-1A6756743797}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.WindowsForms", "src\RemoteBlazorWebView.Form\RemoteBlazorWebView.WindowsForms.csproj", "{56B35F59-356F-446C-B6B1-1A6756743797}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebViewTutorial.WinFormsApp", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj", "{07464107-56ED-4C5F-B434-5A80D82682DD}"
 EndProject
