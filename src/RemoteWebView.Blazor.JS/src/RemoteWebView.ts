@@ -46,7 +46,7 @@ export function initializeRemoteWebView() {
             }
         });
 
-    (<any>window).RemoteWebWindow = {
+    (<any>window).RemoteWebView = {
 
         showMessage: function (message) {
 
