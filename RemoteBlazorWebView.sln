@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A79DAD3-9AE
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteableWebViewService", "src\RemoteableWebWindowService\RemoteableWebViewService.csproj", "{3FFDC421-5BC7-4361-8625-2D807B59194B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebWindow.Blazor.JS", "src\RemoteWebWindow.Blazor.JS\RemoteWebWindow.Blazor.JS.csproj", "{E99BABF3-EEAD-4118-8D77-C0B796F92924}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebView.Blazor.JS", "src\RemoteWebWindow.Blazor.JS\RemoteWebView.Blazor.JS.csproj", "{E99BABF3-EEAD-4118-8D77-C0B796F92924}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.Wpf", "src\RemoteBlazorWebView.Wpf\RemoteBlazorWebView.Wpf.csproj", "{AA110533-9A33-4884-B006-73742762B0F5}"
 EndProject
