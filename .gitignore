@@ -28,3 +28,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemotePhotino.Blazor.JS
 /src/microsoft
 /src/RemoteableWebWindowService/publishAuth
+/src/RemoteableWebViewService/publish
+/src/RemoteableWebViewService/publishAuth
