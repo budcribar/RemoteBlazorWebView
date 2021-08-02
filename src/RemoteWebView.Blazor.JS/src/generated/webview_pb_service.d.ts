@@ -1,62 +1,62 @@
-// package: webwindow
-// file: webwindow.proto
+// package: webview
+// file: webview.proto
 
-import * as webwindow_pb from "./webwindow_pb";
+import * as webview_pb from "./webview_pb";
 import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
 import {grpc} from "@improbable-eng/grpc-web";
 
-type RemoteWebWindowSendMessage = {
+type RemoteWebViewSendMessage = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
+  readonly service: typeof RemoteWebView;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof webwindow_pb.SendMessageRequest;
+  readonly requestType: typeof webview_pb.SendMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
-type RemoteWebWindowShutdown = {
+type RemoteWebViewShutdown = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
+  readonly service: typeof RemoteWebView;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof webwindow_pb.IdMessageRequest;
+  readonly requestType: typeof webview_pb.IdMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
-type RemoteWebWindowCreateWebWindow = {
+type RemoteWebViewCreateWebView = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
+  readonly service: typeof RemoteWebView;
   readonly requestStream: false;
   readonly responseStream: true;
-  readonly requestType: typeof webwindow_pb.CreateWebWindowRequest;
-  readonly responseType: typeof webwindow_pb.WebMessageResponse;
+  readonly requestType: typeof webview_pb.CreateWebViewRequest;
+  readonly responseType: typeof webview_pb.WebMessageResponse;
 };
 
-type RemoteWebWindowFileReader = {
+type RemoteWebViewFileReader = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
+  readonly service: typeof RemoteWebView;
   readonly requestStream: true;
   readonly responseStream: true;
-  readonly requestType: typeof webwindow_pb.FileReadRequest;
-  readonly responseType: typeof webwindow_pb.FileReadResponse;
+  readonly requestType: typeof webview_pb.FileReadRequest;
+  readonly responseType: typeof webview_pb.FileReadResponse;
 };
 
-type RemoteWebWindowGetIds = {
+type RemoteWebViewGetIds = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebWindow;
+  readonly service: typeof RemoteWebView;
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof google_protobuf_empty_pb.Empty;
-  readonly responseType: typeof webwindow_pb.IdArrayResponse;
+  readonly responseType: typeof webview_pb.IdArrayResponse;
 };
 
-export class RemoteWebWindow {
+export class RemoteWebView {
   static readonly serviceName: string;
-  static readonly SendMessage: RemoteWebWindowSendMessage;
-  static readonly Shutdown: RemoteWebWindowShutdown;
-  static readonly CreateWebWindow: RemoteWebWindowCreateWebWindow;
-  static readonly FileReader: RemoteWebWindowFileReader;
-  static readonly GetIds: RemoteWebWindowGetIds;
+  static readonly SendMessage: RemoteWebViewSendMessage;
+  static readonly Shutdown: RemoteWebViewShutdown;
+  static readonly CreateWebView: RemoteWebViewCreateWebView;
+  static readonly FileReader: RemoteWebViewFileReader;
+  static readonly GetIds: RemoteWebViewGetIds;
 }
 
 type BrowserIPCReceiveMessage = {
@@ -64,8 +64,8 @@ type BrowserIPCReceiveMessage = {
   readonly service: typeof BrowserIPC;
   readonly requestStream: false;
   readonly responseStream: true;
-  readonly requestType: typeof webwindow_pb.IdMessageRequest;
-  readonly responseType: typeof webwindow_pb.StringRequest;
+  readonly requestType: typeof webview_pb.IdMessageRequest;
+  readonly responseType: typeof webview_pb.StringRequest;
 };
 
 type BrowserIPCSendMessage = {
@@ -73,7 +73,7 @@ type BrowserIPCSendMessage = {
   readonly service: typeof BrowserIPC;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof webwindow_pb.SendSequenceMessageRequest;
+  readonly requestType: typeof webview_pb.SendSequenceMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
@@ -88,8 +88,8 @@ type ClientIPCGetClients = {
   readonly service: typeof ClientIPC;
   readonly requestStream: false;
   readonly responseStream: true;
-  readonly requestType: typeof webwindow_pb.UserMessageRequest;
-  readonly responseType: typeof webwindow_pb.ClientResponseList;
+  readonly requestType: typeof webview_pb.UserMessageRequest;
+  readonly responseType: typeof webview_pb.ClientResponseList;
 };
 
 export class ClientIPC {
@@ -125,38 +125,38 @@ interface BidirectionalStream<ReqT, ResT> {
   on(type: 'status', handler: (status: Status) => void): BidirectionalStream<ReqT, ResT>;
 }
 
-export class RemoteWebWindowClient {
+export class RemoteWebViewClient {
   readonly serviceHost: string;
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
   sendMessage(
-    requestMessage: webwindow_pb.SendMessageRequest,
+    requestMessage: webview_pb.SendMessageRequest,
     metadata: grpc.Metadata,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
   sendMessage(
-    requestMessage: webwindow_pb.SendMessageRequest,
+    requestMessage: webview_pb.SendMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
   shutdown(
-    requestMessage: webwindow_pb.IdMessageRequest,
+    requestMessage: webview_pb.IdMessageRequest,
     metadata: grpc.Metadata,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
   shutdown(
-    requestMessage: webwindow_pb.IdMessageRequest,
+    requestMessage: webview_pb.IdMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
-  createWebWindow(requestMessage: webwindow_pb.CreateWebWindowRequest, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.WebMessageResponse>;
-  fileReader(metadata?: grpc.Metadata): BidirectionalStream<webwindow_pb.FileReadRequest, webwindow_pb.FileReadResponse>;
+  createWebView(requestMessage: webview_pb.CreateWebViewRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.WebMessageResponse>;
+  fileReader(metadata?: grpc.Metadata): BidirectionalStream<webview_pb.FileReadRequest, webview_pb.FileReadResponse>;
   getIds(
     requestMessage: google_protobuf_empty_pb.Empty,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: webwindow_pb.IdArrayResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.IdArrayResponse|null) => void
   ): UnaryResponse;
   getIds(
     requestMessage: google_protobuf_empty_pb.Empty,
-    callback: (error: ServiceError|null, responseMessage: webwindow_pb.IdArrayResponse|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.IdArrayResponse|null) => void
   ): UnaryResponse;
 }
 
@@ -164,14 +164,14 @@ export class BrowserIPCClient {
   readonly serviceHost: string;
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
-  receiveMessage(requestMessage: webwindow_pb.IdMessageRequest, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.StringRequest>;
+  receiveMessage(requestMessage: webview_pb.IdMessageRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.StringRequest>;
   sendMessage(
-    requestMessage: webwindow_pb.SendSequenceMessageRequest,
+    requestMessage: webview_pb.SendSequenceMessageRequest,
     metadata: grpc.Metadata,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
   sendMessage(
-    requestMessage: webwindow_pb.SendSequenceMessageRequest,
+    requestMessage: webview_pb.SendSequenceMessageRequest,
     callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
   ): UnaryResponse;
 }
@@ -180,6 +180,6 @@ export class ClientIPCClient {
   readonly serviceHost: string;
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
-  getClients(requestMessage: webwindow_pb.UserMessageRequest, metadata?: grpc.Metadata): ResponseStream<webwindow_pb.ClientResponseList>;
+  getClients(requestMessage: webview_pb.UserMessageRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.ClientResponseList>;
 }
 

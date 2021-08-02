@@ -7,7 +7,7 @@ import "google/protobuf/empty.proto";
 
 option csharp_namespace = "PeakSWC.RemoteableWebView";
 
-package webwindow;
+package webview;
 
 message SendMessageRequest {
     string id = 1;
@@ -22,7 +22,7 @@ message IdMessageRequest {
     string id = 1;
 }
 
-message CreateWebWindowRequest {
+message CreateWebViewRequest {
   string id = 1;
   string htmlHostPath = 2;
   string hostname = 3;
@@ -60,10 +60,10 @@ message SendSequenceMessageRequest {
     string url = 4;
 }
 
-service RemoteWebWindow {
+service RemoteWebView {
     rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
-    rpc CreateWebWindow(CreateWebWindowRequest) returns (stream WebMessageResponse);
+    rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
     rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
 }

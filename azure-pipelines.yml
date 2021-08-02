@@ -31,7 +31,7 @@ steps:
     projects: 'src\RemoteableWebViewService\RemoteableWebViewService.csproj'
     arguments: '--configuration $(buildConfiguration)'
 
-#Package RemoteableWebWindowService Nuget Package
+#Package RemoteableWebViewService Nuget Package
 - task: DotNetCoreCLI@2
   displayName: 'Package RemoteableWebViewService'
   inputs:
@@ -45,7 +45,7 @@ steps:
 - task: Npm@1
   inputs:
     command: 'install'
-    workingDir: 'src\RemoteWebWindow.Blazor.JS'
+    workingDir: 'src\RemoteWebView.Blazor.JS'
 
 - task: NuGetCommand@2
   inputs:

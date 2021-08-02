@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
-    public class RemoteWebViewService : RemoteWebWindow.RemoteWebWindowBase
+    public class RemoteWebViewService : RemoteWebView.RemoteWebViewBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private readonly ConcurrentDictionary<string, ServiceState> _webWindowDictionary;
+        private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
         private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly Channel<ClientResponseList> _serviceStateChannel;
         private readonly bool useCache = false;
@@ -22,20 +22,20 @@ namespace PeakSWC.RemoteableWebView
         public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
         {
             _logger = logger;
-            _webWindowDictionary = rootDictionary;
+            _webViewDictionary = rootDictionary;
             _serviceStateChannel = serviceStateChannel;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
             var results = new IdArrayResponse();
-            results.Responses.AddRange(_webWindowDictionary.Keys);
+            results.Responses.AddRange(_webViewDictionary.Keys);
             return Task.FromResult(results);
         }
-        public override async Task CreateWebWindow(CreateWebWindowRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
+        public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             _logger.LogInformation($"CreateWebWindow Id:{request.Id}");
-            if (!_webWindowDictionary.ContainsKey(request.Id))
+            if (!_webViewDictionary.ContainsKey(request.Id))
             {
                 ServiceState state = new()
                 {
@@ -49,10 +49,10 @@ namespace PeakSWC.RemoteableWebView
                 };
 
                 // Let home page know client is available
-                _webWindowDictionary.TryAdd(request.Id, state);
+                _webViewDictionary.TryAdd(request.Id, state);
 
                 var list = new ClientResponseList();
-                _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
                 await _serviceStateChannel.Writer.WriteAsync(list);
                 state.IPC.ResponseStream = responseStream;
@@ -85,13 +85,13 @@ namespace PeakSWC.RemoteableWebView
                         {
                             while (true)
                             {
-                                var file = await _webWindowDictionary[message.Id].FileCollection.Reader.ReadAsync();
+                                var file = await _webViewDictionary[message.Id].FileCollection.Reader.ReadAsync();
                                 {
                                     if (_fileCache.ContainsKey(file) && useCache)
                                     {
                                         // TODO need to further identify file by hash
-                                        var resetEvent = _webWindowDictionary[message.Id].FileDictionary[file].resetEvent;
-                                        _webWindowDictionary[message.Id].FileDictionary[file] = (new MemoryStream(_fileCache[file]), resetEvent);
+                                        var resetEvent = _webViewDictionary[message.Id].FileDictionary[file].resetEvent;
+                                        _webViewDictionary[message.Id].FileDictionary[file] = (new MemoryStream(_fileCache[file]), resetEvent);
                                         resetEvent.Set();
                                     }
                                     else
@@ -108,8 +108,8 @@ namespace PeakSWC.RemoteableWebView
                     else
                     {
                         var bytes = message.Data.ToArray();
-                        var resetEvent = _webWindowDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webWindowDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
+                        var resetEvent = _webViewDictionary[message.Id].FileDictionary[message.Path].resetEvent;
+                        _webViewDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
 
                         // TODO Further identify file by hash
@@ -131,11 +131,11 @@ namespace PeakSWC.RemoteableWebView
         {
             _logger.LogInformation("Shutting down..." + id);
 
-            if (_webWindowDictionary.ContainsKey(id))
-                _webWindowDictionary.Remove(id, out var _);
+            if (_webViewDictionary.ContainsKey(id))
+                _webViewDictionary.Remove(id, out var _);
 
             var list = new ClientResponseList();
-            _webWindowDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+            _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
             _serviceStateChannel.Writer.WriteAsync(list);
         }
@@ -148,7 +148,7 @@ namespace PeakSWC.RemoteableWebView
 
         public override Task<Empty> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            _webWindowDictionary[request.Id].IPC.SendMessage(request.Message);
+            _webViewDictionary[request.Id].IPC.SendMessage(request.Message);
             return Task.FromResult<Empty>(new Empty());
         }
 

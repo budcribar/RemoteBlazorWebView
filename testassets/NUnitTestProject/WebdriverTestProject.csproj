@@ -20,7 +20,7 @@
     <PackageReference Include="Selenium.WebDriver" Version="4.0.0-beta4" />
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="91.0.4472.10100" />
   
-   <Protobuf Include="..\..\src\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
+   <Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.17.3" />
     <PackageReference Include="Grpc.Net.Client" Version="2.38.0" />
    
@@ -28,12 +28,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!--
-    <ProjectReference Include="..\..\src\RemoteableWebWindow\RemoteableWebView.csproj" />
-    -->
   </ItemGroup>
 
 </Project>

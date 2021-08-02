@@ -1,7 +1,7 @@
 ﻿# Building the Javascript
 
 Copy and unzip the preview source files 
-copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebWindow.Blazor.JS\upstream\aspnetcore\web.js
+copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\upstream\aspnetcore\web.js
 
 `
 cd RemoteBlazorWebView\src\RemotePhotino.Blazor.JS\upstream\aspnetcore\web.js
@@ -23,7 +23,7 @@ yarn install
 yarn run build
 
 
-Project RemotableWebWindow
+Project RemotableWebView
 copy maui\src\BlazorWebView\src\WebView2IWebView2Wrapper.cs
 	
 
@@ -31,9 +31,9 @@ copy maui\src\BlazorWebView\src\WebView2IWebView2Wrapper.cs
 
 
 
-Edit the package.json at RemoteBlazorWebView\src\RemoteWebWindow.Blazor.JS\package.json
+Edit the package.json at RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\package.json
 
-copy aspnetcore-6.0.0-preview.5.21301.17\src\Components\WebView\Platforms\WebView2\src\WebView2WebViewManager.cs to RemoteBlazorWebView\src\RemoteableWebWindow
+copy aspnetcore-6.0.0-preview.5.21301.17\src\Components\WebView\Platforms\WebView2\src\WebView2WebViewManager.cs to RemoteBlazorWebView\src\RemoteableWebView
 
 Insert after line 2
 using Microsoft.AspNetCore.Components;

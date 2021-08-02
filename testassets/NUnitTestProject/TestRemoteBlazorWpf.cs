@@ -42,7 +42,7 @@ namespace WebdriverTestProject
 
             process = Utilities.StartServer();
             
-            var ids = new RemoteWebWindow.RemoteWebWindowClient(channel).GetIds(new Empty());
+            var ids = new RemoteWebView.RemoteWebViewClient(channel).GetIds(new Empty());
             Assert.AreEqual(0, ids.Responses.Count);
 
             clients = new List<Process>();
@@ -68,7 +68,7 @@ namespace WebdriverTestProject
 
         protected static void StartClient(int num)
         {
-            var client = new RemoteWebWindow.RemoteWebWindowClient(channel);
+            var client = new RemoteWebView.RemoteWebViewClient(channel);
 
             do
             {

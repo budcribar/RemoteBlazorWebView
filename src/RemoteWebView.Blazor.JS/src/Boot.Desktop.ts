@@ -5,7 +5,7 @@ import { internalFunctions as navigationManagerFunctions } from '../upstream/asp
 import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
 import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged  } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
 import { InputFile } from '../upstream/aspnetcore/web.js/src//InputFile';
-import { initializeRemoteWebWindow } from './RemoteWebWindow';
+import { initializeRemoteWebView } from './RemoteWebView';
 
 let started = false;
 
@@ -16,7 +16,7 @@ async function boot(): Promise<void> {
 
     started = true;
 
-    initializeRemoteWebWindow();
+    initializeRemoteWebView();
 
     DotNet.attachDispatcher({
         beginInvokeDotNetFromJS: sendBeginInvokeDotNetFromJS,

@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <WebpackInputs Remove="src\RemoteWebView.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="dist\" />
   </ItemGroup>
 

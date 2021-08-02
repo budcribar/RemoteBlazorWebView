@@ -1,6 +1,6 @@
 1. login to https://azure.microsoft.com/en-us/account/  as bud@chargeandchange.onmicrosoft.com
 
-2. Start WebWindow  VM
+2. Start WebView  VM
 
 3. rdp using old MSN password  
 

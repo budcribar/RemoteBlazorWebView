@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Client" Link="Protos\webwindow.proto" />
+    <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.17.3" />
     <PackageReference Include="Grpc.Net.Client" Version="2.38.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.6.21355.2" />

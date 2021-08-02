@@ -56,10 +56,6 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <!--
-    <Content Include="..\RemoteableWebWindowSite\publish\wwwroot\**" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
-   -->
-   
    <Compile Remove="publish\**" />
     <Content Remove="publish\**" />
     <None Remove="publish\**" />
@@ -70,7 +66,7 @@
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.6.0-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
    
-    <Protobuf Include="..\Protos\webwindow.proto" GrpcServices="Server" Link="Protos\webwindow.proto" />
+    <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
    
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.0-preview.6.21355.2" />
      

@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "RemoteableWebWindowService": {
+    "RemoteableWebViewService": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {

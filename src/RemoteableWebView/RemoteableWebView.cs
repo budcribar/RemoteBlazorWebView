@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteableWebView
         private readonly object bootLock = new();
         public Dispatcher? Dispacher { get; set; }
 
-        private RemoteWebWindow.RemoteWebWindowClient? client = null;
+        private RemoteWebView.RemoteWebViewClient? client = null;
         private readonly CancellationTokenSource cts = new();
 
         #endregion
@@ -61,7 +61,7 @@ namespace PeakSWC.RemoteableWebView
 
         //public IJSRuntime? JSRuntime { get; set; }
 
-        protected RemoteWebWindow.RemoteWebWindowClient? Client
+        protected RemoteWebView.RemoteWebViewClient? Client
         {
             get
             {
@@ -71,9 +71,9 @@ namespace PeakSWC.RemoteableWebView
                 {
                     var channel = GrpcChannel.ForAddress(ServerUri);
 
-                    client = new RemoteWebWindow.RemoteWebWindowClient(channel);
+                    client = new RemoteWebView.RemoteWebViewClient(channel);
                    
-                    var events = client.CreateWebWindow(new CreateWebWindowRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname, Group=Group }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     var createFailed = false;
 
@@ -191,7 +191,7 @@ namespace PeakSWC.RemoteableWebView
 
         //public void ShowMessage(string title, string body)
         //{
-        //    //JSRuntime?.InvokeVoidAsync($"RemoteWebWindow.showMessage", new object[] { "title", body });
+        //    //JSRuntime?.InvokeVoidAsync($"RemoteWebView.showMessage", new object[] { "title", body });
         //}
         private void Shutdown()
         {

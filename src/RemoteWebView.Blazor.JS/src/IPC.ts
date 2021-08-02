@@ -1,4 +1,4 @@
-import { sendMessage } from "./RemoteWebWindow";
+import { sendMessage } from "./RemoteWebView";
 import { navigateTo } from "../upstream/aspnetcore/web.js/src/Services/NavigationManager"
 import { attachRootComponentToElement, renderBatch } from '../upstream/aspnetcore/web.js/src/Rendering/Renderer';
 import { OutOfProcessRenderBatch } from '../upstream/aspnetcore/web.js/src/Rendering/RenderBatch/OutOfProcessRenderBatch';

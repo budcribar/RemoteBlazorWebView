@@ -8,7 +8,7 @@
     "build:debug": "webpack --mode development",
     "build:production": "npm run protoc && webpack --mode production",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos -I.\\protoc\\include webwindow.proto"
+    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos -I.\\protoc\\include webview.proto"
   },
   "devDependencies": {
     "@microsoft/dotnet-js-interop": "6.0.0-preview.6.21355.2",

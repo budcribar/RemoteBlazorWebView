@@ -1,7 +1,7 @@
 import { receiveMessage, send } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
-import { BrowserIPC } from "./generated/webwindow_pb_service";
-import { SendSequenceMessageRequest, StringRequest, IdMessageRequest } from "./generated/webwindow_pb";
+import { BrowserIPC } from "./generated/webview_pb_service";
+import { SendSequenceMessageRequest, StringRequest, IdMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 
 var sequenceNum: number = 1;
@@ -24,7 +24,7 @@ export function sendMessage(message: string) {
     });
 }
 
-export function initializeRemoteWebWindow() {
+export function initializeRemoteWebView() {
     var message = new IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
     message.setId(id);
