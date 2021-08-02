@@ -356,7 +356,7 @@ ClientIPC.GetClients = {
   service: ClientIPC,
   requestStream: false,
   responseStream: true,
-  requestType: google_protobuf_empty_pb.Empty,
+  requestType: webwindow_pb.UserMessageRequest,
   responseType: webwindow_pb.ClientResponseList
 };
 

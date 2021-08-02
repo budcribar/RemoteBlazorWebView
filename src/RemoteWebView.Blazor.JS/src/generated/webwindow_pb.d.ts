@@ -82,6 +82,9 @@ export class CreateWebWindowRequest extends jspb.Message {
   getHostname(): string;
   setHostname(value: string): void;
 
+  getGroup(): string;
+  setGroup(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateWebWindowRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateWebWindowRequest): CreateWebWindowRequest.AsObject;
@@ -97,6 +100,7 @@ export namespace CreateWebWindowRequest {
     id: string,
     htmlhostpath: string,
     hostname: string,
+    group: string,
   }
 }
 
@@ -269,6 +273,9 @@ export class ClientResponse extends jspb.Message {
   getState(): ClientStateMap[keyof ClientStateMap];
   setState(value: ClientStateMap[keyof ClientStateMap]): void;
 
+  getGroup(): string;
+  setGroup(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ClientResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ClientResponse): ClientResponse.AsObject;
@@ -285,6 +292,7 @@ export namespace ClientResponse {
     hostname: string,
     url: string,
     state: ClientStateMap[keyof ClientStateMap],
+    group: string,
   }
 }
 
@@ -307,6 +315,26 @@ export class ClientResponseList extends jspb.Message {
 export namespace ClientResponseList {
   export type AsObject = {
     clientresponsesList: Array<ClientResponse.AsObject>,
+  }
+}
+
+export class UserMessageRequest extends jspb.Message {
+  getOid(): string;
+  setOid(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UserMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UserMessageRequest): UserMessageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UserMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UserMessageRequest;
+  static deserializeBinaryFromReader(message: UserMessageRequest, reader: jspb.BinaryReader): UserMessageRequest;
+}
+
+export namespace UserMessageRequest {
+  export type AsObject = {
+    oid: string,
   }
 }
 

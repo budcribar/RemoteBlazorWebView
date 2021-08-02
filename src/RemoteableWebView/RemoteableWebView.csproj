@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\RemoteWebWindow.Blazor.JS\dist\remote.blazor.desktop.js" Link="remote.blazor.desktop.js" />
+    <EmbeddedResource Include="..\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js" Link="remote.blazor.desktop.js" />
   </ItemGroup>
 
   <ItemGroup>
