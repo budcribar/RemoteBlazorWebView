@@ -15,10 +15,8 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
-        private readonly ConcurrentDictionary<string, byte[]> _fileCache = new();
         private readonly Channel<ClientResponseList> _serviceStateChannel;
-        private readonly bool useCache = false;
-
+        
         public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
         {
             _logger = logger;
@@ -86,24 +84,9 @@ namespace PeakSWC.RemoteableWebView
                             while (true)
                             {
                                 var file = await _webViewDictionary[message.Id].FileCollection.Reader.ReadAsync();
-                                {
-                                    if (_fileCache.ContainsKey(file) && useCache)
-                                    {
-                                        // TODO need to further identify file by hash
-                                        var resetEvent = _webViewDictionary[message.Id].FileDictionary[file].resetEvent;
-                                        _webViewDictionary[message.Id].FileDictionary[file] = (new MemoryStream(_fileCache[file]), resetEvent);
-                                        resetEvent.Set();
-                                    }
-                                    else
-                                    {
-                                        await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
-                                    }
-
-                                }
+                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
                             }
-
                         });
-
                     }
                     else
                     {
@@ -111,10 +94,6 @@ namespace PeakSWC.RemoteableWebView
                         var resetEvent = _webViewDictionary[message.Id].FileDictionary[message.Path].resetEvent;
                         _webViewDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
                         resetEvent.Set();
-
-                        // TODO Further identify file by hash
-                        if (bytes.Length > 0)
-                            _fileCache.TryAdd(message.Path, bytes);
                     }
                 }
             }

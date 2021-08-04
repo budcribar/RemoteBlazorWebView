@@ -61,11 +61,6 @@ namespace PeakSwc.StaticFiles
 
             _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
-
-            // TODO
-            //_rootDictionary[id].FileCollection.Writer.TryWrite(appFile);
-
-
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
             MemoryStream? stream = _rootDictionary[id].FileDictionary[appFile].stream;
             if (stream == null || stream.Length == 0)

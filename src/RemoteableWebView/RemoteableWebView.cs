@@ -46,8 +46,7 @@ namespace PeakSWC.RemoteableWebView
 
         private readonly string hostname;
         private readonly object bootLock = new();
-        public Dispatcher? Dispacher { get; set; }
-
+        private string Group { get; init; }
         private RemoteWebView.RemoteWebViewClient? client = null;
         private readonly CancellationTokenSource cts = new();
 
@@ -57,8 +56,8 @@ namespace PeakSWC.RemoteableWebView
         public Uri? ServerUri { get; set; }
         public string HostHtmlPath { get; set; } = string.Empty;
         public string Id { get; }
-        private string Group { get; init; }
-
+       
+        public Dispatcher? Dispacher { get; set; }
         //public IJSRuntime? JSRuntime { get; set; }
 
         protected RemoteWebView.RemoteWebViewClient? Client
