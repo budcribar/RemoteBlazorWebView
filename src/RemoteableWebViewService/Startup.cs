@@ -114,7 +114,6 @@ namespace PeakSWC.RemoteableWebView
                 //app.UseHsts();
             }
 
-            // TODO Is this needed or does UseBlazorFrameworkFiles take care of it?
             app.UseResponseCompression();
             app.UseRouting();
 
