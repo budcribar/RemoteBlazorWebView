@@ -29,17 +29,24 @@ namespace PeakSWC.RemoteableWebView
 
         }
 
-        public static void StartBrowser(IBlazorWebView blazorWebView)
+        public static Task<Process?> StartBrowser(IBlazorWebView blazorWebView)
         {
             var url = $"{blazorWebView.ServerUri}app/{blazorWebView.Id}";
-            try
+
+            return Task.Run(() =>
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" + url) { CreateNoWindow = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Unable to open hyperlink. Error:{ex.Message}");
-            }
+                Process? p = null;
+                try
+                {
+                    p = Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" + url) { CreateNoWindow = true });
+                }
+                catch (Exception)
+                {
+                    p = null;
+                }
+                return p;
+            });
+
         }
 
         #region private

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -12,6 +14,6 @@ namespace PeakSWC.RemoteableWebView
         public bool IsRestarting { get; set; }
         public Guid Id { get; }
         public void Restart();
-        public void StartBrowser();
+        public Task<Process?> StartBrowser();
     }
 }

@@ -4,7 +4,9 @@ using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
@@ -145,9 +147,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             RemoteableWebView.RemoteableWebView.Restart(this);
         }
 
-        public void StartBrowser()
+        public Task<Process?> StartBrowser()
         {
-            RemoteableWebView.RemoteableWebView.StartBrowser(this);
+            return RemoteableWebView.RemoteableWebView.StartBrowser(this);
         }
     }
 }

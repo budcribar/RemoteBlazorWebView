@@ -6,6 +6,8 @@ using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -155,9 +157,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             RemoteableWebView.RemoteableWebView.Restart(this);
         }
 
-        public void StartBrowser()
+        public Task<Process?> StartBrowser()
         {
-            RemoteableWebView.RemoteableWebView.StartBrowser(this);
+            return RemoteableWebView.RemoteableWebView.StartBrowser(this);
         }
     }
 }
