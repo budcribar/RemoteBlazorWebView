@@ -56,12 +56,11 @@ namespace PeakSWC.RemoteableWebView
         private string Group { get; init; }
         private RemoteWebView.RemoteWebViewClient? client = null;
         private readonly CancellationTokenSource cts = new();
-
+        private IFileProvider FileProvider { get; }
         #endregion
 
-        public IFileProvider FileProvider { get; set; }
-        public Uri? ServerUri { get; set; }
-        public string HostHtmlPath { get; set; } = string.Empty;
+        public Uri? ServerUri { get; }
+        public string HostHtmlPath { get; } = string.Empty;
         public string Id { get; }
        
         public Dispatcher? Dispacher { get; set; }
@@ -195,10 +194,6 @@ namespace PeakSWC.RemoteableWebView
             Client?.SendMessage(new SendMessageRequest { Id = Id, Message = message });
         }
 
-        //public void ShowMessage(string title, string body)
-        //{
-        //    //JSRuntime?.InvokeVoidAsync($"RemoteWebView.showMessage", new object[] { "title", body });
-        //}
         private void Shutdown()
         {
             Client?.Shutdown(new IdMessageRequest { Id = Id });
@@ -208,11 +203,6 @@ namespace PeakSWC.RemoteableWebView
         {
             _ = Client;
         }
-
-        //public void Invoke(Action callback)
-        //{
-        //    callback.Invoke();
-        //}
 
     }
 }
