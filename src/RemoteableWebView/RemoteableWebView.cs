@@ -134,6 +134,11 @@ namespace PeakSWC.RemoteableWebView
                             OnDisconnected?.Invoke(this, Id);
                             Console.WriteLine("Stream cancelled.");  //TODO
                         }
+                        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+                        {
+                            createFailed = true;
+                            completed.Set();
+                        }
                     }, cts.Token);
 
                     completed.Wait();
@@ -156,7 +161,7 @@ namespace PeakSWC.RemoteableWebView
                                 var bytes = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
                                 ByteString temp = ByteString.Empty;
                                 if (bytes != null)
-                                    temp = ByteString.FromStream(bytes);
+                                    temp = await ByteString.FromStreamAsync(bytes);
                                 await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
                             }
                             catch (Exception)

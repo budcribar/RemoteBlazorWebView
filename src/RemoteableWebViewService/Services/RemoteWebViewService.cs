@@ -1,11 +1,15 @@
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph.CallRecords;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -69,6 +73,7 @@ namespace PeakSWC.RemoteableWebView
 
         }
 
+        
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
@@ -83,16 +88,15 @@ namespace PeakSWC.RemoteableWebView
                         {
                             while (true)
                             {
-                                var file = await _webViewDictionary[message.Id].FileCollection.Reader.ReadAsync();
-                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = file });
+                                var path = await _webViewDictionary[message.Id].FileCollection.Reader.ReadAsync();
+                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = path });
                             }
                         });
                     }
                     else
                     {
-                        var bytes = message.Data.ToArray();
                         var resetEvent = _webViewDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webViewDictionary[message.Id].FileDictionary[message.Path] = (new MemoryStream(bytes), resetEvent);
+                        _webViewDictionary[message.Id].FileDictionary[message.Path] = (message.Data.ToMemoryStream(), resetEvent);
                         resetEvent.Set();
                     }
                 }
