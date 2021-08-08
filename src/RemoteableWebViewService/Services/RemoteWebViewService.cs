@@ -79,24 +79,25 @@ namespace PeakSWC.RemoteableWebView
             var id = string.Empty;
             try
             {
-                await foreach (var message in requestStream.ReadAllAsync())
+                await foreach (FileReadRequest message in requestStream.ReadAllAsync())
                 {
-                    if (message.Path == "Initialize")
+                    
+                    if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
                     {
-                        id = message.Id;
+                        id = message.Init.Id;
                         var task = Task.Run(async () =>
                         {
                             while (true)
                             {
-                                var path = await _webViewDictionary[message.Id].FileCollection.Reader.ReadAsync();
-                                await responseStream.WriteAsync(new FileReadResponse { Id = message.Id, Path = path });
+                                var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync();
+                                await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
                             }
                         });
                     }
                     else
                     {
-                        var resetEvent = _webViewDictionary[message.Id].FileDictionary[message.Path].resetEvent;
-                        _webViewDictionary[message.Id].FileDictionary[message.Path] = (message.Data.ToMemoryStream(), resetEvent);
+                        var resetEvent = _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent;
+                        _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path] = (message.Data.Data.ToMemoryStream(), resetEvent);
                         resetEvent.Set();
                     }
                 }

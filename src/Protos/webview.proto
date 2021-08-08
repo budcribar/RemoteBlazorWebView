@@ -38,11 +38,23 @@ message IdArrayResponse {
     repeated string responses = 1;
 }
 
-message FileReadRequest {
+message FileReadInitRequest {
+    string id = 1;
+}
+
+message FileReadDataRequest {
     string id = 1;
     string path = 2;
-     bytes data = 3;
+    bytes data = 3;
 }
+
+message FileReadRequest {
+    oneof fileRead {
+        FileReadInitRequest init = 1;
+        FileReadDataRequest data = 2;
+    }
+}
+
 message FileReadResponse {
     string id = 1;
     string path = 2;   

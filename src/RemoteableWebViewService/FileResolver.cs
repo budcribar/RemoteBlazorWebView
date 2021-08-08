@@ -151,7 +151,7 @@ namespace PeakSwc.StaticFiles
             return new FileInfo(_rootDictionary, subpath, _logger);
         }
 
-        public IChangeToken Watch(string filter)
+        public IChangeToken Watch(string _)
         {
             return NullChangeToken.Singleton;
         }

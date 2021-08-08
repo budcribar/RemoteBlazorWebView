@@ -150,8 +150,8 @@ namespace PeakSWC.RemoteableWebView
                     Task.Run(async () =>
                     {
                         var files = client.FileReader();
-
-                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = "Initialize" });
+                     
+                        await files.RequestStream.WriteAsync(new FileReadRequest { Init = new FileReadInitRequest { Id = Id } });
 
                         await foreach (var message in files.ResponseStream.ReadAllAsync())
                         {
@@ -163,11 +163,11 @@ namespace PeakSWC.RemoteableWebView
                                 ByteString temp = ByteString.Empty;
                                 if (bytes != null)
                                     temp = await ByteString.FromStreamAsync(bytes);
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = temp });
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = temp } });
                             }
                             catch (Exception)
                             {
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Path = message.Path, Data = ByteString.Empty });
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                             }
                         }
 
