@@ -80,7 +80,7 @@ namespace PeakSWC.RemoteableWebView
                    
                     var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
-                    var createFailed = false;
+                    Exception? exception = null;
 
                     Task.Run(async () =>
                     {
@@ -100,7 +100,7 @@ namespace PeakSWC.RemoteableWebView
                                             break;
 
                                         case "createFailed":
-                                            createFailed = true;
+                                            exception = new Exception("WebView Create failed - Id must be unique");
                                             completed.Set();
                                             break;
 
@@ -124,27 +124,28 @@ namespace PeakSWC.RemoteableWebView
                                 }
                                 catch (Exception ex)
                                 {
-                                    var m = ex.Message;
-
+                                    exception = ex;
+                                    completed.Set();
                                 }
                             }
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
                             OnDisconnected?.Invoke(this, Id);
-                            Console.WriteLine("Stream cancelled.");  //TODO
+                            exception = ex;
+                            completed.Set();
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
                         {
-                            createFailed = true;
+                            exception = ex;
                             completed.Set();
                         }
                     }, cts.Token);
 
                     completed.Wait();
 
-                    if (createFailed)
-                        return null;
+                    if (exception != null)
+                        throw (exception);
 
                     Task.Run(async () =>
                     {
