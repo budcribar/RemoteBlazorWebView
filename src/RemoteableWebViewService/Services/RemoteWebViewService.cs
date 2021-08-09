@@ -91,14 +91,21 @@ namespace PeakSWC.RemoteableWebView
                             {
                                 var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync();
                                 await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
+                                var resetEvent = _webViewDictionary[id].FileDictionary[path].resetEvent;
+                                _webViewDictionary[id].FileDictionary[path] = (new MemoryStream(), resetEvent);
                             }
                         });
                     }
                     else
                     {
-                        var resetEvent = _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent;
-                        _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path] = (message.Data.Data.ToMemoryStream(), resetEvent);
-                        resetEvent.Set();
+                        if (message.Data.Data.Length > 0)
+                        {
+                            var ms = _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].stream;
+                           
+                            if (ms!=null)
+                                await ms.WriteAsync(message.Data.Data.Memory);
+                        }
+                        else _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
                     }
                 }
             }

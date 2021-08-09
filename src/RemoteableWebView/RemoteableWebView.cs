@@ -10,6 +10,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.Storage.Streams;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -159,11 +160,21 @@ namespace PeakSWC.RemoteableWebView
                             {
                                 var path = message.Path[(message.Path.IndexOf("/") + 1)..];
 
-                                var bytes = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
-                                ByteString temp = ByteString.Empty;
-                                if (bytes != null)
-                                    temp = await ByteString.FromStreamAsync(bytes);
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = temp } });
+                                var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
+                                if (stream == null)
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                else
+                                {
+                                    Memory<byte> buffer = new Memory<byte>(new Byte[1*1024]);
+                                    int bytesRead = 0;
+
+                                    while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                    {
+                                        ByteString bs = ByteString.CopyFrom(buffer.Span);
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
+                                    }
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                }
                             }
                             catch (Exception)
                             {
