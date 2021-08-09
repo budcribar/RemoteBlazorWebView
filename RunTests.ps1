@@ -44,4 +44,6 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\pu
 dotnet build -c Debug RemoteBlazorWebView.sln
 
 
-dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj
+dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
+
+Invoke-Expression TestResults\logFile.html
