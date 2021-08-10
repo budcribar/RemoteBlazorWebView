@@ -5,7 +5,7 @@ Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEm
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
 
 # Publish the web site server
-dotnet publish -c Release --self-contained true -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\publish
+dotnet publish -c Release --self-contained false -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\publish
 
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\publish
 
@@ -46,4 +46,4 @@ dotnet build -c Debug RemoteBlazorWebView.sln
 
 dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
 
-Invoke-Expression TestResults\logFile.html
+Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html

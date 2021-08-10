@@ -40,8 +40,8 @@
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.17.3" />
     <PackageReference Include="Grpc.Net.Client" Version="2.38.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.6.21355.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.100-preview.6.1003" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.7.21378.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.100-preview.7.1345" />
     <PackageReference Include="Grpc.Tools" Version="2.38.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
