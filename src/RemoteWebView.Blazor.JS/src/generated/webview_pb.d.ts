@@ -150,7 +150,27 @@ export namespace IdArrayResponse {
   }
 }
 
-export class FileReadRequest extends jspb.Message {
+export class FileReadInitRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): FileReadInitRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: FileReadInitRequest): FileReadInitRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: FileReadInitRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): FileReadInitRequest;
+  static deserializeBinaryFromReader(message: FileReadInitRequest, reader: jspb.BinaryReader): FileReadInitRequest;
+}
+
+export namespace FileReadInitRequest {
+  export type AsObject = {
+    id: string,
+  }
+}
+
+export class FileReadDataRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;
 
@@ -163,6 +183,36 @@ export class FileReadRequest extends jspb.Message {
   setData(value: Uint8Array | string): void;
 
   serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): FileReadDataRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: FileReadDataRequest): FileReadDataRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: FileReadDataRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): FileReadDataRequest;
+  static deserializeBinaryFromReader(message: FileReadDataRequest, reader: jspb.BinaryReader): FileReadDataRequest;
+}
+
+export namespace FileReadDataRequest {
+  export type AsObject = {
+    id: string,
+    path: string,
+    data: Uint8Array | string,
+  }
+}
+
+export class FileReadRequest extends jspb.Message {
+  hasInit(): boolean;
+  clearInit(): void;
+  getInit(): FileReadInitRequest | undefined;
+  setInit(value?: FileReadInitRequest): void;
+
+  hasData(): boolean;
+  clearData(): void;
+  getData(): FileReadDataRequest | undefined;
+  setData(value?: FileReadDataRequest): void;
+
+  getFilereadCase(): FileReadRequest.FilereadCase;
+  serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): FileReadRequest.AsObject;
   static toObject(includeInstance: boolean, msg: FileReadRequest): FileReadRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
@@ -174,9 +224,14 @@ export class FileReadRequest extends jspb.Message {
 
 export namespace FileReadRequest {
   export type AsObject = {
-    id: string,
-    path: string,
-    data: Uint8Array | string,
+    init?: FileReadInitRequest.AsObject,
+    data?: FileReadDataRequest.AsObject,
+  }
+
+  export enum FilereadCase {
+    FILEREAD_NOT_SET = 0,
+    INIT = 1,
+    DATA = 2,
   }
 }
 
