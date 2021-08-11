@@ -3,8 +3,8 @@ import { Blazor } from '../upstream/aspnetcore/web.js/src/GlobalExports';
 import { shouldAutoStart } from '../upstream/aspnetcore/web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
-import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged  } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
-import { InputFile } from '../upstream/aspnetcore/web.js/src//InputFile';
+import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+
 import { initializeRemoteWebView } from './RemoteWebView';
 
 let started = false;
@@ -24,7 +24,6 @@ async function boot(): Promise<void> {
         sendByteArray: sendByteArray,
     });
 
-    Blazor._internal.InputFile = InputFile;
     navigationManagerFunctions.enableNavigationInterception();
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
 
