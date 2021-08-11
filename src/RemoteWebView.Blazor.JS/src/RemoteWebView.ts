@@ -18,7 +18,7 @@ export function sendMessage(message: string) {
             if (code == grpc.Code.OK) {
                 //console.log("sent:" + req.getSequence() + ":" + message)
             } else {
-                console.log("hit an error", code, msg, trailers);
+                console.log("grpc error", code, msg, trailers);              
             }
         }
     });
@@ -41,7 +41,7 @@ export function initializeRemoteWebView() {
                 if (code == grpc.Code.OK) {
                     //console.log("all ok")
                 } else {
-                    console.log("hit an error", code, msg, trailers);
+                    console.log("grpc error", code, msg, trailers);
                 }
             }
         });
