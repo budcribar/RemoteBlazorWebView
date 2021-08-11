@@ -31,3 +31,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteableWebViewService/publish
 /src/RemoteableWebViewService/publishAuth
 /testassets/NUnitTestProject/TestResults/logFile.html
+/src/RemoteWebView.Blazor.JS/package-lock.json
