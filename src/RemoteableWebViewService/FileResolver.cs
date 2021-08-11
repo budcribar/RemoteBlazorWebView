@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace PeakSwc.StaticFiles
 {
-    // TODO Send files in chunks
     public class FileInfo : IFileInfo
     {
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
@@ -77,9 +76,6 @@ namespace PeakSwc.StaticFiles
                 var contents = sr.ReadToEnd();
                 var initialLength = contents.Length;
                 contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");
-
-                //TODO This is obsolete
-                contents = contents.Replace("framework://blazor.desktop.js", "remote.blazor.desktop.js");
                 if (contents.Length == initialLength) _logger.LogError("Unable to find blazor javacript reference in the home page");
                 initialLength = contents.Length;
                 contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);

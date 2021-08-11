@@ -126,9 +126,6 @@ namespace WebdriverTestProject
             Thread.Sleep(1000);
             sw.Restart();
 
-          
-
-            // TODO Why the slow down
             for (int i = 0; i < num; i++)
             {
                 for (int j = 0; j < 100; j++)

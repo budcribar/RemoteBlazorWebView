@@ -53,7 +53,6 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            // TODO Why the slow down?
             for (int i=0;i<100; i++)
             {
                 try
