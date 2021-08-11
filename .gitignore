@@ -30,3 +30,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteableWebWindowService/publishAuth
 /src/RemoteableWebViewService/publish
 /src/RemoteableWebViewService/publishAuth
+/testassets/NUnitTestProject/TestResults/logFile.html
