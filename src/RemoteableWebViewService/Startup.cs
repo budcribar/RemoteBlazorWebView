@@ -24,13 +24,16 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
         private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
+
+#if AUTHORIZATION
         private readonly IConfiguration Configuration;
 
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
-   
+
+
         private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
             IConfidentialClientApplication confidentialClientApplication =
@@ -45,7 +48,7 @@ namespace PeakSWC.RemoteableWebView
             var httpClient = new HttpClient();
             return new ProtectedApiCallHelper(httpClient,result.AccessToken);
         }
-
+#endif
         public void ConfigureServices(IServiceCollection services)
         {
 #if NET5

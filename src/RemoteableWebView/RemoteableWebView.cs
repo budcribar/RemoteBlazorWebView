@@ -10,7 +10,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using Windows.Storage.Streams;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -165,7 +164,7 @@ namespace PeakSWC.RemoteableWebView
                                     await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                 else
                                 {
-                                    Memory<byte> buffer = new Memory<byte>(new Byte[1*1024]);
+                                    Memory<byte> buffer = new(new Byte[1*1024]);
                                     int bytesRead = 0;
 
                                     while ((bytesRead = await stream.ReadAsync(buffer)) > 0)

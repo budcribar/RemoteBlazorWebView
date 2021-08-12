@@ -58,11 +58,11 @@ namespace PeakSwc.StaticFiles
                 return null;
             }
 
-            _rootDictionary[id].FileDictionary[appFile] = (null, new ManualResetEventSlim());
+            _rootDictionary[id].FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
-            MemoryStream? stream = _rootDictionary[id].FileDictionary[appFile].stream;
-            if (stream == null || stream.Length == 0)
+            MemoryStream stream = _rootDictionary[id].FileDictionary[appFile].stream;
+            if (stream.Length == 0)
             {
                 _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
                 return null;

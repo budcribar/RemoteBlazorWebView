@@ -1,17 +1,7 @@
-using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Microsoft.Extensions.Logging;
-using Microsoft.Graph.CallRecords;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
@@ -81,7 +71,7 @@ namespace PeakSWC.RemoteableWebView
             {
                 await foreach (FileReadRequest message in requestStream.ReadAllAsync())
                 {
-                    
+
                     if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
                     {
                         id = message.Init.Id;
@@ -89,10 +79,9 @@ namespace PeakSWC.RemoteableWebView
                         {
                             while (true)
                             {
+                                if (!_webViewDictionary.ContainsKey(id)) break;
                                 var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync();
                                 await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
-                                var resetEvent = _webViewDictionary[id].FileDictionary[path].resetEvent;
-                                _webViewDictionary[id].FileDictionary[path] = (new MemoryStream(), resetEvent);
                             }
                         });
                     }
@@ -101,11 +90,15 @@ namespace PeakSWC.RemoteableWebView
                         if (message.Data.Data.Length > 0)
                         {
                             var ms = _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].stream;
-                           
-                            if (ms!=null)
+                            if (ms != null)
                                 await ms.WriteAsync(message.Data.Data.Memory);
                         }
-                        else _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
+                        else
+                        {
+                            // Trigger the stream read
+                            _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
+                        }
+                            
                     }
                 }
             }
