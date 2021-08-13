@@ -1,3 +1,6 @@
+# Set the build env to use project references instead of packages
+$env:EnvBuildMode = 'Development'
+
 # Start with a clean solution
 
 Get-ChildItem .\ -include bin,obj,publish -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
