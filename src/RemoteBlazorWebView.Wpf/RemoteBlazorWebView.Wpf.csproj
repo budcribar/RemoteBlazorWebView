@@ -18,7 +18,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;Embedded</Configurations>
+    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 

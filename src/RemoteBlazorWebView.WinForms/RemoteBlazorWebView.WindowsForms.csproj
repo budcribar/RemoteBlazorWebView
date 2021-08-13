@@ -20,7 +20,7 @@
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
-    <Configurations>Debug;Release;Embedded</Configurations>
+    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 

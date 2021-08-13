@@ -22,7 +22,7 @@
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteableWebView</AssemblyName>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;Embedded</Configurations>
+    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
