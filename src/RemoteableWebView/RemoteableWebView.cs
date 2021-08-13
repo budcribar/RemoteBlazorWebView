@@ -164,12 +164,12 @@ namespace PeakSWC.RemoteableWebView
                                     await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                 else
                                 {
-                                    Memory<byte> buffer = new(new Byte[1*1024]);
+                                    var buffer = new Byte[1*1024];
                                     int bytesRead = 0;
 
                                     while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
                                     {
-                                        ByteString bs = ByteString.CopyFrom(buffer.Span);
+                                        ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
                                         await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
                                     }
                                     await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });

@@ -16,7 +16,7 @@ const messageHandlers = {
         //TODO Hack required to get home displayed
         if (componentId == 0) {
             var id = window.location.pathname.split('/')[1];
-            navigateTo(`/${id}/`, false);
+            navigateTo(`/${id}/`, false, true);
             sendMessage("connected:");
         }
     },
@@ -41,8 +41,16 @@ const messageHandlers = {
 
     'EndInvokeDotNet': DotNet.jsCallDispatcher.endInvokeDotNetFromJS,
 
+    'SendByteArrayToJS': receiveBase64ByteArray,
+
     'Navigate': navigationManagerFunctions.navigateTo,
 };
+
+function receiveBase64ByteArray(id: number, base64Data: string) {
+    const data = base64ToArrayBuffer(base64Data);
+    DotNet.jsCallDispatcher.receiveByteArray(id, data);
+}
+
 
 function base64ToArrayBuffer(base64: string) {
     const binaryString = atob(base64);

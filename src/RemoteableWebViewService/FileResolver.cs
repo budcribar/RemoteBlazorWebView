@@ -82,7 +82,7 @@ namespace PeakSwc.StaticFiles
                 if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }
-            _logger.LogInformation($"Successfully read {appFile}");
+            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile}");
 
             return stream;
         }
