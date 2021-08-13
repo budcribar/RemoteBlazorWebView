@@ -61,8 +61,8 @@
    <Compile Remove="publish\**" />
     <Content Remove="publish\**" />
     <None Remove="publish\**" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.38.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.38.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
     
     <PackageReference Include="Microsoft.Graph.Auth" Version="1.0.0-preview.7" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.7.0-preview" />
@@ -71,8 +71,8 @@
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
    
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.0-preview.7.21378.6" />
-     
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.0-preview.7.21378.6" NoWarn="NU1605" />    
+ 
     <PackageReference Include="Microsoft.Identity.Web" Version="1.15.2" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.15.2" />
   </ItemGroup>

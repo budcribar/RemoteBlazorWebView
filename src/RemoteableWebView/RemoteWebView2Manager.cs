@@ -33,11 +33,10 @@ namespace PeakSWC.RemoteableWebView
             {
                 url = url.Replace(RemoteableWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
                 url = url.Replace(RemoteableWebView.Id.ToString() + $"/", "");
-                if (url.EndsWith(RemoteableWebView.HostHtmlPath)) url = url.Replace(RemoteableWebView.HostHtmlPath, "");
-                MessageReceived(new Uri(url), e);
+                if (url.EndsWith(RemoteableWebView.HostHtmlPath)) url = url.Replace(RemoteableWebView.HostHtmlPath, "");             
             }
-            else
-                MessageReceived(new Uri(sender?.ToString() ?? ""), e);
+            
+            MessageReceived(new Uri(url), e);
         }
 
         protected override void NavigateCore(Uri absoluteUri)
