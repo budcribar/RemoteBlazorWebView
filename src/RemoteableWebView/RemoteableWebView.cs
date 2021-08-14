@@ -159,21 +159,24 @@ namespace PeakSWC.RemoteableWebView
                             {
                                 var path = message.Path[(message.Path.IndexOf("/") + 1)..];
 
-                                var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
-                                if (stream == null)
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
-                                else
+                                using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
                                 {
-                                    var buffer = new Byte[1*1024];
-                                    int bytesRead = 0;
-
-                                    while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                    if (stream == null)
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                    else
                                     {
-                                        ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
+                                        var buffer = new Byte[1 * 1024];
+                                        int bytesRead = 0;
+
+                                        while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                        {
+                                            ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
+                                        }
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                     }
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                 }
+                               
                             }
                             catch (Exception)
                             {
