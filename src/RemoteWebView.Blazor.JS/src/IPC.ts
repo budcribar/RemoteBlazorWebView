@@ -62,11 +62,6 @@ function base64ToArrayBuffer(base64: string) {
     return result;
 }
 
-
-export function send(eventName: string, args: any): void {
-    sendMessage(`ipc:${eventName} ${JSON.stringify(args)}`);
-}
-
 export function receiveMessage(message: string) {
     const parsedMessage = tryDeserializeMessage(message);
     if (parsedMessage) {
@@ -77,5 +72,3 @@ export function receiveMessage(message: string) {
         }
     }
 }
-
-
