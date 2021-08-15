@@ -138,136 +138,133 @@ namespace PeakSWC.RemoteableWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-
-                endpoints.MapGet("/app/{id:guid}", async context =>
-                {
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                    if (rootDictionary.ContainsKey(guid))
-                    {
-                        if (rootDictionary[guid].InUse)
-                        {
-                            context.Response.StatusCode = 400;
-                            await context.Response.WriteAsync("Client is currently locked");
-
-                        }
-                        else
-                        {
-                            rootDictionary[guid].InUse = true;
-                            // Update Status
-                            var list = new ClientResponseList();
-                            rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
-                            await serviceStateChannel.Writer.WriteAsync(list);
-
-                            var home = rootDictionary[guid].HtmlHostPath;
-
-                            context.Response.Redirect($"/{guid}/{home}");
-                        }
-
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync("Invalid Guid");
-                    }
-                })
+                endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
 #endif
                 ;
-                endpoints.MapGet("/restart/{id:guid}", async context =>
-                {
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                    // wait until client shuts down
-                    for (int i = 0; i < 30; i++)
-                    {
-                        if (!rootDictionary.ContainsKey(guid))
-                            break;
-                        await Task.Delay(1000);
-                    }
-                    if (rootDictionary.ContainsKey(guid))
-                    {
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync($"Unable to restart -> Client did not shut down");
-                        return;
-                    }
-
-                    var text = "<script type='text/javascript'>" +
-                    "var xmlHttp = new XMLHttpRequest();" +
-                    "xmlHttp.onreadystatechange = function () {" +
-                    "   if (xmlHttp.readyState == 4 && xmlHttp.status == 200)" +
-                    $"     window.location.assign('/app/{guid}');" +
-                    "  };" +
-                    $" xmlHttp.open('GET', '/wait/{guid}', true);" +
-                    "  xmlHttp.send(null);" +
-                    "</script><h1 class='display-4'>Restarting...</h1>";
-
-                    await context.Response.WriteAsync(text);
-
-                });
-
-                endpoints.MapGet("/wait/{id:guid}", async context =>
-               {
-                   string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                   for (int i = 0; i < 30; i++)
-                   {
-                       if (rootDictionary.ContainsKey(guid))
-                           break;
-                       await Task.Delay(1000);
-                   }
-                   if (rootDictionary.ContainsKey(guid))
-                       await context.Response.WriteAsync($"Wait completed");
-                   else
-                   {
-                       context.Response.StatusCode = 400;
-                       await context.Response.WriteAsync($"Unable to restart -> Timed out");
-                   }
-
-
-               });
-
-                endpoints.MapGet("/{id:guid}", async context =>
-                {
-                    // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                    if (rootDictionary.ContainsKey(guid))
-                    {
-                        rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
-                        context.Response.Redirect($"/restart/{guid}");
-                        await Task.CompletedTask;
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync("Invalid Guid");
-                    }
-                });
-
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", async context =>
-                {
-                    // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                    string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                    if (rootDictionary.ContainsKey(guid))
-                    {
-                        rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
-                        context.Response.Redirect($"/restart/{guid}");
-                        await Task.CompletedTask;
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync("Invalid Guid");
-                    }
-
-                });
-
+                // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
+                endpoints.MapGet("/{id:guid}", Restart());
+                // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart());
+                endpoints.MapGet("/restart/{id:guid}", AckRestart());
+                endpoints.MapGet("/wait/{id:guid}", Wait());            
                 endpoints.MapFallbackToFile("index.html");
             });
+        }
+
+        private RequestDelegate Start()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                if (rootDictionary.ContainsKey(guid))
+                {
+                    if (rootDictionary[guid].InUse)
+                    {
+                        context.Response.StatusCode = 400;
+                        await context.Response.WriteAsync("Client is currently locked");
+
+                    }
+                    else
+                    {
+                        rootDictionary[guid].InUse = true;
+                        // Update Status
+                        var list = new ClientResponseList();
+                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                        await serviceStateChannel.Writer.WriteAsync(list);
+
+                        var home = rootDictionary[guid].HtmlHostPath;
+
+                        context.Response.Redirect($"/{guid}/{home}");
+                    }
+
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync("Invalid Guid");
+                }
+            };
+        }
+
+        private RequestDelegate AckRestart()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                // wait until client shuts down
+                for (int i = 0; i < 30; i++)
+                {
+                    if (!rootDictionary.ContainsKey(guid))
+                        break;
+                    await Task.Delay(1000);
+                }
+                if (rootDictionary.ContainsKey(guid))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync($"Unable to restart -> Client did not shut down");
+                    return;
+                }
+
+                var text = "<script type='text/javascript'>" +
+                "var xmlHttp = new XMLHttpRequest();" +
+                "xmlHttp.onreadystatechange = function () {" +
+                "   if (xmlHttp.readyState == 4 && xmlHttp.status == 200)" +
+                $"     window.location.assign('/app/{guid}');" +
+                "  };" +
+                $" xmlHttp.open('GET', '/wait/{guid}', true);" +
+                "  xmlHttp.send(null);" +
+                "</script><h1 class='display-4'>Restarting...</h1>";
+
+                await context.Response.WriteAsync(text);
+
+            };
+        }
+
+        private RequestDelegate Wait()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                for (int i = 0; i < 30; i++)
+                {
+                    if (rootDictionary.ContainsKey(guid))
+                        break;
+                    await Task.Delay(1000);
+                }
+                if (rootDictionary.ContainsKey(guid))
+                    await context.Response.WriteAsync($"Wait completed");
+                else
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync($"Unable to restart -> Timed out");
+                }
+
+
+            };
+        }
+        private RequestDelegate Restart()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                if (rootDictionary.ContainsKey(guid))
+                {
+                    rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
+                    context.Response.Redirect($"/restart/{guid}");
+                    await Task.CompletedTask;
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync("Invalid Guid");
+                }
+            };
         }
     }
 }
