@@ -15,12 +15,14 @@ namespace PeakSWC.RemoteableWebView
         private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
         private readonly Channel<ClientResponseList> _serviceStateChannel;
-        
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel)
+        private readonly ConcurrentBag<ServiceState> _serviceStates;
+      
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
             _logger = logger;
             _webViewDictionary = rootDictionary;
             _serviceStateChannel = serviceStateChannel;
+            _serviceStates = serviceStates;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
@@ -41,10 +43,9 @@ namespace PeakSWC.RemoteableWebView
                     InUse = false,
                     Url = $"https://{context.Host}/app/{request.Id}",
                     Id = request.Id,
-                    IPC = new IPC(),
                     Group = request.Group
                 };
-
+                _serviceStates.Add(state);
                 // Let home page know client is available
                 _webViewDictionary.TryAdd(request.Id, state);
 
@@ -52,7 +53,7 @@ namespace PeakSWC.RemoteableWebView
                 _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
                 await _serviceStateChannel.Writer.WriteAsync(list);
-                state.IPC.ResponseStream = responseStream;
+                state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
@@ -74,21 +75,22 @@ namespace PeakSWC.RemoteableWebView
             var id = string.Empty;
             try
             {
-                await foreach (FileReadRequest message in requestStream.ReadAllAsync())
+                await foreach (FileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
 
                     if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
                     {
                         id = message.Init.Id;
-                        var task = Task.Run(async () =>
+
+                        _webViewDictionary[id].FileReaderTask = Task.Run(async () =>
                         {
                             while (true)
                             {
                                 if (!_webViewDictionary.ContainsKey(id)) break;
-                                var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync();
+                                var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync(context.CancellationToken);
                                 await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
                             }
-                        });
+                        }, context.CancellationToken);
                     }
                     else
                     {
@@ -103,7 +105,7 @@ namespace PeakSWC.RemoteableWebView
                             // Trigger the stream read
                             _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
                         }
-                            
+
                     }
                 }
             }
@@ -121,8 +123,15 @@ namespace PeakSWC.RemoteableWebView
             _logger.LogInformation("Shutting down..." + id);
 
             if (_webViewDictionary.ContainsKey(id))
-                _webViewDictionary.Remove(id, out var _);
-
+            {
+                _webViewDictionary.Remove(id, out var client);
+                if (client != null)
+                {
+                    client.IPC.Shutdown();
+                    client.InUse = false;
+                }             
+            }
+               
             var list = new ClientResponseList();
             _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 

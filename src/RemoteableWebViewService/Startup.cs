@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Channel = System.Threading.Channels.Channel;
@@ -77,6 +78,7 @@ namespace PeakSWC.RemoteableWebView
             services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
             services.AddAuthorization();
 #endif 
+            services.AddSingleton<ConcurrentBag<ServiceState>>();
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
 
@@ -148,11 +150,12 @@ namespace PeakSWC.RemoteableWebView
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart());
                 endpoints.MapGet("/restart/{id:guid}", AckRestart());
-                endpoints.MapGet("/wait/{id:guid}", Wait());            
+                endpoints.MapGet("/wait/{id:guid}", Wait());
+                endpoints.MapGet("/status", Status());
                 endpoints.MapFallbackToFile("index.html");
             });
         }
-
+       
         private RequestDelegate Start()
         {
             return async context =>
@@ -189,6 +192,21 @@ namespace PeakSWC.RemoteableWebView
             };
         }
 
+        private RequestDelegate Status()
+        {
+            return async context =>
+            {
+                var text = "<h1>Status</h1>";
+                var bag = context.RequestServices.GetRequiredService<ConcurrentBag<ServiceState>>();
+                
+                foreach(var ss in bag)
+                {
+                    text += $"<b>Id:</b> {ss.Id} <b>Host:</b>{ss.Hostname} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/>";
+                }
+                await context.Response.WriteAsync(text);
+            };
+        }
+                
         private RequestDelegate AckRestart()
         {
             return async context =>
@@ -247,6 +265,7 @@ namespace PeakSWC.RemoteableWebView
 
             };
         }
+
         private RequestDelegate Restart()
         {
             return async context =>

@@ -7,7 +7,8 @@
     <Description>Build Remoteable Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
-
+    <LangVersion>latest</LangVersion>
+    <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <PackageId>PeakSWC.RemoteBlazorWebView.WindowsForms</PackageId>
     <Authors>Bud Cribar</Authors>
     <Company>Peak Software Consulting, LLC</Company>
@@ -21,7 +22,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

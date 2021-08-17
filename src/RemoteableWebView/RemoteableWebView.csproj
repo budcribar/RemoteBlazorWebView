@@ -23,6 +23,7 @@
     <AssemblyName>PeakSWC.RemoteableWebView</AssemblyName>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

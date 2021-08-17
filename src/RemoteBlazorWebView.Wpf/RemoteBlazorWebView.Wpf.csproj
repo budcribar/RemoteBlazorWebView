@@ -19,7 +19,8 @@
     <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

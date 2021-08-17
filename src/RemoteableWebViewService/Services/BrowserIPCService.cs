@@ -39,6 +39,10 @@ namespace PeakSWC.RemoteableWebView
 
         public override Task<Empty> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
+            // TODO Throw error on browser
+            if(!ServiceDictionary.ContainsKey(request.Id))
+                return Task.FromResult(new Empty());
+
             var state = ServiceDictionary[request.Id]?.BrowserIPC;
 
             if (state == null)

@@ -153,7 +153,7 @@ namespace PeakSWC.RemoteableWebView
                      
                         await files.RequestStream.WriteAsync(new FileReadRequest { Init = new FileReadInitRequest { Id = Id } });
 
-                        await foreach (var message in files.ResponseStream.ReadAllAsync())
+                        await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
                         {
                             try
                             {
@@ -216,6 +216,7 @@ namespace PeakSWC.RemoteableWebView
         private void Shutdown()
         {
             Client?.Shutdown(new IdMessageRequest { Id = Id });
+            cts.Cancel();
         }
 
         public void Initialize()

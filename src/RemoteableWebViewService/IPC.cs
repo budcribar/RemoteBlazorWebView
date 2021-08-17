@@ -13,8 +13,11 @@ namespace PeakSWC.RemoteableWebView
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
 
-        public IServerStreamWriter<WebMessageResponse>? ResponseStream { get; set; }
+        public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
         public IServerStreamWriter<StringRequest>? BrowserResponseStream { get; set; }
+
+        public Task ClientTask { get; }
+        public Task BrowserTask { get; }
 
         public async void SendMessage(string eventName, params object[] args)
         {
@@ -30,18 +33,18 @@ namespace PeakSWC.RemoteableWebView
 
         public IPC()
         {
-            Task.Run(async () =>
+            ClientTask = Task.Run(async () =>
             {
-                await foreach (var m in responseChannel.Reader.ReadAllAsync())
+                await foreach (var m in responseChannel.Reader.ReadAllAsync(cts.Token))
                 {
                     // Serialize the write
-                    await (ResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
+                    await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
             }, cts.Token);
 
-            Task.Run(async () =>
+            BrowserTask = Task.Run(async () =>
             {
-                await foreach (var m in browserResponseChannel.Reader.ReadAllAsync())
+                await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(cts.Token))
                 {
                     // Serialize the write
                     await (BrowserResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
@@ -62,11 +65,11 @@ namespace PeakSWC.RemoteableWebView
 
         public async void LocationChanged(Point point)
         {
-            await (ResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
+            await (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
         }
         public async void SizeChanged(Size size)
         {
-            await (ResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
+            await (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
         }
     }
 }
