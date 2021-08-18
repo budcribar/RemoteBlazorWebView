@@ -165,7 +165,7 @@ namespace PeakSWC.RemoteableWebView
                                         await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                     else
                                     {
-                                        var buffer = new Byte[1 * 1024];
+                                        var buffer = new Byte[8 * 1024];
                                         int bytesRead = 0;
 
                                         while ((bytesRead = await stream.ReadAsync(buffer)) > 0)

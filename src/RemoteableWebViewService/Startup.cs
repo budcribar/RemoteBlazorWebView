@@ -12,6 +12,7 @@ using Microsoft.Identity.Web.UI;
 using PeakSwc.StaticFiles;
 using System.Collections.Concurrent;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -81,8 +82,8 @@ namespace PeakSWC.RemoteableWebView
             services.AddSingleton<ConcurrentBag<ServiceState>>();
             services.AddSingleton(rootDictionary);
             services.AddSingleton(serviceStateChannel);
-
-            services.AddGrpc(options => { options.EnableDetailedErrors = true; });
+          
+            services.AddGrpc(options => { options.EnableDetailedErrors = true; options.ResponseCompressionLevel = CompressionLevel.Optimal; options.ResponseCompressionAlgorithm = "gzip"; });
             services.AddTransient<FileResolver>();
 
             services.AddCors(o =>

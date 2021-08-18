@@ -4,6 +4,7 @@ using Microsoft.Extensions.Primitives;
 using PeakSWC.RemoteableWebView;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ namespace PeakSwc.StaticFiles
 {
     public class FileInfo : IFileInfo
     {
+        private static TimeSpan total = TimeSpan.FromSeconds(0);
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
         private readonly string guid;
@@ -50,6 +52,8 @@ namespace PeakSwc.StaticFiles
 
         private async Task<Stream?> ProcessFile(string id, string appFile)
         {
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
             _logger.LogInformation($"Attempting to read {appFile}");
 
             if (!_rootDictionary.ContainsKey(id))
@@ -82,8 +86,9 @@ namespace PeakSwc.StaticFiles
                 if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }
-            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile}");
-
+            total += stopWatch.Elapsed;
+            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} in {stopWatch.Elapsed.TotalSeconds}");
+            _logger.LogInformation($"Total file read time  {total.TotalSeconds}");
             return stream;
         }
 
