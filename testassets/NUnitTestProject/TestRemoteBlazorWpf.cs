@@ -20,7 +20,7 @@ namespace WebdriverTestProject
     public class TestRemoteBlazorWpf
     {
         protected static readonly List<ChromeDriver> _driver = new();
-        private readonly string url = @"https://localhost/";
+        private readonly string url = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
         private static string[] ids = Array.Empty<string>();
         protected static Process? process;

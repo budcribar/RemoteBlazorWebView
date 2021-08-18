@@ -72,7 +72,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             }
         }
 
-        private void ResetServerUri() => ServerUri = new Uri("https://localhost:443");
+        private void ResetServerUri() => ServerUri = new Uri("https://localhost:5001");
 
         private bool ShouldSerializeServerUri() => ServerUri != null;
 
