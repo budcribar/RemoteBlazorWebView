@@ -120,6 +120,8 @@ namespace PeakSWC.RemoteableWebView
                 //app.UseHsts();
             }
 
+            app.UseHttpsRedirection();
+
             app.UseResponseCompression();
             app.UseRouting();
 

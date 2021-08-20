@@ -28,68 +28,18 @@
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <DefineConstants Condition=" '$(TargetFramework)' == 'net5' ">NET5</DefineConstants>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-    <PublishSingleFile Condition="'$(Configuration)' != 'Authorization'">False</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">True</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
     <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ServerNoAuth|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ServerNoAuth|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Embedded|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Embedded|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PlatformTarget>x64</PlatformTarget>
-  </PropertyGroup>
  
   <ItemGroup>
-   <Compile Remove="publish\**" />
-    <Content Remove="publish\**" />
-    <None Remove="publish\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
     
@@ -112,13 +62,6 @@
       <Pack>True</Pack>
     </None>
   </ItemGroup>
-
-  <ItemGroup>
-    <None Update="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
   <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
   
 </Project>

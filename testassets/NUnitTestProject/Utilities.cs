@@ -15,12 +15,13 @@ namespace WebdriverTestProject
             sw.Start();
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteableWebViewService")?.Kill();
-            var relative = @"..\..\..\..\..\src\RemoteableWebViewService";
-            var executable = @"publish\RemoteableWebViewService.exe";
+            var relative = @"..\..\..\..\..\src\RemoteableWebViewService\bin\publishNoAuth";
+            var executable = @"RemoteableWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
 
             Process process = new();
             process.StartInfo.FileName = Path.GetFullPath(f);
+            process.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative);
             process.StartInfo.UseShellExecute = true;
 
             process.Start();
