@@ -136,18 +136,40 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 StartWebViewCoreIfPossible();
             }
         }
+        private void ResetGroup() => _group = "test";
+        private bool ShouldSerializeGroup() => _group != "test";
+       
+        /// <summary>
+        /// Markup that is used to identify the client
+        /// This property must be set to a valid value for the Blazor components to start.
+        /// </summary>
+
+        [Category("Behavior")]
+        [Description(@"Html markup associated with the client.")]
+        public string Markup
+        {
+            get => _markup;
+            set
+            {
+                _markup = value;
+                Invalidate();
+                StartWebViewCoreIfPossible();
+            }
+        }
+        private string _markup = "";
+        private void ResetMarkup() => _markup = "";
+        private bool ShouldSerializeMarkup() => _markup != "";
 
         public bool IsRestarting { get; set; }
 
-        private void ResetGroup() => _group = "test";
-        private bool ShouldSerializeGroup() => _group != "test";
+       
 
         public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
         {
             if (ServerUri == null)
                 WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
             return WebViewManager;
         }

@@ -51,7 +51,7 @@ namespace PeakSWC.RemoteableWebView
 
         #region private
 
-        private readonly string hostname;
+        private string Markup { get; init; }
         private readonly object bootLock = new();
         private string Group { get; init; }
         private RemoteWebView.RemoteWebViewClient? client = null;
@@ -78,7 +78,7 @@ namespace PeakSWC.RemoteableWebView
 
                     client = new RemoteWebView.RemoteWebViewClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = hostname, Group=Group }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = Markup, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -195,15 +195,15 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
 
-        public RemoteableWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group)
+        public RemoteableWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
         {
             ServerUri = uri;
             HostHtmlPath = hostHtmlPath;
             Dispacher = dispatcher;
             FileProvider = fileProvider;
             Id = id;
-            hostname = Dns.GetHostName();
-            Group = group;
+            Markup = string.IsNullOrWhiteSpace(markup) ? Dns.GetHostName() : markup;
+            Group = string.IsNullOrWhiteSpace(group) ? "test" : group;
         }
 
         public void NavigateToUrl(string _) { }

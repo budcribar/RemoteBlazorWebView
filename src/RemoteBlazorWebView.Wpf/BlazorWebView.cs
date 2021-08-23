@@ -26,7 +26,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                    name: nameof(Group),
                    propertyType: typeof(string),
                    ownerType: typeof(BlazorWebView),
-                   typeMetadata: new PropertyMetadata(OnIdPropertyChanged));
+                   typeMetadata: new PropertyMetadata(OnGroupPropertyChanged));
+
+        public static readonly DependencyProperty MarkupProperty = DependencyProperty.Register(
+                  name: nameof(Markup),
+                  propertyType: typeof(string),
+                  ownerType: typeof(BlazorWebView),
+                  typeMetadata: new PropertyMetadata(OnMarkupPropertyChanged));
         #endregion
 
         public Uri? ServerUri
@@ -41,6 +47,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(GroupProperty, value);
         }
 
+        public string Markup
+        {
+            get => (string)GetValue(MarkupProperty);
+            set => SetValue(MarkupProperty, value);
+        }
 
         public bool IsRestarting
         {
@@ -58,6 +69,15 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnIdPropertyChanged(e);
 
         private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+
+        private static void OnGroupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGroupPropertyChanged(e);
+
+        private void OnGroupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+
+        private static void OnMarkupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnMarkupPropertyChanged(e);
+
+        private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+
 
         public IWebViewManager? WebViewManager { get; set; }
         private Guid id = Guid.Empty;
@@ -84,7 +104,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             if (ServerUri == null)
                 WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
             return WebViewManager;
         }
@@ -134,6 +154,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             RootComponents.ToList().ForEach(x => RootComponents.Add(x));
             HostPage = HostPage;
             Group = Group;
+            Markup = Markup;
 
             // TODO
             if (ServerUri != null)
