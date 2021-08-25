@@ -47,14 +47,14 @@ namespace WebdriverTestProject
 
         public static string BlazorWinFormsPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
         public static string BlazorWinFormsEmbeddedPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
             var exePath = "publishEmbedded";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
@@ -76,7 +76,7 @@ namespace WebdriverTestProject
         }
         public static string BlazorWpfPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
             //var exePath = @"bin\debug\net6-windows";
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
@@ -84,7 +84,7 @@ namespace WebdriverTestProject
 
         public static string BlazorWpfEmbeddedPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
             //var exePath = @"bin\debug\net6-windows";
             var exePath = "publishEmbedded";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);

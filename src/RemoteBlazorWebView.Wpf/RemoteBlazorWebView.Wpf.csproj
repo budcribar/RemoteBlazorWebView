@@ -24,13 +24,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Properties\**" />
-    <EmbeddedResource Remove="Properties\**" />
-    <None Remove="Properties\**" />
-    <Page Remove="Properties\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Page Remove="RemoteBlazorWebView.xaml" />
   </ItemGroup>
 

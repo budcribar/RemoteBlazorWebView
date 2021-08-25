@@ -105,7 +105,6 @@ Global
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|Any CPU.ActiveCfg = Embedded|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|Any CPU.Build.0 = Embedded|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x64.ActiveCfg = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x64.Build.0 = Embedded|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x86.ActiveCfg = Embedded|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x86.Build.0 = Embedded|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.NoAuthorization|Any CPU.ActiveCfg = NoAuthorization|Any CPU
