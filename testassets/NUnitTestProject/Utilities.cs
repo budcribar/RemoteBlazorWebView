@@ -28,6 +28,22 @@ namespace WebdriverTestProject
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
         }
+
+        public static Process StartServerFromPackage()
+        {
+
+            Stopwatch sw = new();
+            sw.Start();
+
+            Process process = new();
+            process.StartInfo.FileName = "remoteablewebviewservice";
+            process.StartInfo.UseShellExecute = true;
+
+            process.Start();
+            Console.WriteLine($"Started server in {sw.Elapsed}");
+            return process;
+        }
+
         #endregion
 
         #region WinForm

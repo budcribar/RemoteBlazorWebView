@@ -36,11 +36,16 @@ namespace WebdriverTestProject
             Utilities.KillRemoteBlazorWpfApp();
         }
 
+        public virtual Process StartServer()
+        {
+            return Utilities.StartServer();
+        }
+
         public virtual void Startup(int numClients)
         {
             KillClient();
 
-            process = Utilities.StartServer();
+            process = StartServer();
             
             var ids = new RemoteWebView.RemoteWebViewClient(channel).GetIds(new Empty());
             Assert.AreEqual(0, ids.Responses.Count);

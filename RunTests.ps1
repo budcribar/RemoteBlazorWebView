@@ -3,17 +3,20 @@ $env:EnvBuildMode = 'Development'
 
 # Start with a clean solution
 
-Get-ChildItem .\ -include bin,obj,publish,publishNoAuth,publishAuth -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
+Get-ChildItem .\ -include bin,obj,publish,publishNoAuth,publishAuth,artifacts -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEmbedded, embedded -Exclude EBWebView -Recurse -Force | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
 
 # Publish the web site server
 dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\bin\publishNoAuth
-Copy-Item .\src\RemoteableWebViewService\appsettings.Development.json src\RemoteableWebViewService\bin\publishNoAuth\appsettings.json
-Remove-Item src\RemoteableWebViewService\bin\publishNoAuth\appsettings.Development.json
 
 dotnet publish -c Authorization --self-contained true -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\bin\publishAuth
 
+dotnet build -c Release .\src\RemoteableWebViewService
+dotnet tool uninstall PeakSWC.RemoteableWebViewService -g
+dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
+
+# Publish WpfApp
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish
 
 # Delete all files except the executable and wwwroot

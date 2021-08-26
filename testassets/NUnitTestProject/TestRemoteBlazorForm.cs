@@ -22,7 +22,16 @@ namespace WebdriverTestProject
             Utilities.KillBlazorWinFormsApp();
         }
 
+    }
 
+    [TestClass]
+    public class TestRemotePackageBlazorForm : TestRemoteBlazorForm
+    {
+
+        public override Process StartServer()
+        {
+            return Utilities.StartServerFromPackage();
+        }
     }
 
     // Debug is not working in Preview7
