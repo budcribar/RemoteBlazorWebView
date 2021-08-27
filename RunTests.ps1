@@ -1,5 +1,5 @@
 # Set the build env to use project references instead of packages
-$env:EnvBuildMode = 'Development'
+$env:EnvBuildMode = 'Release' # Debug or Release
 
 # Start with a clean solution
 
@@ -14,9 +14,14 @@ dotnet publish -c Authorization --self-contained true -r win-x64 .\src\Remoteabl
 
 dotnet build -c Release .\src\RemoteableWebViewService
 dotnet tool uninstall PeakSWC.RemoteableWebViewService -g
-dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
 
-# Publish WpfApp
+if ($env:EnvBuildMode -eq 'Debug'){
+	dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
+} else {
+	dotnet tool update -g  PeakSWC.RemoteableWebViewService --version 6.*-* 
+}
+
+# Publish WinFormsApp
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish
 
 # Delete all files except the executable and wwwroot
@@ -59,4 +64,12 @@ dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"ht
 
 Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
 
+# zip up files for github
+$compress = @{
+  Path = "src\RemoteableWebViewService\bin\publishNoAuth\RemoteableWebViewService.exe", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe","..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe", "README.txt"
+  CompressionLevel = "Fastest"
+  DestinationPath = "artifacts\Release.Zip"
+}
 
+if ($env:EnvBuildMode -eq 'Release'){
+	Compress-Archive @compress -Force
