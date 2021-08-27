@@ -1,0 +1,11 @@
+- Increment VersionPrefix from Directory.Build.Props
+- RunTests.ps1 from RemoteBlazorWebView
+-	Check RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js is about 332KB
+- Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
+- Upload the contents of RemoteBlazorWebView\artifacts to nuget.org
+- Open the RemoteBlazorWebViewTutorial solution and make sure Package sources are set to all
+- Update the RemoteBlazorWebView.WindowsForms, RemoteBlazorWebView.Wpf, RemoteBlazorWebViewTutorial.Shared packages to the latest version
+- Edit RunTests.ps1 and set EnvBuildMode to Release
+- Verify RunTests.ps1 passes in release mode
+- Update both RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories with the artifacts/releaze.zip using the latest tag
+- create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
