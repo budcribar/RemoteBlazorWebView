@@ -178,7 +178,7 @@ namespace PeakSWC.RemoteableWebView
                         rootDictionary[guid].InUse = true;
                         // Update Status
                         var list = new ClientResponseList();
-                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
                         serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
                      
                         var home = rootDictionary[guid].HtmlHostPath;

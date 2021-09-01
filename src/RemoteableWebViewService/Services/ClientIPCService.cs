@@ -75,7 +75,7 @@ namespace PeakSWC.RemoteableWebView
                 if (!groups.Contains("test"))
                     groups.Add("test");
 
-                _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url, Group = x.Group }));
+                _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
                 await responseStream.WriteAsync(list);
 
                 await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync())

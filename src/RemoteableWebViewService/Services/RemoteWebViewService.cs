@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteableWebView
                 _webViewDictionary.TryAdd(request.Id, state);
 
                 var list = new ClientResponseList();
-                _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+                _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
 
                 _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
                 state.IPC.ClientResponseStream = responseStream;
@@ -133,7 +133,7 @@ namespace PeakSWC.RemoteableWebView
             }
                
             var list = new ClientResponseList();
-            _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
+            _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
 
             _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
         }
