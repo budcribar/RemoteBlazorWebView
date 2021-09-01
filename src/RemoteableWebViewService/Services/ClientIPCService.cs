@@ -16,7 +16,7 @@ namespace PeakSWC.RemoteableWebView
     public class ClientIPCService : ClientIPC.ClientIPCBase
     {
         private readonly ILogger<ClientIPCService> _logger;
-        private readonly Channel<ClientResponseList> _serviceStateChannel;
+        private readonly ConcurrentDictionary<string,Channel<ClientResponseList>> _serviceStateChannel;
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private readonly ProtectedApiCallHelper _graphApi;
 
@@ -53,7 +53,7 @@ namespace PeakSWC.RemoteableWebView
             return results;
         }
 
-        public ClientIPCService(ILogger<ClientIPCService> logger, Channel<ClientResponseList> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
+        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<ClientResponseList>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
@@ -63,21 +63,31 @@ namespace PeakSWC.RemoteableWebView
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
+            string id = context.GetHttpContext().Connection.Id;
+            _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<ClientResponseList>());
             // https://stackoverflow.com/questions/48385996/platformnotsupported-exception-when-calling-adduserasync-net-core-2-0
             var list = new ClientResponseList();
-           
-            var groups = GetUserGroups(request.Oid);
-
-            // If a user is not in any groups then they are defaulted to the "test" group
-            if (!groups.Any()) groups.Add("test");
-
-            _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url, Group=x.Group }));
-            await responseStream.WriteAsync(list);
-
-            await foreach (var state in _serviceStateChannel.Reader.ReadAllAsync())
+            try
             {
-                await responseStream.WriteAsync(state);
+                var groups = GetUserGroups(request.Oid);
+
+                // If a user is not in any groups then they are defaulted to the "test" group
+                if (!groups.Contains("test"))
+                    groups.Add("test");
+
+                _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url, Group = x.Group }));
+                await responseStream.WriteAsync(list);
+
+                await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync())
+                {
+                    await responseStream.WriteAsync(state);
+                }
             }
+            finally 
+            {
+                _serviceStateChannel.Remove(id, out _);
+            }
+           
         }
 
         private List<string> GetUserGroups (string oid)

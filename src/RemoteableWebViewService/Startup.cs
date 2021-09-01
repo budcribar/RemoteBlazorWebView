@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteableWebView
     public class Startup
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
-        private readonly Channel<ClientResponseList> serviceStateChannel = Channel.CreateUnbounded<ClientResponseList>();
+        private readonly ConcurrentDictionary<string, Channel<ClientResponseList>> serviceStateChannel = new();
 
 #if AUTHORIZATION
         private readonly IConfiguration Configuration;
@@ -179,8 +179,8 @@ namespace PeakSWC.RemoteableWebView
                         // Update Status
                         var list = new ClientResponseList();
                         rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
-                        await serviceStateChannel.Writer.WriteAsync(list);
-
+                        serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
+                     
                         var home = rootDictionary[guid].HtmlHostPath;
 
                         context.Response.Redirect($"/{guid}/{home}");

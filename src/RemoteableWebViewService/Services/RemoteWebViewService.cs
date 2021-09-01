@@ -14,10 +14,10 @@ namespace PeakSWC.RemoteableWebView
     {
         private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
-        private readonly Channel<ClientResponseList> _serviceStateChannel;
+        private readonly ConcurrentDictionary<string, Channel<ClientResponseList>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
       
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, Channel<ClientResponseList> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, Channel<ClientResponseList>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
             _logger = logger;
             _webViewDictionary = rootDictionary;
@@ -52,7 +52,7 @@ namespace PeakSWC.RemoteableWebView
                 var list = new ClientResponseList();
                 _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
-                await _serviceStateChannel.Writer.WriteAsync(list);
+                _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
@@ -135,7 +135,7 @@ namespace PeakSWC.RemoteableWebView
             var list = new ClientResponseList();
             _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.ShuttingDown : ClientState.Connected, Url = x.Url }));
 
-            _serviceStateChannel.Writer.WriteAsync(list);
+            _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

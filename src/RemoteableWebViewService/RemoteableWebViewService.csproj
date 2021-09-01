@@ -36,6 +36,12 @@
     <NoWarn>NU5100</NoWarn>
     <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
     <Platforms>x64</Platforms>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">
+    <Optimize>False</Optimize>
   </PropertyGroup>
 
  
@@ -60,6 +66,19 @@
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
       <PackagePath></PackagePath>
       <Pack>True</Pack>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

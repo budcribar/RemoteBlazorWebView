@@ -9,3 +9,4 @@
 - Verify RunTests.ps1 passes in release mode
 - Update both RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories with the artifacts/releaze.zip using the latest tag
 - create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
+- Upload the 
