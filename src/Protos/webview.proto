@@ -25,7 +25,7 @@ message IdMessageRequest {
 message CreateWebViewRequest {
   string id = 1;
   string htmlHostPath = 2;
-  string hostname = 3;
+  string markup = 3;
   string group = 4;
 }
 
@@ -92,7 +92,7 @@ enum ClientState {
 
 message ClientResponse {
     string id = 1;
-    string hostName = 2;
+    string markup = 2;
     string url = 3;
     ClientState state = 4;
     string group = 5;

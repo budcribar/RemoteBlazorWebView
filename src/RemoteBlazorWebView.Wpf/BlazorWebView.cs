@@ -14,6 +14,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
     public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
     {
+        public BlazorWebView()
+        {
+            Application.Current.Exit += Current_Exit;
+        }
+
+        private void Current_Exit(object sender, ExitEventArgs e)
+        {
+            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                manager.RemoteableWebView.Shutdown();
+        }
         #region Properties
 
         public static readonly DependencyProperty UriProperty = DependencyProperty.Register(

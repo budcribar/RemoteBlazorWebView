@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -29,6 +30,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 Unloaded += h;
                 UnloadedInternal.Remove(h);
             }
+
+            Application.ApplicationExit += Application_ApplicationExit;
+        }
+
+        private void Application_ApplicationExit(object? sender, EventArgs e)
+        {
+            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
+                manager.RemoteableWebView.Shutdown();
         }
 
         public IWebViewManager? WebViewManager { get; set; }

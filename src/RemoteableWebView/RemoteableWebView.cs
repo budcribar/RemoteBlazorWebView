@@ -38,7 +38,7 @@ namespace PeakSWC.RemoteableWebView
                 Process? p = null;
                 try
                 {
-                    p = Process.Start(new ProcessStartInfo("cmd", $"/c start microsoft-edge:" + url) { CreateNoWindow = true });
+                    p = Process.Start(new ProcessStartInfo("cmd", $"/c start " + url) { CreateNoWindow = true });
                 }
                 catch (Exception)
                 {
@@ -78,7 +78,7 @@ namespace PeakSWC.RemoteableWebView
 
                     client = new RemoteWebView.RemoteWebViewClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Hostname = Markup, Group=Group }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -213,7 +213,7 @@ namespace PeakSWC.RemoteableWebView
             Client?.SendMessage(new SendMessageRequest { Id = Id, Message = message });
         }
 
-        private void Shutdown()
+        public void Shutdown()
         {
             Client?.Shutdown(new IdMessageRequest { Id = Id });
             cts.Cancel();

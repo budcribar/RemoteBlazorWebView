@@ -170,15 +170,25 @@ namespace PeakSWC.RemoteableWebView
                     if (rootDictionary[guid].InUse)
                     {
                         context.Response.StatusCode = 400;
-                        await context.Response.WriteAsync("Client is currently locked");
 
+                        string response = "";
+
+                        if (string.IsNullOrEmpty(rootDictionary[guid].User))
+                            response = "<h1>Client is currently locked</h1>";
+                        else
+                            response = $"<h1>Client is currently locked to {rootDictionary[guid].User}</h1> <button type='button' onclick=\"location.href='/{guid}'\">Restart</button>";
+
+                        context.Response.ContentType = "text/html";
+
+                        await context.Response.WriteAsync(response);
                     }
                     else
                     {
+                        rootDictionary[guid].User = context.User.GetDisplayName() ?? "";
                         rootDictionary[guid].InUse = true;
                         // Update Status
                         var list = new ClientResponseList();
-                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { HostName = x.Hostname, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
+                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
                         serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
                      
                         var home = rootDictionary[guid].HtmlHostPath;
@@ -204,7 +214,7 @@ namespace PeakSWC.RemoteableWebView
                 
                 foreach(var ss in bag)
                 {
-                    text += $"<b>Id:</b> {ss.Id} <b>Host:</b>{ss.Hostname} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/>";
+                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/>";
                 }
                 await context.Response.WriteAsync(text);
             };
