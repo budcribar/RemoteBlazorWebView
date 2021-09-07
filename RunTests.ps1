@@ -15,7 +15,7 @@ dotnet publish -c Authorization --self-contained true -r win-x64 .\src\Remoteabl
 dotnet build -c Release .\src\RemoteableWebViewService
 dotnet tool uninstall PeakSWC.RemoteableWebViewService -g
 
-if ($env:EnvBuildMode -eq 'Debug'){
+if ($env:EnvBuildMode -eq 'Debug') {
 	dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
 } else {
 	dotnet tool update -g  PeakSWC.RemoteableWebViewService --version 6.*-* 
@@ -71,5 +71,6 @@ $compress = @{
   DestinationPath = "artifacts\Release.Zip"
 }
 
-if ($env:EnvBuildMode -eq 'Release'){
+if ($env:EnvBuildMode -eq 'Release') {
 	Compress-Archive @compress -Force
+}
