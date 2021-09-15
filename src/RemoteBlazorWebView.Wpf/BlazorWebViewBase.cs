@@ -18,13 +18,14 @@ using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 using System.Reflection;
 using Microsoft.AspNetCore.Components.Web;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
     /// <summary>
     /// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public class BlazorWebViewBase : Control, IDisposable
+    public class BlazorWebViewBase : Control, IAsyncDisposable
     {
         #region Dependency property definitions
         /// <summary>
@@ -219,48 +220,45 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
-        private void Dispose(bool disposing)
-        {
-            if (!_isDisposed)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                   // _webviewManager?.Dispose();
-                    _webview?.Dispose();
-                }
-
-                // Also: free unmanaged resources (unmanaged objects) and override finalizer
-                // Also: set large fields to null
-                _isDisposed = true;
-            }
-        }
-
-        /// <summary>
-        /// Performs the final cleanup before the garbage collector destroys the object.
-        /// </summary>
-        ~BlazorWebViewBase()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: false);
-        }
-
-        /// <summary>
-        /// Releases all resources used by the control.
-        /// </summary>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
         private void CheckDisposed()
         {
             if (_isDisposed)
             {
                 throw new ObjectDisposedException(GetType().Name);
             }
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            // Dispose this component's contents that user-written disposal logic and Blazor disposal logic will complete
+            // first. Then dispose the WebView2 control. This order is critical because once the WebView2 is disposed it
+            // will prevent and Blazor code from working because it requires the WebView to exist.
+            if (_webviewManager != null)
+            {
+                await _webviewManager.DisposeAsync()
+                    .ConfigureAwait(false);
+                _webviewManager = null;
+            }
+
+            _webview?.Dispose();
+            _webview = null;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+            _isDisposed = true;
+
+            // Perform async cleanup.
+            await DisposeAsyncCore();
+
+#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
+            // Suppress finalization.
+            GC.SuppressFinalize(this);
+#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize	
         }
     }
 }
