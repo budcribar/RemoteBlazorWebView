@@ -10,12 +10,12 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteableWebView</PackageId>
     <Authors>Bud Cribar</Authors>
-    <Description></Description>
+    <Description>Support Package for RemoteBlazorWebView.WindowsForms and RemoteBlazorWebView.Wpf</Description>
     <Copyright></Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon></PackageIcon>
-    <RepositoryType></RepositoryType>
-    <RepositoryUrl></RepositoryUrl>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <PackageTags></PackageTags>
     <AssemblyVersion>0.0.1.0</AssemblyVersion>
     <FileVersion>0.0.1.0</FileVersion>
@@ -24,6 +24,8 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <LangVersion>9</LangVersion>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   
   </PropertyGroup>
 
@@ -62,6 +64,17 @@
 
   <ItemGroup>
     <Folder Include="Manifest\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 

@@ -38,6 +38,7 @@
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <DebugType>embedded</DebugType>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">

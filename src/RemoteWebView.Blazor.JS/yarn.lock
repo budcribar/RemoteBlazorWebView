@@ -746,7 +746,7 @@
   "resolved" "https://registry.npmjs.org/google-protobuf/-/google-protobuf-3.15.6.tgz"
   "version" "3.15.6"
 
-"google-protobuf@^3.6.1":
+"google-protobuf@^3.15.5":
   "integrity" "sha512-OVPzcSWIAJ+d5yiHyeaLrdufQtrvaBrF4JQg+z8ynTkbO3uFcujqXszTumqg1cGsAsjkWnI+M5B1xZ19yR4Wyg=="
   "resolved" "https://registry.npmjs.org/google-protobuf/-/google-protobuf-3.17.3.tgz"
   "version" "3.17.3"
@@ -1656,12 +1656,12 @@
     "micromatch" "^3.1.4"
     "semver" "^5.0.1"
 
-"ts-protoc-gen@^0.14.0":
-  "integrity" "sha512-2z6w2HioMCMVNcgNHBcEvudmQfzrn+3BjAlz+xgYZ9L0o8n8UG8WUiTJcbXHFiEg2SU8IltwH2pm1otLoMSKwg=="
-  "resolved" "https://registry.npmjs.org/ts-protoc-gen/-/ts-protoc-gen-0.14.0.tgz"
-  "version" "0.14.0"
+"ts-protoc-gen@0.15.0":
+  "integrity" "sha512-TycnzEyrdVDlATJ3bWFTtra3SCiEP0W0vySXReAuEygXCUr1j2uaVyL0DhzjwuUdQoW5oXPwk6oZWeA0955V+g=="
+  "resolved" "https://registry.npmjs.org/ts-protoc-gen/-/ts-protoc-gen-0.15.0.tgz"
+  "version" "0.15.0"
   dependencies:
-    "google-protobuf" "^3.6.1"
+    "google-protobuf" "^3.15.5"
 
 "tsconfig-paths-webpack-plugin@^3.5.1":
   "integrity" "sha512-n5CMlUUj+N5pjBhBACLq4jdr9cPTitySCjIosoQm0zwK99gmrcTGAfY9CwxRFT9+9OleNWXPRUcxsKP4AYExxQ=="
@@ -1774,7 +1774,7 @@
     "source-list-map" "^2.0.1"
     "source-map" "^0.6.1"
 
-"webpack@^5.1.0", "webpack@4.x.x || 5.x.x", "webpack@5.31.0":
+"webpack@^5.1.0", "webpack@^5.31.0", "webpack@4.x.x || 5.x.x":
   "integrity" "sha512-3fUfZT/FUuThWSSyL32Fsh7weUUfYP/Fjc/cGSbla5KiSo0GtI1JMssCRUopJTvmLjrw05R2q7rlLtiKdSzkzQ=="
   "resolved" "https://registry.npmjs.org/webpack/-/webpack-5.31.0.tgz"
   "version" "5.31.0"

@@ -23,9 +23,16 @@
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <PackageReleaseNotes>Update to net6 rc1</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
       <PackagePath></PackagePath>
       <Pack>True</Pack>
