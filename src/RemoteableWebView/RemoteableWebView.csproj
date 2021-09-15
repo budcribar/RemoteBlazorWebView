@@ -24,12 +24,22 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <LangVersion>9</LangVersion>
+  
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Properties\**" />
     <None Remove="Properties\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="blazor.modules.json" />
+    <None Remove="_framework\blazor.modules.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="_framework\blazor.modules.json" />
   </ItemGroup>
 
   <ItemGroup>
