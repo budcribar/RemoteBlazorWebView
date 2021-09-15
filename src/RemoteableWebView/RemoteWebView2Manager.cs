@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace PeakSWC.RemoteableWebView
 {
-    public class RemoteWebView2Manager : WebView2WebViewManager, IWebViewManager
+    public class RemoteWebView2Manager : WebView2WebViewManager
     {
         Uri url;
         public RemoteableWebView RemoteableWebView { get; set; }
