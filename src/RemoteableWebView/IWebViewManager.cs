@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteableWebView
 {
-    public interface IWebViewManager : IDisposable
+    public interface IWebViewManager : IAsyncDisposable
     {
         void Navigate(string url);
         Task AddRootComponentAsync(Type componentType, string selector, ParameterView parameters);

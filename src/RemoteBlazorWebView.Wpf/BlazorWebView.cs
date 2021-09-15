@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
@@ -89,7 +90,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
 
-        public IWebViewManager? WebViewManager { get; set; }
+        public RemoteableWebView.WebView2WebViewManager? WebViewManager { get; set; }
         private Guid id = Guid.Empty;
         public Guid Id
         {
@@ -109,12 +110,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
-        public override IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        public override RemoteableWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
-                WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+                WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
             return WebViewManager;
         }

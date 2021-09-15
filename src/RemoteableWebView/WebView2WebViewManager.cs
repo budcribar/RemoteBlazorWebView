@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
@@ -34,8 +35,8 @@ namespace PeakSWC.RemoteableWebView
         /// <param name="dispatcher">A <see cref="Dispatcher"/> instance that can marshal calls to the required thread or sync context.</param>
         /// <param name="fileProvider">Provides static content to the webview.</param>
         /// <param name="hostPageRelativePath">Path to the host page within the <paramref name="fileProvider"/>.</param>
-        public WebView2WebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
-            : base(services, dispatcher, new Uri(AppOrigin), fileProvider, hostPageRelativePath)
+        public WebView2WebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+            : base(services, dispatcher, new Uri(AppOrigin), fileProvider, store,hostPageRelativePath)
         {
             _webview = webview ?? throw new ArgumentNullException(nameof(webview));
 

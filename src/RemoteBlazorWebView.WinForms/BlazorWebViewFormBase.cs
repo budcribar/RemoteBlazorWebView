@@ -8,24 +8,25 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteableWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 
-
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     /// <summary>
     /// A Windows Forms control for hosting Blazor web components locally in Windows desktop applications.
     /// </summary>
-    public class BlazorWebViewFormBase : ContainerControl, IDisposable
+    public class BlazorWebViewFormBase : ContainerControl
     {
         private readonly WebView2Control _webview;
-        private IWebViewManager _webviewManager;
+        private WebView2WebViewManager _webviewManager;
         private string _hostPage;
         private IServiceProvider _services;
 
@@ -113,7 +114,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         private void OnServicesPropertyChanged() => StartWebViewCoreIfPossible();
 
-        private bool IsAncestorSiteInDesignMode =>
+        private bool IsAncestorSiteInDesignMode2 =>
             GetSitedParentSite(this) is ISite parentSite && parentSite.DesignMode;
 
         private ISite GetSitedParentSite(Control control) =>
@@ -129,17 +130,16 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             HostPage != null &&
             Services != null;
 
-        public virtual IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        public virtual WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
-            return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+            return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
         }
 
         protected void StartWebViewCoreIfPossible()
         {
             // We never start the Blazor code in design time because it doesn't make sense to run
             // a Blazor component in the designer.
-
-            if (!IsAncestorSiteInDesignMode && (!RequiredStartupPropertiesSet || _webviewManager != null))
+            if (!IsAncestorSiteInDesignMode2 && (!RequiredStartupPropertiesSet || _webviewManager != null))
             {
                 return;
             }
@@ -148,9 +148,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             // unclear there's any other use case. We can add more options later if so.
             var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
+
+			var jsComponents = new JSComponentConfigurationStore();
             IFileProvider provider;
 
-            
+
             var root = Path.GetDirectoryName(HostPage);
             try
             {
@@ -164,7 +166,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 }
                 else provider = new PhysicalFileProvider(contentRootDir);
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 try
                 {
                     EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
@@ -179,9 +182,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 }
                 catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
             }
-           
-            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, provider, hostPageRelativePath);
-          
+
+            _webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, Dispatcher, provider, jsComponents, hostPageRelativePath);
+
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously
@@ -219,15 +222,22 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         {
             if (disposing)
             {
-                // Dispose this component's contents before calling base.Dispose() because that will dispose the WebView2 control, likely
-                // preventing user-written disposal logic from working (because it might try to use Blazor stuff, which wouldn't work anymore).
-                _webviewManager?.Dispose();
+				// Dispose this component's contents and block on completion so that user-written disposal logic and
+				// Blazor disposal logic will complete first. Then call base.Dispose(), which will dispose the WebView2
+				// control. This order is critical because once the WebView2 is disposed it will prevent and Blazor
+				// code from working because it requires the WebView to exist.
+				_webviewManager?
+                    .DisposeAsync()
+                    .AsTask()
+                    .ConfigureAwait(false)
+                    .GetAwaiter()
+                    .GetResult();
             }
-            base.Dispose(disposing);
-        }
+			base.Dispose(disposing);
+		}
 
-        /// <inheritdoc />
-        protected override ControlCollection CreateControlsInstance()
+		/// <inheritdoc />
+		protected override ControlCollection CreateControlsInstance()
         {
             return new BlazorWebViewControlCollection(this);
         }

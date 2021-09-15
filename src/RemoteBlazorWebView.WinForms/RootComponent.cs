@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PeakSWC.RemoteableWebView;
 using Microsoft.AspNetCore.Components;
-
+using Microsoft.AspNetCore.Components.WebView;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -49,13 +49,13 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         /// </summary>
         public IDictionary<string, object> Parameters { get; }
 
-        internal Task AddToWebViewManagerAsync(IWebViewManager webViewManager)
+        internal Task AddToWebViewManagerAsync(WebViewManager webViewManager)
         {
             var parameterView = Parameters == null ? ParameterView.Empty : ParameterView.FromDictionary(Parameters);
             return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
         }
 
-        internal Task RemoveFromWebViewManagerAsync(IWebViewManager webviewManager)
+        internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
         {
             return webviewManager.RemoveRootComponentAsync(Selector);
         }

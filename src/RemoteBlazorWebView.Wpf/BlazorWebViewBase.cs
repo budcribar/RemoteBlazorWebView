@@ -17,6 +17,7 @@ using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
 using System.Reflection;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -55,7 +56,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         private const string webViewTemplateChildName = "WebView";
         private WebView2Control? _webview;
-        private IWebViewManager? _webviewManager;
+        private WebView2WebViewManager? _webviewManager;
         private bool _isDisposed;
 
         /// <summary>
@@ -144,9 +145,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             base.OnInitialized(e);
             StartWebViewCoreIfPossible();
         }
-        public virtual IWebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, string hostPageRelativePath)
+        public virtual WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
-            return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, hostPageRelativePath);
+            return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
         }
 
         private void StartWebViewCoreIfPossible()
@@ -182,8 +183,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
             catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
 
-
-            _webviewManager = this.CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, WpfDispatcher.Instance, provider, hostPageRelativePath);
+            var jsComponents = new JSComponentConfigurationStore();
+            _webviewManager = this.CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, WpfDispatcher.Instance, provider, jsComponents, hostPageRelativePath);
             foreach (var rootComponent in RootComponents)
             {
                 // Since the page isn't loaded yet, this will always complete synchronously
@@ -225,7 +226,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 if (disposing)
                 {
                     // Dispose managed state (managed objects)
-                    _webviewManager?.Dispose();
+                   // _webviewManager?.Dispose();
                     _webview?.Dispose();
                 }
 
