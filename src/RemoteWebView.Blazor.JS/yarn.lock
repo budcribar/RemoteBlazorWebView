@@ -1656,7 +1656,7 @@
     "micromatch" "^3.1.4"
     "semver" "^5.0.1"
 
-"ts-protoc-gen@0.15.0":
+"ts-protoc-gen@^0.15.0":
   "integrity" "sha512-TycnzEyrdVDlATJ3bWFTtra3SCiEP0W0vySXReAuEygXCUr1j2uaVyL0DhzjwuUdQoW5oXPwk6oZWeA0955V+g=="
   "resolved" "https://registry.npmjs.org/ts-protoc-gen/-/ts-protoc-gen-0.15.0.tgz"
   "version" "0.15.0"
