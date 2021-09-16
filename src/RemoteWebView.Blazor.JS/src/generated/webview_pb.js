@@ -830,7 +830,7 @@ proto.webview.CreateWebViewRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     htmlhostpath: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    hostname: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    markup: jspb.Message.getFieldWithDefault(msg, 3, ""),
     group: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
@@ -878,7 +878,7 @@ proto.webview.CreateWebViewRequest.deserializeBinaryFromReader = function(msg, r
       break;
     case 3:
       var value = /** @type {string} */ (reader.readString());
-      msg.setHostname(value);
+      msg.setMarkup(value);
       break;
     case 4:
       var value = /** @type {string} */ (reader.readString());
@@ -927,7 +927,7 @@ proto.webview.CreateWebViewRequest.serializeBinaryToWriter = function(message, w
       f
     );
   }
-  f = message.getHostname();
+  f = message.getMarkup();
   if (f.length > 0) {
     writer.writeString(
       3,
@@ -981,10 +981,10 @@ proto.webview.CreateWebViewRequest.prototype.setHtmlhostpath = function(value) {
 
 
 /**
- * optional string hostname = 3;
+ * optional string markup = 3;
  * @return {string}
  */
-proto.webview.CreateWebViewRequest.prototype.getHostname = function() {
+proto.webview.CreateWebViewRequest.prototype.getMarkup = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
 };
 
@@ -993,7 +993,7 @@ proto.webview.CreateWebViewRequest.prototype.getHostname = function() {
  * @param {string} value
  * @return {!proto.webview.CreateWebViewRequest} returns this
  */
-proto.webview.CreateWebViewRequest.prototype.setHostname = function(value) {
+proto.webview.CreateWebViewRequest.prototype.setMarkup = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
 };
 
@@ -2477,7 +2477,7 @@ proto.webview.ClientResponse.prototype.toObject = function(opt_includeInstance) 
 proto.webview.ClientResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    hostname: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    markup: jspb.Message.getFieldWithDefault(msg, 2, ""),
     url: jspb.Message.getFieldWithDefault(msg, 3, ""),
     state: jspb.Message.getFieldWithDefault(msg, 4, 0),
     group: jspb.Message.getFieldWithDefault(msg, 5, "")
@@ -2523,7 +2523,7 @@ proto.webview.ClientResponse.deserializeBinaryFromReader = function(msg, reader)
       break;
     case 2:
       var value = /** @type {string} */ (reader.readString());
-      msg.setHostname(value);
+      msg.setMarkup(value);
       break;
     case 3:
       var value = /** @type {string} */ (reader.readString());
@@ -2573,7 +2573,7 @@ proto.webview.ClientResponse.serializeBinaryToWriter = function(message, writer)
       f
     );
   }
-  f = message.getHostname();
+  f = message.getMarkup();
   if (f.length > 0) {
     writer.writeString(
       2,
@@ -2623,10 +2623,10 @@ proto.webview.ClientResponse.prototype.setId = function(value) {
 
 
 /**
- * optional string hostName = 2;
+ * optional string markup = 2;
  * @return {string}
  */
-proto.webview.ClientResponse.prototype.getHostname = function() {
+proto.webview.ClientResponse.prototype.getMarkup = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
@@ -2635,7 +2635,7 @@ proto.webview.ClientResponse.prototype.getHostname = function() {
  * @param {string} value
  * @return {!proto.webview.ClientResponse} returns this
  */
-proto.webview.ClientResponse.prototype.setHostname = function(value) {
+proto.webview.ClientResponse.prototype.setMarkup = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
 };
 

@@ -79,8 +79,8 @@ export class CreateWebViewRequest extends jspb.Message {
   getHtmlhostpath(): string;
   setHtmlhostpath(value: string): void;
 
-  getHostname(): string;
-  setHostname(value: string): void;
+  getMarkup(): string;
+  setMarkup(value: string): void;
 
   getGroup(): string;
   setGroup(value: string): void;
@@ -99,7 +99,7 @@ export namespace CreateWebViewRequest {
   export type AsObject = {
     id: string,
     htmlhostpath: string,
-    hostname: string,
+    markup: string,
     group: string,
   }
 }
@@ -319,8 +319,8 @@ export class ClientResponse extends jspb.Message {
   getId(): string;
   setId(value: string): void;
 
-  getHostname(): string;
-  setHostname(value: string): void;
+  getMarkup(): string;
+  setMarkup(value: string): void;
 
   getUrl(): string;
   setUrl(value: string): void;
@@ -344,7 +344,7 @@ export class ClientResponse extends jspb.Message {
 export namespace ClientResponse {
   export type AsObject = {
     id: string,
-    hostname: string,
+    markup: string,
     url: string,
     state: ClientStateMap[keyof ClientStateMap],
     group: string,
