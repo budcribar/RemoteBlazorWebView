@@ -74,15 +74,20 @@ namespace PeakSwc.StaticFiles
 
             stream.Position = 0;
 
+            if (Path.GetFileName(appFile) == "blazor.modules.json")
+			{
+                stream = new MemoryStream(Encoding.ASCII.GetBytes("[]"));
+            }
+
             if (Path.GetFileName(appFile) == Path.GetFileName(_rootDictionary[id].HtmlHostPath))
             {
                 using StreamReader sr = new(stream);
                 var contents = sr.ReadToEnd();
                 var initialLength = contents.Length;
-                contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");
-                if (contents.Length == initialLength) _logger.LogError("Unable to find blazor javacript reference in the home page");
-                initialLength = contents.Length;
-                contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
+				contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");
+				if (contents.Length == initialLength) _logger.LogError("Unable to find blazor javacript reference in the home page");
+				initialLength = contents.Length;
+				contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
                 if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }

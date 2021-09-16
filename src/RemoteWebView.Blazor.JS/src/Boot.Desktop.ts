@@ -2,8 +2,8 @@ import { DotNet } from '@microsoft/dotnet-js-interop';
 import { Blazor } from '../upstream/aspnetcore/web.js/src/GlobalExports';
 import { shouldAutoStart } from '../upstream/aspnetcore/web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
-import { setEventDispatcher } from '../upstream/aspnetcore/web.js/src/Rendering/Events/EventDispatcher';
-import { sendBrowserEvent, sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+import {  sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
+import { fetchAndInvokeInitializers } from '../upstream/aspnetcore/web.js/src/JSInitializers/JSInitializers.WebView';
 
 import { initializeRemoteWebView } from './RemoteWebView';
 
@@ -13,6 +13,8 @@ async function boot(): Promise<void> {
     if (started) {
         throw new Error('Blazor has already started.');
     }
+
+    const jsInitializer = await fetchAndInvokeInitializers();
 
     started = true;
 
@@ -28,9 +30,9 @@ async function boot(): Promise<void> {
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
 
     sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
-}
 
-setEventDispatcher(sendBrowserEvent);
+    await jsInitializer.invokeAfterStartedCallbacks(Blazor);
+}
 
 Blazor.start = boot;
 

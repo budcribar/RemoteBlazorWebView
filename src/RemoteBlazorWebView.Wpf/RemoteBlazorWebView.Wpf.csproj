@@ -21,6 +21,9 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <LangVersion>latest</LangVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <PackageReleaseNotes>Update to net6 rc1</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,10 +31,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-preview.7.1345" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.100-rc.1.1608" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
     <None Include="..\..\icons\favicon-32x32.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>

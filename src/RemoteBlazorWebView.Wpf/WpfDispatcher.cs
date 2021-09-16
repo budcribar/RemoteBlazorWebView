@@ -9,7 +9,7 @@ using WindowsDispatcher = System.Windows.Threading.Dispatcher;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
-    internal class WpfDispatcher : Dispatcher
+    internal sealed class WpfDispatcher : Dispatcher
     {
         private readonly WindowsDispatcher _windowsDispatcher;
 

@@ -12,17 +12,17 @@
   },
   "devDependencies": {
     "@improbable-eng/grpc-web": "0.14.0",
-    "@microsoft/dotnet-js-interop": "6.0.0-preview.7.21378.6",
+    "@microsoft/dotnet-js-interop": "6.0.0-rc.1.21452.15",
     "@types/base64-arraybuffer": "^0.1.0",
     "base64-arraybuffer": "^0.1.5",
     "google-protobuf": "3.15.6",
     "grpc-web": "1.2.1",
     "inspectpack": "^4.6.1",
     "ts-loader": "4.4.1",
-    "ts-protoc-gen": "^0.14.0",
+    "ts-protoc-gen": "^0.15.0",
     "tsconfig-paths-webpack-plugin": "^3.5.1",
     "typescript": "^4.2.3",
-    "webpack": "5.31.0",
+    "webpack": "^5.31.0",
     "webpack-cli": "4.7.0"
   },
   "dependencies": {

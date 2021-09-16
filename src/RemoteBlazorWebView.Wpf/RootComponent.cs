@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         /// </summary>
         public IDictionary<string, object?>? Parameters { get; set; }
 
-        internal Task AddToWebViewManagerAsync(IWebViewManager webViewManager)
+        internal Task AddToWebViewManagerAsync(RemoteableWebView.WebView2WebViewManager webViewManager)
         {
             // As a characteristic of XAML,we can't rely on non-default constructors. So we have to
             // validate that the required properties were set. We could skip validating this and allow
@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
         }
 
-        internal Task RemoveFromWebViewManagerAsync(IWebViewManager webviewManager)
+        internal Task RemoveFromWebViewManagerAsync(RemoteableWebView.WebView2WebViewManager webviewManager)
         {
             if (Selector == null) return Task.CompletedTask;
             return webviewManager.RemoveRootComponentAsync(Selector);

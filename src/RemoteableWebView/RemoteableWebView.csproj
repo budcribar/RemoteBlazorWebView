@@ -10,12 +10,12 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteableWebView</PackageId>
     <Authors>Bud Cribar</Authors>
-    <Description></Description>
+    <Description>Support Package for RemoteBlazorWebView.WindowsForms and RemoteBlazorWebView.Wpf</Description>
     <Copyright></Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon></PackageIcon>
-    <RepositoryType></RepositoryType>
-    <RepositoryUrl></RepositoryUrl>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <PackageTags></PackageTags>
     <AssemblyVersion>0.0.1.0</AssemblyVersion>
     <FileVersion>0.0.1.0</FileVersion>
@@ -24,12 +24,24 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <LangVersion>9</LangVersion>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Properties\**" />
     <None Remove="Properties\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="blazor.modules.json" />
+    <None Remove="_framework\blazor.modules.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="_framework\blazor.modules.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,8 +52,8 @@
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.15.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.36.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-preview.7.21378.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.100-preview.7.1345" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-rc.1.21452.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.100-rc.1.1608" />
     <PackageReference Include="Grpc.Tools" Version="2.36.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -52,6 +64,17 @@
 
   <ItemGroup>
     <Folder Include="Manifest\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icons\favicon-32x32.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 
