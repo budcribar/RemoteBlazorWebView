@@ -131,7 +131,8 @@ namespace PeakSWC.RemoteableWebView
                         }
                         catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                         {
-                            OnDisconnected?.Invoke(this, Id);
+                            //OnDisconnected?.Invoke(this, Id);
+                            // TODO This will try and do a restart maybe we need a Restart event also
                             exception = ex;
                             completed.Set();
                         }

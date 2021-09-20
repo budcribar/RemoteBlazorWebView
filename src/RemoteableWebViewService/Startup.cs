@@ -170,16 +170,8 @@ namespace PeakSWC.RemoteableWebView
                     if (rootDictionary[guid].InUse)
                     {
                         context.Response.StatusCode = 400;
-
-                        string response = "";
-
-                        if (string.IsNullOrEmpty(rootDictionary[guid].User))
-                            response = "<h1>Client is currently locked</h1>";
-                        else
-                            response = $"<h1>Client is currently locked to {rootDictionary[guid].User}</h1> <button type='button' onclick=\"location.href='/{guid}'\">Restart</button>";
-
+                        string response = LockedPage.Html(rootDictionary[guid].User, guid);
                         context.Response.ContentType = "text/html";
-
                         await context.Response.WriteAsync(response);
                     }
                     else
