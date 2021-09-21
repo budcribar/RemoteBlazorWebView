@@ -84,9 +84,6 @@ namespace PeakSwc.StaticFiles
                 using StreamReader sr = new(stream);
                 var contents = sr.ReadToEnd();
                 var initialLength = contents.Length;
-				contents = contents.Replace("_framework/blazor.webview.js", "remote.blazor.desktop.js");
-				if (contents.Length == initialLength) _logger.LogError("Unable to find blazor javacript reference in the home page");
-				initialLength = contents.Length;
 				contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
                 if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));

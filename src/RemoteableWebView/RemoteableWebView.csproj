@@ -37,15 +37,8 @@
 
   <ItemGroup>
     <None Remove="blazor.modules.json" />
-    <None Remove="_framework\blazor.modules.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="_framework\blazor.modules.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="..\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js" Link="remote.blazor.desktop.js" />
+    <EmbeddedResource Include="..\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js" Link="_framework/blazor.webview.js" />
   </ItemGroup>
 
   <ItemGroup>
