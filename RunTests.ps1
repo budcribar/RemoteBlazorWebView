@@ -16,6 +16,9 @@ dotnet build -c Release .\src\RemoteableWebViewService
 dotnet tool uninstall PeakSWC.RemoteableWebViewService -g
 
 if ($env:EnvBuildMode -eq 'Debug') {
+	# remove the cached version!!
+	Join-Path $env:HomePath '.dotnet\tools\RemoteableWebViewService.exe' | Remove-Item 
+	Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.remoteablewebviewservice' | Remove-Item  -Recurse
 	dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
 } else {
 	dotnet tool update -g  PeakSWC.RemoteableWebViewService --version 6.*-* 

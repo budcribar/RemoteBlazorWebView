@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace WebdriverTestProject
 {
@@ -47,8 +48,18 @@ namespace WebdriverTestProject
 
             process = StartServer();
             
-            var ids = new RemoteWebView.RemoteWebViewClient(channel).GetIds(new Empty());
-            Assert.AreEqual(0, ids.Responses.Count);
+            for(int i=0; i < 10; i++)
+			{
+                // Wait for server to spin up
+                try
+				{
+                    var ids = new RemoteWebView.RemoteWebViewClient(channel).GetIds(new Empty());
+                    Assert.AreEqual(0, ids.Responses.Count);
+                    break;
+                }
+                catch (Exception ){}
+                Task.Delay(1000).Wait();
+            }
 
             clients = new List<Process>();
 
