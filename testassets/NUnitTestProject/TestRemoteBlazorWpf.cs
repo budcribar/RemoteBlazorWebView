@@ -139,7 +139,7 @@ namespace WebdriverTestProject
             for (int i = 0; i < num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
-            Thread.Sleep(1000);
+            Thread.Sleep(3000);
             sw.Restart();
 
             for (int i = 0; i < num; i++)
