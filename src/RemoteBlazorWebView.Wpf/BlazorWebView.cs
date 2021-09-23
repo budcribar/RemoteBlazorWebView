@@ -115,48 +115,29 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             if (ServerUri == null)
                 WebViewManager = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                WebViewManager = new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
             return WebViewManager;
         }
 
-        public new event EventHandler<string> Unloaded
+        public void FireConnected(ConnectedEventArgs args)
         {
-            add
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnDisconnected += value;
-                //else
-                //    MainBlazorWebView.Unloaded +=  value;
-            }
-
-            remove
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnDisconnected -= value;
-                //else
-                //    MainBlazorWebView.Unloaded -= value;
-            }
+            Connected?.Invoke(this, args);
         }
 
-        public new event EventHandler<string> Loaded
+        public void FireDisconnected(DisconnectedEventArgs args)
         {
-            add
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnConnected += value;
-                //else
-                //MainBlazorWebView.Loaded += value;
-            }
-
-            remove
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnConnected -= value;
-                //else
-                //    MainBlazorWebView.Loaded -= value;
-            }
+            Disconnected?.Invoke(this, args);
         }
+
+        public void FireRefreshed(RefreshedEventArgs args)
+        {
+            Refreshed?.Invoke(this, args);
+        }
+
+        public event EventHandler<ConnectedEventArgs>? Connected;
+        public event EventHandler<DisconnectedEventArgs>? Disconnected;
+        public event EventHandler<RefreshedEventArgs>? Refreshed;
 
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {

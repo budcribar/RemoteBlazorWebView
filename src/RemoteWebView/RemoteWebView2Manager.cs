@@ -12,9 +12,10 @@ namespace PeakSWC.RemoteWebView
         Uri url;
         public RemoteWebView RemoteWebView { get; set; }
        
-        public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Uri url, string id, string group, string markup) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
+        public RemoteWebView2Manager(IBlazorWebView blazorWebView, IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Uri url, string id, string group, string markup) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
         {
             RemoteWebView = new RemoteWebView(
+                blazorWebView,
                 url,
                 hostPageRelativePath,
                 dispatcher,

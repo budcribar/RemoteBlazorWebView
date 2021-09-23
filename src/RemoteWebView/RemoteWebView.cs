@@ -13,7 +13,7 @@ using System.Windows;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebView // : IBlazorWebView 
+    public class RemoteWebView 
     {
         public static void Restart(IBlazorWebView blazorWebView)
         {
@@ -52,6 +52,7 @@ namespace PeakSWC.RemoteWebView
         #region private
 
         private string Markup { get; init; }
+        private IBlazorWebView BlazorWebView { get; init; }
         private readonly object bootLock = new();
         private string Group { get; init; }
         private WebViewIPC.WebViewIPCClient? client = null;
@@ -112,13 +113,13 @@ namespace PeakSWC.RemoteWebView
                                             lock (bootLock)
                                             {
                                                 Shutdown();
-
-                                                OnDisconnected?.Invoke(this, Id);
+                                               
+                                                BlazorWebView.FireRefreshed(new RefreshedEventArgs(Guid.Parse( Id), ServerUri));
                                             }
                                             break;
 
                                         case "connected":
-                                            OnConnected?.Invoke(this, Id);
+                                            BlazorWebView.FireConnected(new ConnectedEventArgs(Guid.Parse(Id), ServerUri));
                                             break;
                                     }
                                 }
@@ -129,14 +130,7 @@ namespace PeakSWC.RemoteWebView
                                 }
                             }
                         }
-                        catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
-                        {
-                            //OnDisconnected?.Invoke(this, Id);
-                            // TODO This will try and do a restart maybe we need a Restart event also
-                            exception = ex;
-                            completed.Set();
-                        }
-                        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+                        catch (Exception ex)
                         {
                             exception = ex;
                             completed.Set();
@@ -146,8 +140,11 @@ namespace PeakSWC.RemoteWebView
                     completed.Wait();
 
                     if (exception != null)
-                        throw (exception);
-
+					{
+                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri));
+                        throw exception;
+                    }
+                      
                     Task.Run(async () =>
                     {
                         var files = client.FileReader();
@@ -193,11 +190,11 @@ namespace PeakSWC.RemoteWebView
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
-        public event EventHandler<string>? OnConnected;
-        public event EventHandler<string>? OnDisconnected;
+       
 
-        public RemoteWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
+        public RemoteWebView(IBlazorWebView blazorWebView, Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
         {
+            BlazorWebView = blazorWebView;
             ServerUri = uri;
             HostHtmlPath = hostHtmlPath;
             Dispacher = dispatcher;

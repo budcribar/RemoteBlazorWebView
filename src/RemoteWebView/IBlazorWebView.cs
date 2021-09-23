@@ -6,9 +6,13 @@ namespace PeakSWC.RemoteWebView
 {
     public interface IBlazorWebView
     {
-        public event EventHandler<string> Unloaded;
-        public event EventHandler<string> Loaded;
+        public event EventHandler<ConnectedEventArgs>? Connected;
+        public event EventHandler<DisconnectedEventArgs>? Disconnected;
+        public event EventHandler<RefreshedEventArgs>? Refreshed;
 
+        public void FireConnected(ConnectedEventArgs args);
+        public void FireDisconnected(DisconnectedEventArgs args);
+        public void FireRefreshed(RefreshedEventArgs args);
         public Uri? ServerUri { get; set; }
         public string Group { get; set; }
         public bool IsRestarting { get; set; }

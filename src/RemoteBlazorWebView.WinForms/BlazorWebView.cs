@@ -20,18 +20,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         protected override void OnCreateControl()
         {
             base.OnCreateControl();
-
-            foreach (var h in LoadedInternal.ToArray())
-            {
-                Loaded += h;
-                LoadedInternal.Remove(h);
-            }
-            foreach (var h in UnloadedInternal.ToArray())
-            {
-                Unloaded += h;
-                UnloadedInternal.Remove(h);
-            }
-
             Application.ApplicationExit += Application_ApplicationExit;
         }
 
@@ -88,46 +76,24 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         private string _group = "test";
 
+        public void FireConnected(ConnectedEventArgs args)
+		{
+            Connected?.Invoke(this, args);
+		}
 
-        private readonly List<EventHandler<string>> UnloadedInternal = new();
-        private readonly List<EventHandler<string>> LoadedInternal = new();
-        public event EventHandler<string> Unloaded
+        public void FireDisconnected(DisconnectedEventArgs args)
         {
-            add
-            {
-                // TODO Does the standard BlazorWebView have an Unloaded event?
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnDisconnected += value;
-                else
-                    UnloadedInternal.Add(value);
-            }
-
-            remove
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnDisconnected -= value;
-            }
+            Disconnected?.Invoke(this, args);
         }
 
-        public event EventHandler<string> Loaded
+        public void FireRefreshed(RefreshedEventArgs args)
         {
-            add
-            {
-                // TODO
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnConnected += value;
-                else
-                    LoadedInternal.Add(value);
-
-            }
-
-            remove
-            {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                    manager.RemoteWebView.OnConnected -= value;
-            }
+            Refreshed?.Invoke(this, args);
         }
 
+        public event EventHandler<ConnectedEventArgs>? Connected;
+        public event EventHandler<DisconnectedEventArgs>? Disconnected;
+        public event EventHandler<RefreshedEventArgs>? Refreshed;
 
         /// <summary>
         /// Group that the user is a member of when signed in
@@ -179,7 +145,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             if (ServerUri == null)
                 WebViewManager = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                WebViewManager = new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
             return WebViewManager;
         }
