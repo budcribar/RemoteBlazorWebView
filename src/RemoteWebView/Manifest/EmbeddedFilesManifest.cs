@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Extensions.Primitives;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class EmbeddedFilesManifest
     {

@@ -23,20 +23,20 @@ steps:
 
 
 
-#Build RemoteableWebViewService Nuget Package
+#Build RemoteWebViewService Nuget Package
 - task: DotNetCoreCLI@2
   displayName: 'Build RemoteWebViewService'
   inputs:
     command: build
-    projects: 'src\RemoteableWebViewService\RemoteableWebViewService.csproj'
+    projects: 'src\RemoteWebViewService\RemoteWebViewService.csproj'
     arguments: '--configuration $(buildConfiguration)'
 
-#Package RemoteableWebViewService Nuget Package
+#Package RemoteWebViewService Nuget Package
 - task: DotNetCoreCLI@2
-  displayName: 'Package RemoteableWebViewService'
+  displayName: 'Package RemoteWebViewService'
   inputs:
     command: pack
-    packagesToPack: 'src\RemoteableWebViewService\RemoteableWebViewService.csproj '
+    packagesToPack: 'src\RemoteWebViewService\RemoteWebViewService.csproj '
     versioningScheme: byPrereleaseNumber
     majorVersion: $(Version.Major)
     minorVersion: $(Version.Minor)

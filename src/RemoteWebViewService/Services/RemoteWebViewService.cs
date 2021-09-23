@@ -8,9 +8,9 @@ using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService : RemoteWebView.RemoteWebViewBase
+    public class RemoteWebViewService : WebViewIPC.WebViewIPCBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;

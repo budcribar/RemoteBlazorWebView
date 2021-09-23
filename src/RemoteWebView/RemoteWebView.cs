@@ -11,9 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
-    public class RemoteableWebView // : IBlazorWebView 
+    public class RemoteWebView // : IBlazorWebView 
     {
         public static void Restart(IBlazorWebView blazorWebView)
         {
@@ -54,7 +54,7 @@ namespace PeakSWC.RemoteableWebView
         private string Markup { get; init; }
         private readonly object bootLock = new();
         private string Group { get; init; }
-        private RemoteWebView.RemoteWebViewClient? client = null;
+        private WebViewIPC.WebViewIPCClient? client = null;
         private readonly CancellationTokenSource cts = new();
         private IFileProvider FileProvider { get; }
         #endregion
@@ -66,7 +66,7 @@ namespace PeakSWC.RemoteableWebView
         public Dispatcher? Dispacher { get; set; }
         //public IJSRuntime? JSRuntime { get; set; }
 
-        protected RemoteWebView.RemoteWebViewClient? Client
+        protected WebViewIPC.WebViewIPCClient? Client
         {
             get
             {
@@ -76,7 +76,7 @@ namespace PeakSWC.RemoteableWebView
                 {
                     var channel = GrpcChannel.ForAddress(ServerUri);
 
-                    client = new RemoteWebView.RemoteWebViewClient(channel);
+                    client = new WebViewIPC.WebViewIPCClient(channel);
                    
                     var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
@@ -196,7 +196,7 @@ namespace PeakSWC.RemoteableWebView
         public event EventHandler<string>? OnConnected;
         public event EventHandler<string>? OnDisconnected;
 
-        public RemoteableWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
+        public RemoteWebView(Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
         {
             ServerUri = uri;
             HostHtmlPath = hostHtmlPath;

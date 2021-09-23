@@ -20,7 +20,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Channel = System.Threading.Channels.Channel;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class Startup
     {

@@ -11,7 +11,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class ClientIPCService : ClientIPC.ClientIPCBase
     {

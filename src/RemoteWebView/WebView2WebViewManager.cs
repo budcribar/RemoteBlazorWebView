@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     /// <summary>
     /// An implementation of <see cref="WebViewManager"/> that uses the Edge WebView2 browser control

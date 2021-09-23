@@ -13,8 +13,8 @@
     <LangVersion>latest</LangVersion>
     <PackAsTool Condition="'$(Configuration)' == 'Release'">true</PackAsTool>
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
-    <PackageId>PeakSWC.RemoteableWebViewService</PackageId>
-    <ToolCommandName>RemoteableWebViewService</ToolCommandName>
+    <PackageId>PeakSWC.RemoteWebViewService</PackageId>
+    <ToolCommandName>RemoteWebViewService</ToolCommandName>
     <Authors>Bud Cribar</Authors>
     <Company>Peak Software Consulting, LLC</Company>
     <Description>This package will transport the user interface from an app built using RemoteBlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser via a cloud server.</Description>
@@ -34,7 +34,7 @@
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
-    <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
+    <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <DebugType>embedded</DebugType>

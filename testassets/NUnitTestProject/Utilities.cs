@@ -14,9 +14,9 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteableWebViewService")?.Kill();
-            var relative = @"..\..\..\..\..\src\RemoteableWebViewService\bin\publishNoAuth";
-            var executable = @"RemoteableWebViewService.exe";
+            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
+            var relative = @"..\..\..\..\..\src\RemoteWebViewService\bin\publishNoAuth";
+            var executable = @"RemoteWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
 
             Process process = new();
@@ -36,7 +36,7 @@ namespace WebdriverTestProject
             sw.Start();
 
             Process process = new();
-            process.StartInfo.FileName = "remoteablewebviewservice";
+            process.StartInfo.FileName = "RemoteWebViewService";
             process.StartInfo.UseShellExecute = true;
 
             process.Start();

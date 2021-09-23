@@ -5,16 +5,16 @@ using Microsoft.Extensions.FileProviders;
 using System;
 using System.Reflection;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class RemoteWebView2Manager : WebView2WebViewManager
     {
         Uri url;
-        public RemoteableWebView RemoteableWebView { get; set; }
+        public RemoteWebView RemoteWebView { get; set; }
        
         public RemoteWebView2Manager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Uri url, string id, string group, string markup) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
         {
-            RemoteableWebView = new RemoteableWebView(
+            RemoteWebView = new RemoteWebView(
                 url,
                 hostPageRelativePath,
                 dispatcher,
@@ -24,18 +24,18 @@ namespace PeakSWC.RemoteableWebView
                 markup
                 );
 
-            RemoteableWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
-            RemoteableWebView.Initialize();
+            RemoteWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
+            RemoteWebView.Initialize();
             this.url = new Uri("https://0.0.0.0/");
         }
         private void RemoteOnWebMessageReceived(object? sender, string e)
         {
             var url = sender?.ToString() ?? "";
-            if (RemoteableWebView.ServerUri != null && url.StartsWith(RemoteableWebView.ServerUri.ToString()))
+            if (RemoteWebView.ServerUri != null && url.StartsWith(RemoteWebView.ServerUri.ToString()))
             {
-                url = url.Replace(RemoteableWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
-                url = url.Replace(RemoteableWebView.Id.ToString() + $"/", "");
-                if (url.EndsWith(RemoteableWebView.HostHtmlPath)) url = url.Replace(RemoteableWebView.HostHtmlPath, "");             
+                url = url.Replace(RemoteWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
+                url = url.Replace(RemoteWebView.Id.ToString() + $"/", "");
+                if (url.EndsWith(RemoteWebView.HostHtmlPath)) url = url.Replace(RemoteWebView.HostHtmlPath, "");             
             }
             
             MessageReceived(new Uri(url), e);
@@ -44,12 +44,12 @@ namespace PeakSWC.RemoteableWebView
         protected override void NavigateCore(Uri absoluteUri)
         {
             this.url = absoluteUri;
-            RemoteableWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
+            RemoteWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
         }
 
         protected override void SendMessage(string message)
         {
-            RemoteableWebView.SendMessage(message);
+            RemoteWebView.SendMessage(message);
         }
     }
 }

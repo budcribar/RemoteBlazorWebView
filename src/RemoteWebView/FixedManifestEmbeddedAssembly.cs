@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class FixedManifestEmbeddedAssembly : Assembly
     {

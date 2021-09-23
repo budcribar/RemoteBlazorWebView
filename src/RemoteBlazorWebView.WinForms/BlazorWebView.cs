@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -37,22 +37,22 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         private void Application_ApplicationExit(object? sender, EventArgs e)
         {
-            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
-                manager.RemoteableWebView.Shutdown();
+            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
+                manager.RemoteWebView.Shutdown();
         }
 
-        public RemoteableWebView.WebView2WebViewManager? WebViewManager { get; set; }
+        public RemoteWebView.WebView2WebViewManager? WebViewManager { get; set; }
 
         private Uri? _serverUri;
 
         /// <summary>
-        /// Uri of the RemoteableWebView service.
+        /// Uri of the RemoteWebView service.
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
 
         [TypeConverter(typeof(UriTypeConverter))]
         [Category("Behavior")]
-        [Description(@"Uri of the RemoteableWebView service.")]
+        [Description(@"Uri of the RemoteWebView service.")]
         public Uri? ServerUri
         {
             get => _serverUri;
@@ -96,16 +96,16 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             add
             {
                 // TODO Does the standard BlazorWebView have an Unloaded event?
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
-                    manager.RemoteableWebView.OnDisconnected += value;
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
+                    manager.RemoteWebView.OnDisconnected += value;
                 else
                     UnloadedInternal.Add(value);
             }
 
             remove
             {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
-                    manager.RemoteableWebView.OnDisconnected -= value;
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
+                    manager.RemoteWebView.OnDisconnected -= value;
             }
         }
 
@@ -114,8 +114,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             add
             {
                 // TODO
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
-                    manager.RemoteableWebView.OnConnected += value;
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
+                    manager.RemoteWebView.OnConnected += value;
                 else
                     LoadedInternal.Add(value);
 
@@ -123,8 +123,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
             remove
             {
-                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteableWebView != null)
-                    manager.RemoteableWebView.OnConnected -= value;
+                if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
+                    manager.RemoteWebView.OnConnected -= value;
             }
         }
 
@@ -174,10 +174,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
        
 
-        public override RemoteableWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override RemoteWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
-                WebViewManager = new RemoteableWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                WebViewManager = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
                 WebViewManager = new RemoteWebView2Manager(webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
@@ -186,12 +186,12 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void Restart()
         {
-            RemoteableWebView.RemoteableWebView.Restart(this);
+            RemoteWebView.RemoteWebView.Restart(this);
         }
 
         public Task<Process?> StartBrowser()
         {
-            return RemoteableWebView.RemoteableWebView.StartBrowser(this);
+            return RemoteWebView.RemoteWebView.StartBrowser(this);
         }
     }
 }

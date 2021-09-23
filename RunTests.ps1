@@ -8,20 +8,20 @@ Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEm
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
 
 # Publish the web site server
-dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\bin\publishNoAuth
+dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
 
-dotnet publish -c Authorization --self-contained true -r win-x64 .\src\RemoteableWebViewService -o src\RemoteableWebViewService\bin\publishAuth
+dotnet publish -c Authorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
-dotnet build -c Release .\src\RemoteableWebViewService
-dotnet tool uninstall PeakSWC.RemoteableWebViewService -g
+dotnet build -c Release .\src\RemoteWebViewService
+dotnet tool uninstall PeakSWC.RemoteWebViewService -g
 
 if ($env:EnvBuildMode -eq 'Debug') {
 	# remove the cached version!!
-	Join-Path $env:HomePath '.dotnet\tools\RemoteableWebViewService.exe' | Remove-Item 
-	Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.remoteablewebviewservice' | Remove-Item  -Recurse
-	dotnet tool update -g --add-source artifacts PeakSWC.RemoteableWebViewService --version 6.*-* --ignore-failed-sources
+	Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' | Remove-Item 
+	Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' | Remove-Item  -Recurse
+	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 6.*-* --ignore-failed-sources
 } else {
-	dotnet tool update -g  PeakSWC.RemoteableWebViewService --version 6.*-* 
+	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 6.*-* 
 }
 
 # Publish WinFormsApp
@@ -69,7 +69,7 @@ Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
 
 # zip up files for github
 $compress = @{
-  Path = "src\RemoteableWebViewService\bin\publishNoAuth\RemoteableWebViewService.exe", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe","..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe", "README.txt"
+  Path = "src\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe", "..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe","..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe", "README.txt"
   CompressionLevel = "Fastest"
   DestinationPath = "artifacts\Release.Zip"
 }

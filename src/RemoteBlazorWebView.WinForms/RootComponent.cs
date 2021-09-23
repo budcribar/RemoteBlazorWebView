@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView;
 

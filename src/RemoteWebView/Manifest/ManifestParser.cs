@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public static class ManifestParser
     {

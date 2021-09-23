@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using Microsoft.AspNetCore.Components;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -15,7 +15,7 @@ using System.Windows.Controls;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
-using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
+using WebView2WebViewManager = PeakSWC.RemoteWebView.WebView2WebViewManager;
 using System.Reflection;
 using Microsoft.AspNetCore.Components.Web;
 using System.Threading.Tasks;

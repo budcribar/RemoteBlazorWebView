@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;

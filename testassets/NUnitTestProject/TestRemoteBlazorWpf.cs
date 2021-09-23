@@ -3,7 +3,7 @@ using Grpc.Net.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -53,7 +53,7 @@ namespace WebdriverTestProject
                 // Wait for server to spin up
                 try
 				{
-                    var ids = new RemoteWebView.RemoteWebViewClient(channel).GetIds(new Empty());
+                    var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
                     Assert.AreEqual(0, ids.Responses.Count);
                     break;
                 }
@@ -84,7 +84,7 @@ namespace WebdriverTestProject
 
         protected static void StartClient(int num)
         {
-            var client = new RemoteWebView.RemoteWebViewClient(channel);
+            var client = new WebViewIPC.WebViewIPCClient(channel);
 
             do
             {

@@ -5,7 +5,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-option csharp_namespace = "PeakSWC.RemoteableWebView";
+option csharp_namespace = "PeakSWC.RemoteWebView";
 
 package webview;
 
@@ -72,7 +72,7 @@ message SendSequenceMessageRequest {
     string url = 4;
 }
 
-service RemoteWebView {
+service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);

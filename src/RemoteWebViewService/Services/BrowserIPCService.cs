@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public class BrowserIPCService : BrowserIPC.BrowserIPCBase
     {

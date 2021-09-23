@@ -1,5 +1,5 @@
 ﻿
-namespace PeakSWC.RemoteableWebView
+namespace PeakSWC.RemoteWebView
 {
     public static class LockedPage
     {

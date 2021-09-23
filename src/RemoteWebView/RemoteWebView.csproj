@@ -4,11 +4,11 @@
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <TargetFramework>net6.0-windows</TargetFramework>
-    <RootNamespace>PeakSWC.RemoteableWebView</RootNamespace>
+    <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>true</UseWPF>
     <Platforms>x64</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>PeakSWC.RemoteableWebView</PackageId>
+    <PackageId>PeakSWC.RemoteWebView</PackageId>
     <Authors>Bud Cribar</Authors>
     <Description>Support Package for RemoteBlazorWebView.WindowsForms and RemoteBlazorWebView.Wpf</Description>
     <Copyright></Copyright>
@@ -20,7 +20,7 @@
     <AssemblyVersion>0.0.1.0</AssemblyVersion>
     <FileVersion>0.0.1.0</FileVersion>
     <Company>Peak Software Consulting, LLC</Company>
-    <AssemblyName>PeakSWC.RemoteableWebView</AssemblyName>
+    <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <LangVersion>9</LangVersion>

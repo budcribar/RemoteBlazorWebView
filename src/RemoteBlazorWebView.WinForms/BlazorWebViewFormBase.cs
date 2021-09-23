@@ -14,9 +14,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
-using WebView2WebViewManager = PeakSWC.RemoteableWebView.WebView2WebViewManager;
+using WebView2WebViewManager = PeakSWC.RemoteWebView.WebView2WebViewManager;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {

@@ -1,7 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 using Microsoft.AspNetCore.Components;
-using PeakSWC.RemoteableWebView;
+using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         /// </summary>
         public IDictionary<string, object?>? Parameters { get; set; }
 
-        internal Task AddToWebViewManagerAsync(RemoteableWebView.WebView2WebViewManager webViewManager)
+        internal Task AddToWebViewManagerAsync(RemoteWebView.WebView2WebViewManager webViewManager)
         {
             // As a characteristic of XAML,we can't rely on non-default constructors. So we have to
             // validate that the required properties were set. We could skip validating this and allow
@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
         }
 
-        internal Task RemoveFromWebViewManagerAsync(RemoteableWebView.WebView2WebViewManager webviewManager)
+        internal Task RemoveFromWebViewManagerAsync(RemoteWebView.WebView2WebViewManager webviewManager)
         {
             if (Selector == null) return Task.CompletedTask;
             return webviewManager.RemoveRootComponentAsync(Selector);
