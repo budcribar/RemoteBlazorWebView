@@ -21,7 +21,7 @@ RemoteBlazorWebView.WindowsForms.BlazorWebView is a drop-in replacement for the 
 You do not need to build this repo unless you want to customize the RemoteWebViewService. Run the following command to install the RemoteWebViewService
 
 ```console
-dotnet tool update -g PeakSWC.RemoteWebViewService --version 6.*-* --ignore-failed-sources
+dotnet tool update -g PeakSWC.RemoteWebViewService --version 6.*-* 
 ```
 
 # Samples

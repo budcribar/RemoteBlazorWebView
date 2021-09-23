@@ -41,13 +41,6 @@ namespace WebdriverTestProject
             TestClient(100);
         }
 
-        [Ignore("Too long")]
-        [TestMethod]
-        public void Test1000Clicks()
-        {
-            TestClient(1000);
-        }
-
         public void TestClient(int numClicks)
         {
             Stopwatch sw = new();

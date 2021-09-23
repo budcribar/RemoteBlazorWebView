@@ -114,13 +114,6 @@ namespace WebdriverTestProject
             TestClient(2);
         }
 
-        [Ignore("Not enough resources")]
-        [TestMethod]
-        public void Test10Client()
-        {
-            TestClient(10);
-        }
-
         [TestMethod]
         public void Test5Client()
         {

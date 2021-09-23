@@ -19,7 +19,7 @@ if ($env:EnvBuildMode -eq 'Debug') {
 	# remove the cached version!!
 	Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' | Remove-Item 
 	Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' | Remove-Item  -Recurse
-	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 6.*-* --ignore-failed-sources
+	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 6.*-* 
 } else {
 	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 6.*-* 
 }
