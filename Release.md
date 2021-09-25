@@ -1,8 +1,8 @@
 - Increment VersionPrefix from Directory.Build.Props
 - Edit RunTests.ps1 and set EnvBuildMode to Debug
+- Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
 - RunTests.ps1 from RemoteBlazorWebView
 -	Check RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js is about 332KB
-- Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
 - Upload the contents of RemoteBlazorWebView\artifacts to nuget.org
 - Open the RemoteBlazorWebViewTutorial solution and make sure Package sources are set to all
 - Update the RemoteBlazorWebView.WindowsForms, RemoteBlazorWebView.Wpf, RemoteBlazorWebViewTutorial.Shared packages to the latest version
