@@ -154,7 +154,9 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart());
                 endpoints.MapGet("/restart/{id:guid}", AckRestart());
                 endpoints.MapGet("/wait/{id:guid}", Wait());
+#if !AUTHORIZATION
                 endpoints.MapGet("/status", Status());
+#endif
                 endpoints.MapFallbackToFile("index.html");
             });
         }
