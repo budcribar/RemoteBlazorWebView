@@ -34,19 +34,19 @@ namespace WebdriverTestProject
         }
     }
 
-    // Debug is not working in Preview7
-    //[TestClass]
-    //public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm
-    //{
+	// Debug is not building
+	[TestClass]
+	public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm
+	{
 
-    //    public override Process CreateClient()
-    //    {
-    //        return Utilities.StartRemoteBlazorWinFormsDebugApp();
-    //    }
+		public override Process CreateClient()
+		{
+			return Utilities.StartRemoteBlazorWinFormsDebugApp();
+		}
 
-    //}
+	}
 
-    [TestClass]
+	[TestClass]
     public class TestRemoteEmbeddedBlazorForm : TestRemoteBlazorForm
     {
 

@@ -1,5 +1,5 @@
 # Set the build env to use project references instead of packages
-$env:EnvBuildMode = 'Release' # Debug or Release
+$env:EnvBuildMode = 'Debug' # Debug or Release
 
 # Start with a clean solution
 
@@ -60,8 +60,7 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bi
 
 #
 # Debug mode is not working in Preview7
-#dotnet build -c Debug RemoteBlazorWebView.sln
-
+dotnet build -c Debug RemoteBlazorWebView.sln
 
 dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
 

@@ -5,69 +5,69 @@ var webview_pb = require("./webview_pb");
 var google_protobuf_empty_pb = require("google-protobuf/google/protobuf/empty_pb");
 var grpc = require("@improbable-eng/grpc-web").grpc;
 
-var RemoteWebView = (function () {
-  function RemoteWebView() {}
-  RemoteWebView.serviceName = "webview.RemoteWebView";
-  return RemoteWebView;
+var WebViewIPC = (function () {
+  function WebViewIPC() {}
+  WebViewIPC.serviceName = "webview.WebViewIPC";
+  return WebViewIPC;
 }());
 
-RemoteWebView.SendMessage = {
+WebViewIPC.SendMessage = {
   methodName: "SendMessage",
-  service: RemoteWebView,
+  service: WebViewIPC,
   requestStream: false,
   responseStream: false,
   requestType: webview_pb.SendMessageRequest,
   responseType: google_protobuf_empty_pb.Empty
 };
 
-RemoteWebView.Shutdown = {
+WebViewIPC.Shutdown = {
   methodName: "Shutdown",
-  service: RemoteWebView,
+  service: WebViewIPC,
   requestStream: false,
   responseStream: false,
   requestType: webview_pb.IdMessageRequest,
   responseType: google_protobuf_empty_pb.Empty
 };
 
-RemoteWebView.CreateWebView = {
+WebViewIPC.CreateWebView = {
   methodName: "CreateWebView",
-  service: RemoteWebView,
+  service: WebViewIPC,
   requestStream: false,
   responseStream: true,
   requestType: webview_pb.CreateWebViewRequest,
   responseType: webview_pb.WebMessageResponse
 };
 
-RemoteWebView.FileReader = {
+WebViewIPC.FileReader = {
   methodName: "FileReader",
-  service: RemoteWebView,
+  service: WebViewIPC,
   requestStream: true,
   responseStream: true,
   requestType: webview_pb.FileReadRequest,
   responseType: webview_pb.FileReadResponse
 };
 
-RemoteWebView.GetIds = {
+WebViewIPC.GetIds = {
   methodName: "GetIds",
-  service: RemoteWebView,
+  service: WebViewIPC,
   requestStream: false,
   responseStream: false,
   requestType: google_protobuf_empty_pb.Empty,
   responseType: webview_pb.IdArrayResponse
 };
 
-exports.RemoteWebView = RemoteWebView;
+exports.WebViewIPC = WebViewIPC;
 
-function RemoteWebViewClient(serviceHost, options) {
+function WebViewIPCClient(serviceHost, options) {
   this.serviceHost = serviceHost;
   this.options = options || {};
 }
 
-RemoteWebViewClient.prototype.sendMessage = function sendMessage(requestMessage, metadata, callback) {
+WebViewIPCClient.prototype.sendMessage = function sendMessage(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(RemoteWebView.SendMessage, {
+  var client = grpc.unary(WebViewIPC.SendMessage, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -94,11 +94,11 @@ RemoteWebViewClient.prototype.sendMessage = function sendMessage(requestMessage,
   };
 };
 
-RemoteWebViewClient.prototype.shutdown = function shutdown(requestMessage, metadata, callback) {
+WebViewIPCClient.prototype.shutdown = function shutdown(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(RemoteWebView.Shutdown, {
+  var client = grpc.unary(WebViewIPC.Shutdown, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -125,13 +125,13 @@ RemoteWebViewClient.prototype.shutdown = function shutdown(requestMessage, metad
   };
 };
 
-RemoteWebViewClient.prototype.createWebView = function createWebView(requestMessage, metadata) {
+WebViewIPCClient.prototype.createWebView = function createWebView(requestMessage, metadata) {
   var listeners = {
     data: [],
     end: [],
     status: []
   };
-  var client = grpc.invoke(RemoteWebView.CreateWebView, {
+  var client = grpc.invoke(WebViewIPC.CreateWebView, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -164,13 +164,13 @@ RemoteWebViewClient.prototype.createWebView = function createWebView(requestMess
   };
 };
 
-RemoteWebViewClient.prototype.fileReader = function fileReader(metadata) {
+WebViewIPCClient.prototype.fileReader = function fileReader(metadata) {
   var listeners = {
     data: [],
     end: [],
     status: []
   };
-  var client = grpc.client(RemoteWebView.FileReader, {
+  var client = grpc.client(WebViewIPC.FileReader, {
     host: this.serviceHost,
     metadata: metadata,
     transport: this.options.transport
@@ -209,11 +209,11 @@ RemoteWebViewClient.prototype.fileReader = function fileReader(metadata) {
   };
 };
 
-RemoteWebViewClient.prototype.getIds = function getIds(requestMessage, metadata, callback) {
+WebViewIPCClient.prototype.getIds = function getIds(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
-  var client = grpc.unary(RemoteWebView.GetIds, {
+  var client = grpc.unary(WebViewIPC.GetIds, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
@@ -240,7 +240,7 @@ RemoteWebViewClient.prototype.getIds = function getIds(requestMessage, metadata,
   };
 };
 
-exports.RemoteWebViewClient = RemoteWebViewClient;
+exports.WebViewIPCClient = WebViewIPCClient;
 
 var BrowserIPC = (function () {
   function BrowserIPC() {}
