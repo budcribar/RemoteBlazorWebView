@@ -18,50 +18,44 @@ namespace PeakSWC.RemoteWebView
 {
     public class StaticWebAssetsLoader
     {
-        //internal const string StaticWebAssetsManifestName = "Microsoft.AspNetCore.StaticWebAssets.xml";
-
         public static IFileProvider UseStaticWebAssets(IFileProvider systemProvider)
         {
             using var manifest = GetManifestStream();
-            if (manifest != null)
-            {
-                return UseStaticWebAssetsCore(systemProvider, manifest);
-            }
-            else
-            {
+            if (manifest == null)
                 return systemProvider;
-            }
-
-            static Stream? GetManifestStream()
+            else       
+                return UseStaticWebAssetsCore(systemProvider, manifest);
+           
+        }
+        private static Stream? GetManifestStream()
+        {
+            try
             {
-                try
-                {
-                    var filePath = ResolveRelativeToAssembly();
+                var filePath = ResolveRelativeToAssembly();
 
-                    if (filePath != null && File.Exists(filePath))
-                    {
-                        return File.OpenRead(filePath);
-                    }
-                    else
-                    {
-                        // A missing manifest might simply mean that the feature is not enabled, so we simply
-                        // return early. Misconfigurations will be uncommon given that the entire process is automated
-                        // at build time.
-                        return null;
-                    }
-                }
-                catch
+                if (filePath != null && File.Exists(filePath))
                 {
+                    return File.OpenRead(filePath);
+                }
+                else
+                {
+                    // A missing manifest might simply mean that the feature is not enabled, so we simply
+                    // return early. Misconfigurations will be uncommon given that the entire process is automated
+                    // at build time.
                     return null;
                 }
             }
+            catch
+            {
+                return null;
+            }
         }
 
-        internal static IFileProvider UseStaticWebAssetsCore(IFileProvider systemProvider, Stream manifest)
+        private static IFileProvider UseStaticWebAssetsCore(IFileProvider systemProvider, Stream manifest)
         {
-            var webRootFileProvider = systemProvider;
-
             var staticWebAssetManifest = ManifestStaticWebAssetFileProvider.StaticWebAssetManifest.Parse(manifest);
+
+            if (staticWebAssetManifest == null) return systemProvider;
 
             var provider = new ManifestStaticWebAssetFileProvider(
                   staticWebAssetManifest,

@@ -141,7 +141,7 @@ namespace PeakSWC.RemoteWebView
 
                     if (exception != null)
 					{
-                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri));
+                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, exception));
                         throw exception;
                     }
                       
