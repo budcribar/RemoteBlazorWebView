@@ -1,4 +1,4 @@
-import { DotNet } from '@microsoft/dotnet-js-interop';
+import { DotNet } from '../upstream/aspnetcore/web.js/node_modules/@microsoft/dotnet-js-interop';
 import { Blazor } from '../upstream/aspnetcore/web.js/src/GlobalExports';
 import { shouldAutoStart } from '../upstream/aspnetcore/web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
@@ -13,10 +13,9 @@ async function boot(): Promise<void> {
     if (started) {
         throw new Error('Blazor has already started.');
     }
+    started = true;
 
     const jsInitializer = await fetchAndInvokeInitializers();
-
-    started = true;
 
     initializeRemoteWebView();
 

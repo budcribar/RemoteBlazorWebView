@@ -34,7 +34,7 @@
 
   <Target Name="EnsureNpmRestored" >
     <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
-    <Exec Command="npm install" />
+    <Exec Command="yarn install" />
   </Target>
 
   <Target Name="RunWebpack" AfterTargets="ResolveReferences" Inputs="@(WebpackInputs)" Outputs="dist\remote.blazor.desktop.js" DependsOnTargets="EnsureNpmRestored">

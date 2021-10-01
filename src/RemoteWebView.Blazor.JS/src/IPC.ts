@@ -5,7 +5,7 @@ import { OutOfProcessRenderBatch } from '../upstream/aspnetcore/web.js/src/Rende
 import { sendRenderCompleted } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcSender';
 import { setApplicationIsTerminated, tryDeserializeMessage } from '../upstream/aspnetcore/web.js/src/Platform/WebView/WebViewIpcCommon';
 import { showErrorNotification } from '../upstream/aspnetcore/web.js/src/BootErrors';
-import { DotNet } from '@microsoft/dotnet-js-interop';
+import { DotNet } from '../upstream/aspnetcore/web.js/node_modules/@microsoft/dotnet-js-interop';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
 
 const messageHandlers = {
