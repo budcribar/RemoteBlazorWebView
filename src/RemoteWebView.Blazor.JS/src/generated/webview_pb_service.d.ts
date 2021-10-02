@@ -5,58 +5,58 @@ import * as webview_pb from "./webview_pb";
 import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
 import {grpc} from "@improbable-eng/grpc-web";
 
-type RemoteWebViewSendMessage = {
+type WebViewIPCSendMessage = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebView;
+  readonly service: typeof WebViewIPC;
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof webview_pb.SendMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
-type RemoteWebViewShutdown = {
+type WebViewIPCShutdown = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebView;
+  readonly service: typeof WebViewIPC;
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof webview_pb.IdMessageRequest;
   readonly responseType: typeof google_protobuf_empty_pb.Empty;
 };
 
-type RemoteWebViewCreateWebView = {
+type WebViewIPCCreateWebView = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebView;
+  readonly service: typeof WebViewIPC;
   readonly requestStream: false;
   readonly responseStream: true;
   readonly requestType: typeof webview_pb.CreateWebViewRequest;
   readonly responseType: typeof webview_pb.WebMessageResponse;
 };
 
-type RemoteWebViewFileReader = {
+type WebViewIPCFileReader = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebView;
+  readonly service: typeof WebViewIPC;
   readonly requestStream: true;
   readonly responseStream: true;
   readonly requestType: typeof webview_pb.FileReadRequest;
   readonly responseType: typeof webview_pb.FileReadResponse;
 };
 
-type RemoteWebViewGetIds = {
+type WebViewIPCGetIds = {
   readonly methodName: string;
-  readonly service: typeof RemoteWebView;
+  readonly service: typeof WebViewIPC;
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof google_protobuf_empty_pb.Empty;
   readonly responseType: typeof webview_pb.IdArrayResponse;
 };
 
-export class RemoteWebView {
+export class WebViewIPC {
   static readonly serviceName: string;
-  static readonly SendMessage: RemoteWebViewSendMessage;
-  static readonly Shutdown: RemoteWebViewShutdown;
-  static readonly CreateWebView: RemoteWebViewCreateWebView;
-  static readonly FileReader: RemoteWebViewFileReader;
-  static readonly GetIds: RemoteWebViewGetIds;
+  static readonly SendMessage: WebViewIPCSendMessage;
+  static readonly Shutdown: WebViewIPCShutdown;
+  static readonly CreateWebView: WebViewIPCCreateWebView;
+  static readonly FileReader: WebViewIPCFileReader;
+  static readonly GetIds: WebViewIPCGetIds;
 }
 
 type BrowserIPCReceiveMessage = {
@@ -125,7 +125,7 @@ interface BidirectionalStream<ReqT, ResT> {
   on(type: 'status', handler: (status: Status) => void): BidirectionalStream<ReqT, ResT>;
 }
 
-export class RemoteWebViewClient {
+export class WebViewIPCClient {
   readonly serviceHost: string;
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);

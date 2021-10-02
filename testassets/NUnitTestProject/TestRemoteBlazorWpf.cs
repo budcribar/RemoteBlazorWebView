@@ -85,11 +85,13 @@ namespace WebdriverTestProject
         protected static void StartClient(int num)
         {
             var client = new WebViewIPC.WebViewIPCClient(channel);
-
+            int count = 0;
             do
             {
                 ids = client.GetIds(new Empty()).Responses.ToArray();
-                Thread.Sleep(200);
+                Thread.Sleep(1000);
+                count++;
+                Assert.IsTrue(count < 20, "Timed out waiting to start client");
             } while (ids.Length != num);
 
         }

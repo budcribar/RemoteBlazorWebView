@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PeakSwc.StaticFiles
 {
-    public class FileInfo : IFileInfo
+    internal class FileInfo : IFileInfo
     {
         private static TimeSpan total = TimeSpan.FromSeconds(0);
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;

@@ -141,7 +141,7 @@ namespace PeakSWC.RemoteWebView
 
                     if (exception != null)
 					{
-                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri));
+                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, exception));
                         throw exception;
                     }
                       
@@ -190,7 +190,35 @@ namespace PeakSWC.RemoteWebView
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
-       
+
+        private string GenMarkup(Uri uri,string id)
+        {
+            var color = "#f1f1f1";
+            var hostname = Dns.GetHostName();
+      
+            var url = $"{uri}app/{id}" ?? "";
+
+            string style = $@"
+            <style>
+            .card{id} {{
+                box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+                padding: 16px;
+                text-align: center;
+                background-color: {color};
+                width: 300px;
+                margin-bottom: 15px;
+            }}
+            </style>";
+            string div = $@"
+                {style}
+                <div class='card{id}'>
+                    <h3><a href = '{url}' > {hostname} </a></h3>
+                </div>
+                ";
+
+            return div;
+        }
+
 
         public RemoteWebView(IBlazorWebView blazorWebView, Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
         {
@@ -200,7 +228,7 @@ namespace PeakSWC.RemoteWebView
             Dispacher = dispatcher;
             FileProvider = fileProvider;
             Id = id;
-            Markup = string.IsNullOrWhiteSpace(markup) ? Dns.GetHostName() : markup;
+            Markup = string.IsNullOrWhiteSpace(markup) ? GenMarkup(uri,id) : markup;
             Group = string.IsNullOrWhiteSpace(group) ? "test" : group;
         }
 

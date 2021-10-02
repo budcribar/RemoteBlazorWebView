@@ -53,12 +53,7 @@ namespace PeakSWC.RemoteWebView
 #endif
         public void ConfigureServices(IServiceCollection services)
         {
-#if NET5
-            services.AddResponseCompression(options => { options.MimeTypes = new[] { "application/octet-stream", "application/wasm" }; });
-#else
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
-#endif
-
 #if AUTHORIZATION
             services.AddSingleton(CreateApiHelper().Result);
             services.Configure<CookiePolicyOptions>(options =>
@@ -154,7 +149,9 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart());
                 endpoints.MapGet("/restart/{id:guid}", AckRestart());
                 endpoints.MapGet("/wait/{id:guid}", Wait());
+#if !AUTHORIZATION
                 endpoints.MapGet("/status", Status());
+#endif
                 endpoints.MapFallbackToFile("index.html");
             });
         }

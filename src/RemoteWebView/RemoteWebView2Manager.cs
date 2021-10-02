@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -14,6 +15,8 @@ namespace PeakSWC.RemoteWebView
        
         public RemoteWebView2Manager(IBlazorWebView blazorWebView, IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Uri url, string id, string group, string markup) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
         {
+           
+
             RemoteWebView = new RemoteWebView(
                 blazorWebView,
                 url,

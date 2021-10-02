@@ -17,8 +17,15 @@ dotnet tool uninstall PeakSWC.RemoteWebViewService -g
 
 if ($env:EnvBuildMode -eq 'Debug') {
 	# remove the cached version!!
-	Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' | Remove-Item 
-	Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' | Remove-Item  -Recurse
+	$file = Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' 
+	if (Test-Path $file) {
+		Remove-Item $file
+	}
+
+	$file = Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' 
+	if (Test-Path $file) {
+		Remove-Item $file -Recurse
+	}
 	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 6.*-* 
 } else {
 	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 6.*-* 
@@ -60,8 +67,7 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bi
 
 #
 # Debug mode is not working in Preview7
-#dotnet build -c Debug RemoteBlazorWebView.sln
-
+# dotnet build -c Debug RemoteBlazorWebView.sln
 
 dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
 

@@ -72,7 +72,7 @@ namespace PeakSWC.RemoteWebView
                 var groups = GetUserGroups(request.Oid);
 
                 // If a user is not in any groups then they are defaulted to the "test" group
-                if (!groups.Contains("test"))
+                if (!groups.Any())
                     groups.Add("test");
 
                 _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));

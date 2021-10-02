@@ -56,7 +56,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\debug\net6.0-windows";  
+            var exePath = @"bin\x64\debug\net6.0-windows";  
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
