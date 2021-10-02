@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Renamed the server and added refresh event</PackageReleaseNotes>
+    <PackageReleaseNotes>Added ability to Debug when running remotely</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
