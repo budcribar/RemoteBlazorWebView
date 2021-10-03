@@ -189,7 +189,7 @@ namespace PeakSWC.RemoteWebView
                 else
                 {
                     context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync("Invalid Guid");
+                    await context.Response.WriteAsync($"Client {guid} is not responding");
                 }
             };
         }
@@ -283,7 +283,7 @@ namespace PeakSWC.RemoteWebView
                 else
                 {
                     context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync("Invalid Guid");
+                    await context.Response.WriteAsync($"Client {guid} is not responding");
                 }
             };
         }
