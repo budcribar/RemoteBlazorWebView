@@ -17,7 +17,7 @@ WebViewIPC.SendMessage = {
   requestStream: false,
   responseStream: false,
   requestType: webview_pb.SendMessageRequest,
-  responseType: google_protobuf_empty_pb.Empty
+  responseType: webview_pb.SendMessageResponse
 };
 
 WebViewIPC.Shutdown = {
@@ -263,7 +263,7 @@ BrowserIPC.SendMessage = {
   requestStream: false,
   responseStream: false,
   requestType: webview_pb.SendSequenceMessageRequest,
-  responseType: google_protobuf_empty_pb.Empty
+  responseType: webview_pb.SendMessageResponse
 };
 
 exports.BrowserIPC = BrowserIPC;

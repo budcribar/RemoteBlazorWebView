@@ -63,7 +63,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
-            string id = context.GetHttpContext().Connection.Id;
+            string id = request.Id;
             _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<ClientResponseList>());
             // https://stackoverflow.com/questions/48385996/platformnotsupported-exception-when-calling-adduserasync-net-core-2-0
             var list = new ClientResponseList();
@@ -78,9 +78,12 @@ namespace PeakSWC.RemoteWebView
                 _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
                 await responseStream.WriteAsync(list);
 
+                // TODO don't need to return a list bc we need to filter out by group anyway
                 await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync())
                 {
-                    await responseStream.WriteAsync(state);
+                    list = new ClientResponseList();
+                    _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+                    await responseStream.WriteAsync(list);
                 }
             }
             finally 

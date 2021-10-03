@@ -37,16 +37,15 @@ namespace PeakSWC.RemoteWebView
             return Task.CompletedTask;
         }
 
-        public override Task<Empty> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
+        public override Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            // TODO Throw error on browser
             if(!ServiceDictionary.ContainsKey(request.Id))
-                return Task.FromResult(new Empty());
+                return Task.FromResult(new SendMessageResponse { Id=request.Id, Success=false});
 
             var state = ServiceDictionary[request.Id]?.BrowserIPC;
 
             if (state == null)
-                return Task.FromResult(new Empty());
+                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
             lock (state)
             {
@@ -65,7 +64,7 @@ namespace PeakSWC.RemoteWebView
                 }
             }
 
-            return Task.FromResult(new Empty());
+            return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
         }
     }
 }

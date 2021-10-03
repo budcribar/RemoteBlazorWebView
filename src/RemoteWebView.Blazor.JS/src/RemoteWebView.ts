@@ -1,8 +1,9 @@
 import { receiveMessage } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webview_pb_service";
-import { SendSequenceMessageRequest, StringRequest, IdMessageRequest } from "./generated/webview_pb";
+import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, IdMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
+import { showErrorNotification } from '../upstream/aspnetcore/web.js/src/BootErrors';
 
 var sequenceNum: number = 1;
 
@@ -14,11 +15,21 @@ export function sendMessage(message: string) {
     req.setSequence(sequenceNum++);
     req.setUrl(navigationManagerFunctions.getLocationHref())
     grpc.invoke(BrowserIPC.SendMessage, {
-        request: req, host: window.location.origin, onEnd: (code, msg, trailers) => {
+        request: req,
+        host: window.location.origin,
+        onMessage: (message: SendMessageResponse) => {
+            if (!message.getSuccess()) {
+                var error = `Client ${id} is unresponsive`
+                console.log(error);
+                showErrorNotification(error);
+            }
+        },
+        onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message)
+                //console.log("sent:" + req.getSequence() + ":" + message);
             } else {
-                console.log("grpc error", code, msg, trailers);              
+                console.log("grpc error", code, msg, trailers);
+                showErrorNotification("grpc error" + code);
             }
         }
     });
@@ -45,14 +56,6 @@ export function initializeRemoteWebView() {
                 }
             }
         });
-
-    (<any>window).RemoteWebView = {
-
-        showMessage: function (message) {
-
-            window.alert(message);
-        }
-    };
 
     (window.external as any).sendMessage = sendMessage;
 

@@ -144,10 +144,15 @@ namespace PeakSWC.RemoteWebView
             return Task.FromResult<Empty>(new Empty());
         }
 
-        public override Task<Empty> SendMessage(SendMessageRequest request, ServerCallContext context)
+        public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            _webViewDictionary[request.Id].IPC.SendMessage(request.Message);
-            return Task.FromResult<Empty>(new Empty());
+            if (_webViewDictionary.ContainsKey(request.Id))
+			{
+                _webViewDictionary[request.Id].IPC.SendMessage(request.Message);
+                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
+            }
+
+            return Task.FromResult( new SendMessageResponse { Id = request.Id, Success = false });
         }
 
     }

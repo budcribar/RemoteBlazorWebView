@@ -11,7 +11,7 @@ type WebViewIPCSendMessage = {
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof webview_pb.SendMessageRequest;
-  readonly responseType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webview_pb.SendMessageResponse;
 };
 
 type WebViewIPCShutdown = {
@@ -74,7 +74,7 @@ type BrowserIPCSendMessage = {
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof webview_pb.SendSequenceMessageRequest;
-  readonly responseType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webview_pb.SendMessageResponse;
 };
 
 export class BrowserIPC {
@@ -132,11 +132,11 @@ export class WebViewIPCClient {
   sendMessage(
     requestMessage: webview_pb.SendMessageRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
   ): UnaryResponse;
   sendMessage(
     requestMessage: webview_pb.SendMessageRequest,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
   ): UnaryResponse;
   shutdown(
     requestMessage: webview_pb.IdMessageRequest,
@@ -168,11 +168,11 @@ export class BrowserIPCClient {
   sendMessage(
     requestMessage: webview_pb.SendSequenceMessageRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
   ): UnaryResponse;
   sendMessage(
     requestMessage: webview_pb.SendSequenceMessageRequest,
-    callback: (error: ServiceError|null, responseMessage: google_protobuf_empty_pb.Empty|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
   ): UnaryResponse;
 }
 

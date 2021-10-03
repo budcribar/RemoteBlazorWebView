@@ -72,8 +72,13 @@ message SendSequenceMessageRequest {
     string url = 4;
 }
 
+message SendMessageResponse {
+    string id = 1;
+    bool success = 2;
+}
+
 service WebViewIPC {
-    rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty); 
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
@@ -82,7 +87,7 @@ service WebViewIPC {
 
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
-    rpc SendMessage(SendSequenceMessageRequest) returns (google.protobuf.Empty);
+    rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
 }
 
 enum ClientState {
@@ -104,6 +109,7 @@ message ClientResponseList {
 
 message UserMessageRequest {
     string oid = 1;
+    string id = 2;
 }
 
 service ClientIPC {

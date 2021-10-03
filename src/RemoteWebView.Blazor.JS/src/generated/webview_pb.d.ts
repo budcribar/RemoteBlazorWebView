@@ -315,6 +315,30 @@ export namespace SendSequenceMessageRequest {
   }
 }
 
+export class SendMessageResponse extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getSuccess(): boolean;
+  setSuccess(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): SendMessageResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: SendMessageResponse): SendMessageResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: SendMessageResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SendMessageResponse;
+  static deserializeBinaryFromReader(message: SendMessageResponse, reader: jspb.BinaryReader): SendMessageResponse;
+}
+
+export namespace SendMessageResponse {
+  export type AsObject = {
+    id: string,
+    success: boolean,
+  }
+}
+
 export class ClientResponse extends jspb.Message {
   getId(): string;
   setId(value: string): void;
