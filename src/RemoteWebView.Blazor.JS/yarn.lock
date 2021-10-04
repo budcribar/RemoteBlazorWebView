@@ -1634,7 +1634,7 @@ ts-loader@4.4.1:
 
 ts-protoc-gen@^0.15.0:
   version "0.15.0"
-  resolved "https://registry.yarnpkg.com/ts-protoc-gen/-/ts-protoc-gen-0.15.0.tgz#2fec5930b46def7dcc9fa73c060d770b7b076b7b"
+  resolved "https://registry.npmjs.org/ts-protoc-gen/-/ts-protoc-gen-0.15.0.tgz"
   integrity sha512-TycnzEyrdVDlATJ3bWFTtra3SCiEP0W0vySXReAuEygXCUr1j2uaVyL0DhzjwuUdQoW5oXPwk6oZWeA0955V+g==
   dependencies:
     google-protobuf "^3.15.5"

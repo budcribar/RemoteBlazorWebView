@@ -1,5 +1,5 @@
 # Set the build env to use project references instead of packages
-$env:EnvBuildMode = 'Release' # Debug or Release
+$env:EnvBuildMode = 'Debug' # Debug or Release
 
 # Start with a clean solution
 

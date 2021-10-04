@@ -3071,7 +3071,8 @@ proto.webview.UserMessageRequest.prototype.toObject = function(opt_includeInstan
  */
 proto.webview.UserMessageRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
-    oid: jspb.Message.getFieldWithDefault(msg, 1, "")
+    oid: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    id: jspb.Message.getFieldWithDefault(msg, 2, "")
   };
 
   if (includeInstance) {
@@ -3112,6 +3113,10 @@ proto.webview.UserMessageRequest.deserializeBinaryFromReader = function(msg, rea
       var value = /** @type {string} */ (reader.readString());
       msg.setOid(value);
       break;
+    case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -3148,6 +3153,13 @@ proto.webview.UserMessageRequest.serializeBinaryToWriter = function(message, wri
       f
     );
   }
+  f = message.getId();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
 };
 
 
@@ -3166,6 +3178,24 @@ proto.webview.UserMessageRequest.prototype.getOid = function() {
  */
 proto.webview.UserMessageRequest.prototype.setOid = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional string id = 2;
+ * @return {string}
+ */
+proto.webview.UserMessageRequest.prototype.getId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.webview.UserMessageRequest} returns this
+ */
+proto.webview.UserMessageRequest.prototype.setId = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 

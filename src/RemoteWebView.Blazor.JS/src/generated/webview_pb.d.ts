@@ -401,6 +401,9 @@ export class UserMessageRequest extends jspb.Message {
   getOid(): string;
   setOid(value: string): void;
 
+  getId(): string;
+  setId(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UserMessageRequest.AsObject;
   static toObject(includeInstance: boolean, msg: UserMessageRequest): UserMessageRequest.AsObject;
@@ -414,6 +417,7 @@ export class UserMessageRequest extends jspb.Message {
 export namespace UserMessageRequest {
   export type AsObject = {
     oid: string,
+    id: string,
   }
 }
 
