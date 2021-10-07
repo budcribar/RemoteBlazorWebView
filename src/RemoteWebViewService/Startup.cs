@@ -175,6 +175,9 @@ namespace PeakSWC.RemoteWebView
                         rootDictionary[guid].User = context.User.GetDisplayName() ?? "";
                         rootDictionary[guid].InUse = true;
                         var home = rootDictionary[guid].HtmlHostPath;
+
+                        // Update Status
+                        serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Connect:{guid}"));
                         context.Response.Redirect($"/{guid}/{home}");
                     }
                 }
