@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteWebView
     public class Startup
     {
         private readonly ConcurrentDictionary<string, ServiceState> rootDictionary = new();
-        private readonly ConcurrentDictionary<string, Channel<ClientResponseList>> serviceStateChannel = new();
+        private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
 
 #if AUTHORIZATION
         private readonly IConfiguration Configuration;
@@ -79,7 +79,7 @@ namespace PeakSWC.RemoteWebView
             services.AddSingleton(serviceStateChannel);
           
             services.AddGrpc(options => { options.EnableDetailedErrors = true; options.ResponseCompressionLevel = CompressionLevel.Optimal; options.ResponseCompressionAlgorithm = "gzip"; });
-            services.AddTransient<FileResolver>();
+            services.AddTransient<RemoteFileResolver>();
 
             services.AddCors(o =>
             {
@@ -131,7 +131,7 @@ namespace PeakSWC.RemoteWebView
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
-            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetService<FileResolver>() });
+            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetService<RemoteFileResolver>() });
 
             app.UseEndpoints(endpoints =>
             {
@@ -167,29 +167,22 @@ namespace PeakSWC.RemoteWebView
                     if (rootDictionary[guid].InUse)
                     {
                         context.Response.StatusCode = 400;
-                        string response = LockedPage.Html(rootDictionary[guid].User, guid);
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(response);
+                        await context.Response.WriteAsync(LockedPage.Html(rootDictionary[guid].User, guid));
                     }
                     else
                     {
                         rootDictionary[guid].User = context.User.GetDisplayName() ?? "";
                         rootDictionary[guid].InUse = true;
-                        // Update Status
-                        var list = new ClientResponseList();
-                        rootDictionary.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
-                        serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
-                     
                         var home = rootDictionary[guid].HtmlHostPath;
-
                         context.Response.Redirect($"/{guid}/{home}");
                     }
-
                 }
                 else
                 {
                     context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync($"Client {guid} is not responding");
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, false));
                 }
             };
         }
@@ -215,6 +208,9 @@ namespace PeakSWC.RemoteWebView
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
+                ServiceState? serviceState = null;
+                rootDictionary.TryGetValue(guid, out serviceState);
+
                 // wait until client shuts down
                 for (int i = 0; i < 30; i++)
                 {
@@ -224,23 +220,20 @@ namespace PeakSWC.RemoteWebView
                 }
                 if (rootDictionary.ContainsKey(guid))
                 {
+                    rootDictionary.TryRemove(guid, out serviceState);
                     context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync($"Unable to restart -> Client did not shut down");
+                    context.Response.ContentType = "text/html";
+
+                    if (serviceState == null)
+                        await context.Response.WriteAsync(RestartFailedPage.Html(guid, true));
+                    else
+                        await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
                     return;
                 }
 
-                var text = "<script type='text/javascript'>" +
-                "var xmlHttp = new XMLHttpRequest();" +
-                "xmlHttp.onreadystatechange = function () {" +
-                "   if (xmlHttp.readyState == 4 && xmlHttp.status == 200)" +
-                $"     window.location.assign('/app/{guid}');" +
-                "  };" +
-                $" xmlHttp.open('GET', '/wait/{guid}', true);" +
-                "  xmlHttp.send(null);" +
-                "</script><h1 class='display-4'>Restarting...</h1>";
+                context.Response.ContentType = "text/html";
 
-                await context.Response.WriteAsync(text);
-
+                await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
             };
         }
 
@@ -261,10 +254,9 @@ namespace PeakSWC.RemoteWebView
                 else
                 {
                     context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync($"Unable to restart -> Timed out");
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(RestartFailedPage.Fragment(guid));
                 }
-
-
             };
         }
 
@@ -276,14 +268,15 @@ namespace PeakSWC.RemoteWebView
 
                 if (rootDictionary.ContainsKey(guid))
                 {
-                    rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
                     context.Response.Redirect($"/restart/{guid}");
+                    rootDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
                     await Task.CompletedTask;
                 }
                 else
                 {
-                    context.Response.StatusCode = 400;
-                    await context.Response.WriteAsync($"Client {guid} is not responding");
+                    context.Response.StatusCode = 400;                  
+                    context.Response.ContentType = "text/html";
+                    await context.Response.WriteAsync(RestartFailedPage.Html(guid,true));
                 }
             };
         }

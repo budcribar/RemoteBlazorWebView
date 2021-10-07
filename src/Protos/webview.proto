@@ -27,6 +27,9 @@ message CreateWebViewRequest {
   string htmlHostPath = 2;
   string markup = 3;
   string group = 4;
+  int32 pid = 5;
+  string processName = 6;
+  string hostName = 7;
 }
 
 message WebMessageResponse {

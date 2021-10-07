@@ -15,6 +15,9 @@ namespace PeakSWC.RemoteWebView
         public bool InUse { get; set; } = false;
         public string Id { get; init; } = string.Empty;
         public string Group { get; init;  } = string.Empty;
+        public int Pid { get; init; } = 0;
+        public string ProcessName {  get; init; } = string.Empty;
+        public string HostName { get; init; } = string.Empty;
         public string User {  get; set; } = string.Empty;
         public Task? FileReaderTask { get; set; }
         public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();

@@ -63,9 +63,7 @@ namespace PeakSWC.RemoteWebView
         public Uri? ServerUri { get; }
         public string HostHtmlPath { get; } = string.Empty;
         public string Id { get; }
-       
         public Dispatcher? Dispacher { get; set; }
-        //public IJSRuntime? JSRuntime { get; set; }
 
         protected WebViewIPC.WebViewIPCClient? Client
         {
@@ -79,7 +77,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -218,7 +216,6 @@ namespace PeakSWC.RemoteWebView
 
             return div;
         }
-
 
         public RemoteWebView(IBlazorWebView blazorWebView, Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
         {

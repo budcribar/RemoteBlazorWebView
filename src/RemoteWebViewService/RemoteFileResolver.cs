@@ -20,7 +20,7 @@ namespace PeakSwc.StaticFiles
         private string path;
         private readonly string guid;
         private Stream? stream = null;
-        private readonly ILogger<FileResolver> _logger;
+        private readonly ILogger<RemoteFileResolver> _logger;
 
         private async Task<Stream?> GetStream()
         {
@@ -64,7 +64,7 @@ namespace PeakSwc.StaticFiles
 
             _rootDictionary[id].FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
-            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait();
+            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(30));
             MemoryStream stream = _rootDictionary[id].FileDictionary[appFile].stream;
             if (stream.Length == 0)
             {
@@ -94,7 +94,7 @@ namespace PeakSwc.StaticFiles
             return stream;
         }
 
-        public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<FileResolver> logger)
+        public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
         {
             _logger = logger;
 
@@ -131,14 +131,13 @@ namespace PeakSwc.StaticFiles
         }
     }
 
-    public class FileResolver : IFileProvider
+    public class RemoteFileResolver : IFileProvider
     {
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
-        private readonly ILogger<FileResolver> _logger;
+        private readonly ILogger<RemoteFileResolver> _logger;
 
-        public FileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<FileResolver> logger)
+        public RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger)
         {
-
             _rootDictionary = rootDictionary;
             _logger = logger;
         }

@@ -1,3 +1,4 @@
+using Azure.Core;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -14,10 +15,10 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly ILogger<RemoteWebViewService> _logger;
         private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
-        private readonly ConcurrentDictionary<string, Channel<ClientResponseList>> _serviceStateChannel;
+        private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
       
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, Channel<ClientResponseList>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
             _logger = logger;
             _webViewDictionary = rootDictionary;
@@ -43,7 +44,10 @@ namespace PeakSWC.RemoteWebView
                     InUse = false,
                     Url = $"https://{context.Host}/app/{request.Id}",
                     Id = request.Id,
-                    Group = request.Group
+                    Group = request.Group,
+                    Pid = request.Pid,
+                    HostName = request.HostName,
+                    ProcessName = request.ProcessName,                 
                 };
                 _serviceStates.Add(state);
                 // Let home page know client is available
@@ -51,8 +55,8 @@ namespace PeakSWC.RemoteWebView
 
                 var list = new ClientResponseList();
                 _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
-
-                _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
+               
+                _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Start:{request.Id}"));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
@@ -131,11 +135,7 @@ namespace PeakSWC.RemoteWebView
                     client.InUse = false;
                 }             
             }
-               
-            var list = new ClientResponseList();
-            _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
-
-            _serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync(list));
+            _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

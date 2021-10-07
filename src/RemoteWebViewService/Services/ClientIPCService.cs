@@ -16,7 +16,7 @@ namespace PeakSWC.RemoteWebView
     public class ClientIPCService : ClientIPC.ClientIPCBase
     {
         private readonly ILogger<ClientIPCService> _logger;
-        private readonly ConcurrentDictionary<string,Channel<ClientResponseList>> _serviceStateChannel;
+        private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private readonly ProtectedApiCallHelper _graphApi;
 
@@ -53,7 +53,7 @@ namespace PeakSWC.RemoteWebView
             return results;
         }
 
-        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<ClientResponseList>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
+        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
@@ -64,9 +64,9 @@ namespace PeakSWC.RemoteWebView
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
             string id = request.Id;
-            _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<ClientResponseList>());
+            _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<string>());
             // https://stackoverflow.com/questions/48385996/platformnotsupported-exception-when-calling-adduserasync-net-core-2-0
-            var list = new ClientResponseList();
+           
             try
             {
                 var groups = GetUserGroups(request.Oid);
@@ -75,22 +75,25 @@ namespace PeakSWC.RemoteWebView
                 if (!groups.Any())
                     groups.Add("test");
 
-                _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
-                await responseStream.WriteAsync(list);
+                await WriteResponse(responseStream, groups);
 
-                // TODO don't need to return a list bc we need to filter out by group anyway
                 await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync())
                 {
-                    list = new ClientResponseList();
-                    _rootDictionary.Values.Where(x => groups.Contains(x.Group)).ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
-                    await responseStream.WriteAsync(list);
+                    this._logger.LogInformation($"Client IPC: {state}");
+                    await WriteResponse(responseStream, groups);
                 }
             }
             finally 
             {
                 _serviceStateChannel.Remove(id, out _);
-            }
-           
+            }        
+        }
+
+        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
+        {
+            var list = new ClientResponseList();
+            list.ClientResponses.AddRange(_rootDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            return responseStream.WriteAsync(list);
         }
 
         private List<string> GetUserGroups (string oid)
