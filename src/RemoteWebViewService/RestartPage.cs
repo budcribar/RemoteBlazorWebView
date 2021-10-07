@@ -10,7 +10,7 @@ namespace PeakSWC.RemoteWebView
     {
         public static string Html(string guid, string processName, string hostName)
         {
-            string restart = string.IsNullOrEmpty(processName) || string.IsNullOrEmpty(hostName) ? "Restarting" : $"Restarting<b>{ processName}</ b > on host<b>{ hostName}</b>";
+            string restart = string.IsNullOrEmpty(processName) || string.IsNullOrEmpty(hostName) ? "Restarting" : $"Restarting <b>{processName}</b> on host <b>{hostName}</b>";
             string html = $@"
 <!DOCTYPE html>
 <html lang='en' style='height: 100%;' >
