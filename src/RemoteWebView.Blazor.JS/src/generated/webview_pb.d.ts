@@ -85,6 +85,15 @@ export class CreateWebViewRequest extends jspb.Message {
   getGroup(): string;
   setGroup(value: string): void;
 
+  getPid(): number;
+  setPid(value: number): void;
+
+  getProcessname(): string;
+  setProcessname(value: string): void;
+
+  getHostname(): string;
+  setHostname(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateWebViewRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateWebViewRequest): CreateWebViewRequest.AsObject;
@@ -101,6 +110,9 @@ export namespace CreateWebViewRequest {
     htmlhostpath: string,
     markup: string,
     group: string,
+    pid: number,
+    processname: string,
+    hostname: string,
   }
 }
 

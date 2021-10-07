@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Enhanced error message reporting</PackageReleaseNotes>
+    <PackageReleaseNotes>Enhanced error message reporting from server</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
