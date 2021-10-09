@@ -144,11 +144,27 @@ namespace PeakSWC.RemoteWebView
 #endif
                 ;
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                endpoints.MapGet("/{id:guid}", Restart());
+                endpoints.MapGet("/{id:guid}", Restart())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif
+                ;
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart());
-                endpoints.MapGet("/restart/{id:guid}", AckRestart());
-                endpoints.MapGet("/wait/{id:guid}", Wait());
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif
+                ;
+                endpoints.MapGet("/restart/{id:guid}", AckRestart())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif
+                ;
+                endpoints.MapGet("/wait/{id:guid}", Wait())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif
+                ;
 #if !AUTHORIZATION
                 endpoints.MapGet("/status", Status());
 #endif
