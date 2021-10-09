@@ -178,19 +178,19 @@ namespace PeakSWC.RemoteWebView
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
-                if (rootDictionary.ContainsKey(guid))
+                if (rootDictionary.TryGetValue(guid, out var serviceState))         
                 {
-                    if (rootDictionary[guid].InUse)
+                    if (serviceState.InUse)
                     {
                         context.Response.StatusCode = 400;
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(LockedPage.Html(rootDictionary[guid].User, guid));
+                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
                     }
                     else
                     {
-                        rootDictionary[guid].User = context.User.GetDisplayName() ?? "";
-                        rootDictionary[guid].InUse = true;
-                        var home = rootDictionary[guid].HtmlHostPath;
+                        serviceState.User = context.User.GetDisplayName() ?? "";
+                        serviceState.InUse = true;
+                        var home = serviceState.HtmlHostPath;
 
                         // Update Status
                         serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Connect:{guid}"));
@@ -226,9 +226,7 @@ namespace PeakSWC.RemoteWebView
             return async context =>
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                ServiceState? serviceState = null;
-                rootDictionary.TryGetValue(guid, out serviceState);
+                rootDictionary.TryGetValue(guid, out var serviceState);
 
                 // wait until client shuts down
                 for (int i = 0; i < 30; i++)
@@ -237,6 +235,7 @@ namespace PeakSWC.RemoteWebView
                         break;
                     await Task.Delay(1000);
                 }
+
                 if (rootDictionary.ContainsKey(guid))
                 {
                     rootDictionary.TryRemove(guid, out serviceState);
@@ -265,17 +264,17 @@ namespace PeakSWC.RemoteWebView
                 for (int i = 0; i < 30; i++)
                 {
                     if (rootDictionary.ContainsKey(guid))
-                        break;
+                    {
+                        await context.Response.WriteAsync($"Wait completed");
+                        return;
+                    }
+
                     await Task.Delay(1000);
                 }
-                if (rootDictionary.ContainsKey(guid))
-                    await context.Response.WriteAsync($"Wait completed");
-                else
-                {
-                    context.Response.StatusCode = 400;
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(RestartFailedPage.Fragment(guid));
-                }
+
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(RestartFailedPage.Fragment(guid));
             };
         }
 
