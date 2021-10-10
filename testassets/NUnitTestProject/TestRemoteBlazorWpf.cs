@@ -103,7 +103,29 @@ namespace WebdriverTestProject
             channel = GrpcChannel.ForAddress(url);
         }
 
-        
+        //[TestMethod]
+        //public void Test1Client1Refresh()
+        //{
+        //    TestRefresh(1,1);
+        //}
+
+        //[TestMethod]
+        //public void Test1Client10Refresh()
+        //{
+        //    TestRefresh(1, 10);
+        //}
+        //[TestMethod]
+        //public void Test5Client1Refresh()
+        //{
+        //    TestRefresh(1, 10);
+        //}
+        [TestMethod]
+        public void Test5Client10Refresh()
+        {
+            TestRefresh(1, 10);
+        }
+
+
         [TestMethod]
         public void Test1Client()
         {
@@ -122,8 +144,72 @@ namespace WebdriverTestProject
             TestClient(5);
         }
 
+        protected virtual void TestRefresh(int numClients, int numRefreshes)
+        {
+            Startup(numClients);
+
+            Stopwatch sw = new();
+            sw.Start();
+
+            Assert.AreEqual(numClients, _driver.Count);
+
+            for (int i = 0; i < numClients; i++) _driver[i].Url = url + $"app/{ids[i]}";
+            Console.WriteLine($"Navigate home in {sw.Elapsed}");
+
+            Thread.Sleep(3000);
+            sw.Restart();
+
+            for (int k = 0; k < numRefreshes; k++)
+            {
+                for (int i = 0; i < numClients; i++)
+                {
+                    for (int j = 0; j < 100; j++)
+                    {
+                        try
+                        {
+                            var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
+                            link?.Click();
+                            Thread.Sleep(100);
+                            break;
+                        }
+                        catch (Exception) { }
+                        Thread.Sleep(100);
+                    }
+                }
+
+                Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
+
+                sw.Restart();
+
+                // Test refresh
+                for (int i = 0; i < numClients; i++) _driver[i].Navigate().Refresh();
+
+                for (int i = 0; i < numClients; i++)
+                {
+                    for (int j = 0; j < 100; j++)
+                    {
+                        try
+                        {
+                            var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
+                            link?.Click();
+                            Thread.Sleep(100);
+                            break;
+                        }
+                        catch (Exception) { }
+                        Thread.Sleep(100);
+                    }
+                }
+
+                for (int i = 0; i < numClients; i++)
+                {
+                    Assert.IsNotNull(_driver[i].FindElement(By.PartialLinkText("Counter")));
+                }
+            }     
+        }
+
         protected virtual void TestClient(int num)
         {
+            
             Startup(num);
 
             Stopwatch sw = new();
