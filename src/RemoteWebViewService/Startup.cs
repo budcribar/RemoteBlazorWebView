@@ -228,30 +228,28 @@ namespace PeakSWC.RemoteWebView
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
                 ServiceDictionary.TryGetValue(guid, out var serviceState);
 
-                // wait until client shuts down  TODO
+                // Wait until client shuts down 
                 for (int i = 0; i < 300; i++)
                 {
                     if (!ServiceDictionary.ContainsKey(guid))
-                        break;
+                    {
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
+                        return;
+                    }
+                       
                     await Task.Delay(100);
                 }
 
-                if (ServiceDictionary.ContainsKey(guid))
-                {
-                    ServiceDictionary.TryRemove(guid, out serviceState);
-                    context.Response.StatusCode = 400;
-                    context.Response.ContentType = "text/html";
-
-                    if (serviceState == null)
-                        await context.Response.WriteAsync(RestartFailedPage.Html(guid, true));
-                    else
-                        await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
-                    return;
-                }
-
+                // Client did not respond to shutdown request
+                ServiceDictionary.TryRemove(guid, out serviceState);
+                context.Response.StatusCode = 400;
                 context.Response.ContentType = "text/html";
 
-                await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
+                if (serviceState == null)
+                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, true));
+                else
+                    await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));             
             };
         }
 
