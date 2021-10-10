@@ -283,11 +283,10 @@ namespace PeakSWC.RemoteWebView
             return async context =>
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-
-                if (ServiceDictionary.ContainsKey(guid))
+                if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
                     context.Response.Redirect($"/restart/{guid}");
-                    ServiceDictionary[guid].IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
+                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
                     await Task.CompletedTask;
                 }
                 else
