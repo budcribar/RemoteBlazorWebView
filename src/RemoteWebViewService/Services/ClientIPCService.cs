@@ -17,7 +17,7 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly ILogger<ClientIPCService> _logger;
         private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
-        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
+        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ProtectedApiCallHelper _graphApi;
 
         private Dictionary<string, string> GetGroups(JObject result)
@@ -53,11 +53,11 @@ namespace PeakSWC.RemoteWebView
             return results;
         }
 
-        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> rootDictionary, ProtectedApiCallHelper graphApi)
+        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, ProtectedApiCallHelper graphApi)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
-            _rootDictionary = rootDictionary;
+            ServiceDictionary = serviceDictionary;
             _graphApi = graphApi;
         }
 
@@ -92,7 +92,7 @@ namespace PeakSWC.RemoteWebView
         private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
         {
             var list = new ClientResponseList();
-            list.ClientResponses.AddRange(_rootDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            list.ClientResponses.AddRange(ServiceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
             return responseStream.WriteAsync(list);
         }
 

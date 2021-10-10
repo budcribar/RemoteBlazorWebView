@@ -10,7 +10,7 @@ namespace PeakSWC.RemoteWebView
     public class BrowserIPCService : BrowserIPC.BrowserIPCBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; set; }
+        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
 
         private volatile bool shutdown = false;
 
