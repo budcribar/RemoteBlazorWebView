@@ -151,12 +151,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             // TODO
             if (ServerUri != null)
                Id = Id;
-
         }
-
 
         public void Restart()
         {
+            // Do not shut down if restarting
+            Application.Current.Exit -= Current_Exit;
             RemoteWebView.RemoteWebView.Restart(this);
         }
 

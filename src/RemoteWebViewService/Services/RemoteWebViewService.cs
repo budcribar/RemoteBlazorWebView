@@ -36,20 +36,6 @@ namespace PeakSWC.RemoteWebView
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
 
-            // Wait for client that is restarting to exit
-            //if (_webViewDictionary.ContainsKey(request.Id))
-            //for (int i=0; i<30; i++)              
-            //{
-            //    if (!_webViewDictionary.ContainsKey(request.Id))
-            //        {
-            //            await Task.Delay(3000);
-            //            break;
-            //        }
-                   
-
-            //    await Task.Delay(1000);
-            //}
-
             if (!ServiceDictionary.ContainsKey(request.Id))
             {
                 ServiceState state = new()
