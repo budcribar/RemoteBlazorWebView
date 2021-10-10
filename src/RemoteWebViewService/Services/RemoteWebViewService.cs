@@ -14,14 +14,14 @@ namespace PeakSWC.RemoteWebView
     public class RemoteWebViewService : WebViewIPC.WebViewIPCBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private readonly ConcurrentDictionary<string, ServiceState> _webViewDictionary;
+        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
       
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> rootDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
             _logger = logger;
-            _webViewDictionary = rootDictionary;
+            ServiceDictionary = serviceDictionary;
             _serviceStateChannel = serviceStateChannel;
             _serviceStates = serviceStates;
         }
@@ -29,13 +29,28 @@ namespace PeakSWC.RemoteWebView
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
             var results = new IdArrayResponse();
-            results.Responses.AddRange(_webViewDictionary.Keys);
+            results.Responses.AddRange(ServiceDictionary.Keys);
             return Task.FromResult(results);
         }
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
-            if (!_webViewDictionary.ContainsKey(request.Id))
+
+            // Wait for client that is restarting to exit
+            //if (_webViewDictionary.ContainsKey(request.Id))
+            //for (int i=0; i<30; i++)              
+            //{
+            //    if (!_webViewDictionary.ContainsKey(request.Id))
+            //        {
+            //            await Task.Delay(3000);
+            //            break;
+            //        }
+                   
+
+            //    await Task.Delay(1000);
+            //}
+
+            if (!ServiceDictionary.ContainsKey(request.Id))
             {
                 ServiceState state = new()
                 {
@@ -51,10 +66,10 @@ namespace PeakSWC.RemoteWebView
                 };
                 _serviceStates.Add(state);
                 // Let home page know client is available
-                _webViewDictionary.TryAdd(request.Id, state);
+                ServiceDictionary.TryAdd(request.Id, state);
 
                 var list = new ClientResponseList();
-                _webViewDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
+                ServiceDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
                
                 _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Start:{request.Id}"));
                 state.IPC.ClientResponseStream = responseStream;
@@ -86,12 +101,12 @@ namespace PeakSWC.RemoteWebView
                     {
                         id = message.Init.Id;
 
-                        _webViewDictionary[id].FileReaderTask = Task.Run(async () =>
+                        ServiceDictionary[id].FileReaderTask = Task.Run(async () =>
                         {
                             while (true)
                             {
-                                if (!_webViewDictionary.ContainsKey(id)) break;
-                                var path = await _webViewDictionary[id].FileCollection.Reader.ReadAsync(context.CancellationToken);
+                                if (!ServiceDictionary.ContainsKey(id)) break;
+                                var path = await ServiceDictionary[id].FileCollection.Reader.ReadAsync(context.CancellationToken);
                                 await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
                             }
                         }, context.CancellationToken);
@@ -100,14 +115,14 @@ namespace PeakSWC.RemoteWebView
                     {
                         if (message.Data.Data.Length > 0)
                         {
-                            var ms = _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].stream;
+                            var ms = ServiceDictionary[message.Data.Id].FileDictionary[message.Data.Path].stream;
                             if (ms != null)
                                 await ms.WriteAsync(message.Data.Data.Memory);
                         }
                         else
                         {
                             // Trigger the stream read
-                            _webViewDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
+                            ServiceDictionary[message.Data.Id].FileDictionary[message.Data.Path].resetEvent.Set();
                         }
 
                     }
@@ -126,9 +141,9 @@ namespace PeakSWC.RemoteWebView
         {
             _logger.LogInformation("Shutting down..." + id);
 
-            if (_webViewDictionary.ContainsKey(id))
+            if (ServiceDictionary.ContainsKey(id))
             {
-                _webViewDictionary.Remove(id, out var client);
+                ServiceDictionary.Remove(id, out var client);
                 if (client != null)
                 {
                     client.IPC.Shutdown();
@@ -146,9 +161,9 @@ namespace PeakSWC.RemoteWebView
 
         public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            if (_webViewDictionary.ContainsKey(request.Id))
+            if (ServiceDictionary.ContainsKey(request.Id))
 			{
-                _webViewDictionary[request.Id].IPC.SendMessage(request.Message);
+                ServiceDictionary[request.Id].IPC.SendMessage(request.Message);
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
 
