@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Enhanced error message reporting from server</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixed race condition on client restart via browser refresh</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

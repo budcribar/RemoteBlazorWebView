@@ -1,5 +1,5 @@
 - Increment VersionPrefix from Directory.Build.Props
-- Edit RunTests.ps1 and set EnvBuildMode to Debug
+- Edit RunTests.ps1 and set EnvBuildMode to Developer
 - Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
 - Modify release notes in Project Files
 - RunTests.ps1 from RemoteBlazorWebView
