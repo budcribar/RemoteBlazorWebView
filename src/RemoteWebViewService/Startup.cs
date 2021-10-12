@@ -55,7 +55,7 @@ namespace PeakSWC.RemoteWebView
         {
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 #if AUTHORIZATION
-            services.AddSingleton(CreateApiHelper().Result);
+            services.AddTransient((sp) => CreateApiHelper());
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.

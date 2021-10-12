@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteWebView
         private readonly ILogger<ClientIPCService> _logger;
         private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
-        private readonly ProtectedApiCallHelper _graphApi;
+        private readonly Task<ProtectedApiCallHelper> _graphApi;
 
         private Dictionary<string, string> GetGroups(JObject result)
         {
@@ -53,7 +53,7 @@ namespace PeakSWC.RemoteWebView
             return results;
         }
 
-        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, ProtectedApiCallHelper graphApi)
+        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, Task<ProtectedApiCallHelper> graphApi)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
@@ -69,7 +69,7 @@ namespace PeakSWC.RemoteWebView
            
             try
             {
-                var groups = GetUserGroups(request.Oid);
+                var groups = await GetUserGroups(request.Oid);
 
                 // If a user is not in any groups then they are defaulted to the "test" group
                 if (!groups.Any())
@@ -96,16 +96,16 @@ namespace PeakSWC.RemoteWebView
             return responseStream.WriteAsync(list);
         }
 
-        private List<string> GetUserGroups (string oid)
+        private async Task<List<string>> GetUserGroups (string oid)
         {
             List<string> groups = new();
-            var groupText = _graphApi.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;
+            var groupText = (await _graphApi).CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;
             if (groupText == null) { return groups; }
             var groupDict = GetGroups(groupText);
 
             foreach (var groupId in groupDict.Keys)
             {
-                var members = _graphApi.CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").Result;
+                var members = (await _graphApi).CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").Result;
                 if (members != null)
                     groups.AddRange(GetMembersForGroup(groupId, oid, groupDict, members));
             }
