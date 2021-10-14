@@ -3,7 +3,7 @@ $env:EnvBuildMode = 'Developer' # Developer or Release
 
 # Start with a clean solution
 
-Get-ChildItem .\ -include bin,obj,publish,publishNoAuth,publishAuth,artifacts -Exclude src\RemoteWebView.Blazor.JS  -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
+Get-ChildItem .\src -Exclude RemoteWebView.Blazor.JS | Get-ChildItem -include bin,obj,publish,publishNoAuth,publishAuth,artifacts   -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEmbedded, embedded -Exclude EBWebView -Recurse -Force | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
 
