@@ -21,7 +21,7 @@ export function sendMessage(message: string) {
             if (!message.getSuccess()) {
                 var error = `Client ${id} is unresponsive`
                 console.log(error);
-                showErrorNotification(error);
+                showErrorNotification();
             }
         },
         onEnd: (code, msg, trailers) => {
@@ -29,7 +29,7 @@ export function sendMessage(message: string) {
                 //console.log("sent:" + req.getSequence() + ":" + message);
             } else {
                 console.log("grpc error", code, msg, trailers);
-                showErrorNotification("grpc error" + code);
+                showErrorNotification();
             }
         }
     });

@@ -1354,17 +1354,29 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@microsoft/dotnet-js-interop@link:../../JSInterop/Microsoft.JSInterop.JS/src":
-  version "0.0.0"
-  uid ""
+"@microsoft/dotnet-js-interop@6.0.0-rc.2.21480.10":
+  version "6.0.0-rc.2.21480.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.0-rc.2.21480.10.tgz#eeb2ab58d20528d37e0271c361c6b6a466821683"
+  integrity sha512-7TtUQ0KaqK3t4D4t+FxVaRlUAwHUVwgCczeKeLVizpl6ywBOYC4ByplJit8sEivnZ6ZnWLn7GJnhJ4ypAgSIKQ==
 
-"@microsoft/signalr-protocol-msgpack@link:../../SignalR/clients/ts/signalr-protocol-msgpack":
-  version "0.0.0"
-  uid ""
+"@microsoft/signalr-protocol-msgpack@6.0.0-rc.2.21480.10":
+  version "6.0.0-rc.2.21480.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.0-rc.2.21480.10.tgz#7b65561d6fcd12c796829dbba7808c32875f6eb5"
+  integrity sha512-/G+zQu+yDAiJdigF+9xEDLQxhMH5PRLgRSwDMgWa5uLGMaaeqDlqIXuduLa9ueO+w2emiInJE0zrZ9cLRh7T/A==
+  dependencies:
+    "@microsoft/signalr" ">=6.0.0-rc.2.21480.10"
+    "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@link:../../SignalR/clients/ts/signalr":
-  version "0.0.0"
-  uid ""
+"@microsoft/signalr@6.0.0-rc.2.21480.10", "@microsoft/signalr@>=6.0.0-rc.2.21480.10":
+  version "6.0.0-rc.2.21480.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.0-rc.2.21480.10.tgz#646b4949bf15307502ff7cc79b8fd126e0ca1c63"
+  integrity sha512-x8JrsovWHNlp4niN3jiXdB7qiBAeVZHT1Jk2DYvlICRSoQ226P5ozQq9xbmlhs7Hil6FmuXxmaMvEbn82Imubw==
+  dependencies:
+    abort-controller "^3.0.0"
+    eventsource "^1.0.7"
+    fetch-cookie "^0.11.0"
+    node-fetch "^2.6.1"
+    ws "^7.4.5"
 
 "@msgpack/msgpack@^2.7.0":
   version "2.7.0"
