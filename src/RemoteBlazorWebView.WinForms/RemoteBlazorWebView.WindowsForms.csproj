@@ -29,6 +29,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="WindowsFormsCoreWebView2AcceleratorKeyPressedEventArgsWrapper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
       <Pack>True</Pack>
       <PackagePath></PackagePath>

@@ -27,6 +27,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="WpfCoreWebView2AcceleratorKeyPressedEventArgsWrapper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Page Remove="RemoteBlazorWebView.xaml" />
   </ItemGroup>
 
