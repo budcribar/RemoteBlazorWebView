@@ -209,6 +209,8 @@ function addGlobalModuleScriptTagsToDocument(callback: () => void) {
   // The callback is put in the global scope so that it can be run after the script is loaded.
   // onload cannot be used in this case for non-file scripts.
   window['__wasmmodulecallback__'] = callback;
+
+  // Note: Any updates to the following script will require updating the inline script hash if using CSP
   scriptElem.text = 'var Module; window.__wasmmodulecallback__(); delete window.__wasmmodulecallback__;';
 
   document.body.appendChild(scriptElem);
@@ -436,6 +438,11 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
     if (resourceLoader.bootConfig.modifiableAssemblies) {
       // Configure the app to enable hot reload in Development.
       MONO.mono_wasm_setenv('DOTNET_MODIFIABLE_ASSEMBLIES', resourceLoader.bootConfig.modifiableAssemblies);
+    }
+
+    if (resourceLoader.bootConfig.aspnetCoreBrowserTools) {
+      // See https://github.com/dotnet/aspnetcore/issues/37357#issuecomment-941237000
+      MONO.mono_wasm_setenv('__ASPNETCORE_BROWSER_TOOLS', resourceLoader.bootConfig.aspnetCoreBrowserTools);
     }
 
     const load_runtime = cwrap('mono_wasm_load_runtime', null, ['string', 'number']);
