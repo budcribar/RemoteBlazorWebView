@@ -24,7 +24,7 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Fixed race condition on client restart via browser refresh</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated net6 packages</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -44,9 +44,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0-rc.2.21480.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.101-preview.9.1843" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.101-preview.9.1843" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.101-preview.10.2068" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.101-preview.10.2068" />
    
   </ItemGroup>
 

@@ -23,10 +23,6 @@ yarn install
 yarn run build
 
 
-Edit the package.json at RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\package.json
-
-
-
 Project RemotableWebView
 
 

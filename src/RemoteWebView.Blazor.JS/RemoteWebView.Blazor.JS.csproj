@@ -6,15 +6,19 @@
     <TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
     <DefaultItemExcludes>${DefaultItemExcludes};node_modules\**</DefaultItemExcludes>
     <IsPackable>false</IsPackable>
-
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <!-- VS's FastUpToDateCheck doesn't consider .ts file changes, so it's necessary to disable it to get incremental builds to work correctly (albeit not as fast as if FastUpToDateCheck did work for them) -->
-    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <Configurations>Debug;Release;Embedded</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.4.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    
     <WebpackInputs Include="**\*.ts" Exclude="node_modules\**" />
+    <WebpackInputs Remove="src\RemoteWebView.ts" />
+    <Folder Include="dist\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,14 +26,6 @@
     <EmbeddedResource Remove="upstream\aspnetcore\web.js\node_modules\**" />
     <None Remove="upstream\aspnetcore\web.js\node_modules\**" />
     <WebpackInputs Remove="upstream\aspnetcore\web.js\node_modules\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <WebpackInputs Remove="src\RemoteWebView.ts" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="dist\" />
   </ItemGroup>
 
   <Target Name="EnsureNpmRestored" >
@@ -41,4 +37,5 @@
     <Exec Command="npm run build:debug" Condition="'$(Configuration)' == 'Debug'" />
     <Exec Command="npm run build:production" Condition="'$(Configuration)' != 'Debug'" />
   </Target>
+
 </Project>
