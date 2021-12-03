@@ -13,4 +13,5 @@
 - Merge the changes into the dotnet6 branch
 - create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
 - copy the webwindow.proto file to the RemoteWebViewAdmin project
+- Copy the RemoteWebViewService to the WebWindow server
 
