@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -52,7 +53,7 @@ namespace PeakSWC.RemoteWebView
                 }
             return results;
         }
-
+  
         public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, Task<ProtectedApiCallHelper> graphApi)
         {
             _logger = logger;
@@ -70,14 +71,14 @@ namespace PeakSWC.RemoteWebView
             try
             {
                 var groups = await GetUserGroups(request.Oid);
-
+                
                 // If a user is not in any groups then they are defaulted to the "test" group
                 if (!groups.Any())
                     groups.Add("test");
 
                 await WriteResponse(responseStream, groups);
 
-                await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync())
+                await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
                 {
                     this._logger.LogInformation($"Client IPC: {state}");
                     await WriteResponse(responseStream, groups);

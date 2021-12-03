@@ -7,6 +7,7 @@ using Microsoft.Extensions.FileProviders;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -73,7 +74,14 @@ namespace PeakSWC.RemoteWebView
 
                 if (client == null)
                 {
-                    var channel = GrpcChannel.ForAddress(ServerUri);
+                    var channel = GrpcChannel.ForAddress(ServerUri, 
+                        new GrpcChannelOptions {
+                        HttpHandler = new SocketsHttpHandler {
+                        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                        KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                        KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                        EnableMultipleHttp2Connections = true
+                    } });
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
@@ -146,40 +154,45 @@ namespace PeakSWC.RemoteWebView
                     Task.Run(async () =>
                     {
                         var files = client.FileReader();
-                     
-                        await files.RequestStream.WriteAsync(new FileReadRequest { Init = new FileReadInitRequest { Id = Id } });
-
-                        await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
+                        try
                         {
-                            try
-                            {
-                                var path = message.Path[(message.Path.IndexOf("/") + 1)..];
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Init = new FileReadInitRequest { Id = Id } });
 
-                                using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
+                            await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
+                            {
+                                try
                                 {
-                                    if (stream == null)
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
-                                    else
+                                    var path = message.Path[(message.Path.IndexOf("/") + 1)..];
+
+                                    using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
                                     {
-                                        var buffer = new Byte[8 * 1024];
-                                        int bytesRead = 0;
-
-                                        while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                        if (stream == null)
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                        else
                                         {
-                                            ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
-                                        }
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
-                                    }
-                                }
-                               
-                            }
-                            catch (Exception)
-                            {
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
-                            }
-                        }
+                                            var buffer = new Byte[8 * 1024];
+                                            int bytesRead = 0;
 
+                                            while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                            {
+                                                ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
+                                            }
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                        }
+                                    }
+
+                                }
+                                catch (Exception ex)
+                                {
+                                    BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                }
+                            }
+                        } catch (Exception ex)
+                        {
+                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
+                        }
                     }, cts.Token);
 
                 }
