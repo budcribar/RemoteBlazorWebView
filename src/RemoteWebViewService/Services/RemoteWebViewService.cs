@@ -125,7 +125,7 @@ namespace PeakSWC.RemoteWebView
 
         private void ExShutdown(string id)
         {
-            _logger.LogInformation("Shutting down..." + id);
+            _logger.LogWarning("Shutting down..." + id);
 
             if (ServiceDictionary.ContainsKey(id))
             {

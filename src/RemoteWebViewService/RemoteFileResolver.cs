@@ -65,6 +65,13 @@ namespace PeakSwc.StaticFiles
             _rootDictionary[id].FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
             _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(30));
+
+            if (!_rootDictionary.ContainsKey(id))
+            {
+                _logger.LogError($"Cannot process {appFile} id {id} was removed...");
+                return null;
+            }
+
             MemoryStream stream = _rootDictionary[id].FileDictionary[appFile].stream;
             if (stream.Length == 0)
             {
