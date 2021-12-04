@@ -17,7 +17,6 @@ namespace PeakSWC.RemoteWebView
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
-        private int _pingIntervalSeconds;
       
         public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
@@ -36,7 +35,6 @@ namespace PeakSWC.RemoteWebView
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
-            _pingIntervalSeconds = request.PingIntervalSeconds;
 
             if (!ServiceDictionary.ContainsKey(request.Id))
             {
@@ -143,7 +141,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 responseReceived = false;
                                 await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }); 
-                                await Task.Delay(TimeSpan.FromSeconds(_pingIntervalSeconds));
+                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds));
                                 if (!responseReceived)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });

@@ -33,7 +33,6 @@ message CreateWebViewRequest {
   int32 pid = 5;
   string processName = 6;
   string hostName = 7;
-  int32 pingIntervalSeconds = 8;
 }
 
 message WebMessageResponse {
@@ -87,6 +86,7 @@ message SendMessageResponse {
 message PingMessageRequest {
     string id = 1;
     bool initialize = 2;
+    int32 pingIntervalSeconds = 3;
 }
 
 service WebViewIPC {

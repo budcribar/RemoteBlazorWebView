@@ -85,7 +85,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName, PingIntervalSeconds=30 }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -200,7 +200,7 @@ namespace PeakSWC.RemoteWebView
 
                         try
                         {
-                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = Id, Initialize = true });
+                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = Id, Initialize = true, PingIntervalSeconds=30 });
 
                             await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
                             {
