@@ -37,7 +37,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Renamed the server and added refresh event</PackageReleaseNotes>
+    <PackageReleaseNotes>Enabled client ping test</PackageReleaseNotes>
     <DebugType>embedded</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>

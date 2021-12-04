@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Setup GRPC KeepAlive to avoid timeouts in Azure</PackageReleaseNotes>
+    <PackageReleaseNotes>Enabled client ping test</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
