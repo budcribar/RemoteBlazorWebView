@@ -17,6 +17,7 @@ namespace PeakSWC.RemoteWebView
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
+        private int _pingIntervalSeconds;
       
         public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
         {
@@ -35,6 +36,7 @@ namespace PeakSWC.RemoteWebView
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
+            _pingIntervalSeconds = request.PingIntervalSeconds;
 
             if (!ServiceDictionary.ContainsKey(request.Id))
             {
@@ -123,7 +125,48 @@ namespace PeakSWC.RemoteWebView
 
         }
 
-        private void ExShutdown(string id)
+        public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
+        {
+            var id = string.Empty;
+            try
+            {
+                var responseReceived = false;
+                await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken))
+                {
+                    if (message.Initialize)
+                    {
+                        id = message.Id;
+
+                        ServiceDictionary[id].PingTask = Task.Run(async () =>
+                        {
+                            while (true)
+                            {
+                                responseReceived = false;
+                                await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }); 
+                                await Task.Delay(TimeSpan.FromSeconds(_pingIntervalSeconds));
+                                if (!responseReceived)
+                                {
+                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
+                                    ExShutdown(id);
+                                    break;
+                                }
+                                    
+                            }
+                        }, context.CancellationToken);
+
+                    }
+                    else responseReceived = true;
+                }
+            }
+            catch (Exception)
+            {
+                ExShutdown(id);
+
+                // Client has shut down
+            }
+        }
+
+            private void ExShutdown(string id)
         {
             _logger.LogWarning("Shutting down..." + id);
 
@@ -145,6 +188,7 @@ namespace PeakSWC.RemoteWebView
             return Task.FromResult<Empty>(new Empty());
         }
 
+       
         public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
             if (ServiceDictionary.ContainsKey(request.Id))

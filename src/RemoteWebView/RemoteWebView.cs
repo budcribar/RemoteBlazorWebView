@@ -85,7 +85,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName }, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName, PingIntervalSeconds=30 }, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -193,6 +193,27 @@ namespace PeakSWC.RemoteWebView
                         {
                             BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
                         }
+                    }, cts.Token);
+
+                    Task.Run(async () => {
+                        var pings = client.Ping();
+
+                        try
+                        {
+                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = Id, Initialize = true });
+
+                            await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
+                            {
+                                if (message.Cancelled) throw new Exception("Ping timeout exceeded");
+
+                                await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
+                        }
+
                     }, cts.Token);
 
                 }

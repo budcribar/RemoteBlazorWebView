@@ -13,13 +13,16 @@ message SendMessageRequest {
     string id = 1;
     string message = 2;
 }
-
 message FileMessageRequest {
     string id = 1;
     string path = 2;
 }
 message IdMessageRequest {
     string id = 1;
+}
+message PingMessageResponse {
+    string id = 1;
+    bool cancelled = 2;
 }
 
 message CreateWebViewRequest {
@@ -30,6 +33,7 @@ message CreateWebViewRequest {
   int32 pid = 5;
   string processName = 6;
   string hostName = 7;
+  int32 pingIntervalSeconds = 8;
 }
 
 message WebMessageResponse {
@@ -80,11 +84,17 @@ message SendMessageResponse {
     bool success = 2;
 }
 
+message PingMessageRequest {
+    string id = 1;
+    bool initialize = 2;
+}
+
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
+    rpc Ping(stream PingMessageRequest) returns (stream PingMessageResponse);
     rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
 }
 

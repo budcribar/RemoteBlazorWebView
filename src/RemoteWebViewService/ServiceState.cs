@@ -19,7 +19,8 @@ namespace PeakSWC.RemoteWebView
         public string ProcessName {  get; init; } = string.Empty;
         public string HostName { get; init; } = string.Empty;
         public string User {  get; set; } = string.Empty;
-        public Task? FileReaderTask { get; set; }
+        public Task? FileReaderTask { get; set; } = null;
+        public Task? PingTask { get; set; } = null;
         public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
         public IPC IPC { get; init; } = new();

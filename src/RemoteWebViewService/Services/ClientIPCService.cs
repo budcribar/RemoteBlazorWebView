@@ -19,47 +19,14 @@ namespace PeakSWC.RemoteWebView
         private readonly ILogger<ClientIPCService> _logger;
         private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
-        private readonly Task<ProtectedApiCallHelper> _graphApi;
-
-        private Dictionary<string, string> GetGroups(JObject result)
-        {
-            Dictionary<string, string> groups = new();
-            var list = result.Property("value")?.Value;
-            if (list != null)
-                foreach (var group in list)
-                {
-                    var name = group["displayName"]?.ToString() ?? string.Empty;
-                    var id = group["id"]?.ToString() ?? string.Empty;
-
-                    if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(name))
-                        continue;
-
-                    groups[id] = name;
-                }
-            return groups;
-        }
-
-        private List<string> GetMembersForGroup(string groupId, string userId, Dictionary<string, string> groupDict, JObject result)
-        {
-            List<string> results = new();
-            var list = result.Property("value")?.Value;
-            if (list != null)
-                foreach (var members in list)
-                {
-
-                    var id = members["id"]?.ToString() ?? string.Empty;
-                    if (id == userId)
-                        results.Add(groupDict[groupId]);
-                }
-            return results;
-        }
-  
-        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, Task<ProtectedApiCallHelper> graphApi)
+        private readonly IUserService _userService;
+       
+        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService)
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
             ServiceDictionary = serviceDictionary;
-            _graphApi = graphApi;
+            _userService = userService;
         }
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
@@ -70,7 +37,7 @@ namespace PeakSWC.RemoteWebView
            
             try
             {
-                var groups = await GetUserGroups(request.Oid);
+                var groups = await _userService.GetUserGroups(request.Oid);
                 
                 // If a user is not in any groups then they are defaulted to the "test" group
                 if (!groups.Any())
@@ -95,22 +62,6 @@ namespace PeakSWC.RemoteWebView
             var list = new ClientResponseList();
             list.ClientResponses.AddRange(ServiceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
             return responseStream.WriteAsync(list);
-        }
-
-        private async Task<List<string>> GetUserGroups (string oid)
-        {
-            List<string> groups = new();
-            var groupText = (await _graphApi).CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups").Result;
-            if (groupText == null) { return groups; }
-            var groupDict = GetGroups(groupText);
-
-            foreach (var groupId in groupDict.Keys)
-            {
-                var members = (await _graphApi).CallWebApiAndProcessResultASync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").Result;
-                if (members != null)
-                    groups.AddRange(GetMembersForGroup(groupId, oid, groupDict, members));
-            }
-            return groups;
         }
     }
 }

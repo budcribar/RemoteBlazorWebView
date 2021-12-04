@@ -10,6 +10,7 @@ using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using PeakSwc.StaticFiles;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
@@ -51,11 +52,13 @@ namespace PeakSWC.RemoteWebView
             return new ProtectedApiCallHelper(httpClient,result.AccessToken);
         }
 #endif
-        public void ConfigureServices(IServiceCollection services)
+
+            public void ConfigureServices(IServiceCollection services)
         {
             services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
 #if AUTHORIZATION
             services.AddTransient((sp) => CreateApiHelper());
+            services.AddTransient<IUserService,UserService>();
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
@@ -73,6 +76,10 @@ namespace PeakSWC.RemoteWebView
             services.AddOptions();
             services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
             services.AddAuthorization();
+
+
+#else
+            services.AddTransient<IUserService, MockUserService>();
 #endif 
             services.AddSingleton<ConcurrentBag<ServiceState>>();
             services.AddSingleton(ServiceDictionary);
@@ -215,7 +222,7 @@ namespace PeakSWC.RemoteWebView
                 
                 foreach(var ss in bag)
                 {
-                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/>";
+                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/> <b>Ping:</b>{ss.PingTask?.Status}<br/>";
                 }
                 await context.Response.WriteAsync(text);
             };
