@@ -101,6 +101,7 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
+    rpc Ping(PingMessageRequest) returns (PingMessageResponse);
 }
 
 enum ClientState {

@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
@@ -21,6 +22,9 @@ namespace PeakSWC.RemoteWebView
         public string User {  get; set; } = string.Empty;
         public Task? FileReaderTask { get; set; } = null;
         public Task? PingTask { get; set; } = null;
+        public Task? BrowserPingTask { get; set; } = null;
+        public DateTime BrowserPingReceived { get; set; } = DateTime.MinValue;
+        public TimeSpan MaxBrowserPing { get; set; } = TimeSpan.Zero;
         public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
         public IPC IPC { get; init; } = new();

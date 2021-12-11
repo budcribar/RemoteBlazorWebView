@@ -222,7 +222,7 @@ namespace PeakSWC.RemoteWebView
                 
                 foreach(var ss in bag)
                 {
-                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/> <b>Ping:</b>{ss.PingTask?.Status}<br/>";
+                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/> <b>Ping:</b>{ss.PingTask?.Status}<br/><br/> <b>BrowserPing:</b>{ss.BrowserPingTask?.Status}<br/>";
                 }
                 await context.Response.WriteAsync(text);
             };
@@ -245,7 +245,7 @@ namespace PeakSWC.RemoteWebView
                         return;
                     }
                        
-                    await Task.Delay(100);
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
 
                 // Client did not respond to shutdown request
@@ -274,7 +274,7 @@ namespace PeakSWC.RemoteWebView
                         return;
                     }
 
-                    await Task.Delay(1000);
+                    await Task.Delay(1000).ConfigureAwait(false);
                 }
 
                 context.Response.StatusCode = 400;

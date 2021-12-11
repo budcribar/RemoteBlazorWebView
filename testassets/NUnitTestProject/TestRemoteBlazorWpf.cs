@@ -26,6 +26,7 @@ namespace WebdriverTestProject
         private static string[] ids = Array.Empty<string>();
         protected static Process? process;
         protected static List<Process> clients = new();
+        private static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
 
         public virtual Process CreateClient()
         {
@@ -42,7 +43,7 @@ namespace WebdriverTestProject
             return Utilities.StartServer();
         }
 
-        public virtual void Startup(int numClients)
+        public async virtual void Startup(int numClients)
         {
             KillClient();
 
@@ -58,7 +59,7 @@ namespace WebdriverTestProject
                     break;
                 }
                 catch (Exception ){}
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000);
             }
 
             clients = new List<Process>();
@@ -163,7 +164,7 @@ namespace WebdriverTestProject
             {
                 for (int i = 0; i < numClients; i++)
                 {
-                    for (int j = 0; j < 100; j++)
+                    for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                     {
                         try
                         {
@@ -186,7 +187,7 @@ namespace WebdriverTestProject
 
                 for (int i = 0; i < numClients; i++)
                 {
-                    for (int j = 0; j < 100; j++)
+                    for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                     {
                         try
                         {
@@ -225,7 +226,7 @@ namespace WebdriverTestProject
 
             for (int i = 0; i < num; i++)
             {
-                for (int j = 0; j < 100; j++)
+                for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                 {
                     try
                     {

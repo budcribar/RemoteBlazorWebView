@@ -79,7 +79,7 @@ namespace PeakSWC.RemoteWebView
                         HttpHandler = new SocketsHttpHandler {
                         PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
                         KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                        KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                        KeepAlivePingTimeout = TimeSpan.FromSeconds(50),   // 30 seconds is not enough to pass stress tests
                         EnableMultipleHttp2Connections = true
                     } });
 

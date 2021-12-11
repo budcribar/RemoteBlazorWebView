@@ -64,7 +64,8 @@ namespace PeakSwc.StaticFiles
 
             _rootDictionary[id].FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
             await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
-            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(30));
+
+            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60));
 
             if (!_rootDictionary.ContainsKey(id))
             {
@@ -96,7 +97,7 @@ namespace PeakSwc.StaticFiles
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }
             total += stopWatch.Elapsed;
-            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} in {stopWatch.Elapsed.TotalSeconds}");
+            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} in {stopWatch.Elapsed.TotalSeconds} sec.");
             _logger.LogInformation($"Total file read time  {total.TotalSeconds}");
             return stream;
         }

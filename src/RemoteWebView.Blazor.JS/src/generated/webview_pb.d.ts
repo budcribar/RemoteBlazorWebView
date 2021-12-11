@@ -72,6 +72,30 @@ export namespace IdMessageRequest {
   }
 }
 
+export class PingMessageResponse extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getCancelled(): boolean;
+  setCancelled(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PingMessageResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: PingMessageResponse): PingMessageResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PingMessageResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PingMessageResponse;
+  static deserializeBinaryFromReader(message: PingMessageResponse, reader: jspb.BinaryReader): PingMessageResponse;
+}
+
+export namespace PingMessageResponse {
+  export type AsObject = {
+    id: string,
+    cancelled: boolean,
+  }
+}
+
 export class CreateWebViewRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -348,6 +372,34 @@ export namespace SendMessageResponse {
   export type AsObject = {
     id: string,
     success: boolean,
+  }
+}
+
+export class PingMessageRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getInitialize(): boolean;
+  setInitialize(value: boolean): void;
+
+  getPingintervalseconds(): number;
+  setPingintervalseconds(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): PingMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: PingMessageRequest): PingMessageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: PingMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): PingMessageRequest;
+  static deserializeBinaryFromReader(message: PingMessageRequest, reader: jspb.BinaryReader): PingMessageRequest;
+}
+
+export namespace PingMessageRequest {
+  export type AsObject = {
+    id: string,
+    initialize: boolean,
+    pingintervalseconds: number,
   }
 }
 

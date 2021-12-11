@@ -52,10 +52,10 @@ export function initializeRemoteWebView() {
                 if (code == grpc.Code.OK) {
                     //console.log("all ok")
                 } else {
-                    console.log("grpc error", code, msg, trailers);
+                    console.error("grpc error", code, msg, trailers);
                 }
             }
-        });
+        } );
 
     (window.external as any).sendMessage = sendMessage;
 

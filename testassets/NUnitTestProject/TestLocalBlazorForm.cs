@@ -13,7 +13,7 @@ namespace WebdriverTestProject
     {
         private static EdgeDriver? driver;
         private static string startingDirectory = string.Empty;
-
+        private static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
         public virtual string BinaryLocation()
         {
             return Utilities.BlazorWinFormsAppExe();
@@ -46,7 +46,7 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            for (int i=0;i<100; i++)
+            for (int i=0;i< NUM_LOOPS_WAITING_FOR_PAGE_LOAD; i++)
             {
                 try
                 {

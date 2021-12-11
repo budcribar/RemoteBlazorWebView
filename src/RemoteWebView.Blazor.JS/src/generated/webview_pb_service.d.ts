@@ -41,6 +41,15 @@ type WebViewIPCFileReader = {
   readonly responseType: typeof webview_pb.FileReadResponse;
 };
 
+type WebViewIPCPing = {
+  readonly methodName: string;
+  readonly service: typeof WebViewIPC;
+  readonly requestStream: true;
+  readonly responseStream: true;
+  readonly requestType: typeof webview_pb.PingMessageRequest;
+  readonly responseType: typeof webview_pb.PingMessageResponse;
+};
+
 type WebViewIPCGetIds = {
   readonly methodName: string;
   readonly service: typeof WebViewIPC;
@@ -56,6 +65,7 @@ export class WebViewIPC {
   static readonly Shutdown: WebViewIPCShutdown;
   static readonly CreateWebView: WebViewIPCCreateWebView;
   static readonly FileReader: WebViewIPCFileReader;
+  static readonly Ping: WebViewIPCPing;
   static readonly GetIds: WebViewIPCGetIds;
 }
 
@@ -77,10 +87,20 @@ type BrowserIPCSendMessage = {
   readonly responseType: typeof webview_pb.SendMessageResponse;
 };
 
+type BrowserIPCPing = {
+  readonly methodName: string;
+  readonly service: typeof BrowserIPC;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof webview_pb.PingMessageRequest;
+  readonly responseType: typeof webview_pb.PingMessageResponse;
+};
+
 export class BrowserIPC {
   static readonly serviceName: string;
   static readonly ReceiveMessage: BrowserIPCReceiveMessage;
   static readonly SendMessage: BrowserIPCSendMessage;
+  static readonly Ping: BrowserIPCPing;
 }
 
 type ClientIPCGetClients = {
@@ -149,6 +169,7 @@ export class WebViewIPCClient {
   ): UnaryResponse;
   createWebView(requestMessage: webview_pb.CreateWebViewRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.WebMessageResponse>;
   fileReader(metadata?: grpc.Metadata): BidirectionalStream<webview_pb.FileReadRequest, webview_pb.FileReadResponse>;
+  ping(metadata?: grpc.Metadata): BidirectionalStream<webview_pb.PingMessageRequest, webview_pb.PingMessageResponse>;
   getIds(
     requestMessage: google_protobuf_empty_pb.Empty,
     metadata: grpc.Metadata,
@@ -173,6 +194,15 @@ export class BrowserIPCClient {
   sendMessage(
     requestMessage: webview_pb.SendSequenceMessageRequest,
     callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
+  ): UnaryResponse;
+  ping(
+    requestMessage: webview_pb.PingMessageRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.PingMessageResponse|null) => void
+  ): UnaryResponse;
+  ping(
+    requestMessage: webview_pb.PingMessageRequest,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.PingMessageResponse|null) => void
   ): UnaryResponse;
 }
 
