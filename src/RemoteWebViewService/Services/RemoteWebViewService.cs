@@ -131,11 +131,12 @@ namespace PeakSWC.RemoteWebView
             var id = string.Empty;
             try
             {
-                var responseReceived = false;
+                DateTime responseReceived = DateTime.Now;
+                DateTime responseSent = DateTime.Now;
                 await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
                     id = message.Id;
-                    if (!ServiceDictionary.ContainsKey(id))
+                    if (!ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
                         ExShutdown(id);
@@ -144,25 +145,31 @@ namespace PeakSWC.RemoteWebView
 
                     if (message.Initialize)
                     {
-                        ServiceDictionary[id].PingTask = Task.Run(async () =>
+                        serviceState.PingTask = Task.Run(async () =>
                         {
                             while (true)
                             {
-                                responseReceived = false;
+                                responseSent = DateTime.Now;
                                 await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false });
                                 await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds)).ConfigureAwait(false);
-                                if (!responseReceived)
+                                if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
                                     ExShutdown(id);
                                     break;
                                 }
-                                    
+
                             }
                         }, context.CancellationToken);
 
                     }
-                    else responseReceived = true;
+                    else
+                    {
+                        responseReceived = DateTime.Now;
+                        var delta = responseReceived.Subtract(responseSent);
+                        if (delta > serviceState.MaxClientPing)
+                            serviceState.MaxClientPing = delta;
+                    }
                 }
             }
             catch (Exception)
@@ -198,9 +205,9 @@ namespace PeakSWC.RemoteWebView
        
         public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            if (ServiceDictionary.ContainsKey(request.Id))
+            if (ServiceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                ServiceDictionary[request.Id].IPC.SendMessage(request.Message);
+                serviceState.IPC.SendMessage(request.Message);
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
 

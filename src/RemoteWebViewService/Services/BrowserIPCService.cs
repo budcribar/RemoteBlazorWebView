@@ -25,6 +25,7 @@ namespace PeakSWC.RemoteWebView
             _serviceStateChannel = serviceStateChannel;
         }
 
+        // TODO Inject
         private void ExShutdown(string id)
         {
             _logger.LogWarning("Shutting down..." + id);
@@ -42,36 +43,35 @@ namespace PeakSWC.RemoteWebView
             shutdown = true;
         }
 
-        public void Shutdown()
-        {
-            // TODO Need to call this at some point
-            _logger.LogWarning("Shutting down.");
-            shutdown = true;
-        }
+        //public void Shutdown()
+        //{
+        //    // TODO Need to call this at some point
+        //    _logger.LogWarning("Shutting down.");
+        //    shutdown = true;
+        //}
 
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            ServiceDictionary[request.Id].IPC.BrowserResponseStream = responseStream;
-
-            try
-            {
-                while (!shutdown)
-                    await Task.Delay(1000).ConfigureAwait(false);
-            }
-            catch (Exception)
+            if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
                 ExShutdown(request.Id);
+                return;
             }
+            
+            serviceState.IPC.BrowserResponseStream = responseStream;
 
+            while (!shutdown)
+               await Task.Delay(1000).ConfigureAwait(false);
+          
             return;
         }
 
         public override Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            if(!ServiceDictionary.ContainsKey(request.Id))
+            if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
                 return Task.FromResult(new SendMessageResponse { Id=request.Id, Success=false});
 
-            var state = ServiceDictionary[request.Id]?.BrowserIPC;
+            var state = serviceState.BrowserIPC;
 
             if (state == null)
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
@@ -102,37 +102,40 @@ namespace PeakSWC.RemoteWebView
             var id = message.Id;
             try
             {
-                if (ServiceDictionary[id].BrowserPingReceived != DateTime.MinValue)
+                if(ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
                 {
-                    var delta = DateTime.Now.Subtract(ServiceDictionary[id].BrowserPingReceived);
-                    if (ServiceDictionary[id].MaxBrowserPing < delta)
-                        ServiceDictionary[id].MaxBrowserPing = delta;
-                    _logger.LogInformation($"Max Ping Response from browser {delta}");
-                }
-                  
-
-                ServiceDictionary[id].BrowserPingReceived = DateTime.Now;
-
-                if (message.Initialize)
-                {
-                    ServiceDictionary[id].BrowserPingTask = Task.Run(async () =>
+                    if (serviceState.BrowserPingReceived != DateTime.MinValue)
                     {
-                        while (true)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-                                
-                            // Account for high utilization
-                            if (DateTime.Now.Subtract(ServiceDictionary[id].BrowserPingReceived) > TimeSpan.FromSeconds(message.PingIntervalSeconds + 120))
-                            {
-                                ExShutdown(id);
-                                break;
-                            }
+                        var delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
+                        if (serviceState.MaxBrowserPing < delta)
+                            serviceState.MaxBrowserPing = delta;
+                        _logger.LogInformation($"Max Ping Response from browser id {id} {serviceState.MaxBrowserPing}");
+                    }
 
-                        }
-                    }, context.CancellationToken);
+                    serviceState.BrowserPingReceived = DateTime.Now;
+
+                    if (message.Initialize)
+                    {
+                        serviceState.BrowserPingTask = Task.Run(async () =>
+                        {
+                            while (true)
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                                // Account for high utilization
+                                if (DateTime.Now.Subtract(serviceState.BrowserPingReceived) > TimeSpan.FromSeconds(message.PingIntervalSeconds*1.5))
+                                {
+                                    ExShutdown(id);
+                                    break;
+                                }
+
+                            }
+                        }, context.CancellationToken);
+                    }
+                    return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = false });
                 }
-              
-                return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = false });
+                else
+                    return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
             }
             catch (Exception)
             {

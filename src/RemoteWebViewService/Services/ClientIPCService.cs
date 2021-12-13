@@ -1,3 +1,4 @@
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Channels;
@@ -20,7 +22,14 @@ namespace PeakSWC.RemoteWebView
         private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly IUserService _userService;
-       
+
+        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
+        {
+            var list = new ClientResponseList();
+            list.ClientResponses.AddRange(ServiceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            return responseStream.WriteAsync(list);
+        }
+
         public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService)
         {
             _logger = logger;
@@ -57,11 +66,43 @@ namespace PeakSWC.RemoteWebView
             }        
         }
 
-        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
+        public override Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
         {
-            var list = new ClientResponseList();
-            list.ClientResponses.AddRange(ServiceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
-            return responseStream.WriteAsync(list);
+            List<ConnectionResponse> GetConnectionResponses() 
+            {
+                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxBrowserPingTime=x.MaxBrowserPing.TotalSeconds, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, MaxClientPingTime=x.MaxClientPing.TotalSeconds }).ToList();
+            }
+            List<TaskResponse> GetTaskResponses(string id)
+            {
+                var responses = new List<TaskResponse>();
+
+                if (ServiceDictionary.TryGetValue(id, out ServiceState? ss))
+                {
+                    if(ss.PingTask  != null)
+                    responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
+                    if (ss.BrowserPingTask != null)
+                        responses.Add(new TaskResponse { Name = "BrowserPing", Status = (TaskStatus)(int)ss.BrowserPingTask.Status });
+                    if (ss.IPC.BrowserTask != null)
+                        responses.Add(new TaskResponse { Name = "Browser", Status = (TaskStatus)(int)ss.IPC.BrowserTask.Status });
+                    if (ss.IPC.ClientTask != null)
+                        responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.IPC.ClientTask.Status });
+                    if (ss.FileReaderTask != null)
+                        responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
+                }
+                return responses;
+            }
+
+            var p = Process.GetCurrentProcess();
+            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64 };
+
+            var responses = GetConnectionResponses();
+            response.ConnectionResponses.AddRange(responses);
+            responses.ForEach(x => x.TaskResponses.AddRange(GetTaskResponses(x.Id)));
+         
+            return Task.FromResult(response);
         }
+
+
+
     }
 }

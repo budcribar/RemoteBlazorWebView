@@ -15,7 +15,6 @@ namespace PeakSwc.StaticFiles
 {
     internal class FileInfo : IFileInfo
     {
-        private static TimeSpan total = TimeSpan.FromSeconds(0);
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
         private readonly string guid;
@@ -26,11 +25,11 @@ namespace PeakSwc.StaticFiles
         {
             if (stream == null)
             {
-                if (string.IsNullOrEmpty(path)) return null;
+                if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(guid)) return null;
 
-                if (string.IsNullOrEmpty(guid) || !_rootDictionary.ContainsKey(guid)) return null;
+                if (!_rootDictionary.TryGetValue(guid, out ServiceState? serviceState)) return null;
 
-                var home = _rootDictionary[guid].HtmlHostPath;
+                var home = serviceState.HtmlHostPath;
 
                 if (string.IsNullOrEmpty(home)) return null;
 
@@ -56,24 +55,22 @@ namespace PeakSwc.StaticFiles
             stopWatch.Start();
             _logger.LogInformation($"Attempting to read {appFile}");
 
-            if (!_rootDictionary.ContainsKey(id))
+            if (!_rootDictionary.TryGetValue(id, out ServiceState? serviceState))
             {
                 _logger.LogError($"Cannot process {appFile} id {id} not found...");
                 return null;
             }
 
-            _rootDictionary[id].FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
-            await _rootDictionary[id].FileCollection.Writer.WriteAsync(appFile);
+            serviceState.FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
+            await serviceState.FileCollection.Writer.WriteAsync(appFile);
 
-            _rootDictionary[id].FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60));
-
-            if (!_rootDictionary.ContainsKey(id))
+            if(!serviceState.FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60)))
             {
-                _logger.LogError($"Cannot process {appFile} id {id} was removed...");
+                _logger.LogError($"Timeout processing {appFile} id {id}");
                 return null;
             }
 
-            MemoryStream stream = _rootDictionary[id].FileDictionary[appFile].stream;
+            MemoryStream stream = serviceState.FileDictionary[appFile].stream;
             if (stream.Length == 0)
             {
                 _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
@@ -87,8 +84,10 @@ namespace PeakSwc.StaticFiles
                 stream = new MemoryStream(Encoding.ASCII.GetBytes("[]"));
             }
 
-            if (Path.GetFileName(appFile) == Path.GetFileName(_rootDictionary[id].HtmlHostPath))
+           
+            if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
             {
+                // Edit the href in index.html
                 using StreamReader sr = new(stream);
                 var contents = sr.ReadToEnd();
                 var initialLength = contents.Length;
@@ -96,9 +95,24 @@ namespace PeakSwc.StaticFiles
                 if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                 stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
             }
-            total += stopWatch.Elapsed;
-            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} in {stopWatch.Elapsed.TotalSeconds} sec.");
-            _logger.LogInformation($"Total file read time  {total.TotalSeconds}");
+
+            TimeSpan fileReadTime = stopWatch.Elapsed;
+            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} id {id}");
+            _logger.LogInformation($"Last file read in {fileReadTime} id {id}");
+
+            lock (serviceState)
+            {
+                serviceState.TotalFilesRead++;
+                serviceState.TotalBytesRead += stream.Length;
+                serviceState.TotalFileReadTime += fileReadTime;
+                if (fileReadTime > serviceState.MaxFileReadTime)
+                    serviceState.MaxFileReadTime = fileReadTime;
+
+                _logger.LogInformation($"Total files  {serviceState.TotalFilesRead} id {id}");
+                _logger.LogInformation($"Total bytes  {serviceState.TotalBytesRead} id {id}");
+                _logger.LogInformation($"Total file read time {serviceState.TotalFileReadTime} id {id}");
+            }
+
             return stream;
         }
 

@@ -25,6 +25,11 @@ namespace PeakSWC.RemoteWebView
         public Task? BrowserPingTask { get; set; } = null;
         public DateTime BrowserPingReceived { get; set; } = DateTime.MinValue;
         public TimeSpan MaxBrowserPing { get; set; } = TimeSpan.Zero;
+        public TimeSpan MaxClientPing { get; set;} = TimeSpan.Zero;
+        public long TotalBytesRead { get; set; } = 0;
+        public int TotalFilesRead { get; set; } = 0;
+        public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
+        public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
         public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
         public IPC IPC { get; init; } = new();

@@ -126,6 +126,45 @@ message UserMessageRequest {
     string id = 2;
 }
 
+enum TaskStatus  {
+    Created = 0;
+    WaitingForActivation = 1;
+    WaitingToRun = 2;
+    Running = 3;
+    WaitingForChildrenToComplete = 4;
+    RanToCompletion = 5;
+    Canceled = 6;     
+    Faulted = 7;
+}
+
+message TaskResponse {
+    string name = 1;
+    TaskStatus status = 2;
+}
+
+message ConnectionResponse {
+    string id = 1;
+    repeated TaskResponse taskResponses = 2;
+    bool inUse = 3;
+    string hostName = 4;
+    string userName = 5;
+    double maxFileReadTime = 6;
+    double maxClientPingTime = 7;
+    double maxBrowserPingTime = 8;
+    int64 totalBytesRead = 9;
+    int32 totalFilesRead = 10;
+    double totalReadTime = 11;
+}
+
+message ServerResponse {
+    int64 workingSet = 1;
+    int64 peakWorkingSet = 2;
+    int32 threads = 3;
+    int32 handles = 4;
+    repeated ConnectionResponse connectionResponses = 5;
+}
+
 service ClientIPC {
     rpc GetClients(UserMessageRequest) returns (stream ClientResponseList);
+    rpc GetServerStatus(google.protobuf.Empty) returns (ServerResponse);
 }
