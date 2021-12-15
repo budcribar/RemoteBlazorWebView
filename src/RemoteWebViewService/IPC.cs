@@ -33,23 +33,23 @@ namespace PeakSWC.RemoteWebView
 
         public IPC()
         {
-            ClientTask = Task.Run(async () =>
+            ClientTask = Task.Factory.StartNew(async () =>
             {
                 await foreach (var m in responseChannel.Reader.ReadAllAsync(cts.Token))
                 {
                     // Serialize the write
                     await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
-            }, cts.Token);
+            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-            BrowserTask = Task.Run(async () =>
+            BrowserTask = Task.Factory.StartNew(async () =>
             {
                 await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(cts.Token))
                 {
                     // Serialize the write
                     await (BrowserResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
-            }, cts.Token);
+            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
         }
 

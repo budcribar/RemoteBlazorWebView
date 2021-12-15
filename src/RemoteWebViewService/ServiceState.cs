@@ -10,6 +10,7 @@ namespace PeakSWC.RemoteWebView
 {
     public class ServiceState
     {
+        public CancellationTokenSource CancellationTokenSource => new CancellationTokenSource();
         public string HtmlHostPath { get; init; } = string.Empty;
         public string Markup { get; init; } = string.Empty;
         public string Url { get; init; } = string.Empty;

@@ -89,7 +89,7 @@ namespace PeakSWC.RemoteWebView
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
-                    Task.Run(async () =>
+                    Task.Factory.StartNew(async () =>
                     {
                         try
                         {
@@ -150,8 +150,8 @@ namespace PeakSWC.RemoteWebView
                         BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, exception));
                         throw exception;
                     }
-                      
-                    Task.Run(async () =>
+
+                    Task.Factory.StartNew(async () =>
                     {
                         var files = client.FileReader();
                         try
@@ -193,9 +193,9 @@ namespace PeakSWC.RemoteWebView
                         {
                             BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
                         }
-                    }, cts.Token);
+                    }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-                    Task.Run(async () => {
+                    Task.Factory.StartNew(async () => {
                         var pings = client.Ping();
 
                         try
@@ -214,7 +214,7 @@ namespace PeakSWC.RemoteWebView
                             BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
                         }
 
-                    }, cts.Token);
+                    }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
                 }
                 return client;

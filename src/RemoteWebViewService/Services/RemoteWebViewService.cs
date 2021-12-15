@@ -2,10 +2,12 @@ using Azure.Core;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -17,13 +19,15 @@ namespace PeakSWC.RemoteWebView
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
         private readonly ConcurrentBag<ServiceState> _serviceStates;
-      
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates)
+        ShutdownService ShutdownService { get; }
+
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates, ShutdownService shutdownService)
         {
             _logger = logger;
             ServiceDictionary = serviceDictionary;
             _serviceStateChannel = serviceStateChannel;
             _serviceStates = serviceStates;
+            ShutdownService = shutdownService;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
@@ -32,6 +36,7 @@ namespace PeakSWC.RemoteWebView
             results.Responses.AddRange(ServiceDictionary.Keys);
             return Task.FromResult(results);
         }
+
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
@@ -62,19 +67,20 @@ namespace PeakSWC.RemoteWebView
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
-                while (!context.CancellationToken.IsCancellationRequested)
+                using (CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.CancellationTokenSource.Token))
                 {
-                    await Task.Delay(1000).ConfigureAwait(false);
+                    while (!linkedToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
+                    }
                 }
             }
             else
             {
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" });
             }
-
         }
 
-        
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
@@ -82,49 +88,51 @@ namespace PeakSWC.RemoteWebView
             {
                 await foreach (FileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
-                  
                     if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
-                    {
                         id = message.Init.Id;
-
-                        ServiceDictionary[id].FileReaderTask = Task.Run(async () =>
-                        {
-                            while (true)
-                            {
-                                if (!ServiceDictionary.ContainsKey(id)) throw new Exception($"Id {id} removed from service");
-                                var path = await ServiceDictionary[id].FileCollection.Reader.ReadAsync(context.CancellationToken);
-                                await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
-                            }
-                        }, context.CancellationToken);
-                    }
                     else
-                    {
                         id = message.Data.Id;
-                        if (message.Data.Data.Length > 0)
+
+                    if (ServiceDictionary.TryGetValue(id, out var serviceState))
+                    {
+                        if (serviceState.CancellationTokenSource.IsCancellationRequested)
+                            break;
+
+                        if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
                         {
-                            var ms = ServiceDictionary[id].FileDictionary[message.Data.Path].stream;
-                            if (ms != null)
-                                await ms.WriteAsync(message.Data.Data.Memory);
+                            serviceState.FileReaderTask = Task.Factory.StartNew(async () =>
+                            {
+                                while (!serviceState.CancellationTokenSource.IsCancellationRequested)
+                                {
+                                    var path = await serviceState.FileCollection.Reader.ReadAsync(serviceState.CancellationTokenSource.Token);
+                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
+                                }
+                            }, serviceState.CancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                         }
                         else
                         {
-                            // Trigger the stream read
-                            ServiceDictionary[id].FileDictionary[message.Data.Path].resetEvent.Set();
+                            if (message.Data.Data.Length > 0)
+                            {
+                                var ms = serviceState.FileDictionary[message.Data.Path].stream;
+                                if (ms != null)
+                                    await ms.WriteAsync(message.Data.Data.Memory);
+                            }
+                            else
+                            {
+                                // Trigger the stream read
+                                serviceState.FileDictionary[message.Data.Path].resetEvent.Set();
+                            }
                         }
-
                     }
+
+                    else break;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                ExShutdown(id);
-
-                // Client has shut down
+                ShutdownService.Shutdown(id,ex);
             }
-
         }
-
-
 
         public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
         {
@@ -133,35 +141,35 @@ namespace PeakSWC.RemoteWebView
             {
                 DateTime responseReceived = DateTime.Now;
                 DateTime responseSent = DateTime.Now;
+
                 await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
                     id = message.Id;
                     if (!ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                        ExShutdown(id);
+                        ShutdownService.Shutdown(id);
                         break; ;
                     }
 
                     if (message.Initialize)
                     {
-                        serviceState.PingTask = Task.Run(async () =>
+                        serviceState.PingTask = Task.Factory.StartNew(async () =>
                         {
-                            while (true)
+                            while (!serviceState.CancellationTokenSource.IsCancellationRequested)
                             {
                                 responseSent = DateTime.Now;
                                 await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false });
-                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds)).ConfigureAwait(false);
+                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), serviceState.CancellationTokenSource.Token).ConfigureAwait(false);
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                                    ExShutdown(id);
+                                    ShutdownService.Shutdown(id);
                                     break;
                                 }
 
                             }
-                        }, context.CancellationToken);
-
+                        }, serviceState.CancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                     }
                     else
                     {
@@ -172,37 +180,18 @@ namespace PeakSWC.RemoteWebView
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                ExShutdown(id);
-
-                // Client has shut down
+                ShutdownService.Shutdown(id, ex);
             }
-        }
-
-        private void ExShutdown(string id)
-        {
-            _logger.LogWarning("Shutting down..." + id);
-
-            if (ServiceDictionary.ContainsKey(id))
-            {
-                ServiceDictionary.Remove(id, out var client);
-                if (client != null)
-                {
-                    client.IPC.Shutdown();
-                    client.InUse = false;
-                }             
-            }
-            _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            ExShutdown(request.Id);
-            return Task.FromResult<Empty>(new Empty());
+            ShutdownService.Shutdown(request.Id);
+            return Task.FromResult(new Empty());
         }
 
-       
         public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
             if (ServiceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          

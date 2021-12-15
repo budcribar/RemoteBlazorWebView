@@ -1,6 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,60 +17,36 @@ namespace PeakSWC.RemoteWebView
         private readonly ILogger<RemoteWebViewService> _logger;
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
-        private volatile bool shutdown = false;
+        private ShutdownService ShutdownService { get; }
 
-        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel)
+        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService)
         {
             _logger = logger;
             ServiceDictionary = serviceDictionary;
             _serviceStateChannel = serviceStateChannel;
+            ShutdownService = shutdownService;
         }
-
-        // TODO Inject
-        private void ExShutdown(string id)
-        {
-            _logger.LogWarning("Shutting down..." + id);
-
-            if (ServiceDictionary.ContainsKey(id))
-            {
-                ServiceDictionary.Remove(id, out var client);
-                if (client != null)
-                {
-                    client.IPC.Shutdown();
-                    client.InUse = false;
-                }
-            }
-            _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
-            shutdown = true;
-        }
-
-        //public void Shutdown()
-        //{
-        //    // TODO Need to call this at some point
-        //    _logger.LogWarning("Shutting down.");
-        //    shutdown = true;
-        //}
 
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
-                ExShutdown(request.Id);
+                ShutdownService.Shutdown(request.Id);
                 return;
             }
-            
+
             serviceState.IPC.BrowserResponseStream = responseStream;
 
-            while (!shutdown)
-               await Task.Delay(1000).ConfigureAwait(false);
-          
+            while (!serviceState.CancellationTokenSource.IsCancellationRequested)
+                await Task.Delay(1000, serviceState.CancellationTokenSource.Token).ConfigureAwait(false);
+
             return;
         }
 
         public override Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
             if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
-                return Task.FromResult(new SendMessageResponse { Id=request.Id, Success=false});
+                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
             var state = serviceState.BrowserIPC;
 
@@ -80,7 +57,7 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.Sequence == state.SequenceNum)
                 {
-                    ServiceDictionary[request.Id].IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url });
+                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url });
                     state.SequenceNum++;
                 }
                 else
@@ -88,7 +65,7 @@ namespace PeakSWC.RemoteWebView
 
                 while (state.MessageDictionary.ContainsKey(state.SequenceNum))
                 {
-                    ServiceDictionary[request.Id].IPC.ReceiveMessage(new WebMessageResponse { Response = state.MessageDictionary[state.SequenceNum].Message, Url = state.MessageDictionary[state.SequenceNum].Url });
+                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = state.MessageDictionary[state.SequenceNum].Message, Url = state.MessageDictionary[state.SequenceNum].Url });
                     state.SequenceNum++;
                 }
             }
@@ -96,14 +73,15 @@ namespace PeakSWC.RemoteWebView
             return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
         }
 
-       
+
         public override Task<PingMessageResponse> Ping(PingMessageRequest message, ServerCallContext context)
         {
             var id = message.Id;
             try
             {
-                if(ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
+                if (ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
                 {
+
                     if (serviceState.BrowserPingReceived != DateTime.MinValue)
                     {
                         var delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
@@ -116,30 +94,30 @@ namespace PeakSWC.RemoteWebView
 
                     if (message.Initialize)
                     {
-                        serviceState.BrowserPingTask = Task.Run(async () =>
+                        serviceState.BrowserPingTask = Task.Factory.StartNew(async () =>
                         {
-                            while (true)
+                            while (!serviceState.CancellationTokenSource.IsCancellationRequested)
                             {
-                                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-
-                                // Account for high utilization
-                                if (DateTime.Now.Subtract(serviceState.BrowserPingReceived) > TimeSpan.FromSeconds(message.PingIntervalSeconds*1.5))
+                                await Task.Delay(TimeSpan.FromSeconds(1), serviceState.CancellationTokenSource.Token).ConfigureAwait(false);
+                                TimeSpan delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
+                                    // Account for high utilization
+                                    if (delta > TimeSpan.FromSeconds(message.PingIntervalSeconds * 1.5))
                                 {
-                                    ExShutdown(id);
+                                    ShutdownService.Shutdown(id, new Exception($"Browser Ping Timed out in {delta}"));
                                     break;
                                 }
 
                             }
-                        }, context.CancellationToken);
+                        }, serviceState.CancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                     }
                     return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = false });
                 }
                 else
                     return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                ExShutdown(id);
+                ShutdownService.Shutdown(id, ex);
 
                 return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
             }

@@ -93,7 +93,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             var p = Process.GetCurrentProcess();
-            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64 };
+            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds };
 
             var responses = GetConnectionResponses();
             response.ConnectionResponses.AddRange(responses);
@@ -101,8 +101,6 @@ namespace PeakSWC.RemoteWebView
          
             return Task.FromResult(response);
         }
-
-
 
     }
 }
