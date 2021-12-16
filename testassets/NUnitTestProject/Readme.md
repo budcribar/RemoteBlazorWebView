@@ -1,5 +1,8 @@
 ﻿#Steps to setup testing
 
+msedgedriver.exe needs to be installed in the user's path i.e. C:\Program Files (x86)\EdgeDriver
+
+
 * Publish RemoteBlazorWebViewTutorial.WinFormsApp
 * Copy the wwwroot folder from the publish directory to the embedded folder
   Publish RemoteBlazorWebViewTutorial.WinFormsApp using the Embedded publish profile

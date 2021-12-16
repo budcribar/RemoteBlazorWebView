@@ -48,6 +48,9 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		ServerNoAuth|Any CPU = ServerNoAuth|Any CPU
+		ServerNoAuth|x64 = ServerNoAuth|x64
+		ServerNoAuth|x86 = ServerNoAuth|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|Any CPU.ActiveCfg = Release|Any CPU
@@ -77,6 +80,12 @@ Global
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|x64.Build.0 = Release|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|x86.ActiveCfg = Release|Any CPU
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|x86.Build.0 = Release|Any CPU
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|Any CPU.ActiveCfg = NoAuthorization|Any CPU
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|Any CPU.Build.0 = NoAuthorization|Any CPU
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x64.ActiveCfg = Release|x64
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x64.Build.0 = Release|x64
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x86.ActiveCfg = NoAuthorization|Any CPU
+		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x86.Build.0 = NoAuthorization|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|Any CPU.ActiveCfg = Release|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x64.ActiveCfg = Debug|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x64.Build.0 = Debug|Any CPU
@@ -103,6 +112,12 @@ Global
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x64.Build.0 = Release|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.ActiveCfg = Release|Any CPU
 		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.Build.0 = Release|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|Any CPU.ActiveCfg = ServerNoAuth|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|Any CPU.Build.0 = ServerNoAuth|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x64.ActiveCfg = ServerNoAuth|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x64.Build.0 = ServerNoAuth|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x86.ActiveCfg = ServerNoAuth|Any CPU
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x86.Build.0 = ServerNoAuth|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|Any CPU.Build.0 = Debug|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|x64.ActiveCfg = Debug|Any CPU
@@ -130,6 +145,9 @@ Global
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.Build.0 = Release|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x86.ActiveCfg = Release|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x86.Build.0 = Release|Any CPU
+		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|Any CPU.ActiveCfg = Release|Any CPU
+		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|x64.ActiveCfg = Release|Any CPU
+		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|x86.ActiveCfg = Release|Any CPU
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.Build.0 = Debug|Any CPU
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x64.ActiveCfg = Debug|x64
@@ -158,6 +176,12 @@ Global
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Release|x64.Build.0 = Release|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Release|x86.ActiveCfg = Release|Any CPU
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Release|x86.Build.0 = Release|Any CPU
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|Any CPU.ActiveCfg = Release|Any CPU
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|Any CPU.Build.0 = Release|Any CPU
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|x64.ActiveCfg = Release|x64
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|x64.Build.0 = Release|x64
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|x86.ActiveCfg = Release|Any CPU
+		{17D4D295-890F-412B-A137-24E19BF8E430}.ServerNoAuth|x86.Build.0 = Release|Any CPU
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Authorization|Any CPU.ActiveCfg = Debug|x64
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Authorization|Any CPU.Build.0 = Debug|x64
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Authorization|x64.ActiveCfg = NoAuthorization|x64
@@ -179,6 +203,12 @@ Global
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Release|x64.ActiveCfg = Release|x64
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Release|x64.Build.0 = Release|x64
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.Release|x86.ActiveCfg = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|Any CPU.ActiveCfg = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|Any CPU.Build.0 = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|x64.ActiveCfg = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|x64.Build.0 = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|x86.ActiveCfg = Release|x64
+		{828D3EF0-391F-41B8-BB94-4055EA74CC10}.ServerNoAuth|x86.Build.0 = Release|x64
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Authorization|Any CPU.ActiveCfg = Authorization|x64
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Authorization|x64.ActiveCfg = Authorization|x64
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Authorization|x64.Build.0 = Authorization|x64
@@ -201,13 +231,19 @@ Global
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Release|x64.ActiveCfg = Release|x64
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Release|x64.Build.0 = Release|x64
 		{F1CC0C20-31D5-4011-863E-5139B979C75A}.Release|x86.ActiveCfg = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|Any CPU.ActiveCfg = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|Any CPU.Build.0 = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|x64.ActiveCfg = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|x64.Build.0 = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|x86.ActiveCfg = Release|x64
+		{F1CC0C20-31D5-4011-863E-5139B979C75A}.ServerNoAuth|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AA110533-9A33-4884-B006-73742762B0F5} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE} = {48F15A61-E458-4F4B-A64E-6F0B5F38DB2F}
+		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE} = {D05DB932-B305-40C7-968A-19F814FD7F2A}
 		{BA890C82-9117-4554-864D-BE55C4B0564A} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{17D4D295-890F-412B-A137-24E19BF8E430} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 	EndGlobalSection
