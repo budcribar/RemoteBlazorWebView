@@ -1,36 +1,56 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteWebView;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     public partial class BlazorWebView : BlazorWebViewFormBase, IBlazorWebView
     {
+        private bool IsRefreshing { get; set; } = false;
 
-
-        protected override void OnCreateControl()
+        public override IFileProvider CreateFileProvider(string contentRootDir)
         {
-            base.OnCreateControl();
-            Application.ApplicationExit += Application_ApplicationExit;
+            IFileProvider provider= null;
+            var root = Path.GetDirectoryName(HostPage);
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+                }
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
+                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                    if (dir != null)
+                    {
+                        var manifestRoot = Path.Combine(dir.Name, root);
+                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
+                    }
+                    
+                }
+                catch (Exception) {  }
+            }
+            return provider;
         }
-
-        private void Application_ApplicationExit(object? sender, EventArgs e)
-        {
-            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                manager.RemoteWebView.Shutdown();
-        }
-
-        public RemoteWebView.WebView2WebViewManager? WebViewManager { get; set; }
-
+        
         private Uri? _serverUri;
 
         /// <summary>
@@ -83,11 +103,13 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void FireDisconnected(DisconnectedEventArgs args)
         {
-            Disconnected?.Invoke(this, args);
+            if (!IsRefreshing)
+                Disconnected?.Invoke(this, args);
         }
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
+            IsRefreshing = true;
             Refreshed?.Invoke(this, args);
         }
 
@@ -138,16 +160,15 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public bool IsRestarting { get; set; }
 
-       
-
         public override RemoteWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
+            RemoteWebView.WebView2WebViewManager m;
             if (ServerUri == null)
-                WebViewManager = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                 m = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
-                WebViewManager = new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                 m  = new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 
-            return WebViewManager;
+            return m;
         }
 
         public void Restart()
