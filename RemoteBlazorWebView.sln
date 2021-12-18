@@ -19,6 +19,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Release.md = Release.md
 		ReleaseNotes.txt = ReleaseNotes.txt
 		RunTests.ps1 = RunTests.ps1
+		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}"
@@ -31,7 +32,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebView", "src\Remote
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebViewService", "src\RemoteWebViewService\RemoteWebViewService.csproj", "{F1CC0C20-31D5-4011-863E-5139B979C75A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EditWebView", "EditWebView\EditWebView.csproj", "{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EditWebView", "EditWebView\EditWebView.csproj", "{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
