@@ -6,7 +6,7 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <Description>Build Remote Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
-    <Nullable>enable</Nullable>
+    <Nullable>annotations</Nullable>
     <LangVersion>latest</LangVersion>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <PackageId>PeakSWC.RemoteBlazorWebView.WindowsForms</PackageId>
