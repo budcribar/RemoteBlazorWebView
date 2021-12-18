@@ -17,7 +17,7 @@
     <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
-    <Nullable>enable</Nullable>
+    <Nullable>annotations</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <LangVersion>latest</LangVersion>

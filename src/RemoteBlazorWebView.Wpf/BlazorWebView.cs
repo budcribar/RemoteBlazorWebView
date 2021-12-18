@@ -6,7 +6,9 @@ using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -15,16 +17,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
     public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
     {
-        public BlazorWebView()
-        {
-            Application.Current.Exit += Current_Exit;
-        }
+        private bool IsRefreshing { get; set; } = false;
 
-        private void Current_Exit(object sender, ExitEventArgs e)
-        {
-            if (WebViewManager is RemoteWebView2Manager manager && manager.RemoteWebView != null)
-                manager.RemoteWebView.Shutdown();
-        }
         #region Properties
 
         public static readonly DependencyProperty UriProperty = DependencyProperty.Register(
@@ -110,6 +104,26 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
+        public override IFileProvider CreateFileProvider(string contentRootDir)
+        {
+            IFileProvider provider;
+            var root = Path.GetDirectoryName(HostPage) ?? string.Empty;
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!));
+                var dir = manifest._rootDirectory.Children.Where(x => (x as ManifestDirectory)?.Children.Any(y => y.Name == root) ?? false).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!), manifestRoot);
+                }
+                else provider = new PhysicalFileProvider(contentRootDir);
+            }
+            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+            return provider;
+        }
+
         public override RemoteWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
@@ -127,11 +141,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void FireDisconnected(DisconnectedEventArgs args)
         {
-            Disconnected?.Invoke(this, args);
+             if(!IsRefreshing)
+                Disconnected?.Invoke(this, args);
         }
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
+            IsRefreshing = true;
             Refreshed?.Invoke(this, args);
         }
 
@@ -155,8 +171,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void Restart()
         {
-            // Do not shut down if restarting
-            Application.Current.Exit -= Current_Exit;
             RemoteWebView.RemoteWebView.Restart(this);
         }
 
