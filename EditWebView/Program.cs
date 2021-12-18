@@ -19,7 +19,6 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
         else
             fileName = "BlazorWebViewBase.cs";
 
-    //if (fileName == "RootComponentsCollection.cs") continue;
 
     if (fileName == "BlazorWebViewFormBase.cs")
     {
@@ -33,15 +32,17 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
     }
     text = text.Replace("namespace Microsoft.AspNetCore.Components.WebView.WindowsForms", "namespace PeakSWC.RemoteBlazorWebView.WindowsForms");
 
-    if (fileName != "WindowsFormsWebView2Wrapper.cs")
+    //if (fileName != "WindowsFormsWebView2Wrapper.cs")
+
+    if (fileName == "RootComponent.cs" || fileName == "WindowsFormsDispatcher.cs" || fileName == "BlazorWebViewFormBase.cs" || fileName=="RootComponentCollectionExtensions.cs")
         text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components;");
 
-    if (fileName != "WindowsFormsDispatcher.cs" && fileName != "WindowsFormsWebView2Wrapper.cs")
-        text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+        if (fileName == "RootComponent.cs" || fileName == "BlazorWebViewFormBase.cs")
+       text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\n");
 
-    if(fileName != "RootComponent.cs" && fileName != "WindowsFormsDispatcher.cs" && fileName != "WindowsFormsWebView2Wrapper.cs")
+    if (fileName == "BlazorWebViewFormBase.cs")
         text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
-    
+
     if (fileName == "RootComponent.cs" || fileName == "BlazorWebViewFormBase.cs")
        text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "");
     File.WriteAllText(Path.Combine(outputDir, fileName), text);
