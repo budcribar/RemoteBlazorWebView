@@ -36,7 +36,9 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
     text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components;");
 
     if (fileName != "WindowsFormsDispatcher.cs")
-        text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
+        text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+    if(fileName != "RootComponent.cs")
+        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
     //text = text.Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
 
     if (fileName == "RootComponent.cs" || fileName == "BlazorWebViewFormBase.cs")
