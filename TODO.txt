@@ -5,6 +5,6 @@ Need to either generate WebView2WebViewManager.cs or eliminate it
 Get rid of warning about prerelease dependency
 File bug report on file provider
 Make demo
-Get rid of wait endpoint
 turn on public class TestRemotePackageBlazorForm : and TestRemoteBlazorDebugForm 
 Fix EditWebView to fix file provider
+Do we need client ping?

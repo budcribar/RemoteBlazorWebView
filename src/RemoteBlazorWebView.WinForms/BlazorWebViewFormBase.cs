@@ -162,7 +162,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			//var assetFileProvider = new PhysicalFileProvider(contentRootDir);
 			IFileProvider fileProvider = customFileProvider == null
 				? new PhysicalFileProvider(contentRootDir)
-				: customFileProvider;// new CompositeFileProvider(customFileProvider, assetFileProvider);
+				: customFileProvider;
 
 			_webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 

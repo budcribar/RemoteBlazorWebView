@@ -1,10 +1,10 @@
 ﻿// See https://aka.ms/new-console-template for more information
+string maui = "maui-6.0.101-preview.11.3";
+string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
+string outputDir = "../../../../src/RemoteBlazorWebView.WinForms";
 
-string inputDir = @"C:\Users\budcr\Downloads\maui-6.0.101-preview.11.3\src\BlazorWebView\src\WindowsForms";
-string outputDir = "winforms";
-
-if(!Directory.Exists(outputDir))
-    Directory.CreateDirectory(outputDir);
+if (!Directory.Exists(outputDir))
+    throw new Exception("Can't locate output directory");
 
 foreach(var f in Directory.EnumerateFiles(inputDir))
 {
@@ -22,6 +22,9 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
 
     if (fileName == "BlazorWebViewFormBase.cs")
     {
+        text = text.Replace("var assetFileProvider =", "//var assetFileProvider =");
+        text = text.Replace( "? assetFileProvider", "? new PhysicalFileProvider(contentRootDir)");
+        text = text.Replace("new CompositeFileProvider(customFileProvider, assetFileProvider)", "customFileProvider");
         text = text.Replace("new WebView2WebViewManager", "CreateWebViewManager");
         text = text.Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
         text = text.Replace("BlazorWebView", "BlazorWebViewFormBase");
@@ -45,11 +48,11 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
     File.WriteAllText(Path.Combine(outputDir, fileName), text);
 }
 
-inputDir = @"C:\Users\budcr\Downloads\maui-6.0.101-preview.11.3\src\BlazorWebView\src\Wpf";
-outputDir = "wpf";
+inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\Wpf");
+outputDir = "../../../../src/RemoteBlazorWebView.Wpf";
 
 if (!Directory.Exists(outputDir))
-    Directory.CreateDirectory(outputDir);
+    throw new Exception("Can't locate output directory");
 
 foreach (var f in Directory.EnumerateFiles(inputDir))
 {
@@ -66,6 +69,10 @@ foreach (var f in Directory.EnumerateFiles(inputDir))
 
     if (fileName == "BlazorWebViewBase.cs")
     {
+        text = text.Replace("var assetFileProvider =", "//var assetFileProvider =");
+        text = text.Replace("? assetFileProvider", "? new PhysicalFileProvider(contentRootDir)");
+        text = text.Replace("new CompositeFileProvider(customFileProvider, assetFileProvider)", "customFileProvider");
+
         text = text.Replace("new WebView2WebViewManager", "CreateWebViewManager");
         text = text.Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
         text = text.Replace("BlazorWebView", "BlazorWebViewBase");
