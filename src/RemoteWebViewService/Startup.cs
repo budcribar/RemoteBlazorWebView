@@ -164,19 +164,11 @@ namespace PeakSWC.RemoteWebView
                 .RequireAuthorization()
 #endif
                 ;
-                endpoints.MapGet("/restart/{id:guid}", AckRestart())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
                 endpoints.MapGet("/wait/{id:guid}", Wait())
 #if AUTHORIZATION
                 .RequireAuthorization()
 #endif
                 ;
-#if !AUTHORIZATION
-                endpoints.MapGet("/status", Status());
-#endif
                 endpoints.MapFallbackToFile("index.html");
             });
         }
@@ -215,53 +207,6 @@ namespace PeakSWC.RemoteWebView
             };
         }
 
-        private RequestDelegate Status()
-        {
-            return async context =>
-            {
-                var text = "<h1>Status</h1>";
-                var bag = context.RequestServices.GetRequiredService<ConcurrentBag<ServiceState>>();
-                
-                foreach(var ss in bag)
-                {
-                    text += $"<b>Id:</b> {ss.Id} <b>Markup:</b>{ss.Markup} <b>InUse:</b>{ss.InUse} <b>Client:</b>{ss.IPC.ClientTask.Status} <b>Browser:</b>{ss.IPC.BrowserTask.Status} <b>File:</b>{ss.FileReaderTask?.Status}<br/> <b>Ping:</b>{ss.PingTask?.Status}<br/><br/> <b>BrowserPing:</b>{ss.BrowserPingTask?.Status}<br/>";
-                }
-                await context.Response.WriteAsync(text);
-            };
-        }
-                
-        private RequestDelegate AckRestart()
-        {
-            return async context =>
-            {
-                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-                ServiceDictionary.TryGetValue(guid, out var serviceState);
-
-                // Wait until client shuts down 
-                for (int i = 0; i < 300; i++)
-                {
-                    if (!ServiceDictionary.ContainsKey(guid))
-                    {
-                        context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
-                        return;
-                    }
-                       
-                    await Task.Delay(100).ConfigureAwait(false);
-                }
-
-                // Client did not respond to shutdown request
-                ServiceDictionary.TryRemove(guid, out serviceState);
-                context.Response.StatusCode = 400;
-                context.Response.ContentType = "text/html";
-
-                if (serviceState == null)
-                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, true));
-                else
-                    await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));             
-            };
-        }
-
         private RequestDelegate Wait()
         {
             return async context =>
@@ -292,8 +237,28 @@ namespace PeakSWC.RemoteWebView
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    context.Response.Redirect($"/restart/{guid}");
                     serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
+
+                    // Wait until client shuts down 
+                    for (int i = 0; i < 3000; i++)
+                    {
+                        if (!ServiceDictionary.ContainsKey(guid))
+                        {
+                            context.Response.ContentType = "text/html";
+                            await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
+                            return;
+                        }
+
+                        await Task.Delay(10).ConfigureAwait(false);
+                    }
+
+                    context.Response.StatusCode = 400;
+                    context.Response.ContentType = "text/html";
+
+                    await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
+
+                    // Shutdown since client did not respond to restart request
+                    context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
                     await Task.CompletedTask;
                 }
                 else
