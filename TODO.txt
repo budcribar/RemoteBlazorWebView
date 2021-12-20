@@ -2,7 +2,6 @@ Add Title to RemoteWebView
 Run security review
 Missing files causes disconnect
 Need to either generate WebView2WebViewManager.cs or eliminate it
-Fix the webdriver under windows/system32 to use nuget package
 Get rid of warning about prerelease dependency
 File bug report on file provider
 Make demo
