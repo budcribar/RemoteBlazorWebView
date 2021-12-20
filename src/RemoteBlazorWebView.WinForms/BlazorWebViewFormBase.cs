@@ -159,10 +159,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
 
 			var customFileProvider = CreateFileProvider(contentRootDir);
-			var assetFileProvider = new PhysicalFileProvider(contentRootDir);
+			//var assetFileProvider = new PhysicalFileProvider(contentRootDir);
 			IFileProvider fileProvider = customFileProvider == null
-				? assetFileProvider
-				: new CompositeFileProvider(customFileProvider, assetFileProvider);
+				? new PhysicalFileProvider(contentRootDir)
+				: customFileProvider;// new CompositeFileProvider(customFileProvider, assetFileProvider);
 
 			_webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 

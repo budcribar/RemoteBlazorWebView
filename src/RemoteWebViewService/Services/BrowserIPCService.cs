@@ -37,8 +37,8 @@ namespace PeakSWC.RemoteWebView
 
             serviceState.IPC.BrowserResponseStream = responseStream;
 
-            while (!serviceState.CancellationTokenSource.IsCancellationRequested)
-                await Task.Delay(1000, serviceState.CancellationTokenSource.Token).ConfigureAwait(false);
+            while (!serviceState.Token.IsCancellationRequested)
+                await Task.Delay(1000, serviceState.Token).ConfigureAwait(false);
 
             return;
         }
@@ -96,9 +96,9 @@ namespace PeakSWC.RemoteWebView
                     {
                         serviceState.BrowserPingTask = Task.Factory.StartNew(async () =>
                         {
-                            while (!serviceState.CancellationTokenSource.IsCancellationRequested)
+                            while (!serviceState.Token.IsCancellationRequested)
                             {
-                                await Task.Delay(TimeSpan.FromSeconds(1), serviceState.CancellationTokenSource.Token).ConfigureAwait(false);
+                                await Task.Delay(TimeSpan.FromSeconds(1), serviceState.Token).ConfigureAwait(false);
                                 TimeSpan delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
                                     // Account for high utilization
                                     if (delta > TimeSpan.FromSeconds(message.PingIntervalSeconds * 1.5))
@@ -108,17 +108,16 @@ namespace PeakSWC.RemoteWebView
                                 }
 
                             }
-                        }, serviceState.CancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                        }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                     }
                     return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = false });
                 }
                 else
-                    return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
+                   return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
             }
             catch (Exception ex)
             {
                 ShutdownService.Shutdown(id, ex);
-
                 return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
             }
         }

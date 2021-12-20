@@ -22,8 +22,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebView.Blazor.JS", "src\RemoteWebView.Blazor.JS\RemoteWebView.Blazor.JS.csproj", "{BA890C82-9117-4554-864D-BE55C4B0564A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.WindowsForms", "src\RemoteBlazorWebView.WinForms\RemoteBlazorWebView.WindowsForms.csproj", "{17D4D295-890F-412B-A137-24E19BF8E430}"
@@ -33,6 +31,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebViewService", "src\RemoteWebViewService\RemoteWebViewService.csproj", "{F1CC0C20-31D5-4011-863E-5139B979C75A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EditWebView", "EditWebView\EditWebView.csproj", "{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebdriverTestProject", "testassets\NUnitTestProject\WebdriverTestProject.csproj", "{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,38 +89,6 @@ Global
 		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x64.Build.0 = Release|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x86.ActiveCfg = NoAuthorization|Any CPU
 		{AA110533-9A33-4884-B006-73742762B0F5}.ServerNoAuth|x86.Build.0 = NoAuthorization|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|Any CPU.ActiveCfg = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x64.ActiveCfg = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x64.Build.0 = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x86.ActiveCfg = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Authorization|x86.Build.0 = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x64.Build.0 = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Debug|x86.Build.0 = Debug|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|Any CPU.ActiveCfg = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|Any CPU.Build.0 = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x64.ActiveCfg = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x86.ActiveCfg = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Embedded|x86.Build.0 = Embedded|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.NoAuthorization|Any CPU.ActiveCfg = NoAuthorization|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.NoAuthorization|x64.ActiveCfg = NoAuthorization|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.NoAuthorization|x86.ActiveCfg = NoAuthorization|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.NoAuthorization|x86.Build.0 = NoAuthorization|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x64.ActiveCfg = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x64.Build.0 = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.ActiveCfg = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.Release|x86.Build.0 = Release|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|Any CPU.ActiveCfg = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|Any CPU.Build.0 = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x64.ActiveCfg = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x64.Build.0 = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x86.ActiveCfg = ServerNoAuth|Any CPU
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE}.ServerNoAuth|x86.Build.0 = ServerNoAuth|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|Any CPU.Build.0 = Debug|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|x64.ActiveCfg = Debug|Any CPU
@@ -276,13 +244,48 @@ Global
 		{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}.ServerNoAuth|x64.Build.0 = Debug|Any CPU
 		{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}.ServerNoAuth|x86.ActiveCfg = Debug|Any CPU
 		{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A}.ServerNoAuth|x86.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|Any CPU.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|Any CPU.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|x64.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|x64.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|x86.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Authorization|x86.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|x64.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Debug|x86.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|Any CPU.ActiveCfg = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|Any CPU.Build.0 = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|x64.ActiveCfg = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|x64.Build.0 = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|x86.ActiveCfg = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Embedded|x86.Build.0 = Embedded|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|Any CPU.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|Any CPU.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|x64.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|x64.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|x86.ActiveCfg = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.NoAuthorization|x86.Build.0 = NoAuthorization|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|x64.ActiveCfg = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|x64.Build.0 = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|x86.ActiveCfg = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.Release|x86.Build.0 = Release|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|Any CPU.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|Any CPU.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|x64.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|x64.Build.0 = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|x86.ActiveCfg = Debug|Any CPU
+		{37A39288-E6C1-4294-9E1C-4B11ABAF9CF3}.ServerNoAuth|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AA110533-9A33-4884-B006-73742762B0F5} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
-		{02C920DB-F97B-47A8-9220-2BD38CB1FDDE} = {D05DB932-B305-40C7-968A-19F814FD7F2A}
 		{BA890C82-9117-4554-864D-BE55C4B0564A} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{17D4D295-890F-412B-A137-24E19BF8E430} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{8A0C609B-3186-4FD3-A200-3CC3FCFB6E0A} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}

@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ServiceState
+    public class ServiceState : IDisposable
     {
-        public CancellationTokenSource CancellationTokenSource => new CancellationTokenSource();
+        private CancellationTokenSource CancellationTokenSource { get; }
+        public CancellationToken Token { get; }
         public string HtmlHostPath { get; init; } = string.Empty;
         public string Markup { get; init; } = string.Empty;
         public string Url { get; init; } = string.Empty;
@@ -33,7 +34,25 @@ namespace PeakSWC.RemoteWebView
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
         public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
-        public IPC IPC { get; init; } = new();
+        public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
+
+        public void Cancel()
+        {
+            CancellationTokenSource.Cancel();
+        }
+
+        public void Dispose()
+        {
+            CancellationTokenSource.Dispose();
+        }
+
+        public ServiceState()
+        {
+            CancellationTokenSource = new CancellationTokenSource();
+            Token = CancellationTokenSource.Token;
+            IPC = new IPC(Token);
+        }
     }
+   
 }

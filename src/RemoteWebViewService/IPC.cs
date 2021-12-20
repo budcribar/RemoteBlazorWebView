@@ -9,7 +9,6 @@ namespace PeakSWC.RemoteWebView
 {
     public class IPC
     {
-        private readonly CancellationTokenSource cts = new();
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
 
@@ -30,37 +29,31 @@ namespace PeakSWC.RemoteWebView
             await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
-
-        public IPC()
+        public IPC(CancellationToken token)
         {
             ClientTask = Task.Factory.StartNew(async () =>
             {
-                await foreach (var m in responseChannel.Reader.ReadAllAsync(cts.Token))
+                await foreach (var m in responseChannel.Reader.ReadAllAsync(token))
                 {
                     // Serialize the write
                     await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
-            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
             BrowserTask = Task.Factory.StartNew(async () =>
             {
-                await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(cts.Token))
+                await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
                 {
                     // Serialize the write
                     await (BrowserResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
                 }
-            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
         }
 
         public async void ReceiveMessage(WebMessageResponse message)
         {
             await responseChannel.Writer.WriteAsync(message);
-        }
-
-        public void Shutdown()
-        {
-            cts.Cancel();
         }
 
         public async void LocationChanged(Point point)

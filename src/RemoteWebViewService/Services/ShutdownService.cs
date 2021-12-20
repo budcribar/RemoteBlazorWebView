@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.Services
 {
@@ -29,15 +30,24 @@ namespace PeakSWC.RemoteWebView.Services
             else
                 _logger.LogWarning("Shutting down..." + id);
 
-            if (ServiceDictionary.ContainsKey(id))
+            if (ServiceDictionary.Remove(id, out var client))
             {
-                ServiceDictionary.Remove(id, out var client);
-                if (client != null)
+                client.InUse = false;
+                client.Cancel();
+
+                Task[] tasks = new List<Task?> { client.BrowserPingTask, client.FileReaderTask, client.PingTask, client.IPC.BrowserTask, client.IPC.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
+
+                try
                 {
-                    client.IPC.Shutdown();
-                    client.InUse = false;
-                    client.CancellationTokenSource.Cancel();
+                    Task.WaitAll();
+                    foreach (var t in tasks)
+                        t.Dispose();
                 }
+                finally
+                {
+                    client.Dispose();
+                }
+
             }
             _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
         }

@@ -27,7 +27,6 @@ namespace PeakSWC.RemoteWebView
             psi.ArgumentList.Add($"-r=true");
 
             Process.Start(psi);
-
         }
 
         public static Task<Process?> StartBrowser(IBlazorWebView blazorWebView)
@@ -118,9 +117,9 @@ namespace PeakSWC.RemoteWebView
                                         case "booted":
                                             lock (bootLock)
                                             {
-                                                Shutdown();
-                                               
-                                                BlazorWebView.FireRefreshed(new RefreshedEventArgs(Guid.Parse( Id), ServerUri));
+                                                Client?.Shutdown(new IdMessageRequest { Id = Id });
+                                                BlazorWebView.FireRefreshed(new RefreshedEventArgs(Guid.Parse(Id), ServerUri));
+                                                cts.Cancel();
                                             }
                                             break;
 
@@ -268,12 +267,6 @@ namespace PeakSWC.RemoteWebView
         public void SendMessage(string message)
         {
             Client?.SendMessage(new SendMessageRequest { Id = Id, Message = message });
-        }
-
-        public void Shutdown()
-        {
-            Client?.Shutdown(new IdMessageRequest { Id = Id });
-            cts.Cancel();
         }
 
         public void Initialize()

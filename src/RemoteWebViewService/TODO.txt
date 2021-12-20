@@ -9,3 +9,27 @@ Don't let showmessage do anything until it has been connected.
 
 How to publish the server...
 https://weblog.west-wind.com/posts/2019/Sep/30/Serving-ASPNET-Core-Web-Content-from-External-Folders
+
+
+
+Browser->Server Refresh -> Restart() 
+	Restart() -> new WebMessageResponse { Response = "booted:" 
+
+Client-> FireRefreshed -> Restart Client
+
+Client is now trying to restart itself and sending the Server a  shutting down message
+
+
+
+
+AckRestart() -> Wait until client shuts down by waiting until id is removed from the service dictionary
+   -> Returns wait page which waits until id is in the dictionary
+      -> upon return from the wait page it goes to /app/guid
+
+Both the server and the Restarted app need to know when id has been restarted
+
+Race is between the Refreshed client waiting to create entry into dictionary and AckRestart waiting for id to be removed 
+
+
+
+

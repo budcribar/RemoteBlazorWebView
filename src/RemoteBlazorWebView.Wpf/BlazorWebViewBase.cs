@@ -165,11 +165,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			var contentRootDir = Path.GetDirectoryName(Path.GetFullPath(HostPage));
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDir, HostPage);
 
-			var customFileProvider = CreateFileProvider(contentRootDir);
-			var assetFileProvider = new PhysicalFileProvider(contentRootDir);
+ 			var customFileProvider = CreateFileProvider(contentRootDir);
+			//var assetFileProvider = new PhysicalFileProvider(contentRootDir);
 			IFileProvider fileProvider = customFileProvider == null
-				? assetFileProvider
-				: new CompositeFileProvider(customFileProvider, assetFileProvider);
+				? new PhysicalFileProvider(contentRootDir)
+				: customFileProvider; // new CompositeFileProvider(customFileProvider, assetFileProvider);
 
 			_webviewManager = CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 			foreach (var rootComponent in RootComponents)
