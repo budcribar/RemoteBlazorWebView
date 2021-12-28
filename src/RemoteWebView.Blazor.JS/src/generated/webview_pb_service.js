@@ -454,6 +454,15 @@ ClientIPC.GetClients = {
   responseType: webview_pb.ClientResponseList
 };
 
+ClientIPC.GetServerStatus = {
+  methodName: "GetServerStatus",
+  service: ClientIPC,
+  requestStream: false,
+  responseStream: false,
+  requestType: google_protobuf_empty_pb.Empty,
+  responseType: webview_pb.ServerResponse
+};
+
 exports.ClientIPC = ClientIPC;
 
 function ClientIPCClient(serviceHost, options) {
@@ -495,6 +504,37 @@ ClientIPCClient.prototype.getClients = function getClients(requestMessage, metad
     },
     cancel: function () {
       listeners = null;
+      client.close();
+    }
+  };
+};
+
+ClientIPCClient.prototype.getServerStatus = function getServerStatus(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(ClientIPC.GetServerStatus, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
       client.close();
     }
   };

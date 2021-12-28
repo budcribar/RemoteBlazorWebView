@@ -24,7 +24,7 @@ namespace WebdriverTestProject
             Stopwatch sw = new();
             sw.Start();
 
-            Assert.AreEqual(num, _driver.Count);
+            Assert.AreEqual(num, _driver.Count, , $"Was not able to create expected {numClients} _drivers");
 
             _driver[0].Url = "https:localhost:443";
 
@@ -86,7 +86,7 @@ namespace WebdriverTestProject
                 if (res.Contains($"{numClicks}")) passCount++;
 
             }
-            Assert.AreEqual(num, passCount);
+            Assert.AreEqual(num, passCount, $"Did not get {num} counts");
         }
 
     }

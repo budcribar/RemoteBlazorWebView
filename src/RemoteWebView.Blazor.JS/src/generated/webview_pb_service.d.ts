@@ -112,9 +112,19 @@ type ClientIPCGetClients = {
   readonly responseType: typeof webview_pb.ClientResponseList;
 };
 
+type ClientIPCGetServerStatus = {
+  readonly methodName: string;
+  readonly service: typeof ClientIPC;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webview_pb.ServerResponse;
+};
+
 export class ClientIPC {
   static readonly serviceName: string;
   static readonly GetClients: ClientIPCGetClients;
+  static readonly GetServerStatus: ClientIPCGetServerStatus;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -211,5 +221,14 @@ export class ClientIPCClient {
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
   getClients(requestMessage: webview_pb.UserMessageRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.ClientResponseList>;
+  getServerStatus(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.ServerResponse|null) => void
+  ): UnaryResponse;
+  getServerStatus(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.ServerResponse|null) => void
+  ): UnaryResponse;
 }
 

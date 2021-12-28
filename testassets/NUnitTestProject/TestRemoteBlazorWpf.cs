@@ -43,8 +43,9 @@ namespace WebdriverTestProject
             return Utilities.StartServer();
         }
 
-        public async virtual void Startup(int numClients)
+        public async virtual Task Startup(int numClients)
         {
+            Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
             KillClient();
 
             process = StartServer();
@@ -55,7 +56,7 @@ namespace WebdriverTestProject
                 try
 				{
                     var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
-                    Assert.AreEqual(0, ids.Responses.Count);
+                    Assert.AreEqual(0, ids.Responses.Count, "Server has connections at startup");
                     break;
                 }
                 catch (Exception ){}
@@ -145,14 +146,14 @@ namespace WebdriverTestProject
             TestClient(5);
         }
 
-        protected virtual void TestRefresh(int numClients, int numRefreshes)
+        protected async virtual void TestRefresh(int numClients, int numRefreshes)
         {
-            Startup(numClients);
+            await Startup(numClients);
 
             Stopwatch sw = new();
             sw.Start();
 
-            Assert.AreEqual(numClients, _driver.Count);
+            Assert.AreEqual(numClients, _driver.Count, $"Was not able to create expected {numClients} _drivers");
 
             for (int i = 0; i < numClients; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
@@ -208,15 +209,14 @@ namespace WebdriverTestProject
             }     
         }
 
-        protected virtual void TestClient(int num)
+        protected virtual async void TestClient(int num)
         {
-            
-            Startup(num);
+            await Startup(num);
 
             Stopwatch sw = new();
             sw.Start();
 
-            Assert.AreEqual(num, _driver.Count);
+            Assert.AreEqual(num, _driver.Count, $"Was not able to create expected {num} _drivers");
 
             for (int i = 0; i < num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
@@ -276,7 +276,7 @@ namespace WebdriverTestProject
                 if (res.Contains($"{numClicks}")) passCount++;
 
             }
-            Assert.AreEqual(num, passCount);
+            Assert.AreEqual(num, passCount, $"Did not get {num} counts");
 
             //Cleanup();
         }

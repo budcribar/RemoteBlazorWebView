@@ -485,10 +485,151 @@ export namespace UserMessageRequest {
   }
 }
 
+export class TaskResponse extends jspb.Message {
+  getName(): string;
+  setName(value: string): void;
+
+  getStatus(): TaskStatusMap[keyof TaskStatusMap];
+  setStatus(value: TaskStatusMap[keyof TaskStatusMap]): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TaskResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: TaskResponse): TaskResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TaskResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TaskResponse;
+  static deserializeBinaryFromReader(message: TaskResponse, reader: jspb.BinaryReader): TaskResponse;
+}
+
+export namespace TaskResponse {
+  export type AsObject = {
+    name: string,
+    status: TaskStatusMap[keyof TaskStatusMap],
+  }
+}
+
+export class ConnectionResponse extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  clearTaskresponsesList(): void;
+  getTaskresponsesList(): Array<TaskResponse>;
+  setTaskresponsesList(value: Array<TaskResponse>): void;
+  addTaskresponses(value?: TaskResponse, index?: number): TaskResponse;
+
+  getInuse(): boolean;
+  setInuse(value: boolean): void;
+
+  getHostname(): string;
+  setHostname(value: string): void;
+
+  getUsername(): string;
+  setUsername(value: string): void;
+
+  getMaxfilereadtime(): number;
+  setMaxfilereadtime(value: number): void;
+
+  getMaxclientpingtime(): number;
+  setMaxclientpingtime(value: number): void;
+
+  getMaxbrowserpingtime(): number;
+  setMaxbrowserpingtime(value: number): void;
+
+  getTotalbytesread(): number;
+  setTotalbytesread(value: number): void;
+
+  getTotalfilesread(): number;
+  setTotalfilesread(value: number): void;
+
+  getTotalreadtime(): number;
+  setTotalreadtime(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ConnectionResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ConnectionResponse): ConnectionResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ConnectionResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ConnectionResponse;
+  static deserializeBinaryFromReader(message: ConnectionResponse, reader: jspb.BinaryReader): ConnectionResponse;
+}
+
+export namespace ConnectionResponse {
+  export type AsObject = {
+    id: string,
+    taskresponsesList: Array<TaskResponse.AsObject>,
+    inuse: boolean,
+    hostname: string,
+    username: string,
+    maxfilereadtime: number,
+    maxclientpingtime: number,
+    maxbrowserpingtime: number,
+    totalbytesread: number,
+    totalfilesread: number,
+    totalreadtime: number,
+  }
+}
+
+export class ServerResponse extends jspb.Message {
+  getWorkingset(): number;
+  setWorkingset(value: number): void;
+
+  getPeakworkingset(): number;
+  setPeakworkingset(value: number): void;
+
+  getThreads(): number;
+  setThreads(value: number): void;
+
+  getHandles(): number;
+  setHandles(value: number): void;
+
+  clearConnectionresponsesList(): void;
+  getConnectionresponsesList(): Array<ConnectionResponse>;
+  setConnectionresponsesList(value: Array<ConnectionResponse>): void;
+  addConnectionresponses(value?: ConnectionResponse, index?: number): ConnectionResponse;
+
+  getTotalprocessortime(): number;
+  setTotalprocessortime(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ServerResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: ServerResponse): ServerResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ServerResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ServerResponse;
+  static deserializeBinaryFromReader(message: ServerResponse, reader: jspb.BinaryReader): ServerResponse;
+}
+
+export namespace ServerResponse {
+  export type AsObject = {
+    workingset: number,
+    peakworkingset: number,
+    threads: number,
+    handles: number,
+    connectionresponsesList: Array<ConnectionResponse.AsObject>,
+    totalprocessortime: number,
+  }
+}
+
 export interface ClientStateMap {
   CONNECTED: 0;
   SHUTTINGDOWN: 1;
 }
 
 export const ClientState: ClientStateMap;
+
+export interface TaskStatusMap {
+  CREATED: 0;
+  WAITINGFORACTIVATION: 1;
+  WAITINGTORUN: 2;
+  RUNNING: 3;
+  WAITINGFORCHILDRENTOCOMPLETE: 4;
+  RANTOCOMPLETION: 5;
+  CANCELED: 6;
+  FAULTED: 7;
+}
+
+export const TaskStatus: TaskStatusMap;
 
