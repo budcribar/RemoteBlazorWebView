@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -181,6 +182,11 @@ namespace PeakSWC.RemoteWebView
                                         }
                                     }
 
+                                }
+                                catch (FileNotFoundException)
+                                {
+                                    // TODO Warning to user?
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
                                 }
                                 catch (Exception ex)
                                 {
