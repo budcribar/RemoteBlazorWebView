@@ -20,10 +20,6 @@ message FileMessageRequest {
 message IdMessageRequest {
     string id = 1;
 }
-message PingMessageResponse {
-    string id = 1;
-    bool cancelled = 2;
-}
 
 message CreateWebViewRequest {
   string id = 1;
@@ -83,25 +79,18 @@ message SendMessageResponse {
     bool success = 2;
 }
 
-message PingMessageRequest {
-    string id = 1;
-    bool initialize = 2;
-    int32 pingIntervalSeconds = 3;
-}
 
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
-    rpc Ping(stream PingMessageRequest) returns (stream PingMessageResponse);
     rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
 }
 
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
-    rpc Ping(PingMessageRequest) returns (PingMessageResponse);
 }
 
 enum ClientState {
@@ -149,12 +138,9 @@ message ConnectionResponse {
     string hostName = 4;
     string userName = 5;
     double maxFileReadTime = 6;
-    double maxClientPingTime = 7;
-    double maxBrowserPingTime = 8;
-    int64 totalBytesRead = 9;
-    int32 totalFilesRead = 10;
-    double totalReadTime = 11;
-    
+    int64 totalBytesRead = 7;
+    int32 totalFilesRead = 8;
+    double totalReadTime = 9;
 }
 
 message ServerResponse {

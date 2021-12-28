@@ -69,9 +69,16 @@ namespace PeakSWC.RemoteWebView
 
                 using (CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token))
                 {
-                    while (!linkedToken.IsCancellationRequested)
+                    try
                     {
-                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
+                        while (!linkedToken.IsCancellationRequested)
+                        {
+                            await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ShutdownService.Shutdown(request.Id,ex);
                     }
                 }
             }
@@ -134,58 +141,6 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
-        public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
-        {
-            var id = string.Empty;
-            try
-            {
-                DateTime responseReceived = DateTime.Now;
-                DateTime responseSent = DateTime.Now;
-
-                await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken))
-                {
-                    id = message.Id;
-                    if (!ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
-                    {
-                        await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                        ShutdownService.Shutdown(id);
-                        break; ;
-                    }
-
-                    if (message.Initialize)
-                    {
-                        serviceState.PingTask = Task.Factory.StartNew(async () =>
-                        {
-                            while (!serviceState.Token.IsCancellationRequested)
-                            {
-                                responseSent = DateTime.Now;
-                                await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false });
-                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), serviceState.Token).ConfigureAwait(false);
-                                if (responseReceived < responseSent)
-                                {
-                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                                    ShutdownService.Shutdown(id);
-                                    break;
-                                }
-
-                            }
-                        }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-                    }
-                    else
-                    {
-                        responseReceived = DateTime.Now;
-                        var delta = responseReceived.Subtract(responseSent);
-                        if (delta > serviceState.MaxClientPing)
-                            serviceState.MaxClientPing = delta;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShutdownService.Shutdown(id, ex);
-            }
-        }
-
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
             ShutdownService.Shutdown(request.Id);
@@ -202,6 +157,5 @@ namespace PeakSWC.RemoteWebView
 
             return Task.FromResult( new SendMessageResponse { Id = request.Id, Success = false });
         }
-
     }
 }

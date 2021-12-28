@@ -193,28 +193,6 @@ namespace PeakSWC.RemoteWebView
                             BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
                         }
                     }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
-                    Task.Factory.StartNew(async () => {
-                        var pings = client.Ping();
-
-                        try
-                        {
-                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = Id, Initialize = true, PingIntervalSeconds=30 });
-
-                            await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
-                            {
-                                if (message.Cancelled) throw new Exception("Ping timeout exceeded");
-
-                                await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
-                        }
-
-                    }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
                 }
                 return client;
             }

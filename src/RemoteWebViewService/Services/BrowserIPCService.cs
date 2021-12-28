@@ -36,9 +36,19 @@ namespace PeakSWC.RemoteWebView
             }
 
             serviceState.IPC.BrowserResponseStream = responseStream;
+            using (CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token))
+            {
+                try
+                {
+                    while (!linkedToken.Token.IsCancellationRequested)
+                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
 
-            while (!serviceState.Token.IsCancellationRequested)
-                await Task.Delay(1000, serviceState.Token).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    ShutdownService.Shutdown(request.Id, ex);
+                }
+            }
 
             return;
         }
@@ -72,55 +82,5 @@ namespace PeakSWC.RemoteWebView
 
             return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
         }
-
-
-        public override Task<PingMessageResponse> Ping(PingMessageRequest message, ServerCallContext context)
-        {
-            var id = message.Id;
-            try
-            {
-                if (ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
-                {
-
-                    if (serviceState.BrowserPingReceived != DateTime.MinValue)
-                    {
-                        var delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
-                        if (serviceState.MaxBrowserPing < delta)
-                            serviceState.MaxBrowserPing = delta;
-                        _logger.LogInformation($"Max Ping Response from browser id {id} {serviceState.MaxBrowserPing}");
-                    }
-
-                    serviceState.BrowserPingReceived = DateTime.Now;
-
-                    if (message.Initialize)
-                    {
-                        serviceState.BrowserPingTask = Task.Factory.StartNew(async () =>
-                        {
-                            while (!serviceState.Token.IsCancellationRequested)
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(1), serviceState.Token).ConfigureAwait(false);
-                                TimeSpan delta = DateTime.Now.Subtract(serviceState.BrowserPingReceived);
-                                    // Account for high utilization
-                                    if (delta > TimeSpan.FromSeconds(message.PingIntervalSeconds * 1.5))
-                                {
-                                    ShutdownService.Shutdown(id, new Exception($"Browser Ping Timed out in {delta}"));
-                                    break;
-                                }
-
-                            }
-                        }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-                    }
-                    return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = false });
-                }
-                else
-                   return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
-            }
-            catch (Exception ex)
-            {
-                ShutdownService.Shutdown(id, ex);
-                return Task.FromResult(new PingMessageResponse { Id = id, Cancelled = true });
-            }
-        }
-
     }
 }

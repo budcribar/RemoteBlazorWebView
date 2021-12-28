@@ -70,7 +70,7 @@ namespace PeakSWC.RemoteWebView
         {
             List<ConnectionResponse> GetConnectionResponses() 
             {
-                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxBrowserPingTime=x.MaxBrowserPing.TotalSeconds, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, MaxClientPingTime=x.MaxClientPing.TotalSeconds }).ToList();
+                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds }).ToList();
             }
             List<TaskResponse> GetTaskResponses(string id)
             {
@@ -78,10 +78,6 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(id, out ServiceState? ss))
                 {
-                    if(ss.PingTask  != null)
-                    responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
-                    if (ss.BrowserPingTask != null)
-                        responses.Add(new TaskResponse { Name = "BrowserPing", Status = (TaskStatus)(int)ss.BrowserPingTask.Status });
                     if (ss.IPC.BrowserTask != null)
                         responses.Add(new TaskResponse { Name = "Browser", Status = (TaskStatus)(int)ss.IPC.BrowserTask.Status });
                     if (ss.IPC.ClientTask != null)

@@ -7,9 +7,6 @@ import { setApplicationIsTerminated, tryDeserializeMessage } from '../upstream/a
 import { showErrorNotification } from '../upstream/aspnetcore/web.js/src/BootErrors';
 import { DotNet } from '../upstream/aspnetcore/web.js/node_modules/@microsoft/dotnet-js-interop';
 import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
-import { grpc } from "@improbable-eng/grpc-web";
-import { BrowserIPC } from "./generated/webview_pb_service";
-import { PingMessageRequest, PingMessageResponse } from "./generated/webview_pb";
 
 const messageHandlers = {
 
@@ -22,49 +19,6 @@ const messageHandlers = {
             navigateTo(`/${id}/`, false, true);
             sendMessage("connected:");
         }
-
-        var ping = new PingMessageRequest();
-        var id = window.location.pathname.split('/')[1];
-        ping.setId(id);
-        ping.setPingintervalseconds(30);
-        ping.setInitialize(true);
-
-        //console.log("ping invoke init");
-        grpc.invoke(BrowserIPC.Ping,
-            {
-                request: ping,
-                host: window.location.origin,
-                onMessage: (message: PingMessageResponse) => {
-                    //console.info("Ping Init Response: " + ping.getId());
-                },
-                onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
-                    if (code == grpc.Code.OK) {
-                       // console.log("ping init all ok")
-                    } else {
-                        console.error("grpc error", code, msg, trailers);
-                    }
-                }
-            });
-
-        ping.setInitialize(false);
-        const interval = setInterval(function () {
-            //console.log("ping invoke");
-            grpc.invoke(BrowserIPC.Ping,
-                {
-                    request: ping,
-                    host: window.location.origin,
-                    onMessage: (message: PingMessageResponse) => {
-                        //console.info("Ping Response: " + ping.getId());
-                    },
-                    onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
-                        if (code == grpc.Code.OK) {
-                            //console.log("ping all ok")
-                        } else {
-                            console.error("grpc error", code, msg, trailers);
-                        }
-                    }
-                });
-        }, 30000);
     },
 
     'RenderBatch': (batchId: number, batchDataBase64: string) => {
