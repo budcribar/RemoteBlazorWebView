@@ -18,15 +18,15 @@ namespace PeakSWC.RemoteWebView
         public Task ClientTask { get; }
         public Task BrowserTask { get; }
 
-        public async void SendMessage(string eventName, params object[] args)
+        public ValueTask SendMessage(string eventName, params object[] args)
         {
             var message = $"{eventName}:{JsonSerializer.Serialize(args)}";
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
+            return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
-        public async void SendMessage(string message)
+        public ValueTask SendMessage(string message)
         {
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
+            return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
         public IPC(CancellationToken token)
@@ -51,18 +51,18 @@ namespace PeakSWC.RemoteWebView
 
         }
 
-        public async void ReceiveMessage(WebMessageResponse message)
+        public ValueTask ReceiveMessage(WebMessageResponse message)
         {
-            await responseChannel.Writer.WriteAsync(message);
+            return responseChannel.Writer.WriteAsync(message);
         }
 
-        public async void LocationChanged(Point point)
+        public Task LocationChanged(Point point)
         {
-            await (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
         }
-        public async void SizeChanged(Size size)
+        public Task SizeChanged(Size size)
         {
-            await (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
         }
     }
 }

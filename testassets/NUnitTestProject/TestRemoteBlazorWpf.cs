@@ -93,7 +93,7 @@ namespace WebdriverTestProject
                 ids = client.GetIds(new Empty()).Responses.ToArray();
                 Thread.Sleep(1000);
                 count++;
-                Assert.IsTrue(count < 20, "Timed out waiting to start client");
+                Assert.IsTrue(count < 20, $"Timed out waiting to start {num} clients found {ids.Length}");
             } while (ids.Length != num);
 
         }
@@ -129,21 +129,21 @@ namespace WebdriverTestProject
 
 
         [TestMethod]
-        public void Test1Client()
+        public async Task Test1Client()
         {
-            TestClient(1);
+            await TestClient(1);
         }
 
         [TestMethod]
-        public void Test2Client()
+        public async Task Test2Client()
         {
-            TestClient(2);
+            await TestClient(2);
         }
 
         [TestMethod]
-        public void Test5Client()
+        public async Task Test5Client()
         {
-            TestClient(5);
+           await TestClient(5);
         }
 
         protected async virtual void TestRefresh(int numClients, int numRefreshes)
@@ -209,7 +209,7 @@ namespace WebdriverTestProject
             }     
         }
 
-        protected virtual async void TestClient(int num)
+        protected virtual async Task TestClient(int num)
         {
             await Startup(num);
 
