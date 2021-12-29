@@ -2,13 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using PeakSWC.RemoteWebView;
+using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.AspNetCore.Components.WebView;
 
 using Microsoft.AspNetCore.Components;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
+
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {

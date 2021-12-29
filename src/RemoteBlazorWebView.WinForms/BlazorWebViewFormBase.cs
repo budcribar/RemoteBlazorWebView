@@ -55,7 +55,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		public WebView2Control WebView => _webview;
 
 		/// <summary>
-		/// Returns the current <see cref="RemoteWebView.WebView2WebViewManager"/> used by this control. This property is <c>null</c>
+		/// Returns the current <see cref="WebView2.WebView2WebViewManager"/> used by this control. This property is <c>null</c>
 		/// until after the XYZ event is raised.
 		/// </summary>
 		public WebView2.WebView2WebViewManager WebViewManager => _webviewManager;
@@ -87,7 +87,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		}
 
 		/// <summary>
-		/// Occurs when the <see cref="RemoteWebView.WebView2WebViewManager"/> is created.
+		/// Occurs when the <see cref="WebView2.WebView2WebViewManager"/> is created.
 		/// </summary>
 		public event EventHandler<WebViewManagerCreatedEventArgs> WebViewManagerCreated;
 

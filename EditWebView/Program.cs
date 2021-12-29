@@ -20,7 +20,7 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
             fileName = "BlazorWebViewBase.cs";
 
 
-    if (fileName == "BlazorWebViewFormBase.cs")
+    if (fileName == "BlazorWebViewFormBase.cs" )
     {
         text = text.Replace("var assetFileProvider =", "//var assetFileProvider =");
         text = text.Replace( "? assetFileProvider", "? new PhysicalFileProvider(contentRootDir)");
@@ -29,7 +29,7 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
         text = text.Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
         text = text.Replace("BlazorWebView", "BlazorWebViewFormBase");
         text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components.Web;");
-        text = text.Replace("WebView2WebViewManager", "RemoteWebView.WebView2WebViewManager");
+        text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
     }
     text = text.Replace("namespace Microsoft.AspNetCore.Components.WebView.WindowsForms", "namespace PeakSWC.RemoteBlazorWebView.WindowsForms");
 
@@ -38,7 +38,11 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
         text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components;");
 
     if (fileName == "RootComponent.cs" )
-       text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+    {
+        text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
+        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+
+    }
 
     if (fileName == "BlazorWebViewFormBase.cs")
         text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
@@ -77,7 +81,7 @@ foreach (var f in Directory.EnumerateFiles(inputDir))
         text = text.Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
         text = text.Replace("BlazorWebView", "BlazorWebViewBase");
         text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components.Web;");
-        text = text.Replace("WebView2WebViewManager", "RemoteWebView.WebView2WebViewManager");
+        text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
     }
 
     text = text.Replace("namespace Microsoft.AspNetCore.Components.WebView.Wpf", "namespace PeakSWC.RemoteBlazorWebView.Wpf");
@@ -85,9 +89,13 @@ foreach (var f in Directory.EnumerateFiles(inputDir))
     if (fileName == "RootComponent.cs" || fileName == "WpfDispatcher.cs" || fileName == "BlazorWebViewBase.cs" )
         text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components;");
 
-    if (fileName == "RootComponent.cs")
-        text = text.Replace("using System;", "using System;\nusing PeakSWC.RemoteWebView;\nusing Microsoft.AspNetCore.Components.WebView;\n");
 
+    if (fileName == "RootComponent.cs")
+    {
+        text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
+        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+
+    }
 
     if (fileName == "BlazorWebViewBase.cs")
         text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
