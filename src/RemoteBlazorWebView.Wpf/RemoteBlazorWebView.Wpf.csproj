@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Enabled browser to server keep alive</PackageReleaseNotes>
+    <PackageReleaseNotes>Ping optimizations</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
