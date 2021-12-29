@@ -237,7 +237,7 @@ namespace PeakSWC.RemoteWebView
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "booted:" });
+                    await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" });
 
                     // Wait until client shuts down 
                     for (int i = 0; i < 3000; i++)

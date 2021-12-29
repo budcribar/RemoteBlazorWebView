@@ -115,13 +115,18 @@ namespace PeakSWC.RemoteWebView
                                             OnWebMessageReceived?.Invoke(message.Url, message.Response);
                                             break;
 
-                                        case "booted":
+                                        case "refreshed":
                                             lock (bootLock)
                                             {
                                                 Client?.Shutdown(new IdMessageRequest { Id = Id });
                                                 BlazorWebView.FireRefreshed(new RefreshedEventArgs(Guid.Parse(Id), ServerUri));
                                                 cts.Cancel();
                                             }
+                                            break;
+
+                                        case "shutdown":
+                                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, new Exception("Server shut down connection")));
+                                            cts.Cancel();
                                             break;
 
                                         case "connected":

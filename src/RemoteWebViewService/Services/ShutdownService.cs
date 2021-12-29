@@ -32,6 +32,7 @@ namespace PeakSWC.RemoteWebView.Services
 
             if (ServiceDictionary.Remove(id, out var client))
             {
+                client.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });
                 client.InUse = false;
                 client.Cancel();
 
