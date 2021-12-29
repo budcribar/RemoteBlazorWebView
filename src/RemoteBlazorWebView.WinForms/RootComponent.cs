@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
+using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -59,7 +60,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
 		}
 
-		internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
+		internal Task RemoveFromWebViewManagerAsync(WebView2.WebView2WebViewManager webviewManager)
 		{
 			return webviewManager.RemoveRootComponentAsync(Selector);
 		}

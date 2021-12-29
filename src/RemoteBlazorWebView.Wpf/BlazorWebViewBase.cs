@@ -55,7 +55,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 		private const string webViewTemplateChildName = "WebView";
 		private WebView2Control _webview;
-		private RemoteWebView.WebView2WebViewManager _webviewManager;
+		private WebView2.WebView2WebViewManager _webviewManager;
 		private bool _isDisposed;
 
 		/// <summary>
@@ -147,9 +147,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			StartWebViewCoreIfPossible();
 		}
 
-		public virtual RemoteWebView.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
 		{
-			return new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{

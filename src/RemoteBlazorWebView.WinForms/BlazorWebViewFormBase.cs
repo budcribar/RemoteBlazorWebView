@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 	public class BlazorWebViewFormBase : ContainerControl
 	{
 		private readonly WebView2Control _webview;
-		private RemoteWebView.WebView2WebViewManager _webviewManager;
+		private WebView2.WebView2WebViewManager _webviewManager;
 		private string _hostPage;
 		private IServiceProvider _services;
 
@@ -58,7 +58,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		/// Returns the current <see cref="RemoteWebView.WebView2WebViewManager"/> used by this control. This property is <c>null</c>
 		/// until after the XYZ event is raised.
 		/// </summary>
-		public RemoteWebView.WebView2WebViewManager WebViewManager => _webviewManager;
+		public WebView2.WebView2WebViewManager WebViewManager => _webviewManager;
 
 		private WindowsFormsDispatcher ComponentsDispatcher { get; }
 
@@ -134,9 +134,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			HostPage != null &&
 			Services != null;
 
-		public virtual RemoteWebView.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
 		{
-			return new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{

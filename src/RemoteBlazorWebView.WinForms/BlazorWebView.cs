@@ -160,11 +160,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public bool IsRestarting { get; set; }
 
-        public override RemoteWebView.WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
-            RemoteWebView.WebView2WebViewManager m;
+            WebView2WebViewManager m;
             if (ServerUri == null)
-                 m = new RemoteWebView.WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                 m = new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
                  m  = new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
 

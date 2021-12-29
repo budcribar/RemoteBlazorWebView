@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -53,7 +53,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
 		}
 
-		internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
+		internal Task RemoveFromWebViewManagerAsync(WebView2.WebView2WebViewManager webviewManager)
 		{
 			return webviewManager.RemoveRootComponentAsync(Selector);
 		}
