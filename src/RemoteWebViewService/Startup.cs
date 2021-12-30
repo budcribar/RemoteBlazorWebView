@@ -192,7 +192,7 @@ namespace PeakSWC.RemoteWebView
                         serviceState.User = context.User.GetDisplayName() ?? "";
                         serviceState.InUse = true;
                         var home = serviceState.HtmlHostPath;
-
+                        serviceState.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
                         // Update Status
                         serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Connect:{guid}"));
                         context.Response.Redirect($"/{guid}/{home}");

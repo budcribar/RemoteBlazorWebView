@@ -103,7 +103,7 @@ namespace PeakSWC.RemoteWebView
                                 {
                                     switch (command)
                                     {
-                                        case "created":
+                                        case "browserAttached":
                                             _ = Task.Run(async () =>
                                             {
                                                 // TODO Create property for timeout value
@@ -115,6 +115,10 @@ namespace PeakSWC.RemoteWebView
                                                     cts.Cancel();
                                                 }
                                             });
+                                            completed.Set();
+                                            break;
+
+                                        case "created":
                                             completed.Set();
                                             break;
 
