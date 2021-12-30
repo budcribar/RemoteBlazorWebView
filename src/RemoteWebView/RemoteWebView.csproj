@@ -26,7 +26,7 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Ping optimizations</PackageReleaseNotes>
+    <PackageReleaseNotes>Fire disconnected event if browser shut down before all files were downloaded</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

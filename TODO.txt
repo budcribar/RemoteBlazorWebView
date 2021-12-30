@@ -1,10 +1,7 @@
 Add Title to RemoteWebView
 Run security review
-Missing files causes disconnect
-Need to either generate WebView2WebViewManager.cs or eliminate it
 Get rid of warning about prerelease dependency
 File bug report on file provider
 Make demo
 turn on public class TestRemotePackageBlazorForm : and TestRemoteBlazorDebugForm 
-Fix EditWebView to fix file provider
-Do we need client ping?
+Make the timeout a property on the WebView (Form and WPF)

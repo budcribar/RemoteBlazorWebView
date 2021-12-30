@@ -37,7 +37,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Ping optimizations</PackageReleaseNotes>
+    <PackageReleaseNotes>Fire disconnected event if browser shut down before all files were downloaded</PackageReleaseNotes>
     <DebugType>embedded</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
