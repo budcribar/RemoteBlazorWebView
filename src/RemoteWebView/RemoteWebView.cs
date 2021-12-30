@@ -91,6 +91,7 @@ namespace PeakSWC.RemoteWebView
 
                     Task.Factory.StartNew(async () =>
                     {
+                        bool connected = false;
                         try
                         {
                             await foreach (var message in events.ResponseStream.ReadAllAsync())
@@ -103,6 +104,17 @@ namespace PeakSWC.RemoteWebView
                                     switch (command)
                                     {
                                         case "created":
+                                            _ = Task.Run(async () =>
+                                            {
+                                                // TODO Create property for timeout value
+                                                await Task.Delay(TimeSpan.FromSeconds(60));
+
+                                                if (!connected)
+                                                {
+                                                    BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, new Exception("Browser connection timed out")));
+                                                    cts.Cancel();
+                                                }
+                                            });
                                             completed.Set();
                                             break;
 
@@ -131,6 +143,7 @@ namespace PeakSWC.RemoteWebView
 
                                         case "connected":
                                             BlazorWebView.FireConnected(new ConnectedEventArgs(Guid.Parse(Id), ServerUri));
+                                            connected = true;
                                             break;
                                     }
                                 }
