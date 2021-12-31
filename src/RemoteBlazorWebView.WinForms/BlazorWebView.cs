@@ -98,19 +98,19 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void FireConnected(ConnectedEventArgs args)
 		{
-            Connected?.Invoke(this, args);
+            Invoke(() => Connected?.Invoke(this, args));
 		}
 
         public void FireDisconnected(DisconnectedEventArgs args)
         {
             if (!IsRefreshing)
-                Disconnected?.Invoke(this, args);
+                Invoke(() => Disconnected?.Invoke(this, args));
         }
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
             IsRefreshing = true;
-            Refreshed?.Invoke(this, args);
+            Invoke(() => Refreshed?.Invoke(this, args));
         }
 
         public event EventHandler<ConnectedEventArgs>? Connected;
