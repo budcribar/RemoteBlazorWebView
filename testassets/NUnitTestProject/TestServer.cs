@@ -1,93 +1,75 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Edge;
-using System.IO;
 using System.Threading;
-using PeakSWC.RemoteableWebView;
-using Google.Protobuf.WellKnownTypes;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System;
-using OpenQA.Selenium.Chrome;
+using System.Threading.Tasks;
+using PeakSWC.RemoteWebView;
+using Google.Protobuf.WellKnownTypes;
 using System.Linq;
+using System.Threading.Channels;
+using Grpc.Net.Client;
+using Grpc.Net.Client.Web;
+using System.Net.Http;
 
 namespace WebdriverTestProject
 {
-    //[TestClass]
+    [TestClass]
     public class TestServer : TestRemoteBlazorWpf
     {
-       
-        protected override void TestClient(int num)
+        private ClientIPC.ClientIPCClient? client;
+
+        public override void Test5Client10Refresh() { }
+
+        protected override async Task TestClient(int num)
         {
-            Startup(num);
+            await Startup(num);
 
             Stopwatch sw = new();
             sw.Start();
 
-            Assert.AreEqual(num, _driver.Count, , $"Was not able to create expected {numClients} _drivers");
+            Assert.AreEqual(num, _driver.Count,$"Was not able to create expected {num} _drivers");
 
-            _driver[0].Url = "https:localhost:443";
-
-            List<string> links = new();
-            while (sw.ElapsedMilliseconds < 30000)
-            {
-                links = _driver[0].FindElements(By.TagName("a")).Select(x => x.GetAttribute("href")).Where(x => x?.Contains("/app/") ?? false).ToList();
-                if (links.Count == num) break;
-            }
-
-            Assert.IsTrue(sw.ElapsedMilliseconds < 30000);
-
+            for (int i = 0; i < num; i++) _driver[i].Url = url + $"app/{ids[i]}";
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
- 
-            for (int i = 0; i < num; i++) _driver[i].Url = links[i];
 
-            Thread.Sleep(1000);
-
-            for (int i = 0; i < num; i++)
-            {
-                var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
-
-                link.Click();
-            }
-
-            Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
-
-            Thread.Sleep(1000);
-
-            List<IWebElement> button = new();
-            List<IWebElement> para = new();
-
-            for (int i = 0; i < num; i++)
-            {
-                button.Add(_driver[i].FindElement(By.ClassName("btn")));
-                para.Add(_driver[i].FindElement(By.XPath("//p")));
-            }
-
+            Thread.Sleep(3000);
             sw.Restart();
-            int numClicks = 10;
-            for (int i = 0; i < numClicks; i++)
-            {
-                for (int j = 0; j < num; j++)
-                {
-                    button[j].Click();
-                    Thread.Sleep(30);
-                }
 
-            }
-
-            Console.WriteLine($"Click {numClicks} times in {sw.Elapsed}");
-
-
-            Thread.Sleep(1000);
-            int passCount = 0;
             for (int i = 0; i < num; i++)
             {
-                var res = para[i].Text;
-                if (res.Contains($"{numClicks}")) passCount++;
-
+                for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                {
+                    try
+                    {
+                        var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
+                        break;
+                    }
+                    catch (Exception) { }
+                    Thread.Sleep(100);
+                }
             }
-            Assert.AreEqual(num, passCount, $"Did not get {num} counts");
+            var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
+
+            var channel = GrpcChannel.ForAddress(url, new GrpcChannelOptions { HttpHandler = httpHandler });
+            client = new ClientIPC.ClientIPCClient(channel);
+            var response = await client!.GetServerStatusAsync(new Empty { });
+            var totalReadTime = response.ConnectionResponses.Sum(x => x.TotalReadTime);
+            var maxFileReadTime = response.ConnectionResponses.Sum(x => x.MaxFileReadTime);
+            var totalFilesRead = response.ConnectionResponses.Sum(x => x.TotalFilesRead);
+            var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
+
+            //Assert.AreEqual(11 * num, totalFilesRead, "Failed on total files read");
+            //Assert.AreEqual(573894 * num, totalBytesRead, "Failed on total bytes read");
+            Console.WriteLine($"TotalBytesRead {totalBytesRead}");
+            Console.WriteLine($"TotalReadTime {totalReadTime}");
+           
         }
 
+        [TestMethod]
+        public async Task Test10Client()
+        {
+            await TestClient(10);
+        }
     }
 }

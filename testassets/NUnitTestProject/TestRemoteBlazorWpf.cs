@@ -21,12 +21,12 @@ namespace WebdriverTestProject
     public class TestRemoteBlazorWpf
     {
         protected static readonly List<ChromeDriver> _driver = new();
-        private readonly string url = @"https://localhost:5001/";
+        protected readonly string url = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
-        private static string[] ids = Array.Empty<string>();
+        protected static string[] ids = Array.Empty<string>();
         protected static Process? process;
         protected static List<Process> clients = new();
-        private static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
+        protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
 
         public virtual Process CreateClient()
         {
@@ -122,7 +122,7 @@ namespace WebdriverTestProject
         //    TestRefresh(1, 10);
         //}
         [TestMethod]
-        public void Test5Client10Refresh()
+        public virtual void Test5Client10Refresh()
         {
             TestRefresh(1, 10);
         }

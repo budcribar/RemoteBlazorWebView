@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="TestServer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0-preview-20211130-02" />
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.8" />
      <PackageReference Include="coverlet.collector" Version="3.1.0">
@@ -26,6 +22,7 @@
    <Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.15.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.36.0" />
+    <PackageReference Include="Grpc.Net.Client.Web" Version="2.36.0" />
    
     <PackageReference Include="Grpc.Tools" Version="2.36.0">
       <PrivateAssets>all</PrivateAssets>
