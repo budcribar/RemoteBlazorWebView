@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipelines;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -19,6 +20,7 @@ namespace PeakSwc.StaticFiles
         private string path;
         private readonly string guid;
         private Stream? stream = null;
+        private long length = -1;
         private readonly ILogger<RemoteFileResolver> _logger;
 
         private async Task<Stream?> GetStream()
@@ -60,50 +62,55 @@ namespace PeakSwc.StaticFiles
                 _logger.LogError($"Cannot process {appFile} id {id} not found...");
                 return null;
             }
-
-            serviceState.FileDictionary[appFile] = (new MemoryStream(), new ManualResetEventSlim());
-            await serviceState.FileCollection.Writer.WriteAsync(appFile);
-
-            if(!serviceState.FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60)))
-            {
-                _logger.LogError($"Timeout processing {appFile} id {id}");
-                return null;
-            }
-
-            MemoryStream stream = serviceState.FileDictionary[appFile].stream;
-            if (stream.Length == 0)
-            {
-                _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
-                return null;
-            }
-
-            stream.Position = 0;
+            Stream stream;
 
             if (Path.GetFileName(appFile) == "blazor.modules.json")
-			{
-                stream = new MemoryStream(Encoding.ASCII.GetBytes("[]"));
-            }
-
-           
-            if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
             {
-                // Edit the href in index.html
-                using StreamReader sr = new(stream);
-                var contents = sr.ReadToEnd();
-                var initialLength = contents.Length;
-				contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
-                if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
-                stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
+                stream = new MemoryStream(Encoding.ASCII.GetBytes("[]"));
+                length = stream.Length;
+            }
+            else
+            {
+                serviceState.FileDictionary[appFile] = new FileEntry();
+                await serviceState.FileCollection.Writer.WriteAsync(appFile);
+
+                if(!serviceState.FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    _logger.LogError($"Timeout processing {appFile} id {id}");
+                    return null;
+                }
+
+                length = serviceState.FileDictionary[appFile].Length;
+                if (length <= 0)
+                {
+                    _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
+                    return null;
+                }
+
+                stream = serviceState.FileDictionary[appFile].Pipe.Reader.AsStream();
+
+
+                if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
+                {
+                    // Edit the href in index.html
+                    using StreamReader sr = new(stream);
+                    var contents = sr.ReadToEnd();
+                    var initialLength = contents.Length;
+                    contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
+                    if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
+                    stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
+                    length = stream.Length;
+                }
             }
 
             TimeSpan fileReadTime = stopWatch.Elapsed;
-            _logger.LogInformation($"Successfully read {stream.Length} bytes from {appFile} id {id}");
+            _logger.LogInformation($"Successfully read {length} bytes from {appFile} id {id}");
             _logger.LogInformation($"Last file read in {fileReadTime} id {id}");
 
             lock (serviceState)
             {
                 serviceState.TotalFilesRead++;
-                serviceState.TotalBytesRead += stream.Length;
+                serviceState.TotalBytesRead += length;
                 serviceState.TotalFileReadTime += fileReadTime;
                 if (fileReadTime > serviceState.MaxFileReadTime)
                     serviceState.MaxFileReadTime = fileReadTime;
@@ -135,9 +142,11 @@ namespace PeakSwc.StaticFiles
             _rootDictionary = rootDictionary;
         }
 
-        public bool Exists => GetStream().Result != null;
+        public bool Exists =>  
+            GetStream().Result != null;
 
-        public long Length => GetStream().Result?.Length ?? -1;
+        public long Length => 
+            GetStream().Result == null ? -1 : length;
 
         public string? PhysicalPath => null;
 

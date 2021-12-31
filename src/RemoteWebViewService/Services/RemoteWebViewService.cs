@@ -95,10 +95,7 @@ namespace PeakSWC.RemoteWebView
             {
                 await foreach (FileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
-                    if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
-                        id = message.Init.Id;
-                    else
-                        id = message.Data.Id;
+                    id = message.Id;
 
                     if (ServiceDictionary.TryGetValue(id, out var serviceState))
                     {
@@ -116,18 +113,24 @@ namespace PeakSWC.RemoteWebView
                                 }
                             }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                         }
-                        else
+                        else if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Length)
+                        {
+                            var fileEntry = serviceState.FileDictionary[message.Length.Path];
+                            fileEntry.Length = message.Length.Length;
+                            fileEntry.resetEvent.Set();
+                        }
+                        else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
                             if (message.Data.Data.Length > 0)
                             {
-                                var ms = serviceState.FileDictionary[message.Data.Path].stream;
-                                if (ms != null)
-                                    await ms.WriteAsync(message.Data.Data.Memory);
+                                var fileEntry = serviceState.FileDictionary[message.Data.Path];
+                                await fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory);
                             }
                             else
                             {
                                 // Trigger the stream read
-                                serviceState.FileDictionary[message.Data.Path].resetEvent.Set();
+                                var fileEntry = serviceState.FileDictionary[message.Data.Path];
+                                fileEntry.Pipe.Writer.Complete();
                             }
                         }
                     }

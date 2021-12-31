@@ -2,12 +2,20 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
+    public class FileEntry
+    {
+        public ManualResetEventSlim resetEvent { get; } = new ManualResetEventSlim();
+        public long Length { get; set; } = -1;
+        public Pipe Pipe { get; } = new Pipe();
+    }
+
     public class ServiceState : IDisposable
     {
         private CancellationTokenSource CancellationTokenSource { get; }
@@ -27,7 +35,7 @@ namespace PeakSWC.RemoteWebView
         public int TotalFilesRead { get; set; } = 0;
         public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
-        public ConcurrentDictionary<string, (MemoryStream stream, ManualResetEventSlim resetEvent)> FileDictionary { get; set; } = new();
+        public ConcurrentDictionary<string, FileEntry> FileDictionary { get; set; } = new();
         public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();

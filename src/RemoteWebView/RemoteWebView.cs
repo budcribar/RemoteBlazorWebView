@@ -178,7 +178,7 @@ namespace PeakSWC.RemoteWebView
                         var files = client.FileReader();
                         try
                         {
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Init = new FileReadInitRequest { Id = Id } });
+                            await files.RequestStream.WriteAsync(new FileReadRequest {Id = Id, Init = new () });
 
                             await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
                             {
@@ -186,10 +186,12 @@ namespace PeakSWC.RemoteWebView
                                 {
                                     var path = message.Path[(message.Path.IndexOf("/") + 1)..];
 
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
+
                                     using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
                                     {
                                         if (stream == null)
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                         else
                                         {
                                             var buffer = new Byte[8 * 1024];
@@ -198,9 +200,9 @@ namespace PeakSWC.RemoteWebView
                                             while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
                                             {
                                                 ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                                await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = bs } });
+                                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
                                             }
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                         }
                                     }
 
@@ -208,12 +210,12 @@ namespace PeakSWC.RemoteWebView
                                 catch (FileNotFoundException)
                                 {
                                     // TODO Warning to user?
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                 }
                                 catch (Exception ex)
                                 {
                                     BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Data = new FileReadDataRequest { Id = Id, Path = message.Path, Data = ByteString.Empty } });
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                 }
                             }
                         } catch (Exception ex)

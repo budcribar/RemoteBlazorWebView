@@ -41,19 +41,24 @@ message IdArrayResponse {
 }
 
 message FileReadInitRequest {
-    string id = 1;
 }
 
 message FileReadDataRequest {
-    string id = 1;
     string path = 2;
     bytes data = 3;
 }
 
+message FileReadLengthRequest {
+    string path = 2;
+    int64 length = 3;
+}
+
 message FileReadRequest {
+    string id = 1;
     oneof fileRead {
-        FileReadInitRequest init = 1;
-        FileReadDataRequest data = 2;
+        FileReadInitRequest init = 2;
+        FileReadLengthRequest length = 3;
+        FileReadDataRequest data = 4;
     }
 }
 
