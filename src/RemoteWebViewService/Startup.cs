@@ -189,8 +189,8 @@ namespace PeakSWC.RemoteWebView
                     }
                     else
                     {
-                        serviceState.User = context.User.GetDisplayName() ?? "";
                         serviceState.InUse = true;
+                        serviceState.User = context.User.GetDisplayName() ?? "";                      
                         var home = serviceState.HtmlHostPath;
                         serviceState.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
                         // Update Status
