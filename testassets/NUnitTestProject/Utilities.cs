@@ -116,6 +116,9 @@ namespace WebdriverTestProject
         public static Process StartRemoteBlazorWpfApp() => StartProcess(BlazorWpfAppExe(), BlazorWpfPath());
 
         public static void KillRemoteBlazorWpfApp() => Kill("RemoteBlazorWebViewTutorial.WpfApp");
+
+        public static int CountRemoteBlazorWinFormsApp() => Count("RemoteBlazorWebViewTutorial.WinFormsApp");
+        public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
 
         #region WebView
@@ -153,6 +156,8 @@ namespace WebdriverTestProject
 
             return p;
         }
+
+        public static int Count(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).Count();
         public static void Kill(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).ToList().ForEach(x => x.Kill());
         #endregion
     }

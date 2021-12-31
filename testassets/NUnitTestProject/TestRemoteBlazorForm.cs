@@ -21,7 +21,10 @@ namespace WebdriverTestProject
         {
             Utilities.KillBlazorWinFormsApp();
         }
-
+        public override int CountClients()
+        {
+            return Utilities.CountRemoteBlazorWinFormsApp();
+        }
     }
 
     //[TestClass]
