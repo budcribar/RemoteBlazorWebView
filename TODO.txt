@@ -5,3 +5,5 @@ File bug report on file provider
 Make demo
 turn on public class TestRemotePackageBlazorForm : and TestRemoteBlazorDebugForm 
 Make the timeout a property on the WebView (Form and WPF)
+Copy and paste url in WinFrom demo
+Debug in remote mode

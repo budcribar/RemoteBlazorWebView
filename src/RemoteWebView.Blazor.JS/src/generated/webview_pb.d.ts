@@ -163,9 +163,6 @@ export namespace IdArrayResponse {
 }
 
 export class FileReadInitRequest extends jspb.Message {
-  getId(): string;
-  setId(value: string): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): FileReadInitRequest.AsObject;
   static toObject(includeInstance: boolean, msg: FileReadInitRequest): FileReadInitRequest.AsObject;
@@ -178,14 +175,10 @@ export class FileReadInitRequest extends jspb.Message {
 
 export namespace FileReadInitRequest {
   export type AsObject = {
-    id: string,
   }
 }
 
 export class FileReadDataRequest extends jspb.Message {
-  getId(): string;
-  setId(value: string): void;
-
   getPath(): string;
   setPath(value: string): void;
 
@@ -206,17 +199,48 @@ export class FileReadDataRequest extends jspb.Message {
 
 export namespace FileReadDataRequest {
   export type AsObject = {
-    id: string,
     path: string,
     data: Uint8Array | string,
   }
 }
 
+export class FileReadLengthRequest extends jspb.Message {
+  getPath(): string;
+  setPath(value: string): void;
+
+  getLength(): number;
+  setLength(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): FileReadLengthRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: FileReadLengthRequest): FileReadLengthRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: FileReadLengthRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): FileReadLengthRequest;
+  static deserializeBinaryFromReader(message: FileReadLengthRequest, reader: jspb.BinaryReader): FileReadLengthRequest;
+}
+
+export namespace FileReadLengthRequest {
+  export type AsObject = {
+    path: string,
+    length: number,
+  }
+}
+
 export class FileReadRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
   hasInit(): boolean;
   clearInit(): void;
   getInit(): FileReadInitRequest | undefined;
   setInit(value?: FileReadInitRequest): void;
+
+  hasLength(): boolean;
+  clearLength(): void;
+  getLength(): FileReadLengthRequest | undefined;
+  setLength(value?: FileReadLengthRequest): void;
 
   hasData(): boolean;
   clearData(): void;
@@ -236,14 +260,17 @@ export class FileReadRequest extends jspb.Message {
 
 export namespace FileReadRequest {
   export type AsObject = {
+    id: string,
     init?: FileReadInitRequest.AsObject,
+    length?: FileReadLengthRequest.AsObject,
     data?: FileReadDataRequest.AsObject,
   }
 
   export enum FilereadCase {
     FILEREAD_NOT_SET = 0,
-    INIT = 1,
-    DATA = 2,
+    INIT = 2,
+    LENGTH = 3,
+    DATA = 4,
   }
 }
 

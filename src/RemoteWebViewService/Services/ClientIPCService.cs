@@ -83,7 +83,7 @@ namespace PeakSWC.RemoteWebView
                     if (ss.IPC.ClientTask != null)
                         responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.IPC.ClientTask.Status });
                     if (ss.FileReaderTask != null)
-                        responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
+                        responses.Add(new TaskResponse { Name = "FileReader", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
                 }
                 return responses;
             }

@@ -26,7 +26,7 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Fire disconnected event if browser shut down before all files were downloaded</PackageReleaseNotes>
+    <PackageReleaseNotes>Replace MemoryStream with Pipe for 30-50% file download speed increase</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
