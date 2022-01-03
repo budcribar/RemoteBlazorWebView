@@ -40,15 +40,11 @@ foreach(var f in Directory.EnumerateFiles(inputDir))
     if (fileName == "RootComponent.cs" )
     {
         text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
-        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\nusing Microsoft.AspNetCore.Components.WebView;\n");
-
+        text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components.WebView;\n");
     }
 
-    if (fileName == "BlazorWebViewFormBase.cs")
-        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
-
     if (fileName == "RootComponent.cs" || fileName == "BlazorWebViewFormBase.cs")
-       text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "");
+       text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;");
     File.WriteAllText(Path.Combine(outputDir, fileName), text);
 }
 
@@ -93,14 +89,11 @@ foreach (var f in Directory.EnumerateFiles(inputDir))
     if (fileName == "RootComponent.cs")
     {
         text = text.Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
-        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\nusing Microsoft.AspNetCore.Components.WebView;\n");
+        text = text.Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components.WebView;\n");
 
     }
 
-    if (fileName == "BlazorWebViewBase.cs")
-        text = text.Replace("using System;", "using System;\nusing WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;\n");
-
     if (fileName == "RootComponent.cs" || fileName == "BlazorWebViewBase.cs")
-        text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "");
+        text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;");
     File.WriteAllText(Path.Combine(outputDir, fileName), text);
 }
