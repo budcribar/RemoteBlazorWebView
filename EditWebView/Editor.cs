@@ -30,22 +30,20 @@ namespace EditWebView
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {
                 Comment("var assetFileProvider =");
-
                 Replace("? assetFileProvider", "? new PhysicalFileProvider(contentRootDir)");
                 Replace("new CompositeFileProvider(customFileProvider, assetFileProvider)", "customFileProvider");
                 Replace("new WebView2WebViewManager", "CreateWebViewManager");
-                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
-               
-                
+                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
                 Replace("BlazorWebView", Path.GetFileNameWithoutExtension(fileName));
                 InsertUsing("Microsoft.AspNetCore.Components.Web");
                 Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
             }
+
             Replace("namespace Microsoft.AspNetCore.Components.WebView.WindowsForms", "namespace PeakSWC.RemoteBlazorWebView.WindowsForms");
             Replace("namespace Microsoft.AspNetCore.Components.WebView.Wpf", "namespace PeakSWC.RemoteBlazorWebView.Wpf");
 
             if (fileName == "RootComponent.cs" || fileName == "WpfDispatcher.cs" || fileName == "BlazorWebViewBase.cs" || fileName == "WindowsFormsDispatcher.cs" || fileName == "BlazorWebViewFormBase.cs" || fileName == "RootComponentCollectionExtensions.cs")
-                Replace("using System;", "using System;\nusing Microsoft.AspNetCore.Components;");
+                InsertUsing("Microsoft.AspNetCore.Components");
 
             if (fileName == "RootComponent.cs")
             {
