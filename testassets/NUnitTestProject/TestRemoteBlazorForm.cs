@@ -37,18 +37,16 @@ namespace WebdriverTestProject
         }
     }
 
+   [TestClass]
+    public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm
+    {
 
-    // This is now failing
-    //[TestClass]
-    //public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm
-    //{
+        public override Process CreateClient()
+        {
+            return Utilities.StartRemoteBlazorWinFormsDebugApp();
+        }
 
-    //    public override Process CreateClient()
-    //    {
-    //        return Utilities.StartRemoteBlazorWinFormsDebugApp();
-    //    }
-
-    //}
+    }
 
     [TestClass]
     public class TestRemoteEmbeddedBlazorForm : TestRemoteBlazorForm

@@ -47,6 +47,8 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
+# Build the Debug version of both wpf and winforms
+dotnet build -c Debug ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.sln
 
 ## Same for the wpf app
 
@@ -54,7 +56,6 @@ dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebVie
 
 # Delete all files except the executable and wwwroot
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\* -Exclude *.exe, wwwroot 
-
 
 # created the embedded files
 Copy-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\wwwroot -Recurse ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\embedded\wwwroot
@@ -64,10 +65,6 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\* -Exclude *.exe -Recurse
-
-#
-# Debug mode is not working in Preview7
-# dotnet build -c Debug RemoteBlazorWebView.sln
 
 dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
 

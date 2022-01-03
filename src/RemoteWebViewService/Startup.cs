@@ -147,6 +147,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                endpoints.MapGet("/favicon.ico", Favicon());
                 endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
@@ -172,7 +173,15 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapFallbackToFile("index.html");
             });
         }
-       
+
+        private RequestDelegate Favicon()
+        {
+            return async context =>
+            {
+                context.Response.StatusCode = 404;
+                await Task.CompletedTask;
+            };
+        }
         private RequestDelegate Start()
         {
             return async context =>

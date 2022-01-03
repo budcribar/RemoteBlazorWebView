@@ -86,6 +86,17 @@ namespace WebdriverTestProject
         #endregion
 
         #region Wpf
+
+        public static Process StartRemoteBlazorWpfDebugApp() => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfPath());
+        public static string BlazorWpfDebugAppExe() => Path.Combine(BlazorWpfDebugPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
+
+        public static string BlazorWpfDebugPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var exePath = @"bin\x64\debug\net6.0-windows";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+
         public static string BlazorWpfAppExe()
         {
             return Path.Combine(BlazorWpfPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
