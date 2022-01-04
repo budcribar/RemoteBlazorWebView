@@ -23,7 +23,7 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Replace MemoryStream with Pipe for 30-50% file download speed increase</PackageReleaseNotes>
+    <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

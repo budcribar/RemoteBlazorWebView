@@ -37,7 +37,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Replace MemoryStream with Pipe for 30-50% file download speed increase</PackageReleaseNotes>
+    <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
     <DebugType>embedded</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
