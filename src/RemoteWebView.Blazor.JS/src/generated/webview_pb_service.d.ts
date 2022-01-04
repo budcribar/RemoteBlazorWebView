@@ -50,6 +50,15 @@ type WebViewIPCGetIds = {
   readonly responseType: typeof webview_pb.IdArrayResponse;
 };
 
+type WebViewIPCPing = {
+  readonly methodName: string;
+  readonly service: typeof WebViewIPC;
+  readonly requestStream: true;
+  readonly responseStream: true;
+  readonly requestType: typeof webview_pb.PingMessageRequest;
+  readonly responseType: typeof webview_pb.PingMessageResponse;
+};
+
 export class WebViewIPC {
   static readonly serviceName: string;
   static readonly SendMessage: WebViewIPCSendMessage;
@@ -57,6 +66,7 @@ export class WebViewIPC {
   static readonly CreateWebView: WebViewIPCCreateWebView;
   static readonly FileReader: WebViewIPCFileReader;
   static readonly GetIds: WebViewIPCGetIds;
+  static readonly Ping: WebViewIPCPing;
 }
 
 type BrowserIPCReceiveMessage = {
@@ -168,6 +178,7 @@ export class WebViewIPCClient {
     requestMessage: google_protobuf_empty_pb.Empty,
     callback: (error: ServiceError|null, responseMessage: webview_pb.IdArrayResponse|null) => void
   ): UnaryResponse;
+  ping(metadata?: grpc.Metadata): BidirectionalStream<webview_pb.PingMessageRequest, webview_pb.PingMessageResponse>;
 }
 
 export class BrowserIPCClient {

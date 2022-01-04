@@ -84,6 +84,15 @@ message SendMessageResponse {
     bool success = 2;
 }
 
+message PingMessageResponse {
+    string id = 1;
+    bool cancelled = 2;
+}
+message PingMessageRequest {
+    string id = 1;
+    bool initialize = 2;
+    int32 pingIntervalSeconds = 3;
+}
 
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
@@ -91,6 +100,7 @@ service WebViewIPC {
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
     rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
     rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
+    rpc Ping(stream PingMessageRequest) returns (stream PingMessageResponse);
 }
 
 service BrowserIPC {

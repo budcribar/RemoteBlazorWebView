@@ -139,7 +139,6 @@ namespace PeakSWC.RemoteWebView
 #endif
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
-            app.UseStaticFiles();
             app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetService<RemoteFileResolver>() });
 
             app.UseEndpoints(endpoints =>
@@ -147,7 +146,6 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-                endpoints.MapGet("/favicon.ico", Favicon());
                 endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
@@ -173,22 +171,13 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapFallbackToFile("index.html");
             });
         }
-
-        private RequestDelegate Favicon()
-        {
-            return async context =>
-            {
-                context.Response.StatusCode = 404;
-                await Task.CompletedTask;
-            };
-        }
         private RequestDelegate Start()
         {
             return async context =>
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
-                if (ServiceDictionary.TryGetValue(guid, out var serviceState))         
+                if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
                     if (serviceState.InUse)
                     {
@@ -199,11 +188,13 @@ namespace PeakSWC.RemoteWebView
                     else
                     {
                         serviceState.InUse = true;
-                        serviceState.User = context.User.GetDisplayName() ?? "";                      
+                        serviceState.User = context.User.GetDisplayName() ?? "";
                         var home = serviceState.HtmlHostPath;
-                        serviceState.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                        if (serviceState.IPC.ClientResponseStream != null)
+                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
                         // Update Status
-                        serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Connect:{guid}"));
+                        foreach (var channel in serviceStateChannel.Values)
+                            await channel.Writer.WriteAsync($"Connect:{guid}");
                         context.Response.Redirect($"/{guid}/{home}");
                     }
                 }

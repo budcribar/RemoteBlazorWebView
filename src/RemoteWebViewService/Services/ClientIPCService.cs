@@ -78,6 +78,8 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(id, out ServiceState? ss))
                 {
+                    if (ss.PingTask != null)
+                        responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
                     if (ss.IPC.BrowserTask != null)
                         responses.Add(new TaskResponse { Name = "Browser", Status = (TaskStatus)(int)ss.IPC.BrowserTask.Status });
                     if (ss.IPC.ClientTask != null)

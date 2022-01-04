@@ -36,7 +36,7 @@ namespace PeakSWC.RemoteWebView.Services
                 client.InUse = false;
                 client.Cancel();
 
-                Task[] tasks = new List<Task?> { client.FileReaderTask, client.IPC.BrowserTask, client.IPC.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
+                Task[] tasks = new List<Task?> { client.FileReaderTask, client.PingTask, client.IPC.BrowserTask, client.IPC.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
 
                 try
                 {

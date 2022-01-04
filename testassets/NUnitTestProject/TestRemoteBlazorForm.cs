@@ -27,15 +27,15 @@ namespace WebdriverTestProject
         }
     }
 
-    [TestClass]
-    public class TestRemotePackageBlazorForm : TestRemoteBlazorForm
-    {
+    //[TestClass]
+    //public class TestRemotePackageBlazorForm : TestRemoteBlazorForm
+    //{
 
-        public override Process StartServer()
-        {
-            return Utilities.StartServerFromPackage();
-        }
-    }
+    //    public override Process StartServer()
+    //    {
+    //        return Utilities.StartServerFromPackage();
+    //    }
+    //}
 
    [TestClass]
     public class TestRemoteBlazorDebugForm : TestRemoteBlazorForm

@@ -56,6 +56,15 @@ WebViewIPC.GetIds = {
   responseType: webview_pb.IdArrayResponse
 };
 
+WebViewIPC.Ping = {
+  methodName: "Ping",
+  service: WebViewIPC,
+  requestStream: true,
+  responseStream: true,
+  requestType: webview_pb.PingMessageRequest,
+  responseType: webview_pb.PingMessageResponse
+};
+
 exports.WebViewIPC = WebViewIPC;
 
 function WebViewIPCClient(serviceHost, options) {
@@ -235,6 +244,51 @@ WebViewIPCClient.prototype.getIds = function getIds(requestMessage, metadata, ca
   return {
     cancel: function () {
       callback = null;
+      client.close();
+    }
+  };
+};
+
+WebViewIPCClient.prototype.ping = function ping(metadata) {
+  var listeners = {
+    data: [],
+    end: [],
+    status: []
+  };
+  var client = grpc.client(WebViewIPC.Ping, {
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport
+  });
+  client.onEnd(function (status, statusMessage, trailers) {
+    listeners.status.forEach(function (handler) {
+      handler({ code: status, details: statusMessage, metadata: trailers });
+    });
+    listeners.end.forEach(function (handler) {
+      handler({ code: status, details: statusMessage, metadata: trailers });
+    });
+    listeners = null;
+  });
+  client.onMessage(function (message) {
+    listeners.data.forEach(function (handler) {
+      handler(message);
+    })
+  });
+  client.start(metadata);
+  return {
+    on: function (type, handler) {
+      listeners[type].push(handler);
+      return this;
+    },
+    write: function (requestMessage) {
+      client.send(requestMessage);
+      return this;
+    },
+    end: function () {
+      client.finishSend();
+    },
+    cancel: function () {
+      listeners = null;
       client.close();
     }
   };
