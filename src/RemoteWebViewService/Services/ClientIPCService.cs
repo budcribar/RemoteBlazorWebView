@@ -70,7 +70,7 @@ namespace PeakSWC.RemoteWebView
         {
             List<ConnectionResponse> GetConnectionResponses() 
             {
-                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds }).ToList();
+                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
             }
             List<TaskResponse> GetTaskResponses(string id)
             {
@@ -91,7 +91,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             var p = Process.GetCurrentProcess();
-            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds };
+            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds, UpTime = DateTime.Now.Subtract(p.StartTime).TotalSeconds };
 
             var responses = GetConnectionResponses();
             response.ConnectionResponses.AddRange(responses);

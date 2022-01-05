@@ -156,6 +156,7 @@ message ConnectionResponse {
     int64 totalBytesRead = 7;
     int32 totalFilesRead = 8;
     double totalReadTime = 9;
+    double timeConnected = 10;
 }
 
 message ServerResponse {
@@ -165,6 +166,7 @@ message ServerResponse {
     int32 handles = 4;
     repeated ConnectionResponse connectionResponses = 5;
     double totalProcessorTime = 6;
+    double upTime = 7;
 }
 
 service ClientIPC {

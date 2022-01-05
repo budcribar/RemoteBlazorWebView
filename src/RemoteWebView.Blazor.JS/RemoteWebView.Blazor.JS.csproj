@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.4.2">
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.5.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -28,7 +28,7 @@
     <WebpackInputs Remove="upstream\aspnetcore\web.js\node_modules\**" />
   </ItemGroup>
 
-  <Target Name="EnsureNpmRestored" >
+  <Target Name="EnsureNpmRestored">
     <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
     <Exec Command="yarn install" />
   </Target>

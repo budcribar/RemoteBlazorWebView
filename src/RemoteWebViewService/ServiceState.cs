@@ -42,6 +42,7 @@ namespace PeakSWC.RemoteWebView
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
 
+        public DateTime StartTime { get; } = DateTime.Now;
         public void Cancel()
         {
             CancellationTokenSource.Cancel();
