@@ -38,7 +38,7 @@
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
-    <DebugType>embedded</DebugType>
+    <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
 

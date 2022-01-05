@@ -89,7 +89,6 @@ namespace PeakSwc.StaticFiles
 
                 stream = serviceState.FileDictionary[appFile].Pipe.Reader.AsStream();
 
-
                 if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
                 {
                     // Edit the href in index.html
@@ -98,6 +97,7 @@ namespace PeakSwc.StaticFiles
                     var initialLength = contents.Length;
                     contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
                     if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
+                    stream.Dispose();
                     stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
                     length = stream.Length;
                 }
