@@ -162,13 +162,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
-            WebView2WebViewManager m;
             if (ServerUri == null)
-                 m = new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
-                 m  = new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
-
-            return m;
+                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
         }
 
         public void Restart()
