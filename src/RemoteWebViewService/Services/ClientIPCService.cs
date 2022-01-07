@@ -1,18 +1,15 @@
-using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Client;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
+#pragma warning disable CA1416
 
 namespace PeakSWC.RemoteWebView
 {
@@ -97,6 +94,39 @@ namespace PeakSWC.RemoteWebView
             response.ConnectionResponses.AddRange(responses);
             responses.ForEach(x => x.TaskResponses.AddRange(GetTaskResponses(x.Id)));
          
+            return Task.FromResult(response);
+        }
+
+        public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
+        {
+           
+            List<string> ToList(string s)
+            {
+                return s.Split(Environment.NewLine).ToList();
+            }
+           
+            List<EventResponse> GetEventResponses()
+            {
+                EventLog eventLog = new EventLog();
+                eventLog.Log = "Application";
+               
+                var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
+                var entries = eventLog.Entries.Cast<EventLogEntry>().Where(x => x.TimeGenerated > DateTime.Now.Subtract(elapsedTime) /*&& x.Source == "RemoteWebViewService"*/).OrderByDescending(x => x.TimeGenerated);
+
+                List<EventResponse> results = new();
+                foreach (var entry in entries) {
+                    var er = new EventResponse { Timestamp = Timestamp.FromDateTime(entry.TimeGenerated.ToUniversalTime()) };
+                    er.Messages.AddRange(entry.Message.Split(Environment.NewLine));
+                    results.Add(er);
+                }
+
+                return results;
+            }
+
+           
+            var response = new LoggedEventResponse();
+            response.EventResponses.AddRange(GetEventResponses());
+
             return Task.FromResult(response);
         }
 

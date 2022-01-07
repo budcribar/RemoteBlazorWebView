@@ -4,6 +4,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "PeakSWC.RemoteWebView";
 
@@ -169,7 +170,17 @@ message ServerResponse {
     double upTime = 7;
 }
 
+message EventResponse {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated string messages = 2;
+}
+
+message LoggedEventResponse {
+    repeated EventResponse eventResponses = 1;
+}
+
 service ClientIPC {
     rpc GetClients(UserMessageRequest) returns (stream ClientResponseList);
     rpc GetServerStatus(google.protobuf.Empty) returns (ServerResponse);
+    rpc GetLoggedEvents(google.protobuf.Empty) returns (LoggedEventResponse);
 }
