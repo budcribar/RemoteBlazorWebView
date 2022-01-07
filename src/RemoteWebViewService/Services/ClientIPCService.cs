@@ -99,19 +99,13 @@ namespace PeakSWC.RemoteWebView
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
         {
-           
-            List<string> ToList(string s)
-            {
-                return s.Split(Environment.NewLine).ToList();
-            }
-           
             List<EventResponse> GetEventResponses()
             {
                 EventLog eventLog = new EventLog();
                 eventLog.Log = "Application";
                
                 var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
-                var entries = eventLog.Entries.Cast<EventLogEntry>().Where(x => x.TimeGenerated > DateTime.Now.Subtract(elapsedTime) /*&& x.Source == "RemoteWebViewService"*/).OrderByDescending(x => x.TimeGenerated);
+                var entries = eventLog.Entries.Cast<EventLogEntry>().Where(x => x.TimeGenerated > DateTime.Now.Subtract(elapsedTime) && x.Source == "RemoteWebViewService").OrderByDescending(x => x.TimeGenerated);
 
                 List<EventResponse> results = new();
                 foreach (var entry in entries) {
