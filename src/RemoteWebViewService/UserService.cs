@@ -67,6 +67,11 @@ namespace PeakSWC.RemoteWebView
                 if (members != null)
                     groups.AddRange(GetMembersForGroup(groupId, oid, groupDict, members));
             }
+
+            // If a user is not in any groups then they are defaulted to the "test" group
+            if (!groups.Any())
+                groups.Add("test");
+
             return groups;
         }
     }

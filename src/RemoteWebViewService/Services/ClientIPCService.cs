@@ -45,10 +45,6 @@ namespace PeakSWC.RemoteWebView
             {
                 var groups = await _userService.GetUserGroups(request.Oid);
                 
-                // If a user is not in any groups then they are defaulted to the "test" group
-                if (!groups.Any())
-                    groups.Add("test");
-
                 await WriteResponse(responseStream, groups);
 
                 await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
@@ -61,6 +57,14 @@ namespace PeakSWC.RemoteWebView
             {
                 _serviceStateChannel.Remove(id, out _);
             }        
+        }
+
+        public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
+        {
+            var groups = await _userService.GetUserGroups(request.Oid);
+            var response = new UserResponse();
+            response.Groups.AddRange(groups);
+            return response;
         }
 
         public override Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)

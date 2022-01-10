@@ -131,6 +131,13 @@ message UserMessageRequest {
     string id = 2;
 }
 
+message UserRequest {
+    string oid = 1;
+}
+message UserResponse {
+    repeated string groups = 1;
+}
+
 enum TaskStatus  {
     Created = 0;
     WaitingForActivation = 1;
@@ -181,6 +188,7 @@ message LoggedEventResponse {
 
 service ClientIPC {
     rpc GetClients(UserMessageRequest) returns (stream ClientResponseList);
+    rpc GetUserGroups(UserRequest) returns (UserResponse);
     rpc GetServerStatus(google.protobuf.Empty) returns (ServerResponse);
     rpc GetLoggedEvents(google.protobuf.Empty) returns (LoggedEventResponse);
 }
