@@ -102,6 +102,15 @@ type ClientIPCGetClients = {
   readonly responseType: typeof webview_pb.ClientResponseList;
 };
 
+type ClientIPCGetUserGroups = {
+  readonly methodName: string;
+  readonly service: typeof ClientIPC;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof webview_pb.UserRequest;
+  readonly responseType: typeof webview_pb.UserResponse;
+};
+
 type ClientIPCGetServerStatus = {
   readonly methodName: string;
   readonly service: typeof ClientIPC;
@@ -111,10 +120,21 @@ type ClientIPCGetServerStatus = {
   readonly responseType: typeof webview_pb.ServerResponse;
 };
 
+type ClientIPCGetLoggedEvents = {
+  readonly methodName: string;
+  readonly service: typeof ClientIPC;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof google_protobuf_empty_pb.Empty;
+  readonly responseType: typeof webview_pb.LoggedEventResponse;
+};
+
 export class ClientIPC {
   static readonly serviceName: string;
   static readonly GetClients: ClientIPCGetClients;
+  static readonly GetUserGroups: ClientIPCGetUserGroups;
   static readonly GetServerStatus: ClientIPCGetServerStatus;
+  static readonly GetLoggedEvents: ClientIPCGetLoggedEvents;
 }
 
 export type ServiceError = { message: string, code: number; metadata: grpc.Metadata }
@@ -202,6 +222,15 @@ export class ClientIPCClient {
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
   getClients(requestMessage: webview_pb.UserMessageRequest, metadata?: grpc.Metadata): ResponseStream<webview_pb.ClientResponseList>;
+  getUserGroups(
+    requestMessage: webview_pb.UserRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.UserResponse|null) => void
+  ): UnaryResponse;
+  getUserGroups(
+    requestMessage: webview_pb.UserRequest,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.UserResponse|null) => void
+  ): UnaryResponse;
   getServerStatus(
     requestMessage: google_protobuf_empty_pb.Empty,
     metadata: grpc.Metadata,
@@ -210,6 +239,15 @@ export class ClientIPCClient {
   getServerStatus(
     requestMessage: google_protobuf_empty_pb.Empty,
     callback: (error: ServiceError|null, responseMessage: webview_pb.ServerResponse|null) => void
+  ): UnaryResponse;
+  getLoggedEvents(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.LoggedEventResponse|null) => void
+  ): UnaryResponse;
+  getLoggedEvents(
+    requestMessage: google_protobuf_empty_pb.Empty,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.LoggedEventResponse|null) => void
   ): UnaryResponse;
 }
 

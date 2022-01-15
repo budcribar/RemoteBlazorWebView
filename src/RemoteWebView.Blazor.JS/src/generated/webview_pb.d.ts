@@ -3,6 +3,7 @@
 
 import * as jspb from "google-protobuf";
 import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
+import * as google_protobuf_timestamp_pb from "google-protobuf/google/protobuf/timestamp_pb";
 
 export class SendMessageRequest extends jspb.Message {
   getId(): string;
@@ -512,6 +513,48 @@ export namespace UserMessageRequest {
   }
 }
 
+export class UserRequest extends jspb.Message {
+  getOid(): string;
+  setOid(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UserRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: UserRequest): UserRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UserRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UserRequest;
+  static deserializeBinaryFromReader(message: UserRequest, reader: jspb.BinaryReader): UserRequest;
+}
+
+export namespace UserRequest {
+  export type AsObject = {
+    oid: string,
+  }
+}
+
+export class UserResponse extends jspb.Message {
+  clearGroupsList(): void;
+  getGroupsList(): Array<string>;
+  setGroupsList(value: Array<string>): void;
+  addGroups(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): UserResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: UserResponse): UserResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: UserResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): UserResponse;
+  static deserializeBinaryFromReader(message: UserResponse, reader: jspb.BinaryReader): UserResponse;
+}
+
+export namespace UserResponse {
+  export type AsObject = {
+    groupsList: Array<string>,
+  }
+}
+
 export class TaskResponse extends jspb.Message {
   getName(): string;
   setName(value: string): void;
@@ -566,6 +609,9 @@ export class ConnectionResponse extends jspb.Message {
   getTotalreadtime(): number;
   setTotalreadtime(value: number): void;
 
+  getTimeconnected(): number;
+  setTimeconnected(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ConnectionResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ConnectionResponse): ConnectionResponse.AsObject;
@@ -587,6 +633,7 @@ export namespace ConnectionResponse {
     totalbytesread: number,
     totalfilesread: number,
     totalreadtime: number,
+    timeconnected: number,
   }
 }
 
@@ -611,6 +658,9 @@ export class ServerResponse extends jspb.Message {
   getTotalprocessortime(): number;
   setTotalprocessortime(value: number): void;
 
+  getUptime(): number;
+  setUptime(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): ServerResponse.AsObject;
   static toObject(includeInstance: boolean, msg: ServerResponse): ServerResponse.AsObject;
@@ -629,6 +679,57 @@ export namespace ServerResponse {
     handles: number,
     connectionresponsesList: Array<ConnectionResponse.AsObject>,
     totalprocessortime: number,
+    uptime: number,
+  }
+}
+
+export class EventResponse extends jspb.Message {
+  hasTimestamp(): boolean;
+  clearTimestamp(): void;
+  getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
+  setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): void;
+
+  clearMessagesList(): void;
+  getMessagesList(): Array<string>;
+  setMessagesList(value: Array<string>): void;
+  addMessages(value: string, index?: number): string;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): EventResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: EventResponse): EventResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: EventResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): EventResponse;
+  static deserializeBinaryFromReader(message: EventResponse, reader: jspb.BinaryReader): EventResponse;
+}
+
+export namespace EventResponse {
+  export type AsObject = {
+    timestamp?: google_protobuf_timestamp_pb.Timestamp.AsObject,
+    messagesList: Array<string>,
+  }
+}
+
+export class LoggedEventResponse extends jspb.Message {
+  clearEventresponsesList(): void;
+  getEventresponsesList(): Array<EventResponse>;
+  setEventresponsesList(value: Array<EventResponse>): void;
+  addEventresponses(value?: EventResponse, index?: number): EventResponse;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): LoggedEventResponse.AsObject;
+  static toObject(includeInstance: boolean, msg: LoggedEventResponse): LoggedEventResponse.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: LoggedEventResponse, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): LoggedEventResponse;
+  static deserializeBinaryFromReader(message: LoggedEventResponse, reader: jspb.BinaryReader): LoggedEventResponse;
+}
+
+export namespace LoggedEventResponse {
+  export type AsObject = {
+    eventresponsesList: Array<EventResponse.AsObject>,
   }
 }
 

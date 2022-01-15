@@ -414,6 +414,15 @@ ClientIPC.GetClients = {
   responseType: webview_pb.ClientResponseList
 };
 
+ClientIPC.GetUserGroups = {
+  methodName: "GetUserGroups",
+  service: ClientIPC,
+  requestStream: false,
+  responseStream: false,
+  requestType: webview_pb.UserRequest,
+  responseType: webview_pb.UserResponse
+};
+
 ClientIPC.GetServerStatus = {
   methodName: "GetServerStatus",
   service: ClientIPC,
@@ -421,6 +430,15 @@ ClientIPC.GetServerStatus = {
   responseStream: false,
   requestType: google_protobuf_empty_pb.Empty,
   responseType: webview_pb.ServerResponse
+};
+
+ClientIPC.GetLoggedEvents = {
+  methodName: "GetLoggedEvents",
+  service: ClientIPC,
+  requestStream: false,
+  responseStream: false,
+  requestType: google_protobuf_empty_pb.Empty,
+  responseType: webview_pb.LoggedEventResponse
 };
 
 exports.ClientIPC = ClientIPC;
@@ -469,11 +487,73 @@ ClientIPCClient.prototype.getClients = function getClients(requestMessage, metad
   };
 };
 
+ClientIPCClient.prototype.getUserGroups = function getUserGroups(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(ClientIPC.GetUserGroups, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
 ClientIPCClient.prototype.getServerStatus = function getServerStatus(requestMessage, metadata, callback) {
   if (arguments.length === 2) {
     callback = arguments[1];
   }
   var client = grpc.unary(ClientIPC.GetServerStatus, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+ClientIPCClient.prototype.getLoggedEvents = function getLoggedEvents(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(ClientIPC.GetLoggedEvents, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
