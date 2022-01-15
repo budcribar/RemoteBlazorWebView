@@ -15,6 +15,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 	/// </summary>
 	public class RootComponent
 	{
+		public RootComponent() { }
 		/// <summary>
 		/// Constructs an instance of <see cref="RootComponent"/>.
 		/// </summary>
