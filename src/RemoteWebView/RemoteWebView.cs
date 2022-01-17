@@ -52,29 +52,25 @@ namespace PeakSWC.RemoteWebView
 
         #region private
 
-        private string Markup { get; init; }
         private IBlazorWebView BlazorWebView { get; init; }
         private readonly object bootLock = new();
-        private string Group { get; init; }
         private WebViewIPC.WebViewIPCClient? client = null;
         private readonly CancellationTokenSource cts = new();
         private IFileProvider FileProvider { get; }
         #endregion
 
-        public Uri? ServerUri { get; }
         public string HostHtmlPath { get; } = string.Empty;
-        public string Id { get; }
         public Dispatcher? Dispacher { get; set; }
 
         protected WebViewIPC.WebViewIPCClient? Client
         {
             get
             {
-                if (ServerUri == null) return null;
+                if (BlazorWebView.ServerUri == null) return null;
 
                 if (client == null)
                 {
-                    var channel = GrpcChannel.ForAddress(ServerUri, 
+                    var channel = GrpcChannel.ForAddress(BlazorWebView.ServerUri, 
                         new GrpcChannelOptions {
                         HttpHandler = new SocketsHttpHandler {
                         PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
@@ -85,7 +81,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = Id, HtmlHostPath = HostHtmlPath, Markup = Markup, Group=Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -111,7 +107,7 @@ namespace PeakSWC.RemoteWebView
 
                                                 if (!connected)
                                                 {
-                                                    BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, new Exception("Browser connection timed out")));
+                                                    FireDisconnected(new Exception("Browser connection timed out"));
                                                     cts.Cancel();
                                                 }
                                             });
@@ -134,19 +130,19 @@ namespace PeakSWC.RemoteWebView
                                         case "refreshed":
                                             lock (bootLock)
                                             {
-                                                Client?.Shutdown(new IdMessageRequest { Id = Id });
-                                                BlazorWebView.FireRefreshed(new RefreshedEventArgs(Guid.Parse(Id), ServerUri));
+                                                Shutdown();
+                                                FireRefreshed();
                                                 cts.Cancel();
                                             }
                                             break;
 
                                         case "shutdown":
-                                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, new Exception("Server shut down connection")));
+                                            FireDisconnected(new Exception("Server shut down connection"));
                                             cts.Cancel();
                                             break;
 
                                         case "connected":
-                                            BlazorWebView.FireConnected(new ConnectedEventArgs(Guid.Parse(Id), ServerUri));
+                                            FireConnected();
                                             connected = true;
                                             break;
                                     }
@@ -169,7 +165,7 @@ namespace PeakSWC.RemoteWebView
 
                     if (exception != null)
 					{
-                        BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, exception));
+                        FireDisconnected(exception);
                         throw exception;
                     }
 
@@ -178,7 +174,7 @@ namespace PeakSWC.RemoteWebView
                         var files = client.FileReader();
                         try
                         {
-                            await files.RequestStream.WriteAsync(new FileReadRequest {Id = Id, Init = new () });
+                            await files.RequestStream.WriteAsync(new FileReadRequest {Id = BlazorWebView.Id.ToString(), Init = new () });
 
                             await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
                             {
@@ -186,12 +182,12 @@ namespace PeakSWC.RemoteWebView
                                 {
                                     var path = message.Path[(message.Path.IndexOf("/") + 1)..];
 
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
 
                                     using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
                                     {
                                         if (stream == null)
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                         else
                                         {
                                             var buffer = new Byte[8 * 1024];
@@ -200,9 +196,9 @@ namespace PeakSWC.RemoteWebView
                                             while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
                                             {
                                                 ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
+                                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
                                             }
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                         }
                                     }
 
@@ -210,17 +206,17 @@ namespace PeakSWC.RemoteWebView
                                 catch (FileNotFoundException)
                                 {
                                     // TODO Warning to user?
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                 }
                                 catch (Exception ex)
                                 {
-                                    BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = Id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                    FireDisconnected(ex);
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                 }
                             }
                         } catch (Exception ex)
                         {
-                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
+                            FireDisconnected(ex);
                         }
                     }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
@@ -229,7 +225,7 @@ namespace PeakSWC.RemoteWebView
 
                         try
                         {
-                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = Id, Initialize = true, PingIntervalSeconds = 30 });
+                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = BlazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = 30 });
 
                             await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
                             {
@@ -240,19 +236,40 @@ namespace PeakSWC.RemoteWebView
                         }
                         catch (Exception ex)
                         {
-                            BlazorWebView.FireDisconnected(new DisconnectedEventArgs(Guid.Parse(Id), ServerUri, ex));
+                            FireDisconnected(ex);
                         }
 
                     }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
                 }
                 return client;
+
+
+                void Shutdown()
+                {
+                    Dispacher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+                }
+
+                void FireConnected()
+                {
+                    Dispacher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                }
+
+                void FireDisconnected(Exception exception)
+                {
+                    Dispacher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
+                }
+
+                void FireRefreshed()
+                {
+                    Dispacher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                }
             }
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
 
-        private string GenMarkup(Uri uri,string id)
+        private string GenMarkup(Uri? uri,Guid id)
         {
             var color = "#f1f1f1";
             var hostname = Dns.GetHostName();
@@ -280,23 +297,21 @@ namespace PeakSWC.RemoteWebView
             return div;
         }
 
-        public RemoteWebView(IBlazorWebView blazorWebView, Uri uri, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, string id,  string group = "", string markup = "")
+        public RemoteWebView(IBlazorWebView blazorWebView,string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider)
         {
             BlazorWebView = blazorWebView;
-            ServerUri = uri;
             HostHtmlPath = hostHtmlPath;
             Dispacher = dispatcher;
             FileProvider = fileProvider;
-            Id = id;
-            Markup = string.IsNullOrWhiteSpace(markup) ? GenMarkup(uri,id) : markup;
-            Group = string.IsNullOrWhiteSpace(group) ? "test" : group;
+            BlazorWebView.Markup = string.IsNullOrWhiteSpace(BlazorWebView.Markup) ? GenMarkup(BlazorWebView.ServerUri, BlazorWebView.Id) : BlazorWebView.Markup;
+            BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
         }
 
         public void NavigateToUrl(string _) { }
 
         public void SendMessage(string message)
         {
-            Client?.SendMessage(new SendMessageRequest { Id = Id, Message = message });
+            Client?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
         }
 
         public void Initialize()

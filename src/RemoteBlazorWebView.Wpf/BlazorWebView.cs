@@ -89,7 +89,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             get
             {
                 if (id == Guid.Empty)
-                    id = Guid.NewGuid();
+                    throw new Exception("Id not initialized");
 
                 return id;
             }
@@ -127,7 +127,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             if (ServerUri == null)
                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
             else
-                return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
         }
 
         public void FireConnected(ConnectedEventArgs args)
@@ -159,6 +159,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             HostPage = HostPage;
             Group = Group;
             Markup = Markup;
+            ServerUri = ServerUri;
 
             // TODO
             if (ServerUri != null)

@@ -18,12 +18,13 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
     <Nullable>annotations</Nullable>
-    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
+    <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
     <Platforms>x64</Platforms>
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
+    <DebugType>full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

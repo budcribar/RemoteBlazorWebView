@@ -78,7 +78,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get
             {
                 if (id == Guid.Empty)
-                    id = Guid.NewGuid();
+                    throw new Exception("Id not initialized");
 
                 return id;
             }
@@ -86,7 +86,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             {
                 if (value == Guid.Empty)
                     id = Guid.NewGuid();
-                id = value;
+                else
+                    id = value;
             }
         }
 
@@ -131,7 +132,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             {            
                 _group = value;
                 Invalidate();
-                StartWebViewCoreIfPossible();
+                //StartWebViewCoreIfPossible();
             }
         }
         private void ResetGroup() => _group = "test";
@@ -151,7 +152,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             {
                 _markup = value;
                 Invalidate();
-                StartWebViewCoreIfPossible();
+                //StartWebViewCoreIfPossible();
             }
         }
         private string _markup = "";
@@ -165,7 +166,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             if (ServerUri == null)
                  return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
             else
-                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, ServerUri, Id.ToString(), Group, Markup);
+                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath);
         }
 
         public void Restart()

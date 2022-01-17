@@ -22,11 +22,12 @@
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
+    <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
+    <DebugType>full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

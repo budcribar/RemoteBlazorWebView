@@ -6,6 +6,10 @@ Copy and paste url in WinFrom demo
 Fix cannot dispose of task while running
 javascript with naming convention
 
+Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
+
+
+
 
 
 
