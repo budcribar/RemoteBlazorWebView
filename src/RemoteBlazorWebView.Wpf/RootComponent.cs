@@ -33,7 +33,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			ComponentType = componentType ?? throw new ArgumentNullException(nameof(componentType));
 			Parameters = parameters;
 		}
-
 		/// <summary>
 		/// Gets or sets the CSS selector string that specifies where in the document the component should be placed.
 		/// This must be unique among the root components within the <see cref="BlazorWebView"/>.
