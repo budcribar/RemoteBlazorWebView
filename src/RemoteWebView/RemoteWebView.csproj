@@ -28,6 +28,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
     <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>

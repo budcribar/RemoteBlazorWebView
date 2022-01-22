@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
+		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
+		<TargetFramework>net6.0</TargetFramework>
+		<PackageId>RemotePhotino.Blazor</PackageId>
+		<Authors>Bud Cribar</Authors>
+		<Company>Peak Software Consulting, LLC</Company>
+		<Description>.NET 6 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
+		<GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<PackageDescription>.NET 6 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
+		<Copyright>Peak Software Consulting, LLC</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageIcon>favicon-32x32.png</PackageIcon>
+		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+		<PackageTags>BlazorWebView, Blazor, WebView, Photino</PackageTags>
+		<Title>RemotePhotino.Blazor</Title>
+		<Nullable>enable</Nullable>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageReleaseNotes></PackageReleaseNotes>
+		<DebugType>full</DebugType>
+	</PropertyGroup>
+
+	<Target Name="SetPackageVersion" DependsOnTargets="Build">
+		<PropertyGroup>
+			<PackageVersion>$(Version)</PackageVersion>
+		</PropertyGroup>
+	</Target>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+		<PackageReference Include="Microsoft.JSInterop" Version="6.0.1" />
+		<PackageReference Include="Photino.Blazor" Version="2.1.5" />
+		<PackageReference Include="Photino.NET" Version="2.1.11" />
+		<PackageReference Include="System.Collections" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
+
+
+
+</Project>
