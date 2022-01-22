@@ -142,12 +142,12 @@ namespace WebdriverTestProject
 
         public static string BlazorWebViewAppExe()
         {
-            return Path.Combine(BlazorWebViewPath(), "RemotePhotinoBlazor.exe");
+            return Path.Combine(BlazorWebViewPath(), "RemotePhotinoBlazorTutorial.exe");
         }
 
         public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
 
-        public static void KillRemoteBlazorWebViewApp() => Kill("RemotePhotinoBlazor");
+        public static void KillRemoteBlazorWebViewApp() => Kill("RemotePhotinoBlazorTutorial");
 
         #endregion
 

@@ -40,8 +40,6 @@ namespace PeakSWC.RemoteWebView
             MainWindow.Id = id;
             MainWindow.IsRestarting = isRestarting;
 
-
-
             MainWindow.RegisterCustomSchemeHandler(PhotinoWebViewManager.BlazorAppScheme, HandleWebRequest);
 
             // We assume the host page is always in the root of the content directory, because it's
@@ -53,7 +51,12 @@ namespace PeakSWC.RemoteWebView
 
             var dispatcher = new RemotePhotinoDispatcher(MainWindow);
             var jsComponents = new JSComponentConfigurationStore();
-            WindowManager = new RemotePhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath);
+
+            if (serverUrl == null)
+                WindowManager = new PhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath);
+            else
+                WindowManager = new RemotePhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath);
+            
             RootComponents = new BlazorWindowRootComponents(WindowManager, jsComponents);
             foreach (var component in rootComponents)
             {
@@ -63,11 +66,14 @@ namespace PeakSWC.RemoteWebView
 
         public RemotePhotinoWindow? MainWindow { get; private set; }
 
-        public RemotePhotinoWebViewManager? WindowManager { get; private set; }
+        public PhotinoWebViewManager? WindowManager { get; private set; }
 
         public void Run()
         {
-            WindowManager?.Navigate(@"wwwroot\index.html");
+            if(MainWindow?.ServerUri == null)
+                WindowManager?.Navigate("/");
+            else
+                WindowManager?.Navigate(@"wwwroot\index.html");
 
             MainWindow?.WaitForClose();
         }

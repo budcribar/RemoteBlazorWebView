@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView
                 blazorWebView,
                 hostPageRelativePath,
                 dispatcher,
-                new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
+                new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(typeof(RemoteWebView).Assembly))
                 );
 
             RemoteWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
