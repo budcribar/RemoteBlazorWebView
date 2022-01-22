@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using PeakSWC.RemoteWebView;
 using Photino.Blazor;
 using PhotinoNET;
@@ -15,17 +16,17 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemotePhotinoBlazorApp
     {
-        private IServiceProvider? _services;
+        public IServiceProvider? Services { get; private set; }
 
         /// <summary>
         /// Gets configuration for the root components in the window.
         /// </summary>
         public BlazorWindowRootComponents? RootComponents { get; private set; }
 
-        internal void Initialize(IServiceProvider services, RootComponentList rootComponents)
+        internal void Initialize(IServiceProvider services, RootComponentList rootComponents, Uri serverUrl, Guid id, bool isRestarting)
         {
-            _services = services;
-
+            Services = services;
+           
             MainWindow = new RemotePhotinoWindow();
             MainWindow.SetTitle("Photino.Blazor App");
             MainWindow.SetUseOsDefaultLocation(false);
@@ -34,7 +35,12 @@ namespace PeakSWC.RemoteWebView
             MainWindow.SetLeft(450);
             MainWindow.SetTop(100);
 
-            MainWindow.ServerUri = new Uri("https://localhost:5001");
+            //MainWindow.ServerUri = new Uri("https://localhost:5001");
+            MainWindow.ServerUri = serverUrl;
+            MainWindow.Id = id;
+            MainWindow.IsRestarting = isRestarting;
+
+
 
             MainWindow.RegisterCustomSchemeHandler(PhotinoWebViewManager.BlazorAppScheme, HandleWebRequest);
 

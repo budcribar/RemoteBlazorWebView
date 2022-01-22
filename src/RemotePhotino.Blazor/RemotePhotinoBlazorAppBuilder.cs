@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
 using Photino.Blazor;
+using Microsoft.Extensions.Options;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -39,13 +40,14 @@ namespace PeakSWC.RemoteWebView
 
         public IServiceCollection Services { get; }
 
+       
 
-        public RemotePhotinoBlazorApp Build()
+        public RemotePhotinoBlazorApp Build(Uri serverUrl, Guid id, bool isRestarting)
         {
             var sp = Services.BuildServiceProvider();
             var app = sp.GetService<RemotePhotinoBlazorApp>();
             if(app == null) throw new ArgumentNullException(nameof(app));
-            app.Initialize(sp, RootComponents);
+            app.Initialize(sp, RootComponents, serverUrl, id, isRestarting);
             return app;
         }
     }

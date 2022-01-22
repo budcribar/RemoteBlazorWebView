@@ -127,9 +127,9 @@ namespace WebdriverTestProject
         //    TestRefresh(1, 10);
         //}
         [TestMethod]
-        public virtual void Test5Client10Refresh()
+        public virtual void Test2Client5Refresh()
         {
-            TestRefresh(1, 10);
+            TestRefresh(2, 5);
         }
 
 

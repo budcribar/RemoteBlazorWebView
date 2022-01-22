@@ -19,7 +19,7 @@ namespace WebdriverTestProject
     {
         private ClientIPC.ClientIPCClient? client;
 
-        public override void Test5Client10Refresh() { }
+        public override void Test2Client5Refresh() { }
 
         protected override async Task TestClient(int num)
         {
@@ -110,7 +110,7 @@ namespace WebdriverTestProject
     {
         private ClientIPC.ClientIPCClient? client;
 
-        public override void Test5Client10Refresh() { }
+        public override void Test2Client5Refresh() { }
 
         protected override async Task TestClient(int num)
         {

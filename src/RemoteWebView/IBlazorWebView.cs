@@ -16,7 +16,7 @@ namespace PeakSWC.RemoteWebView
         public Uri? ServerUri { get; set; }
         public string Group { get; set; }
         public bool IsRestarting { get; set; }
-        public Guid Id { get; }
+        public Guid Id { get; set; }
         public string Markup { get; set; }
         public void Restart();
         public Task<Process?> StartBrowser();

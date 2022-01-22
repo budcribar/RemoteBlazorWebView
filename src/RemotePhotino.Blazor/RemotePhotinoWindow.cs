@@ -17,6 +17,26 @@ namespace PeakSWC.RemoteWebView
         public bool IsRestarting { get; set; }
         public string Markup { get; set; } = "";
 
+        private Guid id = Guid.Empty;
+        public new Guid Id
+        {
+            get
+            {
+                if (id == Guid.Empty)
+                    throw new Exception("Id not initialized");
+
+                return id;
+            }
+            set
+            {
+                if (value == Guid.Empty)
+                    id = Guid.NewGuid();
+                else
+                    id = value;
+            }
+        }
+
+
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
