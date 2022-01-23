@@ -4,7 +4,7 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<TargetFramework>net6.0</TargetFramework>
-		<PackageId>RemotePhotino.Blazor</PackageId>
+		<PackageId>RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
 		<Description>.NET 6 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
@@ -17,7 +17,7 @@
 		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
 		<PackageTags>BlazorWebView, Blazor, WebView, Photino</PackageTags>
-		<Title>RemotePhotino.Blazor</Title>
+		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageReleaseNotes></PackageReleaseNotes>
