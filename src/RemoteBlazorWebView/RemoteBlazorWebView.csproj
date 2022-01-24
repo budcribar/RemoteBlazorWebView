@@ -22,6 +22,7 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageReleaseNotes></PackageReleaseNotes>
 		<DebugType>full</DebugType>
+		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
 
 	<Target Name="SetPackageVersion" DependsOnTargets="Build">

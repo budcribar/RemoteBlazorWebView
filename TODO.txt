@@ -8,6 +8,7 @@ javascript with naming convention
 
 Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
 
+ public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage) is defined in 3 places. Remove duplicates
 
 
 

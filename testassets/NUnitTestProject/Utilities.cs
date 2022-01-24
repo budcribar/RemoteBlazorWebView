@@ -133,16 +133,41 @@ namespace WebdriverTestProject
         #endregion
 
         #region WebView
-        public static string BlazorWebViewPath()
+        public static string BlazorWebViewDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
             var exePath = @"bin\debug\net6.0";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
+        public static string BlazorWebViewPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
+            var exePath = @"publish";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+
+        public static string BlazorWebViewDebugAppExe()
+        {
+            return Path.Combine(BlazorWebViewDebugPath(), "RemoteBlazorWebViewTutorial.exe");
+        }
+
         public static string BlazorWebViewAppExe()
         {
             return Path.Combine(BlazorWebViewPath(), "RemoteBlazorWebViewTutorial.exe");
+        }
+
+        public static string BlazorWebViewEmbeddedPath()
+        {
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
+            var exePath = "publishEmbedded";
+            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+        }
+      
+
+        public static string BlazorWebViewAppEmbeddedExe()
+        {
+            return Path.Combine(BlazorWebViewEmbeddedPath(), "RemoteBlazorWebViewTutorial.exe");
         }
 
         public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
