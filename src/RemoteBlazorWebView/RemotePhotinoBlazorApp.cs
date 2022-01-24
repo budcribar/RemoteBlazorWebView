@@ -27,7 +27,7 @@ namespace PeakSWC.RemoteWebView
         {
             Services = services;
            
-            MainWindow = new RemotePhotinoWindow();
+            MainWindow = new RemoteBlazorWebViewWindow();
             MainWindow.SetTitle("Photino.Blazor App");
             MainWindow.SetUseOsDefaultLocation(false);
             MainWindow.SetWidth(1000);
@@ -64,7 +64,7 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
-        public RemotePhotinoWindow? MainWindow { get; private set; }
+        public RemoteBlazorWebViewWindow? MainWindow { get; private set; }
 
         public PhotinoWebViewManager? WindowManager { get; private set; }
 

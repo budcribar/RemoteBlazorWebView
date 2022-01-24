@@ -10,20 +10,20 @@ using Microsoft.Extensions.Options;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemotePhotinoBlazorAppBuilder
+    public class RemoteBlazorWebViewAppBuilder
     {
-        internal RemotePhotinoBlazorAppBuilder()
+        internal RemoteBlazorWebViewAppBuilder()
         {
             RootComponents = new RootComponentList();
             Services = new ServiceCollection();
         }
 
-        public static RemotePhotinoBlazorAppBuilder CreateDefault(string[]? args = default)
+        public static RemoteBlazorWebViewAppBuilder CreateDefault(string[]? args = default)
         {
             // We don't use the args for anything right now, but we want to accept them
             // here so that it shows up this way in the project templates.
             // var jsRuntime = DefaultWebAssemblyJSRuntime.Instance;
-            var builder = new RemotePhotinoBlazorAppBuilder();
+            var builder = new RemoteBlazorWebViewAppBuilder();
             builder.Services
                 //.AddScoped(sp => new HttpClient(new PhotinoHttpHandler(sp.GetService<PhotinoBlazorApp>())) { BaseAddress = new Uri(PhotinoWebViewManager.AppBaseUri) })
                 .AddSingleton<RemotePhotinoBlazorApp>()

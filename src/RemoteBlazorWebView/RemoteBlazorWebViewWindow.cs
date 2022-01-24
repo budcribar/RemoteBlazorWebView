@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemotePhotinoWindow : PhotinoWindow, IBlazorWebView
+    public class RemoteBlazorWebViewWindow : PhotinoWindow, IBlazorWebView
     {
         public Uri? ServerUri { get; set; }
         public string Group { get; set; } = "test";

@@ -117,7 +117,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             var fileEntry = serviceState.FileDictionary[message.Length.Path];
                             fileEntry.Length = message.Length.Length;
-                            fileEntry.resetEvent.Set();
+                            fileEntry.ResetEvent.Set();
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {

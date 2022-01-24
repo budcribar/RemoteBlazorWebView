@@ -53,7 +53,7 @@ namespace PeakSwc.StaticFiles
 
         private async Task<Stream?> ProcessFile(string id, string appFile)
         {
-            Stopwatch stopWatch = new Stopwatch();
+            Stopwatch stopWatch = new ();
             stopWatch.Start();
             _logger.LogInformation($"Attempting to read {appFile}");
 
@@ -74,7 +74,7 @@ namespace PeakSwc.StaticFiles
                 serviceState.FileDictionary[appFile] = new FileEntry();
                 await serviceState.FileCollection.Writer.WriteAsync(appFile);
 
-                if(!serviceState.FileDictionary[appFile].resetEvent.Wait(TimeSpan.FromSeconds(60)))
+                if(!serviceState.FileDictionary[appFile].ResetEvent.Wait(TimeSpan.FromSeconds(60)))
                 {
                     _logger.LogError($"Timeout processing {appFile} id {id}");
                     return null;

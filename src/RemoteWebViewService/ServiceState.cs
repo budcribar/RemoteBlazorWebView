@@ -11,7 +11,7 @@ namespace PeakSWC.RemoteWebView
 {
     public class FileEntry
     {
-        public ManualResetEventSlim resetEvent { get; } = new ManualResetEventSlim();
+        public ManualResetEventSlim ResetEvent { get; } = new ManualResetEventSlim();
         public long Length { get; set; } = -1;
         public Pipe Pipe { get; } = new Pipe();
     }
@@ -24,6 +24,7 @@ namespace PeakSWC.RemoteWebView
         public string Markup { get; init; } = string.Empty;
         public string Url { get; init; } = string.Empty;
         public bool InUse { get; set; } = false;
+        public bool Refresh { get; set; } = false;
         public string Id { get; init; } = string.Empty;
         public string Group { get; init;  } = string.Empty;
         public int Pid { get; init; } = 0;
@@ -47,12 +48,10 @@ namespace PeakSWC.RemoteWebView
         {
             CancellationTokenSource.Cancel();
         }
-
         public void Dispose()
         {
             CancellationTokenSource.Dispose();
         }
-
         public ServiceState()
         {
             CancellationTokenSource = new CancellationTokenSource();

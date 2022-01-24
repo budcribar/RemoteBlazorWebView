@@ -135,19 +135,19 @@ namespace WebdriverTestProject
         #region WebView
         public static string BlazorWebViewPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemotePhotinoBlazor";
+            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
             var exePath = @"bin\debug\net6.0";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
         public static string BlazorWebViewAppExe()
         {
-            return Path.Combine(BlazorWebViewPath(), "RemotePhotinoBlazorTutorial.exe");
+            return Path.Combine(BlazorWebViewPath(), "RemoteBlazorWebViewTutorial.exe");
         }
 
         public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
 
-        public static void KillRemoteBlazorWebViewApp() => Kill("RemotePhotinoBlazorTutorial");
+        public static void KillRemoteBlazorWebViewApp() => Kill("RemoteBlazorWebViewTutorial");
 
         #endregion
 

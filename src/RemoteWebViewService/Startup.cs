@@ -152,13 +152,13 @@ namespace PeakSWC.RemoteWebView
 #endif
                 ;
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                endpoints.MapGet("/{id:guid}", Restart())
+                endpoints.MapGet("/{id:guid}", StartOrRefresh())
 #if AUTHORIZATION
                 .RequireAuthorization()
 #endif
                 ;
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", Restart())
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh())
 #if AUTHORIZATION
                 .RequireAuthorization()
 #endif
@@ -189,13 +189,14 @@ namespace PeakSWC.RemoteWebView
                     {
                         serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
-                        var home = serviceState.HtmlHostPath;
+                       
                         if (serviceState.IPC.ClientResponseStream != null)
                             await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
                         // Update Status
                         foreach (var channel in serviceStateChannel.Values)
                             await channel.Writer.WriteAsync($"Connect:{guid}");
-                        context.Response.Redirect($"/{guid}/{home}");
+                       
+                        context.Response.Redirect($"/{guid}");
                     }
                 }
                 else
@@ -230,36 +231,59 @@ namespace PeakSWC.RemoteWebView
             };
         }
 
-        private RequestDelegate Restart()
+        private RequestDelegate StartOrRefresh()
         {
             return async context =>
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+             
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" });
-
-                    // Wait until client shuts down 
-                    for (int i = 0; i < 3000; i++)
+                    if (!serviceState.Refresh)
                     {
-                        if (!ServiceDictionary.ContainsKey(guid))
+                        serviceState.Refresh = true;
+                        var home = serviceState.HtmlHostPath;
+                        var rfr = context.RequestServices.GetService<RemoteFileResolver>();
+                        var fi = rfr?.GetFileInfo($"/{guid}/{home}");
+                        context.Response.ContentLength = fi?.Length;
+                        var stream = fi?.CreateReadStream();
+                        if (stream != null)
                         {
+                            context.Response.StatusCode = 200;
                             context.Response.ContentType = "text/html";
-                            await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
-                            return;
+                            TextReader tr = new StreamReader(stream);
+                            var text = await tr.ReadToEndAsync();
+                            await context.Response.WriteAsync(text);
+                        }
+                        else context.Response.StatusCode = 400;
+                    }
+                    else
+                    {
+                        await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" });
+
+                        // Wait until client shuts down 
+                        for (int i = 0; i < 3000; i++)
+                        {
+                            if (!ServiceDictionary.ContainsKey(guid))
+                            {
+                                context.Response.ContentType = "text/html";
+                                await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
+                                return;
+                            }
+
+                            await Task.Delay(10).ConfigureAwait(false);
                         }
 
-                        await Task.Delay(10).ConfigureAwait(false);
+                        context.Response.StatusCode = 400;
+                        context.Response.ContentType = "text/html";
+
+                        await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
+
+                        // Shutdown since client did not respond to restart request
+                        context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
+                        await Task.CompletedTask;
                     }
-
-                    context.Response.StatusCode = 400;
-                    context.Response.ContentType = "text/html";
-
-                    await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
-
-                    // Shutdown since client did not respond to restart request
-                    context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
-                    await Task.CompletedTask;
+                   
                 }
                 else
                 {

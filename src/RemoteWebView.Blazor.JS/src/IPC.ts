@@ -13,10 +13,7 @@ const messageHandlers = {
     'AttachToDocument': (componentId: number, elementSelector: string) => {
         attachRootComponentToElement(elementSelector, componentId);
 
-        //TODO Hack required to get home displayed
         if (componentId == 0) {
-            var id = window.location.pathname.split('/')[1];
-            navigateTo(`/${id}/`, false, true);
             sendMessage("connected:");
         }
     },
