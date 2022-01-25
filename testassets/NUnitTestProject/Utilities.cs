@@ -171,7 +171,7 @@ namespace WebdriverTestProject
         }
 
         public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
-
+        public static Process StartRemoteBlazorWebViewEmbeddedApp() => StartProcess(BlazorWebViewAppEmbeddedExe(), BlazorWebViewEmbeddedPath());
         public static void KillRemoteBlazorWebViewApp() => Kill("RemoteBlazorWebViewTutorial");
 
         #endregion

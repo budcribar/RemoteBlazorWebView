@@ -318,6 +318,17 @@ namespace WebdriverTestProject
         }
 
     }
+    [TestClass]
+    public class TestRemoteEmbeddedBlazor : TestRemoteBlazorWpf
+    {
+        public override Process CreateClient()
+        {
+            return Utilities.StartRemoteBlazorWebViewEmbeddedApp();
+        }
+
+    }
+
+
 
     [TestClass]
     public class TestRemoteBlazorDebugWpf : TestRemoteBlazorWpf
