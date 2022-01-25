@@ -40,7 +40,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 try
                 {
-                    Task.WaitAll();
+                    Task.WaitAll(tasks);
                     foreach (var t in tasks)
                         t.Dispose();
                 }
