@@ -5,6 +5,7 @@
     )
 
 # .\RunTests.ps1  -Build:$true
+# .\RunTests.ps1  -Mode Release
 
 # Set the build env to use project references instead of packages
 $env:EnvBuildMode = $Mode # Developer or Release
