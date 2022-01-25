@@ -24,7 +24,7 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Improve client shutdown detection</PackageReleaseNotes>
+    <PackageReleaseNotes>Add RemoteBlazorWebView and update packages</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

@@ -10,6 +10,11 @@ Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartup
 
  public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage) is defined in 3 places. Remove duplicates
 
+Add default open in admin control panel
+Add user admin in admin control panel
+Speed up grpc calls using "unsafe" byte copy
+use await all in the server
+
 
 
 

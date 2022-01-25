@@ -4,12 +4,12 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<TargetFramework>net6.0</TargetFramework>
-		<PackageId>RemoteBlazorWebView</PackageId>
+		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
 		<Description>.NET 6 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
 		<GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageDescription>.NET 6 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
 		<Copyright>Peak Software Consulting, LLC</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes></PackageReleaseNotes>
+		<PackageReleaseNotes>Add RemoteBlazorWebView and update packages</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
@@ -45,6 +45,16 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+		<None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
+			<PackagePath></PackagePath>
+			<Pack>True</Pack>
+		</None>
 	</ItemGroup>
 
 

@@ -1,12 +1,25 @@
-# Set the build env to use project references instead of packages
-$env:EnvBuildMode = 'Developer' # Developer or Release
 
+ Param(
+        [string] $Mode = 'Developer',
+        [switch] $Build = $false
+    )
+
+# .\RunTests.ps1  -Build:$true
+
+# Set the build env to use project references instead of packages
+$env:EnvBuildMode = $Mode # Developer or Release
+
+Write-Host -ForegroundColor GREEN ("Build:",$Build)
+Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
+
+Write-Host -ForegroundColor GREEN "Clean artifacts"
 # Start with a clean solution
 
 Get-ChildItem .\src -Exclude RemoteWebView.Blazor.JS | Get-ChildItem -include bin,obj,publish,publishNoAuth,publishAuth,artifacts   -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEmbedded, embedded -Exclude EBWebView -Recurse -Force | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
 
+Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 # Publish the web site server
 dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
 
@@ -31,6 +44,7 @@ if ($env:EnvBuildMode -eq 'Debug') {
 	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 6.*-* 
 }
 
+Write-Host -ForegroundColor GREEN "Publish WinFormsApp"
 # Publish WinFormsApp
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish
 
@@ -52,6 +66,7 @@ dotnet build -c Debug ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial
 
 ## Same for the wpf app
 
+Write-Host -ForegroundColor GREEN "Publish WpfApp"
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish
 
 # Delete all files except the executable and wwwroot
@@ -67,7 +82,7 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
 # Same for WebView app
-
+Write-Host -ForegroundColor GREEN "Publish WebView App"
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publish
 # Delete all files except the executable and wwwroot
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\* -Exclude *.exe, wwwroot 
@@ -78,9 +93,11 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
-dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
-
-Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
+if ($Build -ne $true)
+{
+	dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
+	Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
+}
 
 # zip up files for github
 $compress = @{
