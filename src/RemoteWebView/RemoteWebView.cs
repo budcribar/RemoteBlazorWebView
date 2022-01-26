@@ -92,8 +92,9 @@ namespace PeakSWC.RemoteWebView
                         {
                             await foreach (var message in events.ResponseStream.ReadAllAsync())
                             {
-                                var command = message.Response.Split(':')[0];
-                                var data = message.Response[(message.Response.IndexOf(':') + 1)..];
+                                var split = message.Response.Split(':', 2);
+                                var command = split[0];
+                                var data = split[1];
 
                                 try
                                 {
