@@ -92,7 +92,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             await foreach (var message in events.ResponseStream.ReadAllAsync())
                             {
-                                var command = message.Response.Split(':', 2)[0];
+                                var command = message.Response.Substring(0, message.Response.IndexOf(':'));
                               
                                 try
                                 {
