@@ -16,24 +16,22 @@ namespace PeakSWC.RemoteWebView
     public class RemoteWebViewService : WebViewIPC.WebViewIPCBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
+        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
         private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
-        private readonly ConcurrentBag<ServiceState> _serviceStates;
-        ShutdownService ShutdownService { get; }
+        private readonly ShutdownService _shutdownService;
 
-        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentBag<ServiceState> serviceStates, ShutdownService shutdownService)
+        public RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel,ShutdownService shutdownService)
         {
             _logger = logger;
-            ServiceDictionary = serviceDictionary;
+            _serviceDictionary = serviceDictionary;
             _serviceStateChannel = serviceStateChannel;
-            _serviceStates = serviceStates;
-            ShutdownService = shutdownService;
+            _shutdownService = shutdownService;
         }
 
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
             var results = new IdArrayResponse();
-            results.Responses.AddRange(ServiceDictionary.Keys);
+            results.Responses.AddRange(_serviceDictionary.Keys);
             return Task.FromResult(results);
         }
 
@@ -41,45 +39,37 @@ namespace PeakSWC.RemoteWebView
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
 
-            if (!ServiceDictionary.ContainsKey(request.Id))
+            ServiceState state = new()
             {
-                ServiceState state = new()
-                {
-                    HtmlHostPath = request.HtmlHostPath,
-                    Markup = request.Markup,
-                    InUse = false,
-                    Url = $"https://{context.Host}/app/{request.Id}",
-                    Id = request.Id,
-                    Group = request.Group,
-                    Pid = request.Pid,
-                    HostName = request.HostName,
-                    ProcessName = request.ProcessName,                 
-                };
-                _serviceStates.Add(state);
-                // Let home page know client is available
-                ServiceDictionary.TryAdd(request.Id, state);
+                HtmlHostPath = request.HtmlHostPath,
+                Markup = request.Markup,
+                InUse = false,
+                Url = $"https://{context.Host}/app/{request.Id}",
+                Id = request.Id,
+                Group = request.Group,
+                Pid = request.Pid,
+                HostName = request.HostName,
+                ProcessName = request.ProcessName,
+            };
 
-                var list = new ClientResponseList();
-                ServiceDictionary?.Values.ToList().ForEach(x => list.ClientResponses.Add(new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url }));
-               
+            if (_serviceDictionary.TryAdd(request.Id, state))
+            { 
                 _serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Start:{request.Id}"));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
-                using (CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token))
+                using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
+                try
                 {
-                    try
+                    while (!linkedToken.IsCancellationRequested)
                     {
-                        while (!linkedToken.IsCancellationRequested)
-                        {
-                            await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
-                        }
+                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
-                    {
-                        ShutdownService.Shutdown(request.Id,ex);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _shutdownService.Shutdown(request.Id, ex);
                 }
             }
             else
@@ -97,7 +87,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     id = message.Id;
 
-                    if (ServiceDictionary.TryGetValue(id, out var serviceState))
+                    if (_serviceDictionary.TryGetValue(id, out var serviceState))
                     {
                         if (serviceState.Token.IsCancellationRequested)
                             break;
@@ -140,19 +130,19 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                ShutdownService.Shutdown(id,ex);
+                _shutdownService.Shutdown(id,ex);
             }
         }
 
         public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            ShutdownService.Shutdown(request.Id);
+            _shutdownService.Shutdown(request.Id);
             return Task.FromResult(new Empty());
         }
 
         public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            if (ServiceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
+            if (_serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
                 serviceState.IPC.SendMessage(request.Message);
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
@@ -172,10 +162,10 @@ namespace PeakSWC.RemoteWebView
                 await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
                     id = message.Id;
-                    if (!ServiceDictionary.TryGetValue(id, out ServiceState? serviceState))
+                    if (!_serviceDictionary.TryGetValue(id, out ServiceState? serviceState))
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                        ShutdownService.Shutdown(id);
+                        _shutdownService.Shutdown(id);
                         break; ;
                     }
 
@@ -191,7 +181,7 @@ namespace PeakSWC.RemoteWebView
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
-                                    ShutdownService.Shutdown(id);
+                                    _shutdownService.Shutdown(id);
                                     break;
                                 }
 
@@ -209,7 +199,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                ShutdownService.Shutdown(id, ex);
+                _shutdownService.Shutdown(id, ex);
             }
         }
     }

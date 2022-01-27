@@ -82,7 +82,6 @@ namespace PeakSWC.RemoteWebView
 #else
             services.AddTransient<IUserService, MockUserService>();
 #endif 
-            services.AddSingleton<ConcurrentBag<ServiceState>>();
             services.AddSingleton(ServiceDictionary);
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();

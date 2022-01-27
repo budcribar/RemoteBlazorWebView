@@ -15,39 +15,35 @@ namespace PeakSWC.RemoteWebView
     public class BrowserIPCService : BrowserIPC.BrowserIPCBase
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
-        private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
-        private ShutdownService ShutdownService { get; }
+        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
+        private readonly ShutdownService _shutdownService;
 
-        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService)
+        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ShutdownService shutdownService)
         {
             _logger = logger;
-            ServiceDictionary = serviceDictionary;
-            _serviceStateChannel = serviceStateChannel;
-            ShutdownService = shutdownService;
+            _serviceDictionary = serviceDictionary;
+            _shutdownService = shutdownService;
         }
 
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
-                ShutdownService.Shutdown(request.Id);
+                _shutdownService.Shutdown(request.Id);
                 return;
             }
 
             serviceState.IPC.BrowserResponseStream = responseStream;
-            using (CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token))
+            using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
+            try
             {
-                try
-                {
-                    while (!linkedToken.Token.IsCancellationRequested)
-                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
+                while (!linkedToken.Token.IsCancellationRequested)
+                    await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
 
-                }
-                catch (Exception ex)
-                {
-                    ShutdownService.Shutdown(request.Id, ex);
-                }
+            }
+            catch (Exception ex)
+            {
+                _shutdownService.Shutdown(request.Id, ex);
             }
 
             return;
@@ -55,7 +51,7 @@ namespace PeakSWC.RemoteWebView
 
         public override Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            if (!ServiceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
             var state = serviceState.BrowserIPC;

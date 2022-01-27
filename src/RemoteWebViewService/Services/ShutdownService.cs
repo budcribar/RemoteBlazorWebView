@@ -9,17 +9,16 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.Services
 {
-   
     public class ShutdownService
     {
         private readonly ILogger<RemoteWebViewService> _logger;
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
-        private ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
+        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
+        private readonly ConcurrentDictionary<string, Channel<string>> _serviceStateChannel;
 
         public ShutdownService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary)
         {
             _logger = logger;
-            ServiceDictionary = serviceDictionary;
+            _serviceDictionary = serviceDictionary;
             _serviceStateChannel = serviceStateChannel;
         }
 
@@ -30,7 +29,7 @@ namespace PeakSWC.RemoteWebView.Services
             else
                 _logger.LogWarning("Shutting down..." + id);
 
-            if (ServiceDictionary.Remove(id, out var client))
+            if (_serviceDictionary.Remove(id, out var client))
             {
                 client.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });
                 client.InUse = false;

@@ -9,21 +9,19 @@ using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-#pragma warning disable CA1416
-
 namespace PeakSWC.RemoteWebView
 {
     public class ClientIPCService : ClientIPC.ClientIPCBase
     {
         private readonly ILogger<ClientIPCService> _logger;
         private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; init; }
+        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
         private readonly IUserService _userService;
 
         private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
         {
             var list = new ClientResponseList();
-            list.ClientResponses.AddRange(ServiceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            list.ClientResponses.AddRange(_serviceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
             return responseStream.WriteAsync(list);
         }
 
@@ -31,7 +29,7 @@ namespace PeakSWC.RemoteWebView
         {
             _logger = logger;
             _serviceStateChannel = serviceStateChannel;
-            ServiceDictionary = serviceDictionary;
+            _serviceDictionary = serviceDictionary;
             _userService = userService;
         }
 
@@ -39,7 +37,6 @@ namespace PeakSWC.RemoteWebView
         {
             string id = request.Id;
             _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<string>());
-            // https://stackoverflow.com/questions/48385996/platformnotsupported-exception-when-calling-adduserasync-net-core-2-0
            
             try
             {
@@ -49,7 +46,7 @@ namespace PeakSWC.RemoteWebView
 
                 await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
                 {
-                    this._logger.LogInformation($"Client IPC: {state}");
+                    _logger.LogInformation($"Client IPC: {state}");
                     await WriteResponse(responseStream, groups);
                 }
             }
@@ -71,13 +68,13 @@ namespace PeakSWC.RemoteWebView
         {
             List<ConnectionResponse> GetConnectionResponses() 
             {
-                return ServiceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
+                return _serviceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
             }
             List<TaskResponse> GetTaskResponses(string id)
             {
                 var responses = new List<TaskResponse>();
 
-                if (ServiceDictionary.TryGetValue(id, out ServiceState? ss))
+                if (_serviceDictionary.TryGetValue(id, out ServiceState? ss))
                 {
                     if (ss.PingTask != null)
                         responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
@@ -105,7 +102,7 @@ namespace PeakSWC.RemoteWebView
         {
             List<EventResponse> GetEventResponses()
             {
-                EventLog eventLog = new EventLog();
+                EventLog eventLog = new();
                 eventLog.Log = "Application";
                
                 var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
@@ -120,8 +117,7 @@ namespace PeakSWC.RemoteWebView
 
                 return results;
             }
-
-           
+        
             var response = new LoggedEventResponse();
             response.EventResponses.AddRange(GetEventResponses());
 
