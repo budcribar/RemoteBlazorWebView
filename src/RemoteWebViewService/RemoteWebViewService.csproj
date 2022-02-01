@@ -49,8 +49,8 @@
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.5.0" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.36.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.36.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.42.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.42.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.2-mauipre.1.22054.8" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.27.0-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
