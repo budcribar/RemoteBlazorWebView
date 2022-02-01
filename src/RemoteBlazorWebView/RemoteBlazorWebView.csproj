@@ -39,7 +39,7 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.2-mauipre.1.22054.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.2-mauipre.1.22054.8" />
 		<PackageReference Include="Microsoft.JSInterop" Version="6.0.1" />
-		<PackageReference Include="Photino.Blazor" Version="2.1.5" />
+		<PackageReference Include="Photino.Blazor" Version="2.1.6" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
 	</ItemGroup>
 
