@@ -26,33 +26,34 @@ namespace PeakSWC.RemoteWebView
 
         public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage)
         {
-            IFileProvider provider = null;
-            var root = Path.GetDirectoryName(hostPage);
+            IFileProvider? provider = new PhysicalFileProvider(contentRootDir);
+            var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly == null)
+                return provider;
             try
             {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(entryAssembly);
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
 
                 if (dir != null)
                 {
                     var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
+                    provider = new ManifestEmbeddedFileProvider(entryAssembly, manifestRoot);
                 }
             }
             catch (Exception)
             {
                 try
                 {
-                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
-                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(entryAssembly));
+                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
 
                     if (dir != null)
                     {
                         var manifestRoot = Path.Combine(dir.Name, root);
-                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
+                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), manifestRoot);
                     }
-                    else provider = new PhysicalFileProvider(contentRootDir);
-
                 }
                 catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
             }

@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteWebView
             };
         }
 
-        public Stream HandleWebRequest(object sender, string schema, string url, out string? contentType)
+        public Stream? HandleWebRequest(object sender, string schema, string url, out string? contentType)
         {
             // It would be better if we were told whether or not this is a navigation request, but
             // since we're not, guess.
