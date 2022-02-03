@@ -12,6 +12,11 @@ outputDir = "../../../../RemoteBlazorWebView.Wpf";
 
 ProcessFiles(inputDir, outputDir);
 
+inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\SharedSource");
+outputDir = "../../../../SharedSource";
+
+ProcessFiles(inputDir, outputDir);
+
 static void ProcessFiles(string inputDir, string outputDir)
 {
     if (!Directory.Exists(outputDir))
