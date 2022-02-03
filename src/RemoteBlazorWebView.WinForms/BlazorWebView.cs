@@ -18,40 +18,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
     {
         private bool IsRefreshing { get; set; } = false;
 
-        public override IFileProvider CreateFileProvider(string contentRootDir)
-        {
-            IFileProvider provider= null;
-            var root = Path.GetDirectoryName(HostPage);
-            try
-            {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(Assembly.GetEntryAssembly());
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
+        public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir, HostPage);
 
-                if (dir != null)
-                {
-                    var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(Assembly.GetEntryAssembly(), manifestRoot);
-                }
-            }
-            catch (Exception)
-            {
-                try
-                {
-                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()));
-                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory && (x as ManifestDirectory).Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                    if (dir != null)
-                    {
-                        var manifestRoot = Path.Combine(dir.Name, root);
-                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()), manifestRoot);
-                    }
-                    
-                }
-                catch (Exception) {  }
-            }
-            return provider;
-        }
-        
         private Uri? _serverUri;
 
         /// <summary>
@@ -170,14 +138,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                  return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath);
         }
 
-        public void Restart()
-        {
-            RemoteWebView.RemoteWebView.Restart(this);
-        }
+        public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public Task<Process?> StartBrowser()
-        {
-            return RemoteWebView.RemoteWebView.StartBrowser(this);
-        }
+        public Task<Process?> StartBrowser() => RemoteWebView.RemoteWebView.StartBrowser(this);
     }
 }

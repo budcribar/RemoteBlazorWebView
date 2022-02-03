@@ -9,7 +9,7 @@ namespace EditWebView
     public class Editor
     {
         string text;
-        string fileName;
+        readonly string fileName;
         public Editor(string file)
         {
             text = File.ReadAllText(file);
@@ -29,8 +29,11 @@ namespace EditWebView
         {
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {
-              
-                Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
+                Comment("#pragma warning disable CA1816");
+                Comment("#pragma warning restore");
+
+
+                //Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
                 Replace("new WebView2WebViewManager", "CreateWebViewManager");
                 Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
                 Replace("BlazorWebView", Path.GetFileNameWithoutExtension(fileName));

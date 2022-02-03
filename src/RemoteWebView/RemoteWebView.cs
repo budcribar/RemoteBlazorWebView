@@ -7,8 +7,10 @@ using Microsoft.Extensions.FileProviders;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,6 +19,45 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemoteWebView 
     {
+        public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage)
+        {
+            IFileProvider? provider = null;
+            var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
+            var entryAssembly = Assembly.GetEntryAssembly()!;
+
+            try
+            {
+                EmbeddedFilesManifest manifest = ManifestParser.Parse(entryAssembly);
+                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                if (dir != null)
+                {
+                    var manifestRoot = Path.Combine(dir.Name, root);
+                    provider = new ManifestEmbeddedFileProvider(entryAssembly, manifestRoot);
+                }
+                else throw new Exception("Try fixed manifest");
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(entryAssembly));
+                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
+
+                    if (dir != null)
+                    {
+                        var manifestRoot = Path.Combine(dir.Name, root);
+                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), manifestRoot);
+                    }
+                }
+                catch (Exception) { }
+            }
+
+            if (provider == null)
+                provider = new PhysicalFileProvider(contentRootDir);
+
+            return provider;
+        }
         public static void Restart(IBlazorWebView blazorWebView)
         {
             var psi = new ProcessStartInfo
@@ -81,7 +122,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid=Process.GetCurrentProcess().Id, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid= Environment.ProcessId, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -92,7 +133,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             await foreach (var message in events.ResponseStream.ReadAllAsync())
                             {
-                                var command = message.Response.Substring(0, message.Response.IndexOf(':'));
+                                var command = message.Response[..message.Response.IndexOf(':')];
                               
                                 try
                                 {
@@ -183,22 +224,20 @@ namespace PeakSWC.RemoteWebView
 
                                     await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
 
-                                    using (var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null)
+                                    using var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
+                                    if (stream == null)
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                    else
                                     {
-                                        if (stream == null)
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                        else
-                                        {
-                                            var buffer = new Byte[8 * 1024];
-                                            int bytesRead = 0;
+                                        var buffer = new Byte[8 * 1024];
+                                        int bytesRead = 0;
 
-                                            while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
-                                            {
-                                                ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
-                                            }
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                        while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                        {
+                                            ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
                                         }
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                                     }
 
                                 }
@@ -268,7 +307,7 @@ namespace PeakSWC.RemoteWebView
 
         public event EventHandler<string>? OnWebMessageReceived;
 
-        private string GenMarkup(Uri? uri,Guid id)
+        private static string GenMarkup(Uri? uri,Guid id)
         {
             var color = "#f1f1f1";
             var hostname = Dns.GetHostName();
@@ -306,7 +345,7 @@ namespace PeakSWC.RemoteWebView
             BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
         }
 
-        public void NavigateToUrl(string _) { }
+        public static void NavigateToUrl(string _) { }
 
         public void SendMessage(string message)
         {

@@ -175,8 +175,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			var contentRootDirFullPath = Path.GetDirectoryName(hostPageFullPath);
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDirFullPath, hostPageFullPath);
 
-			var customFileProvider = CreateFileProvider(contentRootDirFullPath);
-            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;
+			var fileProvider = CreateFileProvider(contentRootDirFullPath);
 
 			_webviewManager = CreateWebViewManager(_webview, Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 			foreach (var rootComponent in RootComponents)
@@ -263,10 +262,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			// Perform async cleanup.
 			await DisposeAsyncCore();
 
-#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
+//#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
 			// Suppress finalization.
 			GC.SuppressFinalize(this);
-#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize	
+//#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize	
 		}
 	}
 }

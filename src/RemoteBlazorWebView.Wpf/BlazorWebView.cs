@@ -102,25 +102,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
-        public override IFileProvider CreateFileProvider(string contentRootDir)
-        {
-            IFileProvider provider;
-            var root = Path.GetDirectoryName(HostPage) ?? string.Empty;
-            try
-            {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!));
-                var dir = manifest._rootDirectory.Children.Where(x => (x as ManifestDirectory)?.Children.Any(y => y.Name == root) ?? false).FirstOrDefault();
-
-                if (dir != null)
-                {
-                    var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(Assembly.GetEntryAssembly()!), manifestRoot);
-                }
-                else provider = new PhysicalFileProvider(contentRootDir);
-            }
-            catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
-            return provider;
-        }
+        public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir,HostPage);
 
         public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {

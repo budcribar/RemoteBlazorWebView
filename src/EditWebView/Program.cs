@@ -26,7 +26,7 @@ static void ProcessFiles(string inputDir, string outputDir)
     {
         if (f.EndsWith(".csproj")) continue;
 
-        Editor editor = new Editor(f);
+        Editor editor = new(f);
         editor.Edit();
         editor.WriteAllText(outputDir);
     }

@@ -24,45 +24,7 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public BlazorWindowRootComponents? RootComponents { get; private set; }
 
-        public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage)
-        {
-            IFileProvider? provider = null;
-            var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
-            var entryAssembly = Assembly.GetEntryAssembly()!;
-            
-            try
-            {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(entryAssembly);
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                if (dir != null)
-                {
-                    var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(entryAssembly, manifestRoot);
-                }
-                else throw new Exception("Try fixed manifest");
-            }
-            catch (Exception)
-            {
-                try
-                {
-                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(entryAssembly));
-                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                    if (dir != null)
-                    {
-                        var manifestRoot = Path.Combine(dir.Name, root);
-                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), manifestRoot);
-                    }
-                }
-                catch (Exception) {  }
-            }
-
-            if (provider == null)
-                provider = new PhysicalFileProvider(contentRootDir);
-
-            return provider;
-        }
+       
         
         internal void Initialize(IServiceProvider services, RootComponentList rootComponents, Uri serverUrl, Guid id, bool isRestarting)
         {
@@ -90,7 +52,7 @@ namespace PeakSWC.RemoteWebView
             var hostPageRelativePath = Path.GetRelativePath(contentRootDir, hostPage);
             //var fileProvider = new PhysicalFileProvider(contentRootDir);
 
-            var fileProvider = CreateFileProvider(contentRootDir, hostPage);
+            var fileProvider = RemoteWebView.CreateFileProvider(contentRootDir, hostPage);
 
 
             var dispatcher = new RemotePhotinoDispatcher(MainWindow);
