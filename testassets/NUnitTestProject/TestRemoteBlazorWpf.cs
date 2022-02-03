@@ -3,6 +3,7 @@ using Grpc.Net.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
 using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
@@ -20,7 +21,7 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteBlazorWpf
     {
-        protected static readonly List<ChromeDriver> _driver = new();
+        protected static readonly List<EdgeDriver> _driver = new();
         protected readonly string url = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
         protected static string[] ids = Array.Empty<string>();
@@ -82,7 +83,7 @@ namespace WebdriverTestProject
             sw.Restart();
             for (int i = 0; i < numClients; i++)
             {
-                _driver.Add(new ChromeDriver());
+                _driver.Add(new());
             }
 
             Console.WriteLine($"Browsers started in {sw.Elapsed}");

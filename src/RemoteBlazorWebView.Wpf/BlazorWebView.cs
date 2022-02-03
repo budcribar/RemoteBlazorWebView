@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
-
+using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
@@ -122,7 +122,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             return provider;
         }
 
-        public override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);

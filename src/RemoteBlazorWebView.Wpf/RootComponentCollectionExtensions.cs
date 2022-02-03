@@ -24,7 +24,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		public static void Add<TComponent>(this RootComponentsCollection components, string selector, IDictionary<string, object> parameters = null)
 			where TComponent : IComponent
 		{
-			components.Add(new RootComponent(selector, typeof(TComponent), parameters));
+			components.Add(new RootComponent { Selector = selector, ComponentType = typeof(TComponent), Parameters = parameters });
 		}
 
 		/// <summary>

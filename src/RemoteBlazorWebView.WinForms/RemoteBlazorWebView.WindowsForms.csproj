@@ -3,6 +3,7 @@
   <PropertyGroup> 
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
+	<DefineConstants>$(DefineConstants);WEBVIEW2_WINFORMS</DefineConstants>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Description>Build Remote Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
@@ -31,6 +32,10 @@
   <ItemGroup>
     <Compile Remove="WindowsFormsCoreWebView2AcceleratorKeyPressedEventArgsWrapper.cs" />
   </ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="..\SharedSource\**\*.cs" Link="SharedSource\%(Filename)%(Extension)" />
+	</ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">

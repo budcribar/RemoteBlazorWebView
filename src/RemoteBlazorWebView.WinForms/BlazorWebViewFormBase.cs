@@ -22,7 +22,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 	public class BlazorWebViewFormBase : ContainerControl
 	{
 		private readonly WebView2Control _webview;
-		private WebView2.WebView2WebViewManager _webviewManager;
+		private WebView2WebViewManager _webviewManager;
 		private string _hostPage;
 		private IServiceProvider _services;
 
@@ -54,10 +54,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		public WebView2Control WebView => _webview;
 
 		/// <summary>
-		/// Returns the current <see cref="WebView2.WebView2WebViewManager"/> used by this control. This property is <c>null</c>
+		/// Returns the current <see cref="WebView2WebViewManager"/> used by this control. This property is <c>null</c>
 		/// until after the XYZ event is raised.
 		/// </summary>
-		public WebView2.WebView2WebViewManager WebViewManager => _webviewManager;
+		public WebView2WebViewManager WebViewManager => _webviewManager;
 
 		private WindowsFormsDispatcher ComponentsDispatcher { get; }
 
@@ -83,16 +83,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 				_hostPage = value;
 				OnHostPagePropertyChanged();
 			}
-		}
-
-		/// <summary>
-		/// Occurs when the <see cref="WebView2.WebView2WebViewManager"/> is created.
-		/// </summary>
-		public event EventHandler<WebViewManagerCreatedEventArgs> WebViewManagerCreated;
-
-		protected virtual void OnWebViewManagerCreated(WebViewManagerCreatedEventArgs webViewManagerCreatedEventArgs)
-		{
-			WebViewManagerCreated?.Invoke(this, webViewManagerCreatedEventArgs);
 		}
 
 		// Learn more about these methods here: https://docs.microsoft.com/en-us/dotnet/desktop/winforms/controls/defining-default-values-with-the-shouldserialize-and-reset-methods?view=netframeworkdesktop-4.8
@@ -133,9 +123,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			HostPage != null &&
 			Services != null;
 
-		public virtual WebView2.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
 		{
-			return new WebView2.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
@@ -169,12 +159,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDirFullPath, hostPageFullPath);
 
 			var customFileProvider = CreateFileProvider(contentRootDirFullPath);
-			//var assetFileProvider = new PhysicalFileProvider(contentRootDirFullPath);
-			IFileProvider fileProvider = customFileProvider == null
-				? new PhysicalFileProvider(contentRootDirFullPath)
-				: customFileProvider;
+            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;
 
-			_webviewManager = CreateWebViewManager(new WindowsFormsWebView2Wrapper(_webview), Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
+			_webviewManager = CreateWebViewManager(_webview, Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 
 			foreach (var rootComponent in RootComponents)
 			{
@@ -209,14 +196,16 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		}
 
 		/// <summary>
-		/// Creates a file provider for static assets used in the <see cref="BlazorWebViewFormBase"/>. Override
-		/// this method to return a custom <see cref="IFileProvider"/> to serve assets such as <c>wwwroot/index.html</c>.
+		/// Creates a file provider for static assets used in the <see cref="BlazorWebViewFormBase"/>. The default implementation
+		/// serves files from disk. Override this method to return a custom <see cref="IFileProvider"/> to serve assets such
+		/// as <c>wwwroot/index.html</c>. Call the base method and combine its return value with a <see cref="CompositeFileProvider"/>
+		/// to use both custom assets and default assets.
 		/// </summary>
 		/// <param name="contentRootDir">The base directory to use for all requested assets, such as <c>wwwroot</c>.</param>
-		/// <returns>Returns a <see cref="IFileProvider"/> for static assets, or <c>null</c> if there is no custom provider.</returns>
+		/// <returns>Returns a <see cref="IFileProvider"/> for static assets.</returns>
 		public virtual IFileProvider CreateFileProvider(string contentRootDir)
 		{
-			return null;
+			return new PhysicalFileProvider(contentRootDir);
 		}
 
 		/// <inheritdoc />

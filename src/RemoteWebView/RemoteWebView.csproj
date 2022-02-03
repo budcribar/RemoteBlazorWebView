@@ -6,7 +6,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
-    <Platforms>x64</Platforms>
+    <Platforms>x64;AnyCPU</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteWebView</PackageId>
     <Authors>Bud Cribar</Authors>

@@ -1,57 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
-    <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-    <TargetFramework>net6.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
-    <Authors>Bud Cribar</Authors>
-    <Company>Peak Software Consulting, LLC</Company>
-    <Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
-    <Copyright>Peak Software Consulting, LLC</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon>favicon-32x32.png</PackageIcon>
-    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
-    <Nullable>annotations</Nullable>
-    <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
-    <Platforms>x64</Platforms>
-    <LangVersion>latest</LangVersion>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Update packages and reduce download size</PackageReleaseNotes>
-    <DebugType>full</DebugType>
-  </PropertyGroup>
+	<PropertyGroup>
+		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
+		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
+		<DefineConstants>$(DefineConstants);WEBVIEW2_WPF</DefineConstants>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
+		<Authors>Bud Cribar</Authors>
+		<Company>Peak Software Consulting, LLC</Company>
+		<Description>This package will transport the user interface from an app built using BlazorWebView to a server running in the cloud. This allows an app running behind a firewall to be accessed through a browser by accessing the cloud server.</Description>
+		<Copyright>Peak Software Consulting, LLC</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageIcon>favicon-32x32.png</PackageIcon>
+		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
+		<Nullable>annotations</Nullable>
+		<Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
+		<Platforms>x64</Platforms>
+		<LangVersion>latest</LangVersion>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+		<PackageReleaseNotes>Update packages and reduce download size</PackageReleaseNotes>
+		<DebugType>full</DebugType>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="WpfCoreWebView2AcceleratorKeyPressedEventArgsWrapper.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Include="..\SharedSource\**\*.cs" Link="SharedSource\%(Filename)%(Extension)" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Page Remove="RemoteBlazorWebView.xaml" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.200-preview.12.2441" />
-  </ItemGroup>
+	<ItemGroup>
+		<Page Remove="RemoteBlazorWebView.xaml" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="..\..\icons\favicon-32x32.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.200-preview.12.2441" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\..\..\RemoteBlazorWebViewTutorial\README.md">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+		<None Include="..\..\icons\favicon-32x32.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
 
 </Project>

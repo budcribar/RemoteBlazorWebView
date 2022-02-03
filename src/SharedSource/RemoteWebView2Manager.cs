@@ -1,19 +1,32 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿//using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebView.WebView2;
+//using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+#if WEBVIEW2_WINFORMS
+using Microsoft.Web.WebView2;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.AspNetCore.Components.WebView.WebView2;
+using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
+using Microsoft.AspNetCore.Components.WebView;
+using Microsoft.AspNetCore.Components;
+#elif WEBVIEW2_WPF
+using Microsoft.Web.WebView2;
+using Microsoft.Web.WebView2.Core;
+using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using Microsoft.AspNetCore.Components;
+#endif 
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebView2Manager : WebView2WebViewManager
+    public class RemoteWebView2Manager : PeakSWC.RemoteBlazorWebView.WebView2WebViewManager
     {
         Uri url;
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
-        public RemoteWebView2Manager(IBlazorWebView blazorWebView, IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
+        public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath)
         {
             BlazorWebView = blazorWebView;
             RemoteWebView = new RemoteWebView(

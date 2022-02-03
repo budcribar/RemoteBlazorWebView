@@ -29,14 +29,13 @@ namespace EditWebView
         {
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {
-                Comment("var assetFileProvider =");
-                Replace("? assetFileProvider", "? new PhysicalFileProvider(contentRootDirFullPath)");
-                Replace("new CompositeFileProvider(customFileProvider, assetFileProvider)", "customFileProvider");
+              
+                Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
                 Replace("new WebView2WebViewManager", "CreateWebViewManager");
-                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
+                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
                 Replace("BlazorWebView", Path.GetFileNameWithoutExtension(fileName));
                 InsertUsing("Microsoft.AspNetCore.Components.Web");
-                Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
+                //Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
             }
 
             Replace("namespace Microsoft.AspNetCore.Components.WebView.WindowsForms", "namespace PeakSWC.RemoteBlazorWebView.WindowsForms");
@@ -47,7 +46,7 @@ namespace EditWebView
 
             if (fileName == "RootComponent.cs")
             {
-                Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
+                //Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
                 InsertUsing("Microsoft.AspNetCore.Components.WebView");
             }
 

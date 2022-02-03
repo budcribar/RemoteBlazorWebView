@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -161,7 +162,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public bool IsRestarting { get; set; }
 
-        public override WebView2WebViewManager CreateWebViewManager(IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
                  return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);

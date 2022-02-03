@@ -15,24 +15,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 	/// </summary>
 	public class RootComponent
 	{
-		public RootComponent() { }
-		/// <summary>
-		/// Constructs an instance of <see cref="RootComponent"/>.
-		/// </summary>
-		/// <param name="selector">The CSS selector string that specifies where in the document the component should be placed. This must be unique among the root components within the <see cref="BlazorWebView"/>.</param>
-		/// <param name="componentType">The type of the root component. This type must implement <see cref="IComponent"/>.</param>
-		/// <param name="parameters">An optional dictionary of parameters to pass to the root component.</param>
-		public RootComponent(string selector, Type componentType, IDictionary<string, object> parameters)
-		{
-			if (string.IsNullOrWhiteSpace(selector))
-			{
-				throw new ArgumentException($"'{nameof(selector)}' cannot be null or whitespace.", nameof(selector));
-			}
-
-			Selector = selector;
-			ComponentType = componentType ?? throw new ArgumentNullException(nameof(componentType));
-			Parameters = parameters;
-		}
 		/// <summary>
 		/// Gets or sets the CSS selector string that specifies where in the document the component should be placed.
 		/// This must be unique among the root components within the <see cref="BlazorWebView"/>.
@@ -69,7 +51,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
 		}
 
-		internal Task RemoveFromWebViewManagerAsync(WebView2.WebView2WebViewManager webviewManager)
+		internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
 		{
 			return webviewManager.RemoveRootComponentAsync(Selector);
 		}

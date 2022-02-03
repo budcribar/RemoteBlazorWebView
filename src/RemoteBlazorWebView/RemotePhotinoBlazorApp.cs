@@ -26,11 +26,10 @@ namespace PeakSWC.RemoteWebView
 
         public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage)
         {
-            IFileProvider? provider = new PhysicalFileProvider(contentRootDir);
+            IFileProvider? provider = null;
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
-            var entryAssembly = Assembly.GetEntryAssembly();
-            if (entryAssembly == null)
-                return provider;
+            var entryAssembly = Assembly.GetEntryAssembly()!;
+            
             try
             {
                 EmbeddedFilesManifest manifest = ManifestParser.Parse(entryAssembly);
@@ -41,6 +40,7 @@ namespace PeakSWC.RemoteWebView
                     var manifestRoot = Path.Combine(dir.Name, root);
                     provider = new ManifestEmbeddedFileProvider(entryAssembly, manifestRoot);
                 }
+                else throw new Exception("Try fixed manifest");
             }
             catch (Exception)
             {
@@ -55,8 +55,12 @@ namespace PeakSWC.RemoteWebView
                         provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), manifestRoot);
                     }
                 }
-                catch (Exception) { provider = new PhysicalFileProvider(contentRootDir); }
+                catch (Exception) {  }
             }
+
+            if (provider == null)
+                provider = new PhysicalFileProvider(contentRootDir);
+
             return provider;
         }
         

@@ -57,7 +57,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			return webViewManager.AddRootComponentAsync(ComponentType, Selector, parameterView);
 		}
 
-		internal Task RemoveFromWebViewManagerAsync(WebView2.WebView2WebViewManager webviewManager)
+		internal Task RemoveFromWebViewManagerAsync(WebView2WebViewManager webviewManager)
 		{
 			return webviewManager.RemoveRootComponentAsync(Selector);
 		}

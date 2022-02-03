@@ -54,7 +54,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 		private const string webViewTemplateChildName = "WebView";
 		private WebView2Control _webview;
-		private WebView2.WebView2WebViewManager _webviewManager;
+		private WebView2WebViewManager _webviewManager;
 		private bool _isDisposed;
 
 		/// <summary>
@@ -146,9 +146,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			StartWebViewCoreIfPossible();
 		}
 
-		public virtual WebView2.WebView2WebViewManager CreateWebViewManager(WebView2.IWebView2Wrapper webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
 		{
-			return new WebView2.WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
@@ -176,12 +176,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDirFullPath, hostPageFullPath);
 
 			var customFileProvider = CreateFileProvider(contentRootDirFullPath);
-			//var assetFileProvider = new PhysicalFileProvider(contentRootDirFullPath);
-			IFileProvider fileProvider = customFileProvider == null
-				? new PhysicalFileProvider(contentRootDirFullPath)
-				: customFileProvider;
+            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;
 
-			_webviewManager = CreateWebViewManager(new WpfWebView2Wrapper(_webview), Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
+			_webviewManager = CreateWebViewManager(_webview, Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
 			foreach (var rootComponent in RootComponents)
 			{
 				// Since the page isn't loaded yet, this will always complete synchronously
@@ -219,14 +216,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		}
 
 		/// <summary>
-		/// Creates a file provider for static assets used in the <see cref="BlazorWebViewBase"/>. Override
-		/// this method to return a custom <see cref="IFileProvider"/> to serve assets such as <c>wwwroot/index.html</c>.
+		/// Creates a file provider for static assets used in the <see cref="BlazorWebViewBase"/>. The default implementation
+		/// serves files from disk. Override this method to return a custom <see cref="IFileProvider"/> to serve assets such
+		/// as <c>wwwroot/index.html</c>. Call the base method and combine its return value with a <see cref="CompositeFileProvider"/>
+		/// to use both custom assets and default assets.
 		/// </summary>
 		/// <param name="contentRootDir">The base directory to use for all requested assets, such as <c>wwwroot</c>.</param>
-		/// <returns>Returns a <see cref="IFileProvider"/> for static assets, or <c>null</c> if there is no custom provider.</returns>
+		/// <returns>Returns a <see cref="IFileProvider"/> for static assets.</returns>
 		public virtual IFileProvider CreateFileProvider(string contentRootDir)
 		{
-			return null;
+			return new PhysicalFileProvider(contentRootDir);
 		}
 
 		private void CheckDisposed()
