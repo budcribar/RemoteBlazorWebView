@@ -1,17 +1,10 @@
-Get rid of warning about prerelease dependency
 Make demo
-turn on public class TestRemotePackageBlazorForm : and TestRemoteBlazorDebugForm 
+Turn on public class TestRemotePackageBlazorForm and TestRemoteBlazorDebugForm tests
 Make the timeout a property on the WebView (Form and WPF)
-Copy and paste url in WinFrom demo
-Fix cannot dispose of task while running
-javascript with naming convention
-
+Copy and paste url in WinForm demo not working
+Fix cannot dispose of task while running exception
 Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
-
- public  IFileProvider CreateFileProvider(string contentRootDir, string hostPage) is defined in 3 places. Remove duplicates
-
-Add user admin in admin control panel
-
 Test2Client5Refresh hangs randomally TestRemoteBlazorWebView
+The URL link which shows up in Photino Blazor View should be customizable. Maybe add to the RootComponents collection?
 
 
