@@ -38,9 +38,7 @@ namespace PeakSWC.RemoteWebView
 
         public RootComponentList RootComponents { get; }
 
-        public IServiceCollection Services { get; }
-
-       
+        public IServiceCollection Services { get; }   
 
         public RemotePhotinoBlazorApp Build(Uri serverUrl, Guid id, bool isRestarting)
         {

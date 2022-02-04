@@ -22,9 +22,7 @@ namespace PeakSWC.RemoteWebView
         /// <summary>
         /// Gets configuration for the root components in the window.
         /// </summary>
-        public BlazorWindowRootComponents? RootComponents { get; private set; }
-
-       
+        public BlazorWindowRootComponents? RootComponents { get; private set; } 
         
         internal void Initialize(IServiceProvider services, RootComponentList rootComponents, Uri serverUrl, Guid id, bool isRestarting)
         {
@@ -38,7 +36,6 @@ namespace PeakSWC.RemoteWebView
             MainWindow.SetLeft(450);
             MainWindow.SetTop(100);
 
-            //MainWindow.ServerUri = new Uri("https://localhost:5001");
             MainWindow.ServerUri = serverUrl;
             MainWindow.Id = id;
             MainWindow.IsRestarting = isRestarting;
@@ -53,7 +50,6 @@ namespace PeakSWC.RemoteWebView
             //var fileProvider = new PhysicalFileProvider(contentRootDir);
 
             var fileProvider = RemoteWebView.CreateFileProvider(contentRootDir, hostPage);
-
 
             var dispatcher = new RemotePhotinoDispatcher(MainWindow);
             var jsComponents = new JSComponentConfigurationStore();
