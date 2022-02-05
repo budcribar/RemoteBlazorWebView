@@ -1,1 +1,8 @@
 - Updated dependencies
+
+- Removed unused StartBrowser from IBlazorWebView
+- Added NavigateToString to IBlazorWebView
+- Added string RemoteHomePage(string url) to IBlazorWebView
+- Remove usused IsRestarting
+
+

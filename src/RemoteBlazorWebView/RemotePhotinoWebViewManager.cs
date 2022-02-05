@@ -55,10 +55,10 @@ namespace PeakSWC.RemoteWebView
 
         protected override void NavigateCore(Uri absoluteUri)
         {
-            string link = $"<a href='{BlazorWebView.ServerUri}app/{BlazorWebView.Id}' target='_blank'> {BlazorWebView.ServerUri}app/{BlazorWebView.Id} </a>";
-            _window.LoadRawString(link);
             this.url = absoluteUri;
             RemoteWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
+          
+            BlazorWebView.NavigateToString(BlazorWebView.RemoteHomePage);
         }
 
         protected override void SendMessage(string message)

@@ -24,7 +24,7 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public BlazorWindowRootComponents? RootComponents { get; private set; } 
         
-        internal void Initialize(IServiceProvider services, RootComponentList rootComponents, Uri serverUrl, Guid id, bool isRestarting)
+        internal void Initialize(IServiceProvider services, RootComponentList rootComponents, Uri serverUrl, Guid id)
         {
             Services = services;
            
@@ -38,7 +38,6 @@ namespace PeakSWC.RemoteWebView
 
             MainWindow.ServerUri = serverUrl;
             MainWindow.Id = id;
-            MainWindow.IsRestarting = isRestarting;
 
             MainWindow.RegisterCustomSchemeHandler(PhotinoWebViewManager.BlazorAppScheme, HandleWebRequest);
 

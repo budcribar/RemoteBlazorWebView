@@ -128,8 +128,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";
 
-        public bool IsRestarting { get; set; }
-
         public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
         {
             if (ServerUri == null)
@@ -140,6 +138,18 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public Task<Process?> StartBrowser() => RemoteWebView.RemoteWebView.StartBrowser(this);
+        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+
+        private string remoteHomePage = "";
+        public string RemoteHomePage
+        {
+            get
+            {
+                if (remoteHomePage.Length == 0)
+                    remoteHomePage = $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
+                return remoteHomePage;
+            }
+            set => remoteHomePage = value;
+        }
     }
 }

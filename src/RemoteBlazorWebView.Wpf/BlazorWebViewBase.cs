@@ -73,6 +73,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			};
 		}
 
+		public WebView2WebViewManager WebViewManager => _webviewManager;
+
 		/// <summary>
 		/// Returns the inner <see cref="WebView2Control"/> used by this control.
 		/// </summary>

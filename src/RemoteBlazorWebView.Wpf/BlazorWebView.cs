@@ -57,16 +57,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             get => (string)GetValue(MarkupProperty);
             set => SetValue(MarkupProperty, value);
         }
-
-        public bool IsRestarting
-        {
-            get { return (bool)GetValue(IsRestartingProperty); }
-            set { SetValue(IsRestartingProperty, value); }
-        }
-
-        public static readonly DependencyProperty IsRestartingProperty =
-            DependencyProperty.Register(nameof(IsRestarting), typeof(bool), typeof(BlazorWebView), new PropertyMetadata(false));
-
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServerUriPropertyChanged(e);
 
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
@@ -100,6 +90,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 else
                     id = value;
             }
+        }
+
+        private string remoteHomePage = "";
+        public string RemoteHomePage { 
+            get {
+                if (remoteHomePage.Length == 0)
+                    remoteHomePage =  $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
+                return remoteHomePage; 
+            } 
+            set => remoteHomePage = value; 
         }
 
         public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir,HostPage);
@@ -148,14 +148,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                Id = Id;
         }
 
-        public void Restart()
-        {
-            RemoteWebView.RemoteWebView.Restart(this);
-        }
+        public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public Task<Process?> StartBrowser()
-        {
-            return RemoteWebView.RemoteWebView.StartBrowser(this);
-        }
+        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
     }
 }

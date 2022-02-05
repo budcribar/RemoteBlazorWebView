@@ -182,7 +182,8 @@ namespace PeakSWC.RemoteWebView
                                             break;
 
                                         case "connected":
-                                            FireConnected();
+                                            var split = message.Response.Split(":");
+                                            FireConnected(split[1],split[2]);
                                             connected = true;
                                             break;
                                     }
@@ -288,9 +289,9 @@ namespace PeakSWC.RemoteWebView
                     Dispacher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
                 }
 
-                void FireConnected()
+                void FireConnected(string ip, string user)
                 {
-                    Dispacher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                    Dispacher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
                 }
 
                 void FireDisconnected(Exception exception)
@@ -356,6 +357,5 @@ namespace PeakSWC.RemoteWebView
         {
             _ = Client;
         }
-
     }
 }

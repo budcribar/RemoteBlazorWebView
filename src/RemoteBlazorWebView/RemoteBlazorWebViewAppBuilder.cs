@@ -40,12 +40,11 @@ namespace PeakSWC.RemoteWebView
 
         public IServiceCollection Services { get; }   
 
-        public RemotePhotinoBlazorApp Build(Uri serverUrl, Guid id, bool isRestarting)
+        public RemotePhotinoBlazorApp Build(Uri serverUrl, Guid id)
         {
             var sp = Services.BuildServiceProvider();
             var app = sp.GetService<RemotePhotinoBlazorApp>();
-            if(app == null) throw new ArgumentNullException(nameof(app));
-            app.Initialize(sp, RootComponents, serverUrl, id, isRestarting);
+            app!.Initialize(sp, RootComponents, serverUrl, id);
             return app;
         }
     }

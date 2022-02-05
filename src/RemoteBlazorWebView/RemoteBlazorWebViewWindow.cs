@@ -14,7 +14,6 @@ namespace PeakSWC.RemoteWebView
     {
         public Uri? ServerUri { get; set; }
         public string Group { get; set; } = "test";
-        public bool IsRestarting { get; set; }
         public string Markup { get; set; } = "";
 
         private Guid id = Guid.Empty;
@@ -35,7 +34,6 @@ namespace PeakSWC.RemoteWebView
                     id = value;
             }
         }
-
 
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
@@ -61,9 +59,22 @@ namespace PeakSWC.RemoteWebView
             RemoteWebView.Restart(this);
         }
 
-        public Task<Process?> StartBrowser()
+        public void NavigateToString(string htmlContent)
         {
-            return RemoteWebView.StartBrowser(this);
+            // TODO Need to wait for window????
+             this.LoadRawString(htmlContent);
+        }
+
+        private string remoteHomePage = "";
+        public string RemoteHomePage
+        {
+            get
+            {
+                if (remoteHomePage.Length == 0)
+                    remoteHomePage = $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
+                return remoteHomePage;
+            }
+            set => remoteHomePage = value;
         }
     }
 }

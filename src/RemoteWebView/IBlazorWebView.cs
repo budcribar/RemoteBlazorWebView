@@ -15,10 +15,10 @@ namespace PeakSWC.RemoteWebView
         public void FireRefreshed(RefreshedEventArgs args);
         public Uri? ServerUri { get; set; }
         public string Group { get; set; }
-        public bool IsRestarting { get; set; }
         public Guid Id { get; set; }
         public string Markup { get; set; }
         public void Restart();
-        public Task<Process?> StartBrowser();
+        public void NavigateToString(string htmlContent);
+        public string RemoteHomePage { get; set; }
     }
 }

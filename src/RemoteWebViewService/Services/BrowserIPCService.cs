@@ -59,6 +59,9 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.Sequence == state.SequenceNum)
                 {
+                    if (request.Message == "connected:")
+                        request.Message += context.GetHttpContext().Connection.RemoteIpAddress + ":" + serviceState.User;
+
                     serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url });
                     state.SequenceNum++;
                 }
