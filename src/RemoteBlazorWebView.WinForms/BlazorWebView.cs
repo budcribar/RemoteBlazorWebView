@@ -83,15 +83,22 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             Invoke(() => Refreshed?.Invoke(this, args));
         }
 
+        public void FireReadyToConnect(ReadyToConnectEventArgs args)
+        {
+            Invoke(() => ReadyToConnect?.Invoke(this, args));
+        }
+
+
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
+        public event EventHandler<ReadyToConnectEventArgs>? ReadyToConnect;
 
         /// <summary>
         /// Group that the user is a member of when signed in
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
-       
+
         [Category("Behavior")]
         [Description(@"Group associated with the user.")]
         public string Group
@@ -139,17 +146,5 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
-
-        private string remoteHomePage = "";
-        public string RemoteHomePage
-        {
-            get
-            {
-                if (remoteHomePage.Length == 0)
-                    remoteHomePage = $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
-                return remoteHomePage;
-            }
-            set => remoteHomePage = value;
-        }
     }
 }

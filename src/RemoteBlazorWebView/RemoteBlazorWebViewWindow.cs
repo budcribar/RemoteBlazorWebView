@@ -38,6 +38,7 @@ namespace PeakSWC.RemoteWebView
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
+        public event EventHandler<ReadyToConnectEventArgs>? ReadyToConnect;
 
         public void FireConnected(ConnectedEventArgs args)
         {
@@ -54,6 +55,11 @@ namespace PeakSWC.RemoteWebView
             Invoke(() => Refreshed?.Invoke(this, args));
         }
 
+        public void FireReadyToConnect(ReadyToConnectEventArgs args)
+        {
+            Invoke(() => ReadyToConnect?.Invoke(this, args));
+        }
+
         public void Restart()
         {
             RemoteWebView.Restart(this);
@@ -63,18 +69,6 @@ namespace PeakSWC.RemoteWebView
         {
             // TODO Need to wait for window????
              this.LoadRawString(htmlContent);
-        }
-
-        private string remoteHomePage = "";
-        public string RemoteHomePage
-        {
-            get
-            {
-                if (remoteHomePage.Length == 0)
-                    remoteHomePage = $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
-                return remoteHomePage;
-            }
-            set => remoteHomePage = value;
         }
     }
 }

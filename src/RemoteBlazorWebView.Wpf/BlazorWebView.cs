@@ -92,16 +92,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
-        private string remoteHomePage = "";
-        public string RemoteHomePage { 
-            get {
-                if (remoteHomePage.Length == 0)
-                    remoteHomePage =  $"<a href='{ServerUri}app/{Id}' target='_blank'> {ServerUri}app/{Id}</a>";
-                return remoteHomePage; 
-            } 
-            set => remoteHomePage = value; 
-        }
-
         public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir,HostPage);
 
         public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
@@ -129,9 +119,15 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             Dispatcher.Invoke(() => Refreshed?.Invoke(this, args));
         }
 
+        public void FireReadyToConnect(ReadyToConnectEventArgs args)
+        {
+            Dispatcher.Invoke(() => ReadyToConnect?.Invoke(this, args));
+        }
+
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
+        public event EventHandler<ReadyToConnectEventArgs>? ReadyToConnect;
 
         private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
         {
@@ -150,6 +146,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);   
     }
 }

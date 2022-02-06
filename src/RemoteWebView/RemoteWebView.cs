@@ -66,7 +66,6 @@ namespace PeakSWC.RemoteWebView
             };
             psi.ArgumentList.Add($"-u={blazorWebView.ServerUri}");
             psi.ArgumentList.Add($"-i={blazorWebView.Id}");
-            psi.ArgumentList.Add($"-r=true");
 
             Process.Start(psi);
         }
@@ -155,6 +154,7 @@ namespace PeakSWC.RemoteWebView
                                             break;
 
                                         case "created":
+                                            FireReadyToConnect();
                                             completed.Set();
                                             break;
 
@@ -287,6 +287,11 @@ namespace PeakSWC.RemoteWebView
                 void Shutdown()
                 {
                     Dispacher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+                }
+
+                void FireReadyToConnect()
+                {
+                    Dispacher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
                 }
 
                 void FireConnected(string ip, string user)

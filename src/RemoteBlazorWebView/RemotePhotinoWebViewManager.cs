@@ -57,8 +57,6 @@ namespace PeakSWC.RemoteWebView
         {
             this.url = absoluteUri;
             RemoteWebView.NavigateToUrl(absoluteUri.AbsoluteUri);
-          
-            BlazorWebView.NavigateToString(BlazorWebView.RemoteHomePage);
         }
 
         protected override void SendMessage(string message)
