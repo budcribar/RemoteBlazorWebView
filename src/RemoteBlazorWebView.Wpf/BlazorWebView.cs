@@ -146,6 +146,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);   
+        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+
+        public Task WaitForInitialitionComplete() => Task.CompletedTask;
     }
 }

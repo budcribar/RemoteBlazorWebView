@@ -74,7 +74,11 @@ namespace PeakSWC.RemoteWebView
             if(MainWindow?.ServerUri == null)
                 WindowManager?.Navigate("/");
             else
+            {
                 WindowManager?.Navigate(@"wwwroot\index.html");
+                MainWindow.NavigateToString("<br/>");
+            }
+               
 
             MainWindow?.WaitForClose();
         }

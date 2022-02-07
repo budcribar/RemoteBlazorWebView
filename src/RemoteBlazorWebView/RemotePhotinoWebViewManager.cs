@@ -31,7 +31,7 @@ namespace PeakSWC.RemoteWebView
                 );
 
             RemoteWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
-            RemoteWebView.Initialize();
+            //RemoteWebView.Initialize();
 
             this.url = new Uri("https://0.0.0.0/");
         }

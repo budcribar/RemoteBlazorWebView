@@ -70,25 +70,6 @@ namespace PeakSWC.RemoteWebView
             Process.Start(psi);
         }
 
-        public static Task<Process?> StartBrowser(IBlazorWebView blazorWebView)
-        {
-            var url = $"{blazorWebView.ServerUri}app/{blazorWebView.Id}";
-
-            return Task.Run(() =>
-            {
-                Process? p = null;
-                try
-                {                 
-                    p = Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
-                }
-                catch (Exception)
-                {
-                    p = null;
-                }
-                return p;
-            });
-
-        }
 
         #region private
 
@@ -153,9 +134,10 @@ namespace PeakSWC.RemoteWebView
                                             completed.Set();
                                             break;
 
-                                        case "created":
-                                            FireReadyToConnect();
+                                        case "created":                                     
                                             completed.Set();
+                                            await BlazorWebView.WaitForInitialitionComplete();
+                                            FireReadyToConnect();
                                             break;
 
                                         case "createFailed":
@@ -183,7 +165,8 @@ namespace PeakSWC.RemoteWebView
 
                                         case "connected":
                                             var split = message.Response.Split(":");
-                                            FireConnected(split[1],split[2]);
+                                            if (split.Length == 3)
+                                                FireConnected(split[1],split[2]);
                                             connected = true;
                                             break;
                                     }
@@ -351,7 +334,7 @@ namespace PeakSWC.RemoteWebView
             BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
         }
 
-        public static void NavigateToUrl(string _) { }
+        public void NavigateToUrl(string url) { _ = Client; }
 
         public void SendMessage(string message)
         {

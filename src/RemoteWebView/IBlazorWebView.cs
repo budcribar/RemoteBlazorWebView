@@ -10,7 +10,6 @@ namespace PeakSWC.RemoteWebView
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
         public event EventHandler<ReadyToConnectEventArgs>? ReadyToConnect;
-
         public void FireConnected(ConnectedEventArgs args);
         public void FireDisconnected(DisconnectedEventArgs args);
         public void FireRefreshed(RefreshedEventArgs args);
@@ -21,5 +20,7 @@ namespace PeakSWC.RemoteWebView
         public string Markup { get; set; }
         public void Restart();
         public void NavigateToString(string htmlContent);
+
+        public Task WaitForInitialitionComplete();
     }
 }

@@ -70,5 +70,23 @@ namespace PeakSWC.RemoteWebView
             // TODO Need to wait for window????
              this.LoadRawString(htmlContent);
         }
+
+        public async Task WaitForInitialitionComplete()
+        {
+            while(true)
+            {
+                try
+                {
+                    var h = this.WindowHandle;
+                    await Task.Delay(5000);
+                    break;
+                }
+                catch (Exception)
+                {
+                    await Task.Delay(100);
+                }
+            }
+           
+        }
     }
 }
