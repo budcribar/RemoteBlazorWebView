@@ -83,17 +83,16 @@ namespace PeakSWC.RemoteBlazorWebView
 			});
 		}
 
-		public void NavigateToString(string htmlContent)
-		{
-			_ = Dispatcher.InvokeAsync(async () =>
-			{
-				await _webviewReadyTask;
-				_webview.NavigateToString(htmlContent);
-			});
-		}
-
 		/// <inheritdoc />
-		protected override void SendMessage(string message)
+		public void NavigateToString(string htmlContent)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                await _webviewReadyTask;
+                _webview.NavigateToString(htmlContent);
+            });
+        }
+        protected override void SendMessage(string message)
 			=> _webview.CoreWebView2.PostWebMessageAsString(message);
 
 		private async Task InitializeWebView2()

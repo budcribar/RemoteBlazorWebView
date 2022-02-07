@@ -27,6 +27,26 @@ namespace EditWebView
 
         public void Edit()
         {
+
+            // Two additions for .13 release
+            if (fileName == "BlazorWebViewBase.cs")
+                Replace("public WebView2Control WebView => _webview;", "public WebView2Control WebView => _webview;\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
+
+            if(fileName == "WebView2WebViewManager.cs")
+            {
+                string method =
+      @"public void NavigateToString(string htmlContent)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                await _webviewReadyTask;
+                _webview.NavigateToString(htmlContent);
+            });
+        }";
+                Replace("protected override void SendMessage(string message)", method + "\n        protected override void SendMessage(string message)");
+            }
+
+
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {
                 Comment("#pragma warning disable CA1816");

@@ -73,8 +73,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			};
 		}
 
-		public WebView2WebViewManager WebViewManager => _webviewManager;
-
 		/// <summary>
 		/// Returns the inner <see cref="WebView2Control"/> used by this control.
 		/// </summary>
@@ -84,6 +82,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// </remarks>
 		[Browsable(false)]
 		public WebView2Control WebView => _webview;
+        public WebView2WebViewManager WebViewManager => _webviewManager;
 
 		/// <summary>
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
