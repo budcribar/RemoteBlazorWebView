@@ -24,7 +24,7 @@
 		<LangVersion>latest</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Update packages and reduce download size</PackageReleaseNotes>
+		<PackageReleaseNotes>Replaced StartBrowser and IsRestarting with NavigateToString</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
