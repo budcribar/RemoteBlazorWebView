@@ -1,5 +1,23 @@
 ﻿# Building the Javascript
 
+Install npm
+Install yarn
+  npm install -g yarn
+
+Install protoc
+  npm install protoc -g
+
+nvm use 16.13.0 !! latest node fails !!
+
+dotnet dev-certs https --trust
+
+yarn install
+yarn run build
+
+Set your path to include protoc
+source\repos\budcribar\RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\protoc\bin
+
+
 Copy and unzip the preview source files 
 copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\upstream\aspnetcore\web.js
 
