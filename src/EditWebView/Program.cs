@@ -15,6 +15,11 @@ ProcessFiles(inputDir, outputDir);
 inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\SharedSource");
 outputDir = "../../../../SharedSource";
 
+// Maui
+inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\Maui");
+outputDir = "../../../../RemoteBlazorWebView.Maui";
+
+
 ProcessFiles(inputDir, outputDir);
 
 static void ProcessFiles(string inputDir, string outputDir)
@@ -22,12 +27,13 @@ static void ProcessFiles(string inputDir, string outputDir)
     if (!Directory.Exists(outputDir))
         throw new Exception("Can't locate output directory");
 
-    foreach (var f in Directory.EnumerateFiles(inputDir))
+    foreach (var f in Directory.EnumerateFiles(inputDir,"*",new EnumerationOptions { RecurseSubdirectories=true }))
     {
         if (f.EndsWith(".csproj")) continue;
-
+        if(f.Contains("build")) continue;
         Editor editor = new(f);
         editor.Edit();
-        editor.WriteAllText(outputDir);
+        var target = Path.Combine(outputDir, Path.GetDirectoryName(f.Replace(inputDir, "").Substring(1)) ?? "");
+        editor.WriteAllText(target);
     }
 }

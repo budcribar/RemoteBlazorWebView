@@ -55,8 +55,13 @@ namespace EditWebView
 
                 //Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
                 Replace("new WebView2WebViewManager", "CreateWebViewManager");
-                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
+                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
+
+                Replace("BlazorWebViewHandler", "TempWebViewHandler");
+                Replace("IBlazorWebView", "ITempWebView");
                 Replace("BlazorWebView", Path.GetFileNameWithoutExtension(fileName));
+                Replace("ITempWebView", "IBlazorWebView");
+                Replace("TempWebViewHandler", "BlazorWebViewHandler");
                 InsertUsing("Microsoft.AspNetCore.Components.Web");
                 //Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
             }
@@ -68,7 +73,7 @@ namespace EditWebView
             Replace("namespace Microsoft.AspNetCore.Components.WebView", "namespace PeakSWC.RemoteBlazorWebView");
             Replace("using Microsoft.Web.WebView2;", "using Microsoft.Web.WebView2;\nusing Microsoft.AspNetCore.Components.WebView;\nusing Microsoft.AspNetCore.Components;");
            
-            if (fileName == "RootComponent.cs" || fileName == "WpfDispatcher.cs" || fileName == "BlazorWebViewBase.cs" || fileName == "WindowsFormsDispatcher.cs" || fileName == "BlazorWebViewFormBase.cs" || fileName == "RootComponentCollectionExtensions.cs")
+            if (fileName == "RootComponent.cs" || fileName == "WpfDispatcher.cs" || fileName == "BlazorWebViewBase.cs" || fileName == "WindowsFormsDispatcher.cs" || fileName == "MauiDispatcher.cs" || fileName == "BlazorWebViewFormBase.cs" || fileName == "RootComponentCollectionExtensions.cs")
                 InsertUsing("Microsoft.AspNetCore.Components");
 
             if (fileName == "RootComponent.cs")

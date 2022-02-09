@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--<TargetFrameworks>net6.0-windows10.0.19041</TargetFrameworks>-->
+	  <TargetFrameworks>net6.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <Description>Build .NET MAUI applications with Blazor web UI in the BlazorWebView control.</Description>
+    <DefineConstants>$(DefineConstants);WEBVIEW2_MAUI</DefineConstants>
+	  <UseMaui>true</UseMaui>
+  </PropertyGroup>
+
+  <!--<Import Project="..\..\..\..\.nuspec\Microsoft.Maui.Controls.MultiTargeting.targets" />-->
+
+  <ItemGroup>
+    <Compile Include="..\SharedSource\**\*.cs" Link="Windows\SharedSource\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="6.0.2" />
+    <PackageReference Include="Microsoft.JSInterop" Version="6.0.2" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.2" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
+  </ItemGroup>
+
+  <ItemGroup><!--<ProjectReference Include="..\..\..\Controls\src\Core\Controls.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\Core\src\Core.csproj" PrivateAssets="all" />-->
+  
+    <PackageReference Include="System.Runtime.WindowsRuntime" Version="5.0.0-preview.5.20278.1" />
+  </ItemGroup>
+
+  <!--<Import Project="$(MauiRootDirectory)src\Workload\Shared\LibraryPacks.targets" />-->
+	
+	<ItemGroup>
+		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
+
+
+</Project>

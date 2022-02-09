@@ -1,6 +1,4 @@
-﻿//using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-//using Microsoft.AspNetCore.Components.WebView.WebView2;
+﻿using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Reflection;
@@ -17,6 +15,12 @@ using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using Microsoft.AspNetCore.Components;
+#elif WEBVIEW2_MAUI
+using Microsoft.AspNetCore.Components;
+//using Microsoft.Web.WebView2.Core;
+//using WebView2Control = Microsoft.UI.Xaml.Controls.WebView2;
+using System.Runtime.InteropServices.WindowsRuntime;
+//using Windows.Storage.Streams;
 #endif 
 
 namespace PeakSWC.RemoteWebView
