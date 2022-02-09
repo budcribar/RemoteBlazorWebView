@@ -26,36 +26,4 @@ namespace WebdriverTestProject
             return Utilities.CountRemoteBlazorWinFormsApp();
         }
     }
-
-    //[TestClass]
-    //public class TestRemotePackageBlazorForm : TestRemoteBlazorForm
-    //{
-
-    //    public override Process StartServer()
-    //    {
-    //        return Utilities.StartServerFromPackage();
-    //    }
-    //}
-
-   [TestClass]
-    public class TestRemoteBlazorWinFormsDebug : TestRemoteBlazorForm
-    {
-
-        public override Process CreateClient()
-        {
-            return Utilities.StartRemoteBlazorWinFormsDebugApp();
-        }
-
-    }
-
-    [TestClass]
-    public class TestRemoteEmbeddedBlazorForm : TestRemoteBlazorForm
-    {
-
-        public override Process CreateClient()
-        {
-            return Utilities.StartRemoteEmbeddedBlazorWinFormsApp();
-        }
-
-    }
 }
