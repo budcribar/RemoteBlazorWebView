@@ -1,7 +1,1 @@
 - Updated dependencies
-
-- Removed unused StartBrowser from IBlazorWebView
-- Added NavigateToString to IBlazorWebView
-- Remove usused IsRestarting
-
-
