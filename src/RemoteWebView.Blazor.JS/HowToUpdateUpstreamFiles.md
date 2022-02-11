@@ -22,3 +22,21 @@ When using these commands, replace:
 Longer term, we may consider publishing Components.Web.JS as a NuGet package
 with embedded .ts sources, so that it's possible to use inside a WebPack build
 without needing to clone its sources.
+
+
+Alternatively,
+
+* Copy and unzip the aspnetcore source files 
+* Copy the files from src/Components/Web.JS to RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\upstream\aspnetcore\web.js
+
+* Edit package.json
+
+"@microsoft/dotnet-js-interop": "link:../../JSInterop/Microsoft.JSInterop.JS/src",
+"@microsoft/signalr": "link:../../SignalR/clients/ts/signalr",
+"@microsoft/signalr-protocol-msgpack": "link:../../SignalR/clients/ts/signalr-protocol-msgpack",
+
+to
+ // where x is the latest preview
+"@microsoft/signalr": "6.0.x",
+"@microsoft/signalr-protocol-msgpack":"6.0.x",
+"@microsoft/dotnet-js-interop": "6.0.0.x",                        

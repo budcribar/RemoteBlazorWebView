@@ -1,9 +1,8 @@
 Make demo
-Turn on public class TestRemotePackageBlazorForm and TestRemoteBlazorDebugForm tests
 Make the timeout a property on the WebView (Form and WPF)
 Fix cannot dispose of task while running exception
 Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
-Test2Client5Refresh hangs randomally TestRemoteBlazorWebView
-The URL link which shows up in Photino Blazor View should be customizable. Maybe add to the RootComponents collection?
 WaitForInitialitionComplete relies on a 5 second delay
+Remove the server from the release package and have user install dotnet tool instead
+Add detailed build instructions for the server
 

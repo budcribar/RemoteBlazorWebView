@@ -88,14 +88,4 @@ namespace WebdriverTestProject
             driver?.Quit();
         }
     }
-
-    [TestClass]
-    public class TestLocalEmbeddedBlazorForm : TestLocalBlazorForm
-    {
-        public override string BinaryLocation()
-        {
-            return Utilities.BlazorWinFormsEmbeddedAppExe();
-        }
-       
-    }
 }
