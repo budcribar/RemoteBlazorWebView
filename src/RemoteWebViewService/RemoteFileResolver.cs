@@ -55,7 +55,9 @@ namespace PeakSwc.StaticFiles
         {
             Stopwatch stopWatch = new ();
             stopWatch.Start();
-            _logger.LogInformation($"Attempting to read {appFile}");
+
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation($"Attempting to read {appFile}");
 
             if (!_rootDictionary.TryGetValue(id, out ServiceState? serviceState))
             {
@@ -104,9 +106,13 @@ namespace PeakSwc.StaticFiles
             }
 
             TimeSpan fileReadTime = stopWatch.Elapsed;
-            _logger.LogInformation($"Successfully read {length} bytes from {appFile} id {id}");
-            _logger.LogInformation($"Last file read in {fileReadTime} id {id}");
 
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation($"Successfully read {length} bytes from {appFile} id {id}");
+                _logger.LogInformation($"Last file read in {fileReadTime} id {id}");
+            }
+                
             lock (serviceState)
             {
                 serviceState.TotalFilesRead++;
@@ -114,10 +120,6 @@ namespace PeakSwc.StaticFiles
                 serviceState.TotalFileReadTime += fileReadTime;
                 if (fileReadTime > serviceState.MaxFileReadTime)
                     serviceState.MaxFileReadTime = fileReadTime;
-
-                _logger.LogInformation($"Total files  {serviceState.TotalFilesRead} id {id}");
-                _logger.LogInformation($"Total bytes  {serviceState.TotalBytesRead} id {id}");
-                _logger.LogInformation($"Total file read time {serviceState.TotalFileReadTime} id {id}");
             }
 
             return stream;
