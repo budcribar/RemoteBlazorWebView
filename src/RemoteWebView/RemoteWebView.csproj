@@ -58,10 +58,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Manifest\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
