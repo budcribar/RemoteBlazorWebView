@@ -1354,23 +1354,23 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@microsoft/dotnet-js-interop@6.0.1":
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.1.tgz#229adb8a0c5b4db9f971a1b0b6a0c8fb8c2a7088"
-  integrity sha512-0KubzjT8CcvRPPfAwqiftkuQE1sIOMWQpc06bZqB/Wfva/BgIniKi+a95E9Z9URgBAJ/7P17pMs+ij7NWM6MJA==
+"@microsoft/dotnet-js-interop@6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.2.tgz#69dcf4898604002ee5b92448171751f8e20a3534"
+  integrity sha512-6oivc7C/gngqoqWhNhKT5/Np2hopHjhvfCykS8FIUjnPj8uOcEz1PQOEJdByazL7Bff+iYAYuclx4qyJ5bAT9A==
 
-"@microsoft/signalr-protocol-msgpack@6.0.1":
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.1.tgz#f08c22f3f6c830531ddfed835025ee562f51e5b8"
-  integrity sha512-OvKqWh5nXrLD5SzPyUGgP2p1uLxGsBJNigaKBf2kuWdBUO3aN6qh6CFSAdWWUdoCugN4wucac0Zcr5JU5TRCyw==
+"@microsoft/signalr-protocol-msgpack@6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.2.tgz#2ce4aa9877f8546ec710b5caf4ee0faf83881ec2"
+  integrity sha512-gDZOmeSEECgaU8ls7HobKW4qmTJyJVjsu3AU/wzTr7gHM38ErpYTTi/Ge/cXnCv4mTm3A92gByMPDHMHQ2BEOQ==
   dependencies:
-    "@microsoft/signalr" ">=6.0.1"
+    "@microsoft/signalr" ">=6.0.2"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@6.0.1", "@microsoft/signalr@>=6.0.1":
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.1.tgz#89eeacabb558cfc90c546f8bf165ea34a1f91c28"
-  integrity sha512-witYtScUxPxl1QA69AsuVIsn54S4Rcfym3c/ON2bsA0ZWHcvskA0dUnOX9JCxOduGMEGwkMprKFfVTxUO/inzQ==
+"@microsoft/signalr@6.0.2", "@microsoft/signalr@>=6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.2.tgz#5df3fb1d97f940832b12867b1d7184aec9b3a33d"
+  integrity sha512-OYSRqvOyJWMA9cRvbOIKG0f5wE9xRiayQvkDTQ8gru3WT3WevHk8KGsBUV3x2NmizTSq7gSShQr/l9GkdT/e8g==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^1.0.7"
@@ -4567,9 +4567,9 @@ uri-js@^4.2.2:
     punycode "^2.1.0"
 
 url-parse@>=1.5.0, url-parse@^1.4.3:
-  version "1.5.3"
-  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.5.3.tgz#71c1303d38fb6639ade183c2992c8cc0686df862"
-  integrity sha512-IIORyIQD9rvj0A4CLWsHkBBJuNqWpFQe224b6j9t/ABmquIS0qDU2pY6kl6AuOrL5OkCXHMCFNe1jBcuAggjvQ==
+  version "1.5.7"
+  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.5.7.tgz#00780f60dbdae90181f51ed85fb24109422c932a"
+  integrity sha512-HxWkieX+STA38EDk7CE9MEryFeHCKzgagxlGvsdS7WBImq9Mk+PGwiT56w82WI3aicwJA8REp42Cxo98c8FZMA==
   dependencies:
     querystringify "^2.1.1"
     requires-port "^1.0.0"
