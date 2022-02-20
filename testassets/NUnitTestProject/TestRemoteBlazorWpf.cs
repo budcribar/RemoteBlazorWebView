@@ -309,27 +309,4 @@ namespace WebdriverTestProject
             _driver.Clear();
         }
     }
-
-    [TestClass]
-    public class TestRemoteEmbeddedBlazorWpf : TestRemoteBlazorWpf
-    {
-        public override Process CreateClient()
-        {
-            return Utilities.StartRemoteBlazorWpfEmbeddedApp();
-        }
-
-    }
-
-
-
-    [TestClass]
-    public class TestRemoteBlazorDebugWpf : TestRemoteBlazorWpf
-    {
-
-        public override Process CreateClient()
-        {
-            return Utilities.StartRemoteBlazorWpfDebugApp();
-        }
-
-    }
 }

@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Replaced StartBrowser and IsRestarting with NavigateToString</PackageReleaseNotes>
+		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.13</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
@@ -35,9 +35,9 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.2-mauipre.1.22054.8" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.2-mauipre.1.22054.8" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.2-mauipre.1.22054.8" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.2-mauipre.1.22102.15" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.2-mauipre.1.22102.15" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.2-mauipre.1.22102.15" />
 		<PackageReference Include="Microsoft.JSInterop" Version="6.0.2" />
 		<PackageReference Include="Photino.Blazor" Version="2.1.6" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
