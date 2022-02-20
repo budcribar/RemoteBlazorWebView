@@ -1,17 +1,15 @@
 - Increment VersionPrefix from Directory.Build.Props
-- Edit RunTests.ps1 and set EnvBuildMode to Developer
 - Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
 - Modify PackageReleaseNotes in Project Files (Wpf,Forms,RemoteWebView, RemoteWebViewService)
-- RunTests.ps1 from RemoteBlazorWebView
--	Check RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js is about 332KB
+- .\RunTests.ps1  -Mode Developer from RemoteBlazorWebView
 - Upload the contents of RemoteBlazorWebView\artifacts to nuget.org
 - Open the RemoteBlazorWebViewTutorial solution and make sure Package sources are set to all
 - Update the RemoteBlazorWebView.WindowsForms, RemoteBlazorWebView.Wpf, RemoteBlazorWebViewTutorial.Shared packages to the latest version
-- Edit RunTests.ps1 and set EnvBuildMode to Release
+- .\RunTests.ps1  -Mode Release
 - Verify RunTests.ps1 passes in release mode
 - Update both RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories with the artifacts/releaze.zip using the latest tag
 - Merge the changes into the dotnet6 branch
-- create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
-- copy the webwindow.proto file to the RemoteWebViewAdmin project
+- Create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
+- Copy the webwindow.proto file to the RemoteWebViewAdmin project
 - Copy the RemoteWebViewService to the WebWindow server
 

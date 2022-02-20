@@ -24,7 +24,7 @@
 		<LangVersion>latest</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Replaced StartBrowser and IsRestarting with NavigateToString</PackageReleaseNotes>
+		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.13</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
