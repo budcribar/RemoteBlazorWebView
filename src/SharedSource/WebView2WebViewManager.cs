@@ -30,7 +30,7 @@ using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.UI.Xaml.Controls.WebView2;
 using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Storage.Streams;
+//using Windows.Storage.Streams;
 #endif
 
 namespace PeakSWC.RemoteBlazorWebView

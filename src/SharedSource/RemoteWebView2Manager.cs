@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Components;
 #elif WEBVIEW2_MAUI
 using Microsoft.AspNetCore.Components;
 //using Microsoft.Web.WebView2.Core;
-//using WebView2Control = Microsoft.UI.Xaml.Controls.WebView2;
+using WebView2Control = Microsoft.Maui.Controls.WebView;
 using System.Runtime.InteropServices.WindowsRuntime;
 //using Windows.Storage.Streams;
 #endif 

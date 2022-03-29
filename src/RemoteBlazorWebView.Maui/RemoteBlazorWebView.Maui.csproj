@@ -1,37 +1,63 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <!--<TargetFrameworks>net6.0-windows10.0.19041</TargetFrameworks>-->
-	  <TargetFrameworks>net6.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <Description>Build .NET MAUI applications with Blazor web UI in the BlazorWebView control.</Description>
-    <DefineConstants>$(DefineConstants);WEBVIEW2_MAUI</DefineConstants>
-	  <UseMaui>true</UseMaui>
-  </PropertyGroup>
+	<PropertyGroup>
+		<DefineConstants>$(DefineConstants);WEBVIEW2_MAUI;WINDOWS</DefineConstants>
 
-  <!--<Import Project="..\..\..\..\.nuspec\Microsoft.Maui.Controls.MultiTargeting.targets" />-->
+		<TargetFrameworks>net6.0-windows10.0.19041</TargetFrameworks>
+		<!--<TargetFrameworks>net6.0</TargetFrameworks>-->
+		<Nullable>enable</Nullable>
+		<Description>Build .NET MAUI applications with Blazor web UI in the BlazorWebView control.</Description>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseMaui>true</UseMaui>
 
-  <ItemGroup>
-    <Compile Include="..\SharedSource\**\*.cs" Link="Windows\SharedSource\%(Filename)%(Extension)" />
-  </ItemGroup>
+		<SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net6.0-ios'">14.2</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net6.0-maccatalyst'">14.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net6.0-android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-windows'))">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$(TargetFramework.Contains('-windows'))">10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="6.0.2" />
-    <PackageReference Include="Microsoft.JSInterop" Version="6.0.2" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.2" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
-  </ItemGroup>
+	<!--<Import Project="..\..\..\..\.nuspec\Microsoft.Maui.Controls.MultiTargeting.targets" />-->
 
-  <ItemGroup><!--<ProjectReference Include="..\..\..\Controls\src\Core\Controls.Core.csproj" PrivateAssets="all" />
-    <ProjectReference Include="..\..\..\Core\src\Core.csproj" PrivateAssets="all" />-->
-  
-    <PackageReference Include="System.Runtime.WindowsRuntime" Version="5.0.0-preview.5.20278.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Include="..\SharedSource\**\*.cs" Link="Windows\SharedSource\%(Filename)%(Extension)" />
+	</ItemGroup>
 
-  <!--<Import Project="$(MauiRootDirectory)src\Workload\Shared\LibraryPacks.targets" />-->
-	
+	<ItemGroup>
+		<Compile Remove="Android\**" />
+		<Compile Remove="iOS\**" />
+		<EmbeddedResource Remove="Android\**" />
+		<EmbeddedResource Remove="iOS\**" />
+		<MauiCss Remove="Android\**" />
+		<MauiCss Remove="iOS\**" />
+		<MauiXaml Remove="Android\**" />
+		<MauiXaml Remove="iOS\**" />
+		<None Remove="Android\**" />
+		<None Remove="iOS\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Remove="..\SharedSource\RemoteWebView2Manager.cs" />
+	  <Compile Remove="..\SharedSource\WebView2WebViewManager.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authorization" Version="6.0.1" />
+		<PackageReference Include="Microsoft.JSInterop" Version="6.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
+		<PackageReference Include="Microsoft.UI.Xaml" Version="2.8.0-prerelease.220118001" />
+		<PackageReference Include="System.Runtime.InteropServices.WindowsRuntime" Version="4.3.0" />
+	</ItemGroup>
+
+	<!--<Import Project="$(MauiRootDirectory)src\Workload\Shared\LibraryPacks.targets" />-->
+
 	<ItemGroup>
 		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Standard\" />
 	</ItemGroup>
 
 
