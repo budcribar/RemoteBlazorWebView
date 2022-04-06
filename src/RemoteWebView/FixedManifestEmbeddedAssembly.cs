@@ -42,8 +42,7 @@ namespace PeakSWC.RemoteWebView
 
             if (invalidNode == null)
             {
-                stream.Position = 0;
-                return stream;
+                return new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
             }
 
             invalidNode.Remove();

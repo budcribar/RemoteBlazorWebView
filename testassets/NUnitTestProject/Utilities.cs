@@ -177,6 +177,8 @@ namespace WebdriverTestProject
         #endregion
 
         #region Common
+
+        public static string JavascriptFile = @"..\..\..\..\..\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js";
         public static Process StartProcess(string executable, string directory)
         {
             Stopwatch sw = new();

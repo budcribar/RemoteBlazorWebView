@@ -1,10 +1,9 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace WebdriverTestProject
 {
-
     [TestClass]
-    public class TestLocalBlazorWebView : TestLocalBlazorForm
+    public class TestLocalBlazorWebViewDebug : TestLocalBlazorForm
     {
         public override string BinaryLocation()
         {

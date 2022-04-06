@@ -19,7 +19,7 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemoteWebView 
     {
-        public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage)
+        public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage, string manifestRoot = "embedded")
         {
             IFileProvider? provider = null;
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
@@ -27,32 +27,11 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                EmbeddedFilesManifest manifest = ManifestParser.Parse(entryAssembly);
-                var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                if (dir != null)
-                {
-                    var manifestRoot = Path.Combine(dir.Name, root);
-                    provider = new ManifestEmbeddedFileProvider(entryAssembly, manifestRoot);
-                }
-                else throw new Exception("Try fixed manifest");
+                provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), Path.Combine(manifestRoot, root));
             }
-            catch (Exception)
-            {
-                try
-                {
-                    EmbeddedFilesManifest manifest = ManifestParser.Parse(new FixedManifestEmbeddedAssembly(entryAssembly));
-                    var dir = manifest._rootDirectory.Children.Where(x => x is ManifestDirectory md && md.Children.Any(y => y.Name == root)).FirstOrDefault();
-
-                    if (dir != null)
-                    {
-                        var manifestRoot = Path.Combine(dir.Name, root);
-                        provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), manifestRoot);
-                    }
-                }
-                catch (Exception) { }
-            }
-
+            catch (Exception ex) { 
+                var m = ex.Message; }
+          
             if (provider == null)
                 provider = new PhysicalFileProvider(contentRootDir);
 
