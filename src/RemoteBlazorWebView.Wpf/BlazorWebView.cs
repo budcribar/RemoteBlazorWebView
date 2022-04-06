@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using Microsoft.AspNetCore.Components.WebView;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
@@ -94,12 +95,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir,HostPage);
 
-        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
         {
             if (ServerUri == null)
-                return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+                return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, externalNavigationStarting);
             else
-                return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath,externalNavigationStarting);
         }
 
         public void FireConnected(ConnectedEventArgs args)

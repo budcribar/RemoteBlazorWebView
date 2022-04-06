@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using PeakSWC.RemoteWebView;
@@ -135,12 +136,12 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";
 
-        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
         {
             if (ServerUri == null)
-                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath);
+                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, externalNavigationStarting);
             else
-                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath);
+                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, externalNavigationStarting);
         }
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);

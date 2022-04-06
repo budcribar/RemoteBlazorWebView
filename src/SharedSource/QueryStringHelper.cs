@@ -3,9 +3,11 @@
 
 #nullable enable
 
+using System;
+
 namespace PeakSWC.RemoteBlazorWebView
 {
-	public static class QueryStringHelper
+	internal static class QueryStringHelper
 	{
 		public static string RemovePossibleQueryString(string? url)
 		{
@@ -13,7 +15,7 @@ namespace PeakSWC.RemoteBlazorWebView
 			{
 				return string.Empty;
 			}
-			var indexOfQueryString = url.IndexOf('?');
+			var indexOfQueryString = url.IndexOf('?', StringComparison.Ordinal);
 			return (indexOfQueryString == -1)
 				? url
 				: url.Substring(0, indexOfQueryString);

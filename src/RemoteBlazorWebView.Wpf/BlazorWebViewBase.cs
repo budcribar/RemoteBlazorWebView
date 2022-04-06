@@ -16,11 +16,11 @@ using System.Windows.Controls;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
-
+using Microsoft.AspNetCore.Components.WebView;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 	/// <summary>
-	/// A Windows Presentation Foundation (WPF) control for hosting Blazor web components locally in Windows desktop applications.
+	/// A Windows Presentation Foundation (WPF) control for hosting Razor components locally in Windows desktop applications.
 	/// </summary>
 	public class BlazorWebViewBase : Control, IAsyncDisposable
 	{
@@ -50,9 +50,17 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			propertyType: typeof(IServiceProvider),
 			ownerType: typeof(BlazorWebViewBase),
 			typeMetadata: new PropertyMetadata(OnServicesPropertyChanged));
+
+		/// <summary>
+		/// The backing store for the <see cref="ExternalNavigationStarting"/> property.
+		/// </summary>
+		public static readonly DependencyProperty ExternalNavigationStartingProperty = DependencyProperty.Register(
+			name: nameof(ExternalNavigationStarting),
+			propertyType: typeof(EventHandler<ExternalLinkNavigationEventArgs>),
+			ownerType: typeof(BlazorWebViewBase));
 		#endregion
 
-		private const string webViewTemplateChildName = "WebView";
+		private const string WebViewTemplateChildName = "WebView";
 		private WebView2Control _webview;
 		private WebView2WebViewManager _webviewManager;
 		private bool _isDisposed;
@@ -69,7 +77,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 			Template = new ControlTemplate
 			{
-				VisualTree = new FrameworkElementFactory(typeof(WebView2Control), webViewTemplateChildName)
+				VisualTree = new FrameworkElementFactory(typeof(WebView2Control), WebViewTemplateChildName)
 			};
 		}
 
@@ -86,7 +94,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 		/// <summary>
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
-		/// This property must be set to a valid value for the Blazor components to start.
+		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
 		public string HostPage
 		{
@@ -102,8 +110,18 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			(RootComponentsCollection)GetValue(RootComponentsProperty);
 
 		/// <summary>
+		/// Allows customizing how external links are opened.
+		/// Opens external links in the system browser by default.
+		/// </summary>
+		public EventHandler<ExternalLinkNavigationEventArgs> ExternalNavigationStarting
+		{
+			get => (EventHandler<ExternalLinkNavigationEventArgs>)GetValue(ExternalNavigationStartingProperty);
+			set => SetValue(ExternalNavigationStartingProperty, value);
+		}
+
+		/// <summary>
 		/// Gets or sets an <see cref="IServiceProvider"/> containing services to be used by this control and also by application code.
-		/// This property must be set to a valid value for the Blazor components to start.
+		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
 		public IServiceProvider Services
 		{
@@ -134,7 +152,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 			if (_webview == null)
 			{
-				_webview = (WebView2Control)GetTemplateChild(webViewTemplateChildName);
+				_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);
 				StartWebViewCoreIfPossible();
 			}
 		}
@@ -147,9 +165,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			StartWebViewCoreIfPossible();
 		}
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
 		{
-			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, externalNavigationStarting);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
@@ -178,7 +196,15 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 			var fileProvider = CreateFileProvider(contentRootDirFullPath);
 
-			_webviewManager = CreateWebViewManager(_webview, Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
+			_webviewManager = CreateWebViewManager(
+				_webview,
+				Services,
+				ComponentsDispatcher,
+				fileProvider,
+				RootComponents.JSComponents,
+				hostPageRelativePath,
+				(args) => ExternalNavigationStarting?.Invoke(this, args));
+
 			foreach (var rootComponent in RootComponents)
 			{
 				// Since the page isn't loaded yet, this will always complete synchronously
@@ -225,7 +251,17 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// <returns>Returns a <see cref="IFileProvider"/> for static assets.</returns>
 		public virtual IFileProvider CreateFileProvider(string contentRootDir)
 		{
-			return new PhysicalFileProvider(contentRootDir);
+			if (Directory.Exists(contentRootDir))
+			{
+				// Typical case after publishing, or if you're copying content to the bin dir in development for some nonstandard reason
+				return new PhysicalFileProvider(contentRootDir);
+			}
+			else
+			{
+				// Typical case in development, as the files come from Microsoft.AspNetCore.Components.WebView.StaticContentProvider
+				// instead and aren't copied to the bin dir
+				return new NullFileProvider();
+			}
 		}
 
 		private void CheckDisposed()
@@ -236,11 +272,14 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			}
 		}
 
+		/// <summary>
+		/// Allows asynchronous disposal of the <see cref="BlazorWebViewBase" />.
+		/// </summary>
 		protected virtual async ValueTask DisposeAsyncCore()
 		{
-			// Dispose this component's contents that user-written disposal logic and Blazor disposal logic will complete
-			// first. Then dispose the WebView2 control. This order is critical because once the WebView2 is disposed it
-			// will prevent and Blazor code from working because it requires the WebView to exist.
+			// Dispose this component's contents that user-written disposal logic and Razor component disposal logic will
+			// complete first. Then dispose the WebView2 control. This order is critical because once the WebView2 is
+			// disposed it will prevent and Razor component code from working because it requires the WebView to exist.
 			if (_webviewManager != null)
 			{
 				await _webviewManager.DisposeAsync()
@@ -252,6 +291,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			_webview = null;
 		}
 
+		/// <inheritdoc />
 		public async ValueTask DisposeAsync()
 		{
 			if (_isDisposed)
@@ -266,7 +306,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 //#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
 			// Suppress finalization.
 			GC.SuppressFinalize(this);
-//#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize	
+//#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
 		}
 	}
 }

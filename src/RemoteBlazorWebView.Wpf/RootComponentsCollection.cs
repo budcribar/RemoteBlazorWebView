@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
+	/// <summary>
+	/// A collection of <see cref="RootComponent"/> items.
+	/// </summary>
 	public class RootComponentsCollection : ObservableCollection<RootComponent>, IJSComponentConfiguration
 	{
+		/// <inheritdoc />
 		public JSComponentConfigurationStore JSComponents { get; } = new();
 	}
 }

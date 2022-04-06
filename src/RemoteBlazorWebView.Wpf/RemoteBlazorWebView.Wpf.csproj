@@ -21,7 +21,7 @@
 		<Nullable>annotations</Nullable>
 		<Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
 		<Platforms>x64</Platforms>
-		<LangVersion>latest</LangVersion>
+		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
 		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.13</PackageReleaseNotes>
@@ -32,13 +32,17 @@
 		<Compile Include="..\SharedSource\**\*.cs" Link="SharedSource\%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Remove="..\SharedSource\ExternalLinkNavigationEventArgs.cs" />
+	  <Compile Remove="..\SharedSource\ExternalLinkNavigationPolicy.cs" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Page Remove="RemoteBlazorWebView.xaml" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.200-preview.13.2865" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.200-preview.14.5099" />
 	</ItemGroup>
 
 	<ItemGroup>

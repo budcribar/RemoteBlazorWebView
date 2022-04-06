@@ -13,11 +13,12 @@ using System.Windows.Forms;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
+using Microsoft.AspNetCore.Components.WebView;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
 	/// <summary>
-	/// A Windows Forms control for hosting Blazor web components locally in Windows desktop applications.
+	/// A Windows Forms control for hosting Razor components locally in Windows desktop applications.
 	/// </summary>
 	public class BlazorWebViewFormBase : ContainerControl
 	{
@@ -71,7 +72,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 		/// <summary>
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
-		/// This property must be set to a valid value for the Blazor components to start.
+		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
 		[Category("Behavior")]
 		[Description(@"Path to the host page within the application's static files. Example: wwwroot\index.html.")]
@@ -99,7 +100,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 		/// <summary>
 		/// Gets or sets an <see cref="IServiceProvider"/> containing services to be used by this control and also by application code.
-		/// This property must be set to a valid value for the Blazor components to start.
+		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -113,6 +114,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			}
 		}
 
+		/// <summary>
+		/// Allows customizing how external links are opened.
+		/// Opens external links in the system browser by default.
+		/// </summary>
+		[Category("Action")]
+		[Description("Allows customizing how external links are opened. Opens external links in the system browser by default.")]
+		public EventHandler<ExternalLinkNavigationEventArgs> ExternalNavigationStarting;
+
 		private void OnHostPagePropertyChanged() => StartWebViewCoreIfPossible();
 
 		private void OnServicesPropertyChanged() => StartWebViewCoreIfPossible();
@@ -123,14 +132,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			HostPage != null &&
 			Services != null;
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
 		{
-			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, externalNavigationStarting);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
 			// We never start the Blazor code in design time because it doesn't make sense to run
-			// a Blazor component in the designer.
+			// a Razor component in the designer.
 			if (IsAncestorSiteInDesignMode)
 			{
 				return;
@@ -160,7 +169,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 			var fileProvider = CreateFileProvider(contentRootDirFullPath);
 
-			_webviewManager = CreateWebViewManager(_webview, Services, ComponentsDispatcher, fileProvider, RootComponents.JSComponents, hostPageRelativePath);
+			_webviewManager = CreateWebViewManager(
+				_webview,
+				Services,
+				ComponentsDispatcher,
+				fileProvider,
+				RootComponents.JSComponents,
+				hostPageRelativePath,
+				(args) => ExternalNavigationStarting?.Invoke(this, args));
 
 			foreach (var rootComponent in RootComponents)
 			{
@@ -204,7 +220,17 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		/// <returns>Returns a <see cref="IFileProvider"/> for static assets.</returns>
 		public virtual IFileProvider CreateFileProvider(string contentRootDir)
 		{
-			return new PhysicalFileProvider(contentRootDir);
+			if (Directory.Exists(contentRootDir))
+			{
+				// Typical case after publishing, or if you're copying content to the bin dir in development for some nonstandard reason
+				return new PhysicalFileProvider(contentRootDir);
+			}
+			else
+			{
+				// Typical case in development, as the files come from Microsoft.AspNetCore.Components.WebView.StaticContentProvider
+				// instead and aren't copied to the bin dir
+				return new NullFileProvider();
+			}
 		}
 
 		/// <inheritdoc />
@@ -213,9 +239,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			if (disposing)
 			{
 				// Dispose this component's contents and block on completion so that user-written disposal logic and
-				// Blazor disposal logic will complete first. Then call base.Dispose(), which will dispose the WebView2
-				// control. This order is critical because once the WebView2 is disposed it will prevent and Blazor
-				// code from working because it requires the WebView to exist.
+				// Razor component disposal logic will complete first. Then call base.Dispose(), which will dispose
+				// the WebView2 control. This order is critical because once the WebView2 is disposed it will prevent
+				// Razor component code from working because it requires the WebView to exist.
 				_webviewManager?
 					.DisposeAsync()
 					.AsTask()
