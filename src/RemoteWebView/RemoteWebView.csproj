@@ -26,7 +26,7 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.13</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.14.2</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
