@@ -2,6 +2,7 @@
 - Modify Readme.md in the RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories
 - Modify PackageReleaseNotes in Project Files (Wpf,Forms,RemoteWebView, RemoteWebViewService)
 - .\RunTests.ps1  -Mode Developer from RemoteBlazorWebView
+	** Note if unable to install RemoteWebViewServer you may need to do dotnet nuget remove source 
 - Upload the contents of RemoteBlazorWebView\artifacts to nuget.org
 - Open the RemoteBlazorWebViewTutorial solution and make sure Package sources are set to all
 - Update the RemoteBlazorWebView.WindowsForms, RemoteBlazorWebView.Wpf, RemoteBlazorWebViewTutorial.Shared packages to the latest version
