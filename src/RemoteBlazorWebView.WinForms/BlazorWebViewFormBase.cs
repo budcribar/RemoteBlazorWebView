@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.Web;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -13,7 +14,6 @@ using System.Windows.Forms;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
-using Microsoft.AspNetCore.Components.WebView;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -132,9 +132,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			HostPage != null &&
 			Services != null;
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
 		{
-			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, externalNavigationStarting);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath,externalNavigationStarting);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{

@@ -25,6 +25,7 @@ static void ProcessFiles(string inputDir, string outputDir)
     foreach (var f in Directory.EnumerateFiles(inputDir))
     {
         if (f.EndsWith(".csproj")) continue;
+        if (f.Contains("ExternalLinkNavigation")) continue;
 
         Editor editor = new(f);
         editor.Edit();
