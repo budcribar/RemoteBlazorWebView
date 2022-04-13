@@ -24,7 +24,7 @@ nvm use 16.13.0
   npm install -g yarn
   cd RemoteWebView.Blazor.JS
   yarn install
-  cd .\upstream\aspnetcore\web.js\ 
+  cd .\web.js\ 
 ```
 
 * Add RemoteWebView.Blazor.JS\protoc\bin to your path variable

@@ -2,8 +2,8 @@ import { receiveMessage } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webview_pb_service";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, IdMessageRequest } from "./generated/webview_pb";
-import { internalFunctions as navigationManagerFunctions } from '../upstream/aspnetcore/web.js/src/Services/NavigationManager';
-import { showErrorNotification } from '../upstream/aspnetcore/web.js/src/BootErrors';
+import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
+import { showErrorNotification } from '../web.js/src/BootErrors';
 
 var sequenceNum: number = 1;
 
