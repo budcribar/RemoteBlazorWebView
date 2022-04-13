@@ -3,7 +3,7 @@
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
-	internal class WindowsFormsBlazorMarkerService
+	public class WindowsFormsBlazorMarkerService
 	{
 	}
 }
