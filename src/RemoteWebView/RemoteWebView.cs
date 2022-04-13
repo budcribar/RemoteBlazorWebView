@@ -29,8 +29,7 @@ namespace PeakSWC.RemoteWebView
             {
                 provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), Path.Combine(manifestRoot, root));
             }
-            catch (Exception ex) { 
-                var m = ex.Message; }
+            catch (Exception) { }
           
             if (provider == null)
                 provider = new PhysicalFileProvider(contentRootDir);

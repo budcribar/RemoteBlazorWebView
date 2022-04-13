@@ -44,8 +44,25 @@ namespace EditWebView
             });
         }";
                 Replace("protected override void SendMessage(string message)", method + "\n        protected override void SendMessage(string message)");
+                Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
+                Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
+
             }
 
+            if (fileName =="BlazorWebViewDeveloperTools.cs")
+            {
+                Replace("internal class", "public class");
+            }
+            if (fileName == "WpfBlazorMarkerService.cs")
+            {
+                Replace("internal class", "public class");
+            }
+
+            if (fileName == "BlazorWebViewServiceCollectionExtensions.cs")
+            {
+                Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
+                Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
+            }
 
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {

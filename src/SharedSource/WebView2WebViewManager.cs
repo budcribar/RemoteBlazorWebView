@@ -18,7 +18,6 @@ using Microsoft.Extensions.FileProviders;
 #if WEBVIEW2_WINFORMS
 using System.Diagnostics;
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
-using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2;
 using Microsoft.AspNetCore.Components.WebView;
@@ -28,7 +27,7 @@ using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 using System.Reflection;
 #elif WEBVIEW2_WPF
 using System.Diagnostics;
-using Microsoft.AspNetCore.Components.WebView.Wpf;
+using PeakSWC.RemoteBlazorWebView.Wpf;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2;
 using Microsoft.AspNetCore.Components.WebView;
@@ -36,7 +35,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using System.Reflection;
-using PeakSWC.RemoteBlazorWebView.Wpf;
 #elif WEBVIEW2_MAUI
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.Extensions.DependencyInjection;

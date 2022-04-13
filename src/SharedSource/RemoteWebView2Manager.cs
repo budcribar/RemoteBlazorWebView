@@ -11,14 +11,14 @@ using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
-using Microsoft.AspNetCore.Components.WebView;
+//using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components;
 #elif WEBVIEW2_WPF
 using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebView;
+//using Microsoft.AspNetCore.Components.WebView;
 #endif 
 
 namespace PeakSWC.RemoteWebView

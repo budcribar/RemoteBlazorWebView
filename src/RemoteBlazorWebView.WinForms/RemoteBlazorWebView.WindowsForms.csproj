@@ -49,7 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.300-rc.1.5355" />
    
