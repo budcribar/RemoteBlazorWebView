@@ -64,6 +64,11 @@ namespace EditWebView
                 Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
             }
 
+            if (fileName == "UrlLoadingEventArgs.cs")
+            {
+                Replace("internal static", "public static");
+            }
+
             if (fileName == "BlazorWebViewFormBase.cs" || fileName == "BlazorWebViewBase.cs")
             {
                 Comment("#pragma warning disable CA1816");
