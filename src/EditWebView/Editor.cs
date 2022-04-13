@@ -62,6 +62,7 @@ namespace EditWebView
             {
                 Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
                 Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
+                Replace("namespace Microsoft.Extensions.DependencyInjection", "namespace PeakSWC.RemoteBlazorWebView");
             }
 
             if (fileName == "UrlLoadingEventArgs.cs")

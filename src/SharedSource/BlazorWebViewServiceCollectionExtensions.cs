@@ -12,7 +12,7 @@ using Microsoft.Maui.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace PeakSWC.RemoteBlazorWebView
 {
 	/// <summary>
 	/// Extension methods to <see cref="IServiceCollection"/>.

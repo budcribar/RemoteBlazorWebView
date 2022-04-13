@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Updated dotnet maui packages to 6.0.200-preview.14.2</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.1</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
