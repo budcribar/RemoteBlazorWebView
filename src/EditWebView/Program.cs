@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using EditWebView;
 
-string maui = "maui-6.0.200-preview.14.2";
+string maui = "maui-6.0.300-rc.1";
 string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
 string outputDir = "../../../../RemoteBlazorWebView.WinForms";
 
@@ -25,7 +25,7 @@ static void ProcessFiles(string inputDir, string outputDir)
     foreach (var f in Directory.EnumerateFiles(inputDir))
     {
         if (f.EndsWith(".csproj")) continue;
-        if (f.Contains("ExternalLinkNavigation")) continue;
+        if (f.Contains("UrlLoadingEvent")) continue;
 
         Editor editor = new(f);
         editor.Edit();

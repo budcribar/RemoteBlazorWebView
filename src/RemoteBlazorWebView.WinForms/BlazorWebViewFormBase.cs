@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.WinForms.WebView2;
 
@@ -115,12 +116,12 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		}
 
 		/// <summary>
-		/// Allows customizing how external links are opened.
-		/// Opens external links in the system browser by default.
+		/// Allows customizing how links are opened.
+		/// By default, opens internal links in the webview and external links in an external app.
 		/// </summary>
 		[Category("Action")]
-		[Description("Allows customizing how external links are opened. Opens external links in the system browser by default.")]
-		public EventHandler<ExternalLinkNavigationEventArgs> ExternalNavigationStarting;
+		[Description("Allows customizing how links are opened. By default, opens internal links in the webview and external links in an external app.")]
+		public EventHandler<UrlLoadingEventArgs> UrlLoading;
 
 		private void OnHostPagePropertyChanged() => StartWebViewCoreIfPossible();
 
@@ -132,7 +133,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			HostPage != null &&
 			Services != null;
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,Action<UrlLoadingEventArgs> externalNavigationStarting)
 		{
 			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath,externalNavigationStarting);
 		}
@@ -176,7 +177,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 				fileProvider,
 				RootComponents.JSComponents,
 				hostPageRelativePath,
-				(args) => ExternalNavigationStarting?.Invoke(this, args));
+				(args) => UrlLoading?.Invoke(this, args));
 
 			foreach (var rootComponent in RootComponents)
 			{

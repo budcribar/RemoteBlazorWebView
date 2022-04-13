@@ -136,7 +136,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";
 
-        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<ExternalLinkNavigationEventArgs> externalNavigationStarting)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<UrlLoadingEventArgs> externalNavigationStarting)
         {
             if (ServerUri == null)
                  return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, externalNavigationStarting);
