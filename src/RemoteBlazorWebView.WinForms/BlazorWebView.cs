@@ -136,17 +136,17 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";
 
-        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<UrlLoadingEventArgs> externalNavigationStarting)
+        public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)
         {
             if (ServerUri == null)
-                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, externalNavigationStarting);
+                 return new WebView2WebViewManager(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized);
             else
-                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, externalNavigationStarting);
+                 return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized);
         }
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
-        public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+        //public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
         public Task WaitForInitialitionComplete() => Task.CompletedTask;
     }

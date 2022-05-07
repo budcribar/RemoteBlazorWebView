@@ -5,7 +5,6 @@ using System;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.Web;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
@@ -15,7 +14,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 
@@ -60,11 +58,28 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			name: nameof(UrlLoading),
 			propertyType: typeof(EventHandler<UrlLoadingEventArgs>),
 			ownerType: typeof(BlazorWebViewBase));
+
+		/// <summary>
+		/// The backing store for the <see cref="BlazorWebViewInitializing"/> event.
+		/// </summary>
+		public static readonly DependencyProperty BlazorWebViewInitializingProperty = DependencyProperty.Register(
+			name: nameof(BlazorWebViewInitializing),
+			propertyType: typeof(EventHandler<BlazorWebViewInitializingEventArgs>),
+			ownerType: typeof(BlazorWebViewBase));
+
+		/// <summary>
+		/// The backing store for the <see cref="BlazorWebViewInitialized"/> event.
+		/// </summary>
+		public static readonly DependencyProperty BlazorWebViewInitializedProperty = DependencyProperty.Register(
+			name: nameof(BlazorWebViewInitialized),
+			propertyType: typeof(EventHandler<BlazorWebViewInitializedEventArgs>),
+			ownerType: typeof(BlazorWebViewBase));
+
 		#endregion
 
 		private const string WebViewTemplateChildName = "WebView";
-		private WebView2Control _webview;
-		private WebView2WebViewManager _webviewManager;
+		private WebView2Control? _webview;
+		private WebView2WebViewManager? _webviewManager;
 		private bool _isDisposed;
 
 		/// <summary>
@@ -91,8 +106,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// is controlled by the <see cref="BlazorWebViewBase"/> that is hosting it.
 		/// </remarks>
 		[Browsable(false)]
-		public WebView2Control WebView => _webview;
-        public WebView2WebViewManager WebViewManager => _webviewManager;
+		public WebView2Control WebView => _webview!;
 
 		/// <summary>
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
@@ -119,6 +133,24 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		{
 			get => (EventHandler<UrlLoadingEventArgs>)GetValue(UrlLoadingProperty);
 			set => SetValue(UrlLoadingProperty, value);
+		}
+
+		/// <summary>
+		/// Allows customizing the web view before it is created.
+		/// </summary>
+		public EventHandler<BlazorWebViewInitializingEventArgs> BlazorWebViewInitializing
+		{
+			get => (EventHandler<BlazorWebViewInitializingEventArgs>)GetValue(BlazorWebViewInitializingProperty);
+			set => SetValue(BlazorWebViewInitializingProperty, value);
+		}
+
+		/// <summary>
+		/// Allows customizing the web view after it is created.
+		/// </summary>
+		public EventHandler<BlazorWebViewInitializedEventArgs> BlazorWebViewInitialized
+		{
+			get => (EventHandler<BlazorWebViewInitializedEventArgs>)GetValue(BlazorWebViewInitializedProperty);
+			set => SetValue(BlazorWebViewInitializedProperty, value);
 		}
 
 		/// <summary>
@@ -167,9 +199,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			StartWebViewCoreIfPossible();
 		}
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,Action<UrlLoadingEventArgs> externalNavigationStarting)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)
 		{
-			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath,externalNavigationStarting);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
@@ -186,26 +218,32 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			var entryAssemblyLocation = Assembly.GetEntryAssembly()?.Location;
 			if (!string.IsNullOrEmpty(entryAssemblyLocation))
 			{
-				appRootDir = Path.GetDirectoryName(entryAssemblyLocation);
+				appRootDir = Path.GetDirectoryName(entryAssemblyLocation)!;
 			}
 			else
 			{
 				appRootDir = Environment.CurrentDirectory;
 			}
 			var hostPageFullPath = Path.GetFullPath(Path.Combine(appRootDir, HostPage));
-			var contentRootDirFullPath = Path.GetDirectoryName(hostPageFullPath);
+			var contentRootDirFullPath = Path.GetDirectoryName(hostPageFullPath)!;
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDirFullPath, hostPageFullPath);
+			var contentRootDirRelativePath = Path.GetRelativePath(appRootDir, contentRootDirFullPath);
 
 			var fileProvider = CreateFileProvider(contentRootDirFullPath);
 
 			_webviewManager = CreateWebViewManager(
-				_webview,
+				_webview!,
 				Services,
 				ComponentsDispatcher,
 				fileProvider,
 				RootComponents.JSComponents,
+				contentRootDirRelativePath,
 				hostPageRelativePath,
-				(args) => UrlLoading?.Invoke(this, args));
+				(args) => UrlLoading?.Invoke(this, args),
+				(args) => BlazorWebViewInitializing?.Invoke(this, args),
+				(args) => BlazorWebViewInitialized?.Invoke(this, args));
+
+			StaticContentHotReloadManager.AttachToWebViewManagerIfEnabled(_webviewManager);
 
 			foreach (var rootComponent in RootComponents)
 			{
@@ -217,7 +255,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 		private WpfDispatcher ComponentsDispatcher { get; }
 
-		private void HandleRootComponentsCollectionChanged(object sender, NotifyCollectionChangedEventArgs eventArgs)
+		private void HandleRootComponentsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
 		{
 			CheckDisposed();
 
@@ -227,8 +265,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 				// Dispatch because this is going to be async, and we want to catch any errors
 				_ = ComponentsDispatcher.InvokeAsync(async () =>
 				{
-					var newItems = eventArgs.NewItems.Cast<RootComponent>();
-					var oldItems = eventArgs.OldItems.Cast<RootComponent>();
+					var newItems = (eventArgs.NewItems ?? Array.Empty<RootComponent>()).Cast<RootComponent>();
+					var oldItems = (eventArgs.OldItems ?? Array.Empty<RootComponent>()).Cast<RootComponent>();
 
 					foreach (var item in newItems.Except(oldItems))
 					{

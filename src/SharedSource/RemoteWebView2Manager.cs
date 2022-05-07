@@ -28,7 +28,7 @@ namespace PeakSWC.RemoteWebView
         Uri url;
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
-        public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, Action<UrlLoadingEventArgs> externalNavigationStarting) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, externalNavigationStarting)
+        public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized)
         {
             BlazorWebView = blazorWebView;
             RemoteWebView = new RemoteWebView(
