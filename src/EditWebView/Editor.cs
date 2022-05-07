@@ -121,6 +121,7 @@ namespace EditWebView
             {
                 Replace("Microsoft.AspNetCore.Components.WebView.StaticContentHotReloadManager", "PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager");
                 InsertUsing("Microsoft.AspNetCore.Components");
+                InsertUsing("Microsoft.AspNetCore.Components.WebView");
             }
         }
 

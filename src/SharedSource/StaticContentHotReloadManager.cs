@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +10,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
-using Microsoft.AspNetCore.Components.WebView;
 
 [assembly: MetadataUpdateHandler(typeof(PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager))]
 
