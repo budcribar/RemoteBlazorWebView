@@ -99,14 +99,14 @@ namespace PeakSWC.RemoteBlazorWebView
 			{
 				throw new InvalidOperationException(
 					"Unable to find the required services. " +
-					$"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(BlazorWebViewServiceCollectionExtensions.AddWindowsFormsBlazorWebView)}' in the application startup code.");
+					$"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(BlazorWebViewServiceCollectionExtensions.AddRemoteWindowsFormsBlazorWebView)}' in the application startup code.");
 			}
 #elif WEBVIEW2_WPF
 			if (services.GetService<WpfBlazorMarkerService>() is null)
 			{
 				throw new InvalidOperationException(
 					"Unable to find the required services. " +
-					$"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(BlazorWebViewServiceCollectionExtensions.AddWpfBlazorWebView)}' in the application startup code.");
+					$"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(BlazorWebViewServiceCollectionExtensions.AddRemoteWpfBlazorWebView)}' in the application startup code.");
 			}
 #endif
 
