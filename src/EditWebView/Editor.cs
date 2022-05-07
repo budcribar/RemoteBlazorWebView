@@ -47,6 +47,9 @@ namespace EditWebView
                 Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
                 Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
 
+                Replace("AddWindowsFormsBlazorWebView", "AddRemoteWindowsFormsBlazorWebView");
+                Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
+
             }
 
             if (fileName =="BlazorWebViewDeveloperTools.cs")
@@ -63,6 +66,10 @@ namespace EditWebView
                 Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
                 Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
                 Replace("namespace Microsoft.Extensions.DependencyInjection", "namespace PeakSWC.RemoteBlazorWebView");
+                Replace("AddWindowsFormsBlazorWebView", "AddRemoteWindowsFormsBlazorWebView");
+                Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
+                Replace("AddBlazorWebViewDeveloperTools", "AddRemoteBlazorWebViewDeveloperTools");
+                
             }
 
             if (fileName == "UrlLoadingEventArgs.cs")
