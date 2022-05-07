@@ -25,9 +25,9 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// <param name="services">The <see cref="IServiceCollection"/>.</param>
 		/// <returns>The <see cref="IServiceCollection"/>.</returns>
 #if WEBVIEW2_WINFORMS
-		public static IServiceCollection AddWindowsFormsBlazorWebView(this IServiceCollection services)
+		public static IServiceCollection AddRemoteWindowsFormsBlazorWebView(this IServiceCollection services)
 #elif WEBVIEW2_WPF
-		public static IServiceCollection AddWpfBlazorWebView(this IServiceCollection services)
+		public static IServiceCollection AddRemoteWpfBlazorWebView(this IServiceCollection services)
 #elif WEBVIEW2_MAUI
 		public static IServiceCollection AddMauiBlazorWebView(this IServiceCollection services)
 #else
@@ -52,7 +52,7 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// </summary>
 		/// <param name="services">The <see cref="IServiceCollection"/>.</param>
 		/// <returns>The <see cref="IServiceCollection"/>.</returns>
-		public static IServiceCollection AddBlazorWebViewDeveloperTools(this IServiceCollection services)
+		public static IServiceCollection AddRemoteBlazorWebViewDeveloperTools(this IServiceCollection services)
 		{
 			return services.AddSingleton<BlazorWebViewDeveloperTools>(new BlazorWebViewDeveloperTools { Enabled = true });
 		}
