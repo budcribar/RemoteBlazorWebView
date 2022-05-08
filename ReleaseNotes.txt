@@ -1,1 +1,1 @@
-- Updated dependencies
+- *** Breaking change *** serviceCollection.AddWpfBlazorWebView(); has become serviceCollection.AddRemoteWpfBlazorWebView(); due to a change in maui package 6.0.300-rc.3

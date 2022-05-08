@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.1</PackageReleaseNotes>
+		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.3 *** Breaking change *** serviceCollection.AddWpfBlazorWebView(); has become serviceCollection.AddRemoteWpfBlazorWebView(); due to a change in maui package</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
