@@ -19,7 +19,8 @@ namespace PeakSWC.RemoteWebView
         public Guid Id { get; set; }
         public string Markup { get; set; }
         public void Restart();
-        //public void NavigateToString(string htmlContent);
+        
+        public void NavigateToString(string htmlContent);
 
         public Task WaitForInitialitionComplete();
     }

@@ -55,6 +55,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public WebView2Control WebView => _webview;
+        [Browsable(false)]
+        public WebView2WebViewManager WebViewManager => _webviewManager;
 
 		private WindowsFormsDispatcher ComponentsDispatcher { get; }
 

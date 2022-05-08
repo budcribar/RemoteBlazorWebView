@@ -29,9 +29,7 @@ namespace EditWebView
         {
 
             // Two additions for .13 release
-            if (fileName == "BlazorWebViewBase.cs")
-                Replace("public WebView2Control WebView => _webview;", "public WebView2Control WebView => _webview;\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
-
+          
             if(fileName == "WebView2WebViewManager.cs")
             {
                 string method =
@@ -51,9 +49,13 @@ namespace EditWebView
                 Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
 
                 Replace("internal class WebView2WebViewManager", "public class WebView2WebViewManager");
+                ReplaceFirst("using Microsoft.AspNetCore.Components.WebView;", "");
 
             }
-
+            if (fileName == "UrlLoadingEventArgs.cs")
+            {
+                Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?", "var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data") ?");
+            }
             if (fileName =="BlazorWebViewDeveloperTools.cs")
             {
                 Replace("internal class", "public class");
@@ -83,6 +85,10 @@ namespace EditWebView
             {
                 Comment("#pragma warning disable CA1816");
                 Comment("#pragma warning restore");
+
+                // Winforms does not use nullable on WebView2Control
+                Replace("public WebView2Control WebView => _webview;", "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
+                Replace("public WebView2Control WebView => _webview!;", "public WebView2Control WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
 
 
                 //Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
@@ -133,6 +139,16 @@ namespace EditWebView
         public void Replace(string oldValue, string newValue)
         {
             text = text.Replace($"{oldValue}", $"{newValue}");
+        }
+
+        public void ReplaceFirst(string search, string replace)
+        {
+            int pos = text.IndexOf(search);
+            if (pos < 0)
+            {
+                return;
+            }
+            text = text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
         public void Comment(string target)

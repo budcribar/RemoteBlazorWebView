@@ -33,7 +33,7 @@ namespace PeakSWC.RemoteWebView
             BlazorWebView = blazorWebView;
             RemoteWebView = new RemoteWebView(
                 blazorWebView,
-                hostPageRelativePath,
+                hostPageRelativePath + "//" + hostPagePathWithinFileProvider,
                 dispatcher,
                 new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(typeof(RemoteWebView).Assembly))
                 );

@@ -13,7 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebView;
+
 using Microsoft.Extensions.FileProviders;
 #if WEBVIEW2_WINFORMS
 using System.Diagnostics;

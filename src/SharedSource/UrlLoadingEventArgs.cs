@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteBlazorWebView
 	{
 		public static UrlLoadingEventArgs CreateWithDefaultLoadingStrategy(Uri urlToLoad, Uri appOriginUri)
 		{
-			var strategy = appOriginUri.IsBaseOf(urlToLoad) ?
+			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data") ?
 				UrlLoadingStrategy.OpenInWebView :
 				UrlLoadingStrategy.OpenExternally;
 
