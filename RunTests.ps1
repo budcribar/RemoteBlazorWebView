@@ -40,9 +40,9 @@ if ($env:EnvBuildMode -eq 'Debug') {
 	if (Test-Path $file) {
 		Remove-Item $file -Recurse
 	}
-	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 6.*-* 
+	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 7.*-* 
 } else {
-	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 6.*-* 
+	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 7.*-* 
 }
 
 Write-Host -ForegroundColor GREEN "Publish WinFormsApp"

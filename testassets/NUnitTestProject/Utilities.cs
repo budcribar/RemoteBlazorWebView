@@ -56,7 +56,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\x64\debug\net6.0-windows";  
+            var exePath = @"bin\x64\debug\net7.0-windows";  
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -93,7 +93,7 @@ namespace WebdriverTestProject
         public static string BlazorWpfDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net6.0-windows";
+            var exePath = @"bin\x64\debug\net7.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
@@ -104,7 +104,6 @@ namespace WebdriverTestProject
         public static string BlazorWpfPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
-            //var exePath = @"bin\debug\net6-windows";
             var exePath = "publish";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
@@ -112,7 +111,6 @@ namespace WebdriverTestProject
         public static string BlazorWpfEmbeddedPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
-            //var exePath = @"bin\debug\net6-windows";
             var exePath = "publishEmbedded";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
@@ -136,7 +134,7 @@ namespace WebdriverTestProject
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\debug\net6.0";
+            var exePath = @"bin\debug\net7.0";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 

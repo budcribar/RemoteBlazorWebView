@@ -4,7 +4,7 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<DefineConstants>$(DefineConstants);WEBVIEW2_WPF</DefineConstants>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net7.0-windows</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
 		<Authors>Bud Cribar</Authors>
@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.3 *** Breaking change *** serviceCollection.AddWpfBlazorWebView(); has become serviceCollection.AddRemoteWpfBlazorWebView(); due to a change in maui package</PackageReleaseNotes>
+		<PackageReleaseNotes>- built on aspnet 7.0.0preview4</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
