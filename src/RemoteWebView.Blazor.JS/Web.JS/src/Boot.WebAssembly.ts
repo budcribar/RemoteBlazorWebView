@@ -1,8 +1,11 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 /* eslint-disable array-element-newline */
 import { DotNet } from '@microsoft/dotnet-js-interop';
 import { Blazor } from './GlobalExports';
 import * as Environment from './Environment';
-import { byteArrayBeingTransferred, monoPlatform } from './Platform/Mono/MonoPlatform';
+import { byteArrayBeingTransferred, Module, BINDING, monoPlatform } from './Platform/Mono/MonoPlatform';
 import { renderBatch, getRendererer, attachRootComponentToElement, attachRootComponentToLogicalElement } from './Rendering/Renderer';
 import { SharedMemoryRenderBatch } from './Rendering/RenderBatch/SharedMemoryRenderBatch';
 import { shouldAutoStart } from './BootCommon';
@@ -14,10 +17,8 @@ import { WebAssemblyStartOptions } from './Platform/WebAssemblyStartOptions';
 import { WebAssemblyComponentAttacher } from './Platform/WebAssemblyComponentAttacher';
 import { discoverComponents, discoverPersistedState, WebAssemblyComponentDescriptor } from './Services/ComponentDescriptorDiscovery';
 import { setDispatchEventMiddleware } from './Rendering/WebRendererInteropMethods';
-import { AfterBlazorStartedCallback, JSInitializer } from './JSInitializers/JSInitializers';
 import { fetchAndInvokeInitializers } from './JSInitializers/JSInitializers.WebAssembly';
 
-declare var Module: EmscriptenModule;
 let started = false;
 
 async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
@@ -28,6 +29,7 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
   started = true;
 
   if (inAuthRedirectIframe()) {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     await new Promise(() => {}); // See inAuthRedirectIframe for explanation
   }
 
@@ -109,7 +111,7 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
 
   Blazor._internal.getPersistedState = () => BINDING.js_string_to_mono_string(discoverPersistedState(document) || '');
 
-  Blazor._internal.attachRootComponentToElement = (selector, componentId, rendererId) => {
+  Blazor._internal.attachRootComponentToElement = (selector, componentId, rendererId: any) => {
     const element = componentAttacher.resolveRegisteredElement(selector);
     if (!element) {
       attachRootComponentToElement(selector, componentId, rendererId);
@@ -123,7 +125,8 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
 
   const [resourceLoader] = await Promise.all([
     WebAssemblyResourceLoader.initAsync(bootConfigResult.bootConfig, candidateOptions || {}),
-    WebAssemblyConfigLoader.initAsync(bootConfigResult)]);
+    WebAssemblyConfigLoader.initAsync(bootConfigResult),
+  ]);
 
   try {
     await platform.start(resourceLoader);
@@ -163,10 +166,11 @@ function invokeJSFromDotNet(callInfo: Pointer, arg0: any, arg1: any, arg2: any):
         return result;
       case DotNet.JSCallResultType.JSObjectReference:
         return DotNet.createJSObjectReference(result).__jsObjectId;
-      case DotNet.JSCallResultType.JSStreamReference:
+      case DotNet.JSCallResultType.JSStreamReference: {
         const streamReference = DotNet.createJSStreamReference(result);
         const resultJson = JSON.stringify(streamReference);
         return BINDING.js_string_to_mono_string(resultJson);
+      }
       case DotNet.JSCallResultType.JSVoidResult:
         return null;
       default:
@@ -183,7 +187,7 @@ function endInvokeDotNetFromJS(callId: System_String, success: System_Boolean, r
 }
 
 function receiveByteArray(id: System_Int, data: System_Array<System_Byte>): void {
-  const idLong = id as any as number;
+  const idLong = id as unknown as number;
   const dataByteArray = monoPlatform.toUint8Array(data);
   DotNet.jsCallDispatcher.receiveByteArray(idLong, dataByteArray);
 }

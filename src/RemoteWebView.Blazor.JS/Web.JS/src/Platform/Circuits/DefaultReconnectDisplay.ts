@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 import { ReconnectDisplay } from './ReconnectDisplay';
 import { Logger, LogLevel } from '../Logging/Logger';
 import { Blazor } from '../../GlobalExports';
@@ -9,7 +12,7 @@ export class DefaultReconnectDisplay implements ReconnectDisplay {
 
   button: HTMLButtonElement;
 
-  addedToDom: boolean = false;
+  addedToDom = false;
 
   reloadParagraph: HTMLParagraphElement;
 
@@ -73,7 +76,7 @@ export class DefaultReconnectDisplay implements ReconnectDisplay {
         if (!successful) {
           this.rejected();
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // We got an exception, server is currently unavailable
         this.logger.log(LogLevel.Error, err as Error);
         this.failed();
@@ -152,16 +155,13 @@ export class DefaultReconnectDisplay implements ReconnectDisplay {
       'border-radius: 50%',
       'width: 2em',
       'height: 2em',
-      'display: inline-block'
+      'display: inline-block',
     ];
 
     loader.style.cssText = loaderStyles.join(';');
-    loader.animate([
-      { transform: 'rotate(0deg)' },
-      { transform: 'rotate(360deg)' }
-    ], {
+    loader.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], {
       duration: 2000,
-      iterations: Infinity
+      iterations: Infinity,
     });
 
     return loader;
