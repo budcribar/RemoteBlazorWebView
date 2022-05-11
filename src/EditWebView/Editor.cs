@@ -54,7 +54,7 @@ namespace EditWebView
             }
             if (fileName == "UrlLoadingEventArgs.cs")
             {
-                Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?", "var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data") ?");
+                Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?", "var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\") ?");
             }
             if (fileName =="BlazorWebViewDeveloperTools.cs")
             {
