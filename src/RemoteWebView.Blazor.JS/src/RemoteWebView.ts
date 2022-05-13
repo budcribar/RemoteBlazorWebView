@@ -6,11 +6,12 @@ import { internalFunctions as navigationManagerFunctions } from '../web.js/src/S
 import { showErrorNotification } from '../web.js/src/BootErrors';
 
 var sequenceNum: number = 1;
-
+var clientId: string 
 export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
     req.setId(id);
+    req.setClientid(clientId);
     req.setMessage(message);
     req.setSequence(sequenceNum++);
     req.setUrl(navigationManagerFunctions.getLocationHref())
@@ -39,6 +40,24 @@ export function initializeRemoteWebView() {
     var message = new IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
     message.setId(id);
+
+    grpc.invoke(BrowserIPC.GetClientId,
+        {
+            request: message,
+            host: window.location.origin,
+            onMessage: (message: IdMessageRequest) => {
+                //console.info("ClientId: " + message.getId());
+                clientId = message.getId();
+            },
+            onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
+                if (code == grpc.Code.OK) {
+                    //console.log("all ok")
+                } else {
+                    console.error("grpc error", code, msg, trailers);
+                }
+            }
+
+        });
 
     grpc.invoke(BrowserIPC.ReceiveMessage,
         {

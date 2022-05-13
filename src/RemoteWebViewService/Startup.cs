@@ -20,7 +20,10 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -178,15 +181,16 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    if (serviceState.InUse)
-                    {
-                        context.Response.StatusCode = 400;
-                        context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
-                    }
-                    else
-                    {
-                        serviceState.InUse = true;
+                    //if (serviceState.InUse)
+                    //{
+                    //    context.Response.StatusCode = 400;
+                    //    context.Response.ContentType = "text/html";
+                    //    await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
+                    //}
+                    //else
+                    //{
+                   
+                    serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
                         if (serviceState.IPC.ClientResponseStream != null)
@@ -196,7 +200,7 @@ namespace PeakSWC.RemoteWebView
                             await channel.Writer.WriteAsync($"Connect:{guid}");
                        
                         context.Response.Redirect($"/{guid}");
-                    }
+                    //}
                 }
                 else
                 {
@@ -240,7 +244,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (!serviceState.Refresh)
                     {
-                        serviceState.Refresh = true;
+                        //serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetService<RemoteFileResolver>();
                         var fi = rfr?.GetFileInfo($"/{guid}/{home}");

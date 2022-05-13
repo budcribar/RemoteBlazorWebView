@@ -3,6 +3,7 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Services;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
@@ -37,7 +38,7 @@ namespace PeakSWC.RemoteWebView
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
 
-            ServiceState state = new()
+            ServiceState state = new(_logger)
             {
                 HtmlHostPath = request.HtmlHostPath,
                 Markup = request.Markup,
@@ -105,20 +106,21 @@ namespace PeakSWC.RemoteWebView
                         {
                             var fileEntry = serviceState.FileDictionary[message.Length.Path];
                             fileEntry.Length = message.Length.Length;
-                            fileEntry.ResetEvent.Set();
+                            //fileEntry.ResetEvent.Set();
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
                             if (message.Data.Data.Length > 0)
                             {
                                 var fileEntry = serviceState.FileDictionary[message.Data.Path];
-                                await fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory);
+                                fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory);
                             }
                             else
                             {
                                 // Trigger the stream read
                                 var fileEntry = serviceState.FileDictionary[message.Data.Path];
                                 fileEntry.Pipe.Writer.Complete();
+                                fileEntry.ResetEvent.Set();
                             }
                         }
                     }
