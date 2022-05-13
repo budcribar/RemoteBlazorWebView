@@ -1,5 +1,6 @@
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -21,6 +22,22 @@ namespace PeakSWC.RemoteWebView
             _shutdownService = shutdownService;
         }
 
+        public override Task<IdMessageRequest> GetClientId(IdMessageRequest request, ServerCallContext context)
+        {
+            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            {
+                _shutdownService.Shutdown(request.Id);
+                return Task.FromResult(new IdMessageRequest());
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(serviceState.ClientId))
+                    serviceState.ClientId = Guid.NewGuid().ToString();
+
+                return Task.FromResult(new IdMessageRequest { Id = serviceState.ClientId });
+            }
+        }
+
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
@@ -29,7 +46,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            serviceState.IPC.BrowserResponseStream = responseStream;
+            serviceState.IPC.BrowserResponseStream(responseStream);
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
             try
             {
@@ -50,6 +67,13 @@ namespace PeakSWC.RemoteWebView
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
+            // Skip messages from read only client
+            if (serviceState.ClientId != request.ClientId)
+            {
+                _logger.LogInformation($"Skipped send message from connection {context.GetHttpContext().Request.HttpContext.Connection.Id}");
+                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
+            }
+               
             var state = serviceState.BrowserIPC;
 
             if (state == null)

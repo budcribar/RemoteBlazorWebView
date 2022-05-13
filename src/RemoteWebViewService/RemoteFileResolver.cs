@@ -72,37 +72,47 @@ namespace PeakSwc.StaticFiles
                 length = stream.Length;
             }
             else
-            {
-                serviceState.FileDictionary[appFile] = new FileEntry();
-                await serviceState.FileCollection.Writer.WriteAsync(appFile);
+            {             
+                serviceState.FileDictionary.TryAdd(appFile, new FileEntry());
 
-                if(!serviceState.FileDictionary[appFile].ResetEvent.Wait(TimeSpan.FromSeconds(60)))
+                FileEntry fileEntry = serviceState.FileDictionary[appFile];
+                lock(fileEntry)
                 {
-                    _logger.LogError($"Timeout processing {appFile} id {id}");
-                    return null;
+                    serviceState.FileCollection.Writer.WriteAsync(appFile);
+
+                    if (!fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60)))
+                    {
+                        _logger.LogError($"Timeout processing {appFile} id {id}");
+                        return null;
+                    }
+
+                    length = fileEntry.Length;
+                    if (length <= 0)
+                    {
+                        _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
+                        return null;
+                    }
+
+                    stream = fileEntry.Pipe.Reader.AsStream();
+
+                    if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
+                    {
+                        // Edit the href in index.html
+                        using StreamReader sr = new(stream);
+                        var contents = sr.ReadToEnd();
+                        var initialLength = contents.Length;
+                        contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
+                        if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
+                        stream.Dispose();
+                        stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
+                        length = stream.Length;
+                    }
+                    
+                    fileEntry.Reset();
                 }
 
-                length = serviceState.FileDictionary[appFile].Length;
-                if (length <= 0)
-                {
-                    _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
-                    return null;
-                }
 
-                stream = serviceState.FileDictionary[appFile].Pipe.Reader.AsStream();
-
-                if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
-                {
-                    // Edit the href in index.html
-                    using StreamReader sr = new(stream);
-                    var contents = sr.ReadToEnd();
-                    var initialLength = contents.Length;
-                    contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
-                    if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
-                    stream.Dispose();
-                    stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
-                    length = stream.Length;
-                }
+                
             }
 
             TimeSpan fileReadTime = stopWatch.Elapsed;

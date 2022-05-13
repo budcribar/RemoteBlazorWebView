@@ -2780,7 +2780,8 @@ proto.webview.SendSequenceMessageRequest.toObject = function(includeInstance, ms
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     sequence: jspb.Message.getFieldWithDefault(msg, 2, 0),
     message: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    url: jspb.Message.getFieldWithDefault(msg, 4, "")
+    url: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    clientid: jspb.Message.getFieldWithDefault(msg, 5, "")
   };
 
   if (includeInstance) {
@@ -2832,6 +2833,10 @@ proto.webview.SendSequenceMessageRequest.deserializeBinaryFromReader = function(
     case 4:
       var value = /** @type {string} */ (reader.readString());
       msg.setUrl(value);
+      break;
+    case 5:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setClientid(value);
       break;
     default:
       reader.skipField();
@@ -2887,6 +2892,13 @@ proto.webview.SendSequenceMessageRequest.serializeBinaryToWriter = function(mess
   if (f.length > 0) {
     writer.writeString(
       4,
+      f
+    );
+  }
+  f = message.getClientid();
+  if (f.length > 0) {
+    writer.writeString(
+      5,
       f
     );
   }
@@ -2962,6 +2974,24 @@ proto.webview.SendSequenceMessageRequest.prototype.getUrl = function() {
  */
 proto.webview.SendSequenceMessageRequest.prototype.setUrl = function(value) {
   return jspb.Message.setProto3StringField(this, 4, value);
+};
+
+
+/**
+ * optional string clientId = 5;
+ * @return {string}
+ */
+proto.webview.SendSequenceMessageRequest.prototype.getClientid = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.webview.SendSequenceMessageRequest} returns this
+ */
+proto.webview.SendSequenceMessageRequest.prototype.setClientid = function(value) {
+  return jspb.Message.setProto3StringField(this, 5, value);
 };
 
 

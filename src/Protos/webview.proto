@@ -78,6 +78,7 @@ message SendSequenceMessageRequest {
     uint32 sequence = 2;
     string message = 3; 
     string url = 4;
+    string clientId = 5;
 }
 
 message SendMessageResponse {
@@ -107,6 +108,7 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
+    rpc GetClientId(IdMessageRequest) returns (IdMessageRequest);
 }
 
 enum ClientState {

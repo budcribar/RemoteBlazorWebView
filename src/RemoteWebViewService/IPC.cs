@@ -1,5 +1,8 @@
 ﻿using Grpc.Core;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -11,9 +14,22 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
+        private List<IServerStreamWriter<StringRequest>> browserResponseStreamList = new();
+        private List<StringRequest> messageHistory = new List<StringRequest>();
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
-        public IServerStreamWriter<StringRequest>? BrowserResponseStream { get; set; }
+        public void BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter) {
+            lock (browserResponseStreamList)
+            {
+                browserResponseStreamList.Add(serverStreamWriter);
+                if (browserResponseStreamList.Count > 1)
+                {
+                    messageHistory.ForEach(async m => await serverStreamWriter.WriteAsync(m));
+
+                }
+            }
+            
+        }
 
         public Task ClientTask { get; }
         public Task BrowserTask { get; }
@@ -29,7 +45,7 @@ namespace PeakSWC.RemoteWebView
             return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
-        public IPC(CancellationToken token)
+        public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger)
         {
             ClientTask = Task.Factory.StartNew(async () =>
             {
@@ -37,6 +53,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     // Serialize the write
                     await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
+                    logger.LogInformation($"Browser -> WebView {m.Response}");
                 }
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
@@ -44,8 +61,24 @@ namespace PeakSWC.RemoteWebView
             {
                 await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
                 {
-                    // Serialize the write
-                    await (BrowserResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
+                    lock (browserResponseStreamList)
+                    {
+                        if(!m.Request.Contains("EndInvokeDotNet"))
+                            messageHistory.Add(m);
+                        // Serialize the write
+                        int i = 0;
+                        foreach (var stream in browserResponseStreamList)
+                        {
+                            if(i==0 || !m.Request.Contains("EndInvokeDotNet"))
+                            {
+                                stream.WriteAsync(m);
+                                logger.LogInformation($"WebView -> Browser {m.Id} {m.Request}");
+                            }
+                               
+                            i++;
+                        }
+                    }
+                   
                 }
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 

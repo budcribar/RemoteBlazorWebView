@@ -8,10 +8,12 @@ var webview_pb_1 = require("./generated/webview_pb");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var BootErrors_1 = require("../web.js/src/BootErrors");
 var sequenceNum = 1;
+var clientId;
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
     req.setId(id);
+    req.setClientid(clientId);
     req.setMessage(message);
     req.setSequence(sequenceNum++);
     req.setUrl(NavigationManager_1.internalFunctions.getLocationHref());
@@ -41,6 +43,22 @@ function initializeRemoteWebView() {
     var message = new webview_pb_1.IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
     message.setId(id);
+    grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.GetClientId, {
+        request: message,
+        host: window.location.origin,
+        onMessage: function (message) {
+            //console.info("ClientId: " + message.getId());
+            clientId = message.getId();
+        },
+        onEnd: function (code, msg, trailers) {
+            if (code == grpc_web_1.grpc.Code.OK) {
+                //console.log("all ok")
+            }
+            else {
+                console.error("grpc error", code, msg, trailers);
+            }
+        }
+    });
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.ReceiveMessage, {
         request: message,
         host: window.location.origin,

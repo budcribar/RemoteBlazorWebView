@@ -87,10 +87,20 @@ type BrowserIPCSendMessage = {
   readonly responseType: typeof webview_pb.SendMessageResponse;
 };
 
+type BrowserIPCGetClientId = {
+  readonly methodName: string;
+  readonly service: typeof BrowserIPC;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof webview_pb.IdMessageRequest;
+  readonly responseType: typeof webview_pb.IdMessageRequest;
+};
+
 export class BrowserIPC {
   static readonly serviceName: string;
   static readonly ReceiveMessage: BrowserIPCReceiveMessage;
   static readonly SendMessage: BrowserIPCSendMessage;
+  static readonly GetClientId: BrowserIPCGetClientId;
 }
 
 type ClientIPCGetClients = {
@@ -214,6 +224,15 @@ export class BrowserIPCClient {
   sendMessage(
     requestMessage: webview_pb.SendSequenceMessageRequest,
     callback: (error: ServiceError|null, responseMessage: webview_pb.SendMessageResponse|null) => void
+  ): UnaryResponse;
+  getClientId(
+    requestMessage: webview_pb.IdMessageRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.IdMessageRequest|null) => void
+  ): UnaryResponse;
+  getClientId(
+    requestMessage: webview_pb.IdMessageRequest,
+    callback: (error: ServiceError|null, responseMessage: webview_pb.IdMessageRequest|null) => void
   ): UnaryResponse;
 }
 
