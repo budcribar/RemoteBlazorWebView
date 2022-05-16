@@ -1,12 +1,15 @@
 import { receiveMessage } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webview_pb_service";
-import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, IdMessageRequest } from "./generated/webview_pb";
+import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, IdMessageRequest, ClientIdMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
 import { showErrorNotification } from '../web.js/src/BootErrors';
+import { sendAttachPage} from '../web.js/src/Platform/WebView/WebViewIpcSender';
 
 var sequenceNum: number = 1;
 var clientId: string 
+var isPrimary: boolean = true;
+
 export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
@@ -27,7 +30,7 @@ export function sendMessage(message: string) {
         },
         onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message);
+                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             } else {
                 console.log("grpc error", code, msg, trailers);
                 showErrorNotification();
@@ -36,7 +39,20 @@ export function sendMessage(message: string) {
     });
 }
 
+function setNotAllowedCursor(isPrimary:boolean): void {
+    if (!isPrimary) {
+        document.body.style.cursor = 'not-allowed';
+        var a = document.getElementsByTagName('a');
+
+        for (var idx = 0; idx < a.length; ++idx) {
+            a[idx].style.cursor = 'not-allowed';
+        }
+    }
+}
+
 export function initializeRemoteWebView() {
+    (window.external as any).sendMessage = sendMessage;
+
     var message = new IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
     message.setId(id);
@@ -45,13 +61,20 @@ export function initializeRemoteWebView() {
         {
             request: message,
             host: window.location.origin,
-            onMessage: (message: IdMessageRequest) => {
+            onMessage: (message: ClientIdMessageRequest) => {
                 //console.info("ClientId: " + message.getId());
-                clientId = message.getId();
+                clientId = message.getClientid();
+                isPrimary = message.getIsprimary();
+
+                sendMessage("connected:");
+                sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+
+                setNotAllowedCursor(isPrimary);
+
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
-                    //console.log("all ok")
+                    console.log("all ok:" + clientId)
                 } else {
                     console.error("grpc error", code, msg, trailers);
                 }
@@ -66,6 +89,7 @@ export function initializeRemoteWebView() {
             onMessage: (message: StringRequest) => {
                 //console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());
+                setNotAllowedCursor(isPrimary);
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
@@ -75,7 +99,5 @@ export function initializeRemoteWebView() {
                 }
             }
         } );
-
-    (window.external as any).sendMessage = sendMessage;
 
 }

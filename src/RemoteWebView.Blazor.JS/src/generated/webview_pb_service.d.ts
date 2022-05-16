@@ -93,7 +93,7 @@ type BrowserIPCGetClientId = {
   readonly requestStream: false;
   readonly responseStream: false;
   readonly requestType: typeof webview_pb.IdMessageRequest;
-  readonly responseType: typeof webview_pb.IdMessageRequest;
+  readonly responseType: typeof webview_pb.ClientIdMessageRequest;
 };
 
 export class BrowserIPC {
@@ -228,11 +228,11 @@ export class BrowserIPCClient {
   getClientId(
     requestMessage: webview_pb.IdMessageRequest,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: webview_pb.IdMessageRequest|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.ClientIdMessageRequest|null) => void
   ): UnaryResponse;
   getClientId(
     requestMessage: webview_pb.IdMessageRequest,
-    callback: (error: ServiceError|null, responseMessage: webview_pb.IdMessageRequest|null) => void
+    callback: (error: ServiceError|null, responseMessage: webview_pb.ClientIdMessageRequest|null) => void
   ): UnaryResponse;
 }
 

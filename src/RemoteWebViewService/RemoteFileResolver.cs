@@ -23,7 +23,7 @@ namespace PeakSwc.StaticFiles
         private long length = -1;
         private readonly ILogger<RemoteFileResolver> _logger;
 
-        private async Task<Stream?> GetStream()
+        private Stream? GetStream()
         {
             if (stream == null)
             {
@@ -45,13 +45,13 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path[1..];
 
-                stream = await ProcessFile(guid, path);
+                stream =  ProcessFile(guid, path);
             }
 
             return stream;
         }
 
-        private async Task<Stream?> ProcessFile(string id, string appFile)
+        private Stream? ProcessFile(string id, string appFile)
         {
             Stopwatch stopWatch = new ();
             stopWatch.Start();
@@ -155,10 +155,10 @@ namespace PeakSwc.StaticFiles
         }
 
         public bool Exists =>  
-            GetStream().Result != null;
+            GetStream() != null;
 
         public long Length => 
-            GetStream().Result == null ? -1 : length;
+            GetStream() == null ? -1 : length;
 
         public string? PhysicalPath => null;
 
@@ -170,7 +170,7 @@ namespace PeakSwc.StaticFiles
 
         public Stream? CreateReadStream()
         {
-            return GetStream().Result;
+            return GetStream();
         }
     }
 

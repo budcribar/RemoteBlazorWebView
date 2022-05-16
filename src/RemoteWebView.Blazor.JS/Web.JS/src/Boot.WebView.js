@@ -36,13 +36,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var dotnet_js_interop_1 = require("../web.js/node_modules/@microsoft/dotnet-js-interop");
-var GlobalExports_1 = require("../web.js/src/GlobalExports");
-var BootCommon_1 = require("../web.js/src/BootCommon");
-var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
-var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
-var JSInitializers_WebView_1 = require("../web.js/src/JSInitializers/JSInitializers.WebView");
-var RemoteWebView_1 = require("./RemoteWebView");
+var dotnet_js_interop_1 = require("@microsoft/dotnet-js-interop");
+var GlobalExports_1 = require("./GlobalExports");
+var BootCommon_1 = require("./BootCommon");
+var NavigationManager_1 = require("./Services/NavigationManager");
+var WebViewIpcReceiver_1 = require("./Platform/WebView/WebViewIpcReceiver");
+var WebViewIpcSender_1 = require("./Platform/WebView/WebViewIpcSender");
+var JSInitializers_WebView_1 = require("./JSInitializers/JSInitializers.WebView");
 var started = false;
 function boot() {
     return __awaiter(this, void 0, void 0, function () {
@@ -57,7 +57,7 @@ function boot() {
                     return [4 /*yield*/, (0, JSInitializers_WebView_1.fetchAndInvokeInitializers)()];
                 case 1:
                     jsInitializer = _a.sent();
-                    (0, RemoteWebView_1.initializeRemoteWebView)();
+                    (0, WebViewIpcReceiver_1.startIpcReceiver)();
                     dotnet_js_interop_1.DotNet.attachDispatcher({
                         beginInvokeDotNetFromJS: WebViewIpcSender_1.sendBeginInvokeDotNetFromJS,
                         endInvokeJSFromDotNet: WebViewIpcSender_1.sendEndInvokeJSFromDotNet,
@@ -65,10 +65,9 @@ function boot() {
                     });
                     NavigationManager_1.internalFunctions.enableNavigationInterception();
                     NavigationManager_1.internalFunctions.listenForNavigationEvents(WebViewIpcSender_1.sendLocationChanged);
-                    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+                    (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
                     return [4 /*yield*/, jsInitializer.invokeAfterStartedCallbacks(GlobalExports_1.Blazor)];
                 case 2:
-                    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
                     _a.sent();
                     return [2 /*return*/];
             }
@@ -79,4 +78,4 @@ GlobalExports_1.Blazor.start = boot;
 if ((0, BootCommon_1.shouldAutoStart)()) {
     boot();
 }
-//# sourceMappingURL=Boot.Desktop.js.map
+//# sourceMappingURL=Boot.WebView.js.map

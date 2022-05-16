@@ -7,8 +7,10 @@ var webview_pb_service_1 = require("./generated/webview_pb_service");
 var webview_pb_1 = require("./generated/webview_pb");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var BootErrors_1 = require("../web.js/src/BootErrors");
+var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
 var sequenceNum = 1;
 var clientId;
+var isPrimary = true;
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
@@ -29,7 +31,7 @@ function sendMessage(message) {
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message);
+                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             }
             else {
                 console.log("grpc error", code, msg, trailers);
@@ -39,7 +41,17 @@ function sendMessage(message) {
     });
 }
 exports.sendMessage = sendMessage;
+function setNotAllowedCursor(isPrimary) {
+    if (!isPrimary) {
+        document.body.style.cursor = 'not-allowed';
+        var a = document.getElementsByTagName('a');
+        for (var idx = 0; idx < a.length; ++idx) {
+            a[idx].style.cursor = 'not-allowed';
+        }
+    }
+}
 function initializeRemoteWebView() {
+    window.external.sendMessage = sendMessage;
     var message = new webview_pb_1.IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
     message.setId(id);
@@ -48,11 +60,15 @@ function initializeRemoteWebView() {
         host: window.location.origin,
         onMessage: function (message) {
             //console.info("ClientId: " + message.getId());
-            clientId = message.getId();
+            clientId = message.getClientid();
+            isPrimary = message.getIsprimary();
+            sendMessage("connected:");
+            (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
+            setNotAllowedCursor(isPrimary);
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("all ok")
+                console.log("all ok:" + clientId);
             }
             else {
                 console.error("grpc error", code, msg, trailers);
@@ -65,6 +81,7 @@ function initializeRemoteWebView() {
         onMessage: function (message) {
             //console.info("Received: " + message.getRequest());
             (0, IPC_1.receiveMessage)(message.getRequest());
+            setNotAllowedCursor(isPrimary);
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
@@ -75,7 +92,6 @@ function initializeRemoteWebView() {
             }
         }
     });
-    window.external.sendMessage = sendMessage;
 }
 exports.initializeRemoteWebView = initializeRemoteWebView;
 //# sourceMappingURL=RemoteWebView.js.map

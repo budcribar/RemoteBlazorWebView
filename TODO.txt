@@ -1,8 +1,9 @@
-Make demo
 Make the timeout a property on the WebView (Form and WPF)
 Fix cannot dispose of task while running exception
 Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
 WaitForInitialitionComplete relies on a 5 second delay
 Remove the server from the release package and have user install dotnet tool instead
 Add detailed build instructions for the server
+
+Add detailed instructions for modifying existing Wpf and WinForms app
 

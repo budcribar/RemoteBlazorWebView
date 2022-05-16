@@ -28,7 +28,7 @@ async function boot(): Promise<void> {
     navigationManagerFunctions.enableNavigationInterception();
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
 
-    sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
 
     await jsInitializer.invokeAfterStartedCallbacks(Blazor);
 }
