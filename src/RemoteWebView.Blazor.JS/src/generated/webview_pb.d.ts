@@ -73,6 +73,34 @@ export namespace IdMessageRequest {
   }
 }
 
+export class ClientIdMessageRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getClientid(): string;
+  setClientid(value: string): void;
+
+  getIsprimary(): boolean;
+  setIsprimary(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ClientIdMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ClientIdMessageRequest): ClientIdMessageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ClientIdMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ClientIdMessageRequest;
+  static deserializeBinaryFromReader(message: ClientIdMessageRequest, reader: jspb.BinaryReader): ClientIdMessageRequest;
+}
+
+export namespace ClientIdMessageRequest {
+  export type AsObject = {
+    id: string,
+    clientid: string,
+    isprimary: boolean,
+  }
+}
+
 export class CreateWebViewRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;

@@ -113,7 +113,8 @@ namespace PeakSWC.RemoteWebView
                             if (message.Data.Data.Length > 0)
                             {
                                 var fileEntry = serviceState.FileDictionary[message.Data.Path];
-                                fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory);
+                                // TODO is there a limit on the Pipe write?
+                                fileEntry.Pipe.Writer.Write(message.Data.Data.Span);
                             }
                             else
                             {

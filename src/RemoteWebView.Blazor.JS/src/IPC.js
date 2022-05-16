@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.receiveMessage = void 0;
-var RemoteWebView_1 = require("./RemoteWebView");
 var Renderer_1 = require("../web.js/src/Rendering/Renderer");
 var OutOfProcessRenderBatch_1 = require("../web.js/src/Rendering/RenderBatch/OutOfProcessRenderBatch");
 var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
@@ -12,9 +11,6 @@ var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var messageHandlers = {
     'AttachToDocument': function (componentId, elementSelector) {
         (0, Renderer_1.attachRootComponentToElement)(elementSelector, componentId);
-        if (componentId == 0) {
-            (0, RemoteWebView_1.sendMessage)("connected:");
-        }
     },
     'RenderBatch': function (batchId, batchDataBase64) {
         try {
@@ -50,6 +46,7 @@ function base64ToArrayBuffer(base64) {
     return result;
 }
 function receiveMessage(message) {
+    console.log("Receive:" + message);
     var parsedMessage = (0, WebViewIpcCommon_1.tryDeserializeMessage)(message);
     if (parsedMessage) {
         if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {

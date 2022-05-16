@@ -326,7 +326,7 @@ BrowserIPC.GetClientId = {
   requestStream: false,
   responseStream: false,
   requestType: webview_pb.IdMessageRequest,
-  responseType: webview_pb.IdMessageRequest
+  responseType: webview_pb.ClientIdMessageRequest
 };
 
 exports.BrowserIPC = BrowserIPC;
