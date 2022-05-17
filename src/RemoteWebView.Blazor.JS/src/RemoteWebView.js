@@ -14,6 +14,8 @@ var isPrimary = true;
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
+    if (id == 'mirror')
+        id = window.location.pathname.split('/')[2];
     req.setId(id);
     req.setClientid(clientId);
     req.setMessage(message);
@@ -54,6 +56,8 @@ function initializeRemoteWebView() {
     window.external.sendMessage = sendMessage;
     var message = new webview_pb_1.IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
+    if (id == 'mirror')
+        id = window.location.pathname.split('/')[2];
     message.setId(id);
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.GetClientId, {
         request: message,

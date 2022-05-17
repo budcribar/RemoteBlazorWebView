@@ -23,7 +23,6 @@ using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
 using Microsoft.Extensions.Logging;
-using Microsoft.Net.Http.Headers;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -148,6 +147,12 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+
+                endpoints.MapGet("/mirror/{id:guid}", Mirror())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif  
+                ;
                 endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
@@ -173,6 +178,51 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapFallbackToFile("index.html");
             });
         }
+
+
+        private RequestDelegate Mirror()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                if (ServiceDictionary.TryGetValue(guid, out var serviceState))
+                {
+                    
+                    serviceState.User = context.User.GetDisplayName() ?? "";
+
+                    if (serviceState.IPC.ClientResponseStream != null)
+                        await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                    // Update Status
+                    foreach (var channel in serviceStateChannel.Values)
+                        await channel.Writer.WriteAsync($"Connect:{guid}");
+
+                    var home = serviceState.HtmlHostPath;
+                    var rfr = context.RequestServices.GetService<RemoteFileResolver>();
+                    var fi = rfr?.GetFileInfo($"/{guid}/{home}");
+                    context.Response.ContentLength = fi?.Length;
+                    using var stream = fi?.CreateReadStream();
+                    if (stream != null)
+                    {
+                        context.Response.StatusCode = 200;
+                        context.Response.ContentType = "text/html";
+
+                        await stream.CopyToAsync(context.Response.Body);
+
+                        //TextReader tr = new StreamReader(stream);
+                        //var text = await tr.ReadToEndAsync();
+                        //await context.Response.WriteAsync(text);
+                    }
+                    else context.Response.StatusCode = 400;
+
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                }
+            };
+
+        }
         private RequestDelegate Start()
         {
             return async context =>
@@ -181,16 +231,16 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    //if (serviceState.InUse)
-                    //{
-                    //    context.Response.StatusCode = 400;
-                    //    context.Response.ContentType = "text/html";
-                    //    await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
-                    //}
-                    //else
-                    //{
-                   
-                    serviceState.InUse = true;
+                    if (serviceState.InUse)
+                    {
+                        context.Response.StatusCode = 400;
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
+                    }
+                    else
+                    {
+
+                        serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
                         if (serviceState.IPC.ClientResponseStream != null)
@@ -200,7 +250,7 @@ namespace PeakSWC.RemoteWebView
                             await channel.Writer.WriteAsync($"Connect:{guid}");
                        
                         context.Response.Redirect($"/{guid}");
-                    //}
+                    }
                 }
                 else
                 {
@@ -244,19 +294,20 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (!serviceState.Refresh)
                     {
-                        //serviceState.Refresh = true;
+                        serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetService<RemoteFileResolver>();
                         var fi = rfr?.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi?.Length;
-                        var stream = fi?.CreateReadStream();
+                        using var stream = fi?.CreateReadStream();
                         if (stream != null)
                         {
                             context.Response.StatusCode = 200;
                             context.Response.ContentType = "text/html";
-                            TextReader tr = new StreamReader(stream);
-                            var text = await tr.ReadToEndAsync();
-                            await context.Response.WriteAsync(text);
+                            await stream.CopyToAsync(context.Response.Body);
+                            //TextReader tr = new StreamReader(stream);
+                            //var text = await tr.ReadToEndAsync();
+                            //await context.Response.WriteAsync(text);
                         }
                         else context.Response.StatusCode = 400;
                     }

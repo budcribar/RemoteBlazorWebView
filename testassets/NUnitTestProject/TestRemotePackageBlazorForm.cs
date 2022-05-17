@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace WebdriverTestProject
 {
-    [TestClass]
+    //[TestClass]
     public class TestRemotePackageBlazorForm : TestRemoteBlazorForm
     {
 
