@@ -50,6 +50,10 @@ function setNotAllowedCursor(isPrimary) {
         for (var idx = 0; idx < a.length; ++idx) {
             a[idx].style.cursor = 'not-allowed';
         }
+        var b = document.getElementsByTagName('button');
+        for (var idx = 0; idx < b.length; ++idx) {
+            b[idx].style.cursor = 'not-allowed';
+        }
     }
 }
 function initializeRemoteWebView() {
