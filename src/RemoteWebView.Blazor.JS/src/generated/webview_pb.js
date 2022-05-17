@@ -1294,7 +1294,8 @@ proto.webview.CreateWebViewRequest.toObject = function(includeInstance, msg) {
     group: jspb.Message.getFieldWithDefault(msg, 4, ""),
     pid: jspb.Message.getFieldWithDefault(msg, 5, 0),
     processname: jspb.Message.getFieldWithDefault(msg, 6, ""),
-    hostname: jspb.Message.getFieldWithDefault(msg, 7, "")
+    hostname: jspb.Message.getFieldWithDefault(msg, 7, ""),
+    enablemirrors: jspb.Message.getBooleanFieldWithDefault(msg, 8, false)
   };
 
   if (includeInstance) {
@@ -1358,6 +1359,10 @@ proto.webview.CreateWebViewRequest.deserializeBinaryFromReader = function(msg, r
     case 7:
       var value = /** @type {string} */ (reader.readString());
       msg.setHostname(value);
+      break;
+    case 8:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setEnablemirrors(value);
       break;
     default:
       reader.skipField();
@@ -1434,6 +1439,13 @@ proto.webview.CreateWebViewRequest.serializeBinaryToWriter = function(message, w
   if (f.length > 0) {
     writer.writeString(
       7,
+      f
+    );
+  }
+  f = message.getEnablemirrors();
+  if (f) {
+    writer.writeBool(
+      8,
       f
     );
   }
@@ -1563,6 +1575,24 @@ proto.webview.CreateWebViewRequest.prototype.getHostname = function() {
  */
 proto.webview.CreateWebViewRequest.prototype.setHostname = function(value) {
   return jspb.Message.setProto3StringField(this, 7, value);
+};
+
+
+/**
+ * optional bool enableMirrors = 8;
+ * @return {boolean}
+ */
+proto.webview.CreateWebViewRequest.prototype.getEnablemirrors = function() {
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
+};
+
+
+/**
+ * @param {boolean} value
+ * @return {!proto.webview.CreateWebViewRequest} returns this
+ */
+proto.webview.CreateWebViewRequest.prototype.setEnablemirrors = function(value) {
+  return jspb.Message.setProto3BooleanField(this, 8, value);
 };
 
 
