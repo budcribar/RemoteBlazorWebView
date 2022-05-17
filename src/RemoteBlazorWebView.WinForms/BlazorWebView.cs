@@ -136,6 +136,27 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";
 
+        private bool _enableMirrors = false;
+        private void ResetEnableMirrors() => _enableMirrors = false;
+        private bool ShouldSerializeEnableMirrors() => _enableMirrors;
+
+        /// <summary>
+        /// Enable GUI mirroring 
+        /// </summary>
+
+        [Category("Behavior")]
+        [Description(@"Enable GUI Mirroring")]
+        public bool EnableMirrors
+        {
+            get => _enableMirrors;
+            set
+            {
+                _enableMirrors = value;
+                Invalidate();
+            }
+        }
+       
+
         public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)
         {
             if (ServerUri == null)

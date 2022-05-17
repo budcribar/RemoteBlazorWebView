@@ -37,6 +37,7 @@ message CreateWebViewRequest {
   int32 pid = 5;
   string processName = 6;
   string hostName = 7;
+  bool enableMirrors = 8;
 }
 
 message WebMessageResponse {

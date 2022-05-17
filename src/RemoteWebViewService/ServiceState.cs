@@ -31,7 +31,8 @@ namespace PeakSWC.RemoteWebView
         public string Id { get; init; } = string.Empty;
         public string ClientId { get; set; } = string.Empty;   
 
-        public int MaxClients { get; set; } = 2;
+        public bool EnableMirrors { get; set; } = false;    
+        
         public string Group { get; init;  } = string.Empty;
         public int Pid { get; init; } = 0;
         public string ProcessName {  get; init; } = string.Empty;
@@ -59,12 +60,13 @@ namespace PeakSWC.RemoteWebView
             CancellationTokenSource.Dispose();
         }
 
-        public ServiceState(ILogger<RemoteWebViewService> logger)
+        public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
+            EnableMirrors = enableMirrors;
             CancellationTokenSource = new CancellationTokenSource();
             Token = CancellationTokenSource.Token;
-            IPC = new IPC(Token,logger);
-            Logger = logger;
+            IPC = new IPC(Token,logger,EnableMirrors);
+            Logger = logger;           
         }
     }
    

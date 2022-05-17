@@ -39,6 +39,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                   propertyType: typeof(string),
                   ownerType: typeof(BlazorWebView),
                   typeMetadata: new PropertyMetadata(OnMarkupPropertyChanged));
+
+        public static readonly DependencyProperty EnableMirrorsProperty = DependencyProperty.Register(
+                 name: nameof(EnableMirrors),
+                 propertyType: typeof(bool),
+                 ownerType: typeof(BlazorWebView),
+                 typeMetadata: new PropertyMetadata(OnMarkupPropertyChanged));
         #endregion
 
         public Uri? ServerUri
@@ -58,6 +64,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             get => (string)GetValue(MarkupProperty);
             set => SetValue(MarkupProperty, value);
         }
+
+        public bool EnableMirrors
+        {
+            get => (bool)GetValue(EnableMirrorsProperty);
+            set => SetValue(EnableMirrorsProperty, value);
+        } 
+
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServerUriPropertyChanged(e);
 
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
