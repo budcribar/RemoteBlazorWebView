@@ -123,6 +123,9 @@ export class CreateWebViewRequest extends jspb.Message {
   getHostname(): string;
   setHostname(value: string): void;
 
+  getEnablemirrors(): boolean;
+  setEnablemirrors(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateWebViewRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateWebViewRequest): CreateWebViewRequest.AsObject;
@@ -142,6 +145,7 @@ export namespace CreateWebViewRequest {
     pid: number,
     processname: string,
     hostname: string,
+    enablemirrors: boolean,
   }
 }
 
