@@ -13,7 +13,9 @@ namespace PeakSWC.RemoteBlazorWebView
 	{
 		public static UrlLoadingEventArgs CreateWithDefaultLoadingStrategy(Uri urlToLoad, Uri appOriginUri)
 		{
-			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data") ?
+			var split = urlToLoad.AbsolutePath.Split('/');
+			var isMirrorUrl = split.Length == 3 && split[1] == "mirror" && Guid.TryParse(split[2], out Guid _);
+			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data" || isMirrorUrl) ?
 				UrlLoadingStrategy.OpenInWebView :
 				UrlLoadingStrategy.OpenExternally;
 
