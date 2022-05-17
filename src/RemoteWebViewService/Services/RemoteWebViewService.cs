@@ -38,7 +38,7 @@ namespace PeakSWC.RemoteWebView
         {
             _logger.LogInformation($"CreateWebView Id:{request.Id}");
 
-            ServiceState state = new(_logger)
+            ServiceState state = new(_logger,request.EnableMirrors)
             {
                 HtmlHostPath = request.HtmlHostPath,
                 Markup = request.Markup,

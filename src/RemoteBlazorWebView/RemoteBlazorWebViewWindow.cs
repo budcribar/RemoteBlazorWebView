@@ -16,6 +16,8 @@ namespace PeakSWC.RemoteWebView
         public string Group { get; set; } = "test";
         public string Markup { get; set; } = "";
 
+        public bool EnableMirrors { get; set; } = false;
+
         private Guid id = Guid.Empty;
         public new Guid Id
         {

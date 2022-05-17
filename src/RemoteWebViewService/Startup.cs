@@ -188,33 +188,36 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    
-                    serviceState.User = context.User.GetDisplayName() ?? "";
-
-                    if (serviceState.IPC.ClientResponseStream != null)
-                        await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
-                    // Update Status
-                    foreach (var channel in serviceStateChannel.Values)
-                        await channel.Writer.WriteAsync($"Connect:{guid}");
-
-                    var home = serviceState.HtmlHostPath;
-                    var rfr = context.RequestServices.GetService<RemoteFileResolver>();
-                    var fi = rfr?.GetFileInfo($"/{guid}/{home}");
-                    context.Response.ContentLength = fi?.Length;
-                    using var stream = fi?.CreateReadStream();
-                    if (stream != null)
+                    if (serviceState.EnableMirrors)
                     {
-                        context.Response.StatusCode = 200;
-                        context.Response.ContentType = "text/html";
+                        serviceState.User = context.User.GetDisplayName() ?? "";
 
-                        await stream.CopyToAsync(context.Response.Body);
+                        if (serviceState.IPC.ClientResponseStream != null)
+                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                        // Update Status
+                        foreach (var channel in serviceStateChannel.Values)
+                            await channel.Writer.WriteAsync($"Connect:{guid}");
 
-                        //TextReader tr = new StreamReader(stream);
-                        //var text = await tr.ReadToEndAsync();
-                        //await context.Response.WriteAsync(text);
+                        var home = serviceState.HtmlHostPath;
+                        var rfr = context.RequestServices.GetService<RemoteFileResolver>();
+                        var fi = rfr?.GetFileInfo($"/{guid}/{home}");
+                        context.Response.ContentLength = fi?.Length;
+                        using var stream = fi?.CreateReadStream();
+                        if (stream != null)
+                        {
+                            context.Response.StatusCode = 200;
+                            context.Response.ContentType = "text/html";
+
+                            await stream.CopyToAsync(context.Response.Body);
+                        }
+                        else context.Response.StatusCode = 400;
                     }
-                    else context.Response.StatusCode = 400;
-
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync("Mirroring is not enabled");
+                    }
                 }
                 else
                 {

@@ -14,13 +14,15 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
-        private List<IServerStreamWriter<StringRequest>> browserResponseStreamList = new();
-        private List<StringRequest> messageHistory = new List<StringRequest>();
+        private readonly List<IServerStreamWriter<StringRequest>> browserResponseStreamList = new();
+        private readonly List<StringRequest> messageHistory = new ();
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
-        public void BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter) {
+        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter) {
+            bool isPrimary = true;
             lock (browserResponseStreamList)
             {
+                isPrimary = messageHistory.Count == 0;
                 browserResponseStreamList.Add(serverStreamWriter);
                 if (browserResponseStreamList.Count > 1)
                 {
@@ -28,6 +30,7 @@ namespace PeakSWC.RemoteWebView
 
                 }
             }
+            return isPrimary;
             
         }
 
@@ -45,7 +48,7 @@ namespace PeakSWC.RemoteWebView
             return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
-        public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger)
+        public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
             ClientTask = Task.Factory.StartNew(async () =>
             {
@@ -63,13 +66,14 @@ namespace PeakSWC.RemoteWebView
                 {
                     lock (browserResponseStreamList)
                     {
-                        if(!m.Request.Contains("EndInvokeDotNet"))
+                        if(!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
                             messageHistory.Add(m);
                         // Serialize the write
                         int i = 0;
                         foreach (var stream in browserResponseStreamList)
                         {
-                            if(i==0 || !m.Request.Contains("EndInvokeDotNet"))
+                            // Skip EndInvokeDotNet on the mirrors
+                            if (i==0 || !m.Request.Contains("EndInvokeDotNet"))
                             {
                                 stream.WriteAsync(m);
                                 logger.LogInformation($"WebView -> Browser {m.Id} {m.Request}");
