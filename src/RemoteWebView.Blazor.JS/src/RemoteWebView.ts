@@ -13,6 +13,7 @@ var isPrimary: boolean = true;
 export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
+    if (id == 'mirror') id = window.location.pathname.split('/')[2];
     req.setId(id);
     req.setClientid(clientId);
     req.setMessage(message);
@@ -55,6 +56,7 @@ export function initializeRemoteWebView() {
 
     var message = new IdMessageRequest();
     var id = window.location.pathname.split('/')[1];
+    if (id == 'mirror') id = window.location.pathname.split('/')[2];
     message.setId(id);
 
     grpc.invoke(BrowserIPC.GetClientId,

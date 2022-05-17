@@ -54,7 +54,9 @@ namespace EditWebView
             }
             if (fileName == "UrlLoadingEventArgs.cs")
             {
-                Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?", "var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\") ?");
+                
+                
+                Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?", "var split = urlToLoad.AbsolutePath.Split('/');\n			var isMirrorUrl = split.Length == 3 && split[1] == \"mirror\" && Guid.TryParse(split[2], out Guid _);\n			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\" || isMirrorUrl) ?");
             }
             if (fileName =="BlazorWebViewDeveloperTools.cs")
             {
