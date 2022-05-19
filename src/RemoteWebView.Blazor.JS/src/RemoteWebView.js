@@ -54,6 +54,26 @@ function setNotAllowedCursor(isPrimary) {
         for (var idx = 0; idx < b.length; ++idx) {
             b[idx].style.cursor = 'not-allowed';
         }
+        var s = document.getElementsByTagName('span');
+        for (var idx = 0; idx < s.length; ++idx) {
+            s[idx].style.cursor = 'not-allowed';
+        }
+        var d = document.getElementsByTagName('div');
+        for (var idx = 0; idx < d.length; ++idx) {
+            d[idx].style.cursor = 'not-allowed';
+        }
+        var i = document.getElementsByTagName('input');
+        for (var idx = 0; idx < i.length; ++idx) {
+            i[idx].style.cursor = 'not-allowed';
+        }
+        var t = document.getElementsByTagName('textarea');
+        for (var idx = 0; idx < t.length; ++idx) {
+            t[idx].style.cursor = 'not-allowed';
+        }
+        var l = document.getElementsByTagName('li');
+        for (var idx = 0; idx < l.length; ++idx) {
+            l[idx].style.cursor = 'not-allowed';
+        }
     }
 }
 function initializeRemoteWebView() {
