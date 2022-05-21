@@ -23,7 +23,7 @@ namespace PeakSwc.StaticFiles
         private long length = -1;
         private readonly ILogger<RemoteFileResolver> _logger;
 
-        private async Task<Stream?> GetStream()
+        private Stream? GetStream()
         {
             if (stream == null)
             {
@@ -45,13 +45,13 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path[1..];
 
-                stream = await ProcessFile(guid, path);
+                stream =  ProcessFile(guid, path);
             }
 
             return stream;
         }
 
-        private async Task<Stream?> ProcessFile(string id, string appFile)
+        private Stream? ProcessFile(string id, string appFile)
         {
             Stopwatch stopWatch = new ();
             stopWatch.Start();
@@ -72,37 +72,47 @@ namespace PeakSwc.StaticFiles
                 length = stream.Length;
             }
             else
-            {
-                serviceState.FileDictionary[appFile] = new FileEntry();
-                await serviceState.FileCollection.Writer.WriteAsync(appFile);
+            {             
+                serviceState.FileDictionary.TryAdd(appFile, new FileEntry());
 
-                if(!serviceState.FileDictionary[appFile].ResetEvent.Wait(TimeSpan.FromSeconds(60)))
+                FileEntry fileEntry = serviceState.FileDictionary[appFile];
+                lock(fileEntry)
                 {
-                    _logger.LogError($"Timeout processing {appFile} id {id}");
-                    return null;
+                    serviceState.FileCollection.Writer.WriteAsync(appFile);
+
+                    if (!fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60)))
+                    {
+                        _logger.LogError($"Timeout processing {appFile} id {id}");
+                        return null;
+                    }
+
+                    length = fileEntry.Length;
+                    if (length <= 0)
+                    {
+                        _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
+                        return null;
+                    }
+
+                    stream = fileEntry.Pipe.Reader.AsStream();
+
+                    if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
+                    {
+                        // Edit the href in index.html
+                        using StreamReader sr = new(stream);
+                        var contents = sr.ReadToEnd();
+                        var initialLength = contents.Length;
+                        contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
+                        if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
+                        stream.Dispose();
+                        stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
+                        length = stream.Length;
+                    }
+                    
+                    fileEntry.Reset();
                 }
 
-                length = serviceState.FileDictionary[appFile].Length;
-                if (length <= 0)
-                {
-                    _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
-                    return null;
-                }
 
-                stream = serviceState.FileDictionary[appFile].Pipe.Reader.AsStream();
-
-                if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
-                {
-                    // Edit the href in index.html
-                    using StreamReader sr = new(stream);
-                    var contents = sr.ReadToEnd();
-                    var initialLength = contents.Length;
-                    contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
-                    if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
-                    stream.Dispose();
-                    stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
-                    length = stream.Length;
-                }
+                
             }
 
             TimeSpan fileReadTime = stopWatch.Elapsed;
@@ -145,10 +155,10 @@ namespace PeakSwc.StaticFiles
         }
 
         public bool Exists =>  
-            GetStream().Result != null;
+            GetStream() != null;
 
         public long Length => 
-            GetStream().Result == null ? -1 : length;
+            GetStream() == null ? -1 : length;
 
         public string? PhysicalPath => null;
 
@@ -160,7 +170,7 @@ namespace PeakSwc.StaticFiles
 
         public Stream? CreateReadStream()
         {
-            return GetStream().Result;
+            return GetStream();
         }
     }
 

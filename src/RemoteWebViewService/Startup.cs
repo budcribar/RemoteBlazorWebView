@@ -20,7 +20,9 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
+using Microsoft.Extensions.Logging;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -145,6 +147,12 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+
+                endpoints.MapGet("/mirror/{id:guid}", Mirror())
+#if AUTHORIZATION
+                .RequireAuthorization()
+#endif  
+                ;
                 endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
@@ -170,6 +178,54 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapFallbackToFile("index.html");
             });
         }
+
+
+        private RequestDelegate Mirror()
+        {
+            return async context =>
+            {
+                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+
+                if (ServiceDictionary.TryGetValue(guid, out var serviceState))
+                {
+                    if (serviceState.EnableMirrors && serviceState.InUse)
+                    {
+                        serviceState.User = context.User.GetDisplayName() ?? "";
+
+                        if (serviceState.IPC.ClientResponseStream != null)
+                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                        // Update Status
+                        foreach (var channel in serviceStateChannel.Values)
+                            await channel.Writer.WriteAsync($"Connect:{guid}");
+
+                        var home = serviceState.HtmlHostPath;
+                        var rfr = context.RequestServices.GetService<RemoteFileResolver>();
+                        var fi = rfr?.GetFileInfo($"/{guid}/{home}");
+                        context.Response.ContentLength = fi?.Length;
+                        using var stream = fi?.CreateReadStream();
+                        if (stream != null)
+                        {
+                            context.Response.StatusCode = 200;
+                            context.Response.ContentType = "text/html";
+
+                            await stream.CopyToAsync(context.Response.Body);
+                        }
+                        else context.Response.StatusCode = 400;
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 400;
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync("Mirroring is not enabled");
+                    }
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                }
+            };
+
+        }
         private RequestDelegate Start()
         {
             return async context =>
@@ -186,6 +242,7 @@ namespace PeakSWC.RemoteWebView
                     }
                     else
                     {
+
                         serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
@@ -245,14 +302,15 @@ namespace PeakSWC.RemoteWebView
                         var rfr = context.RequestServices.GetService<RemoteFileResolver>();
                         var fi = rfr?.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi?.Length;
-                        var stream = fi?.CreateReadStream();
+                        using var stream = fi?.CreateReadStream();
                         if (stream != null)
                         {
                             context.Response.StatusCode = 200;
                             context.Response.ContentType = "text/html";
-                            TextReader tr = new StreamReader(stream);
-                            var text = await tr.ReadToEndAsync();
-                            await context.Response.WriteAsync(text);
+                            await stream.CopyToAsync(context.Response.Body);
+                            //TextReader tr = new StreamReader(stream);
+                            //var text = await tr.ReadToEndAsync();
+                            //await context.Response.WriteAsync(text);
                         }
                         else context.Response.StatusCode = 400;
                     }

@@ -22,6 +22,13 @@ message IdMessageRequest {
     string id = 1;
 }
 
+message ClientIdMessageRequest {
+    string id = 1;
+    string clientId = 2;
+    bool isPrimary = 3;
+}
+
+
 message CreateWebViewRequest {
   string id = 1;
   string htmlHostPath = 2;
@@ -30,6 +37,7 @@ message CreateWebViewRequest {
   int32 pid = 5;
   string processName = 6;
   string hostName = 7;
+  bool enableMirrors = 8;
 }
 
 message WebMessageResponse {
@@ -78,6 +86,7 @@ message SendSequenceMessageRequest {
     uint32 sequence = 2;
     string message = 3; 
     string url = 4;
+    string clientId = 5;
 }
 
 message SendMessageResponse {
@@ -107,6 +116,7 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
+    rpc GetClientId(IdMessageRequest) returns (ClientIdMessageRequest);  
 }
 
 enum ClientState {

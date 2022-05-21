@@ -80,7 +80,7 @@ namespace PeakSWC.RemoteWebView
 
                     client = new WebViewIPC.WebViewIPCClient(channel);
                    
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid= Environment.ProcessId, ProcessName= Process.GetCurrentProcess().ProcessName}, cancellationToken: cts.Token); 
+                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid= Environment.ProcessId, ProcessName= Process.GetCurrentProcess().ProcessName, EnableMirrors=BlazorWebView.EnableMirrors}, cancellationToken: cts.Token); 
                     var completed = new ManualResetEventSlim();
                     Exception? exception = null;
 
@@ -280,6 +280,7 @@ namespace PeakSWC.RemoteWebView
             var hostname = Dns.GetHostName();
       
             var url = $"{uri}app/{id}" ?? "";
+            var mirror = $"{uri}mirror/{id}" ?? "";
 
             string style = $@"
             <style>
@@ -295,7 +296,8 @@ namespace PeakSWC.RemoteWebView
             string div = $@"
                 {style}
                 <div class='card{id}'>
-                    <h3><a href = '{url}' > {hostname} </a></h3>
+                    <h3><a href = '{url}' target='_blank' onclick=""function enable() {{ document.getElementById('mirror').style.display='block'; }} enable(); return true;"" > {hostname} </a></h3>
+                    <h3><a id='mirror' style='display:none' href = '{mirror}' target='_blank' > Mirror </a></h3>
                 </div>
                 ";
 

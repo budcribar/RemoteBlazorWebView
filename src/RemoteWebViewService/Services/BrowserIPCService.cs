@@ -1,5 +1,7 @@
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -21,6 +23,29 @@ namespace PeakSWC.RemoteWebView
             _shutdownService = shutdownService;
         }
 
+        public override Task<ClientIdMessageRequest> GetClientId(IdMessageRequest request, ServerCallContext context)
+        {
+            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            {
+                _shutdownService.Shutdown(request.Id);
+                return Task.FromResult(new ClientIdMessageRequest());
+            }
+            else
+            {
+                var guid = Guid.NewGuid().ToString();
+                var isPrimary = false;
+                if (string.IsNullOrEmpty(serviceState.ClientId))
+                {
+                    isPrimary = true;
+                    serviceState.ClientId = guid;
+                }
+                   
+
+                return Task.FromResult(new ClientIdMessageRequest { Id = guid, ClientId = guid, IsPrimary=isPrimary });
+            }
+        }
+
+       
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
@@ -29,7 +54,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            serviceState.IPC.BrowserResponseStream = responseStream;
+            var IsPrimary = serviceState.IPC.BrowserResponseStream(responseStream);
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
             try
             {
@@ -39,7 +64,8 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                _shutdownService.Shutdown(request.Id, ex);
+                if(IsPrimary)
+                    _shutdownService.Shutdown(request.Id, ex);
             }
 
             return;
@@ -50,6 +76,13 @@ namespace PeakSWC.RemoteWebView
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
+            // Skip messages from read only client
+            if (serviceState.ClientId != request.ClientId)
+            {
+                _logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
+                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
+            }
+               
             var state = serviceState.BrowserIPC;
 
             if (state == null)

@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -11,14 +12,16 @@ namespace PeakSWC.RemoteWebView
 {
     public class FileEntry
     {
-        public ManualResetEventSlim ResetEvent { get; } = new ManualResetEventSlim();
+        public ManualResetEventSlim ResetEvent { get; set; } = new ManualResetEventSlim();
         public long Length { get; set; } = -1;
-        public Pipe Pipe { get; } = new Pipe();
+        public Pipe Pipe { get; set; } = new Pipe();
+        public void Reset() { ResetEvent = new ManualResetEventSlim(); Length = -1; Pipe = new Pipe(); }
     }
 
     public class ServiceState : IDisposable
     {
         private CancellationTokenSource CancellationTokenSource { get; }
+        public ILogger<RemoteWebViewService> Logger;
         public CancellationToken Token { get; }
         public string HtmlHostPath { get; init; } = string.Empty;
         public string Markup { get; init; } = string.Empty;
@@ -26,6 +29,10 @@ namespace PeakSWC.RemoteWebView
         public bool InUse { get; set; } = false;
         public bool Refresh { get; set; } = false;
         public string Id { get; init; } = string.Empty;
+        public string ClientId { get; set; } = string.Empty;   
+
+        public bool EnableMirrors { get; set; } = false;    
+        
         public string Group { get; init;  } = string.Empty;
         public int Pid { get; init; } = 0;
         public string ProcessName {  get; init; } = string.Empty;
@@ -52,11 +59,14 @@ namespace PeakSWC.RemoteWebView
         {
             CancellationTokenSource.Dispose();
         }
-        public ServiceState()
+
+        public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
+            EnableMirrors = enableMirrors;
             CancellationTokenSource = new CancellationTokenSource();
             Token = CancellationTokenSource.Token;
-            IPC = new IPC(Token);
+            IPC = new IPC(Token,logger,EnableMirrors);
+            Logger = logger;           
         }
     }
    

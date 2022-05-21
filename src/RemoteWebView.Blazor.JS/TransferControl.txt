@@ -1,0 +1,75 @@
+﻿
+                setTimeout(() => setPrimaryButton(message.getIsprimary()), 1000);
+
+
+                export function setPrimary(): void {
+    var message = new ClientIdMessageRequest();
+    var id = window.location.pathname.split('/')[1];
+    message.setId(id);
+    message.setClientid(clientId);
+    
+    grpc.invoke(BrowserIPC.SetPrimary, {
+        request: message,
+        host: window.location.origin,
+        //onMessage: (message: google.E) => {
+        //    //console.info("Set Primary: " + message.getId() + " " + message.getClientid());
+        //},
+        onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
+            if (code == grpc.Code.OK) {
+                console.log("SetPrimary ok:" + clientId)
+            } else {
+                console.error("grpc error", code, msg, trailers);
+            }
+        }
+    });
+}
+
+function setPrimaryButton(isPrimary: boolean) {
+    var element = document.getElementById('primaryButton');
+    if (element != null) {
+        if (isPrimary)
+            element.innerText = "Primary";
+        else
+            element.innerText = "Mirror";
+
+        element.onclick = setPrimary;
+    }
+       
+}
+
+function setPrimaryButton(isPrimary: boolean) {
+    var element = document.getElementById('primaryButton');
+    if (element != null) {
+        if (isPrimary)
+            element.innerText = "Primary";
+        else
+            element.innerText = "Mirror";
+
+        element.onclick = setPrimary;
+    }
+       
+}
+
+BrowserIPCService:
+
+ public override Task<Empty> SetPrimary(ClientIdMessageRequest request, ServerCallContext context)
+        {
+            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            {
+                _shutdownService.Shutdown(request.Id);
+                return Task.FromResult(new Empty());
+            }
+
+            serviceState.ClientId  = request.ClientId;
+            serviceState.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = $"primaryChanged:{request.ClientId}" });
+            return Task.FromResult(new Empty());
+        }
+
+
+
+                serviceState.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = $"primaryChanged:{guid}" });
+
+
+
+
+                 rpc SetPrimary(ClientIdMessageRequest) returns (google.protobuf.Empty);

@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.3 *** Breaking change *** serviceCollection.AddWpfBlazorWebView(); has become serviceCollection.AddRemoteWpfBlazorWebView(); due to a change in maui package</PackageReleaseNotes>
+		<PackageReleaseNotes>Added mirror capability - see RemoteBlazorWebViewTutorial</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
@@ -35,12 +35,11 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.5" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.2-mauipre.1.22102.15" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.2-mauipre.1.22102.15" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.2-mauipre.1.22102.15" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
 		<PackageReference Include="Microsoft.JSInterop" Version="6.0.5" />
 		<PackageReference Include="Photino.Blazor" Version="2.1.6" />
-		<PackageReference Include="System.Collections" Version="4.3.0" />
 	</ItemGroup>
 
 	<ItemGroup>

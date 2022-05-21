@@ -73,6 +73,34 @@ export namespace IdMessageRequest {
   }
 }
 
+export class ClientIdMessageRequest extends jspb.Message {
+  getId(): string;
+  setId(value: string): void;
+
+  getClientid(): string;
+  setClientid(value: string): void;
+
+  getIsprimary(): boolean;
+  setIsprimary(value: boolean): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): ClientIdMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: ClientIdMessageRequest): ClientIdMessageRequest.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: ClientIdMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): ClientIdMessageRequest;
+  static deserializeBinaryFromReader(message: ClientIdMessageRequest, reader: jspb.BinaryReader): ClientIdMessageRequest;
+}
+
+export namespace ClientIdMessageRequest {
+  export type AsObject = {
+    id: string,
+    clientid: string,
+    isprimary: boolean,
+  }
+}
+
 export class CreateWebViewRequest extends jspb.Message {
   getId(): string;
   setId(value: string): void;
@@ -95,6 +123,9 @@ export class CreateWebViewRequest extends jspb.Message {
   getHostname(): string;
   setHostname(value: string): void;
 
+  getEnablemirrors(): boolean;
+  setEnablemirrors(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): CreateWebViewRequest.AsObject;
   static toObject(includeInstance: boolean, msg: CreateWebViewRequest): CreateWebViewRequest.AsObject;
@@ -114,6 +145,7 @@ export namespace CreateWebViewRequest {
     pid: number,
     processname: string,
     hostname: string,
+    enablemirrors: boolean,
   }
 }
 
@@ -336,6 +368,9 @@ export class SendSequenceMessageRequest extends jspb.Message {
   getUrl(): string;
   setUrl(value: string): void;
 
+  getClientid(): string;
+  setClientid(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): SendSequenceMessageRequest.AsObject;
   static toObject(includeInstance: boolean, msg: SendSequenceMessageRequest): SendSequenceMessageRequest.AsObject;
@@ -352,6 +387,7 @@ export namespace SendSequenceMessageRequest {
     sequence: number,
     message: string,
     url: string,
+    clientid: string,
   }
 }
 

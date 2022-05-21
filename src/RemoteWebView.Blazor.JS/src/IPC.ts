@@ -1,4 +1,4 @@
-import { sendMessage } from "./RemoteWebView";
+import { initializeRemoteWebView, sendMessage } from "./RemoteWebView";
 import { navigateTo } from "../web.js/src/Services/NavigationManager"
 import { attachRootComponentToElement, renderBatch } from '../web.js/src/Rendering/Renderer';
 import { OutOfProcessRenderBatch } from '../web.js/src/Rendering/RenderBatch/OutOfProcessRenderBatch';
@@ -12,10 +12,6 @@ const messageHandlers = {
 
     'AttachToDocument': (componentId: number, elementSelector: string) => {
         attachRootComponentToElement(elementSelector, componentId);
-
-        if (componentId == 0) {
-            sendMessage("connected:");
-        }
     },
 
     'RenderBatch': (batchId: number, batchDataBase64: string) => {
@@ -60,6 +56,7 @@ function base64ToArrayBuffer(base64: string) {
 }
 
 export function receiveMessage(message: string) {
+    console.log("Receive:" + message);
     const parsedMessage = tryDeserializeMessage(message);
     if (parsedMessage) {
         if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {
