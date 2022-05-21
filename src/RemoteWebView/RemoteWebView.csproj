@@ -26,9 +26,17 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Updated dotnet maui packages to 6.0.300-rc.3 *** Breaking change *** serviceCollection.AddWpfBlazorWebView(); has become serviceCollection.AddRemoteWpfBlazorWebView(); due to a change in maui package</PackageReleaseNotes>
+    <PackageReleaseNotes>Added mirror capability - see RemoteBlazorWebViewTutorial</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'">
+    <DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

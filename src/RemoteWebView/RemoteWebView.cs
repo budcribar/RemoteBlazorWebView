@@ -280,6 +280,7 @@ namespace PeakSWC.RemoteWebView
             var hostname = Dns.GetHostName();
       
             var url = $"{uri}app/{id}" ?? "";
+            var mirror = $"{uri}mirror/{id}" ?? "";
 
             string style = $@"
             <style>
@@ -295,7 +296,8 @@ namespace PeakSWC.RemoteWebView
             string div = $@"
                 {style}
                 <div class='card{id}'>
-                    <h3><a href = '{url}' > {hostname} </a></h3>
+                    <h3><a href = '{url}' target='_blank' onclick=""function enable() {{ document.getElementById('mirror').style.display='block'; }} enable(); return true;"" > {hostname} </a></h3>
+                    <h3><a id='mirror' style='display:none' href = '{mirror}' target='_blank' > Mirror </a></h3>
                 </div>
                 ";
 
