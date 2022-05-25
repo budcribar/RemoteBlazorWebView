@@ -23,12 +23,13 @@
     <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
-    <LangVersion>9</LangVersion>
+    <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Added mirror capability - see RemoteBlazorWebViewTutorial</PackageReleaseNotes>
+    <PackageReleaseNotes>Update to Maui 6.0.312</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
+	<SelfContained>True</SelfContained>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'">
@@ -56,8 +57,7 @@
     <PackageReference Include="Google.Protobuf" Version="3.20.1" />
     <PackageReference Include="Grpc.Net.Client" Version="2.46.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
-    <PackageReference Include="Grpc.Tools" Version="2.46.1">
+    <PackageReference Include="Grpc.Tools" Version="2.46.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

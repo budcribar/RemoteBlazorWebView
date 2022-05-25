@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Added mirror capability - see RemoteBlazorWebViewTutorial</PackageReleaseNotes>
+		<PackageReleaseNotes>Update to Maui 6.0.312</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.300-rc.3.5667" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.312" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -31,7 +31,7 @@ export function sendMessage(message: string) {
         },
         onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                //console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             } else {
                 console.log("grpc error", code, msg, trailers);
                 showErrorNotification();
@@ -113,7 +113,7 @@ export function initializeRemoteWebView() {
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
-                    console.log("all ok:" + clientId)
+                    //console.log("all ok:" + clientId)
                 } else {
                     console.error("grpc error", code, msg, trailers);
                 }

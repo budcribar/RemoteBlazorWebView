@@ -20,9 +20,10 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Added mirror capability - see RemoteBlazorWebViewTutorial</PackageReleaseNotes>
+		<PackageReleaseNotes>Update to Maui 6.0.312</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
+		<SelfContained>True</SelfContained>
 	</PropertyGroup>
 
 	<Target Name="SetPackageVersion" DependsOnTargets="Build">
