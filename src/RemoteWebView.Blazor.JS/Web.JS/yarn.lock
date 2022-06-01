@@ -1354,28 +1354,28 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@microsoft/dotnet-js-interop@6.0.2":
-  version "6.0.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.2.tgz#69dcf4898604002ee5b92448171751f8e20a3534"
-  integrity sha512-6oivc7C/gngqoqWhNhKT5/Np2hopHjhvfCykS8FIUjnPj8uOcEz1PQOEJdByazL7Bff+iYAYuclx4qyJ5bAT9A==
+"@microsoft/dotnet-js-interop@6.0.5":
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.5.tgz#af0b1f67cb8c92e202be00c0dc02eda464cfa1fc"
+  integrity sha512-muS4mC2MUr24Vv7/xMwf6tOEZcgFPi9/HOuzrhuTdCPQ9mWMNHbtCB/rWgTPh6cXtsBt976F3FgKW22rLwmPnA==
 
-"@microsoft/signalr-protocol-msgpack@6.0.2":
-  version "6.0.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.2.tgz#2ce4aa9877f8546ec710b5caf4ee0faf83881ec2"
-  integrity sha512-gDZOmeSEECgaU8ls7HobKW4qmTJyJVjsu3AU/wzTr7gHM38ErpYTTi/Ge/cXnCv4mTm3A92gByMPDHMHQ2BEOQ==
+"@microsoft/signalr-protocol-msgpack@6.0.5":
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.5.tgz#2a8d72a94eb4741ee984d891637d6a256757f69e"
+  integrity sha512-zwQBZnGs+Y5sSi3dg+lfGiGNSZ1BOpm5fcgHJI5a1aZeZ4ZYxktOZY/FhNf6vGmdVxcfbqZ+3CwCtSOW2WkQ5Q==
   dependencies:
-    "@microsoft/signalr" ">=6.0.2"
+    "@microsoft/signalr" ">=6.0.5"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@6.0.2", "@microsoft/signalr@>=6.0.2":
-  version "6.0.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.2.tgz#5df3fb1d97f940832b12867b1d7184aec9b3a33d"
-  integrity sha512-OYSRqvOyJWMA9cRvbOIKG0f5wE9xRiayQvkDTQ8gru3WT3WevHk8KGsBUV3x2NmizTSq7gSShQr/l9GkdT/e8g==
+"@microsoft/signalr@6.0.5", "@microsoft/signalr@>=6.0.5":
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.5.tgz#219f7fa10e94a75a841d3d7140d939fd2c2657e9"
+  integrity sha512-Y6Mny+z71wv2/FiuoqLcraojQRIbyeF/Ao4y+tcZK28JzGGieoulXBJIVQhoxzeM15Xe8xGOX0/5pVlOpwrI8Q==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^1.0.7"
     fetch-cookie "^0.11.0"
-    node-fetch "^2.6.1"
+    node-fetch "^2.6.7"
     ws "^7.4.5"
 
 "@msgpack/msgpack@^2.7.0":
@@ -2596,9 +2596,9 @@ events@^3.2.0:
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
 
 eventsource@^1.0.7:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.1.0.tgz#00e8ca7c92109e94b0ddf32dac677d841028cfaf"
-  integrity sha512-VSJjT5oCNrFvCS6igjzPAt5hBzQ2qPBFIbJ03zLI9SE0mxwZpMw6BfJrbFHm1a141AavMEB8JHmBhWAd66PfCg==
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.1.1.tgz#4544a35a57d7120fba4fa4c86cb4023b2c09df2f"
+  integrity sha512-qV5ZC0h7jYIAOhArFJgSfdyz6rALJyb270714o7ZtNnw2WSJ+eexhKtE0O8LYPRsHZHf2osHKZBxGPvm3kPkCA==
   dependencies:
     original "^1.0.0"
 
@@ -3744,7 +3744,7 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-node-fetch@^2.6.1:
+node-fetch@^2.6.7:
   version "2.6.7"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.7.tgz#24de9fba827e3b4ae44dc8b20256a379160052ad"
   integrity sha512-ZjMPFEfVx5j+y2yF35Kzx5sF7kDzxuDj6ziH4FFbOp87zKDZNx8yExJIb05OGF4Nlt9IHFIMBkRl41VdvcNdbQ==
