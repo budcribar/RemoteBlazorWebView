@@ -19,11 +19,11 @@
     <PackageReference Include="Selenium.WebDriver" Version="4.1.1" />
     <PackageReference Include="Selenium.WebDriver.MSEdgeDriver" Version="101.0.1210.9-pre" />
    <Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.20.1" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.46.0-pre1" />
-    <PackageReference Include="Grpc.Net.Client.Web" Version="2.46.0-pre1" />
+    <PackageReference Include="Google.Protobuf" Version="3.21.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.46.0" />
+    <PackageReference Include="Grpc.Net.Client.Web" Version="2.46.0" />
    
-    <PackageReference Include="Grpc.Tools" Version="2.46.0-pre2">
+    <PackageReference Include="Grpc.Tools" Version="2.46.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -298,7 +298,7 @@ namespace PeakSWC.RemoteWebView
 
 			public long Length => _source.Length;
 
-			public string PhysicalPath => _source.PhysicalPath;
+			public string PhysicalPath => _source.PhysicalPath ?? "";
 
 			public DateTimeOffset LastModified => _source.LastModified;
 
