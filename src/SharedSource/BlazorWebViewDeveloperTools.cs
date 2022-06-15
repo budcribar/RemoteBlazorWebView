@@ -11,7 +11,7 @@ namespace PeakSWC.RemoteBlazorWebView.Maui
 #endif
 {
 	public class BlazorWebViewDeveloperTools
-	{
-		public bool Enabled { get; set; } = false;
-	}
+{
+	public bool Enabled { get; set; } = false;
+}
 }

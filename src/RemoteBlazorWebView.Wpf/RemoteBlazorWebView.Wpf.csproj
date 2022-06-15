@@ -15,7 +15,7 @@
 		<PackageIcon>favicon-32x32.png</PackageIcon>
 		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
+		<PackageTags>BlazorWebView, Blazor, WebView, WebView.Wpf</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
 		<Nullable>annotations</Nullable>
@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Update to Maui 6.0.312</PackageReleaseNotes>
+		<PackageReleaseNotes>Update to Maui 6.0.400</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.312" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="6.0.400" />
 	</ItemGroup>
 
 	<ItemGroup>
