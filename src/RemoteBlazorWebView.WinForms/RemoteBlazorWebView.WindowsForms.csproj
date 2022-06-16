@@ -49,10 +49,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.0-preview.4.22251.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.0-preview.5.22303.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.312" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0-preview.4.22229.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.400" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0-preview.5.22301.12" />
    
   </ItemGroup>
 
