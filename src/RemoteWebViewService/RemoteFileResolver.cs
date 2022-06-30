@@ -23,17 +23,17 @@ namespace PeakSwc.StaticFiles
         private long length = -1;
         private readonly ILogger<RemoteFileResolver> _logger;
 
-        private Stream? GetStream()
+        private Stream GetStream()
         {
             if (stream == null)
             {
-                if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(guid)) return null;
+                if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(guid)) return new MemoryStream();
 
-                if (!_rootDictionary.TryGetValue(guid, out ServiceState? serviceState)) return null;
+                if (!_rootDictionary.TryGetValue(guid, out ServiceState? serviceState)) return new MemoryStream(); 
 
                 var home = serviceState.HtmlHostPath;
 
-                if (string.IsNullOrEmpty(home)) return null;
+                if (string.IsNullOrEmpty(home)) return new MemoryStream(); 
 
                 var root = Path.GetDirectoryName(home);
 
@@ -48,7 +48,7 @@ namespace PeakSwc.StaticFiles
                 stream =  ProcessFile(guid, path);
             }
 
-            return stream;
+            return stream ?? new MemoryStream();
         }
 
         private Stream? ProcessFile(string id, string appFile)
@@ -168,7 +168,7 @@ namespace PeakSwc.StaticFiles
 
         public bool IsDirectory => false;
 
-        public Stream? CreateReadStream()
+        public Stream CreateReadStream()
         {
             return GetStream();
         }
