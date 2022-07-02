@@ -189,6 +189,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			if (_webview == null)
 			{
 				_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);
+				_webview.AllowExternalDrop = false;
 				StartWebViewCoreIfPossible();
 			}
 		}
