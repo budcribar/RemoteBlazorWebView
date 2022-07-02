@@ -26,8 +26,7 @@ namespace PeakSWC.RemoteWebView
                 browserResponseStreamList.Add(serverStreamWriter);
                 if (browserResponseStreamList.Count > 1)
                 {
-                    messageHistory.ForEach(async m => await serverStreamWriter.WriteAsync(m));
-
+                    messageHistory.ForEach(m => serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult());
                 }
             }
             return isPrimary;
@@ -43,9 +42,9 @@ namespace PeakSWC.RemoteWebView
             return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
-        public ValueTask SendMessage(string message)
+        public async ValueTask SendMessage(string message)
         {
-            return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
+            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
         }
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
@@ -66,23 +65,22 @@ namespace PeakSWC.RemoteWebView
                 {
                     lock (browserResponseStreamList)
                     {
-                        if(!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
+                        if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
                             messageHistory.Add(m);
                         // Serialize the write
                         int i = 0;
                         foreach (var stream in browserResponseStreamList)
                         {
                             // Skip EndInvokeDotNet on the mirrors
-                            if (i==0 || !m.Request.Contains("EndInvokeDotNet"))
+                            if (i == 0 || !m.Request.Contains("EndInvokeDotNet"))
                             {
-                                stream.WriteAsync(m);
+                                stream.WriteAsync(m).GetAwaiter().GetResult();
                                 logger.LogInformation($"WebView -> Browser {m.Id} {m.Request}");
                             }
-                               
+
                             i++;
                         }
                     }
-                   
                 }
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
