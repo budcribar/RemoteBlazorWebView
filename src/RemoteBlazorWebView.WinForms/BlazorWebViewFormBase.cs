@@ -40,7 +40,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 			_webview = new WebView2Control()
 			{
-				Dock = DockStyle.Fill,
+				Dock = DockStyle.Fill, AllowExternalDrop = false
 			};
 			((BlazorWebViewFormBaseControlCollection)Controls).AddInternal(_webview);
 		}

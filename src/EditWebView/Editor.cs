@@ -88,6 +88,9 @@ namespace EditWebView
                 Comment("#pragma warning disable CA1816");
                 Comment("#pragma warning restore");
 
+                Replace("Dock = DockStyle.Fill,", "Dock = DockStyle.Fill, AllowExternalDrop = false");
+                Replace("_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);", "_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);\n\t\t\t\t_webview.AllowExternalDrop = false;");
+
                 // Winforms does not use nullable on WebView2Control
                 Replace("public WebView2Control WebView => _webview;", "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
                 Replace("public WebView2Control WebView => _webview!;", "public WebView2Control WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
