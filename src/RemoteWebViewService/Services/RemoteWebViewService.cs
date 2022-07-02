@@ -145,7 +145,7 @@ namespace PeakSWC.RemoteWebView
         {
             if (_serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                serviceState.IPC.SendMessage(request.Message);
+                serviceState.IPC.SendMessage(request.Message).AsTask().Wait();  
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
 
