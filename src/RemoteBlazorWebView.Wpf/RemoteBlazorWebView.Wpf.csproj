@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Update to Maui 6.0.400</PackageReleaseNotes>
+		<PackageReleaseNotes>Default AllowExternalDrop to false</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 

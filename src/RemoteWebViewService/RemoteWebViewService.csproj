@@ -37,7 +37,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Update to Maui 6.0.400</PackageReleaseNotes>
+    <PackageReleaseNotes>Default AllowExternalDrop to false</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
@@ -60,8 +60,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.5" NoWarn="NU1605" />    
  
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.1" />
   </ItemGroup>
 
   <ItemGroup>
