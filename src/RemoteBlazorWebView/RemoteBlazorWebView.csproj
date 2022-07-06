@@ -33,14 +33,14 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.5" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.6" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.5" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
-		<PackageReference Include="Microsoft.JSInterop" Version="6.0.5" />
-		<PackageReference Include="Photino.Blazor" Version="2.1.6" />
+		<PackageReference Include="Microsoft.JSInterop" Version="6.0.6" />
+		<PackageReference Include="Photino.Blazor" Version="2.1.7" />
 	</ItemGroup>
 
 	<ItemGroup>
