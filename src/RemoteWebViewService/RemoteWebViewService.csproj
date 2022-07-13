@@ -37,7 +37,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Default AllowExternalDrop to false</PackageReleaseNotes>
+    <PackageReleaseNotes>Update to Maui 6.0.408</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
