@@ -45,17 +45,17 @@
 
   <ItemGroup>
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.21.1" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.46.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.0-preview.5.22303.8" />
+    <PackageReference Include="Google.Protobuf" Version="3.21.2" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.47.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.0-preview.6.22330.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WebView2" Version="6.0.200-preview.12.2441" />
-    <PackageReference Include="Grpc.Tools" Version="2.46.3">
+    <PackageReference Include="Grpc.Tools" Version="2.48.0-pre1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="7.0.0-preview.5.22301.12" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="7.0.0-preview.6.22324.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2-beta1" />
   </ItemGroup>
 
   <ItemGroup>
