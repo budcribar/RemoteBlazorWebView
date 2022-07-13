@@ -20,9 +20,9 @@
   "devDependencies": {
     "@babel/core": "^7.15.0",
     "@babel/preset-env": "^7.15.0",
-    "@microsoft/dotnet-js-interop": "6.0.5",
-    "@microsoft/signalr": "6.0.5",
-    "@microsoft/signalr-protocol-msgpack": "6.0.5",
+    "@microsoft/dotnet-js-interop": "6.0.7",
+    "@microsoft/signalr": "6.0.7",
+    "@microsoft/signalr-protocol-msgpack": "6.0.7",
     "@types/emscripten": "^1.39.5",
     "@types/jest": "^27.0.1",
     "@types/jsdom": "^16.2.13",
@@ -41,7 +41,7 @@
     "webpack-cli": "^4.8.0"
   },
   "resolutions": {
-    "**/set-value": "^3.0.2",
-    "url-parse": ">=1.5.0"
+    "**/set-value": "^4.0.1",
+    "node-fetch": ">=2.6.7"
   }
 }
