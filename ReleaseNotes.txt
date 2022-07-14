@@ -1,1 +1,1 @@
-- built on aspnet 7.0.0preview5
+- built on aspnet 7.0.0preview6
