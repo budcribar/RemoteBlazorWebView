@@ -6,4 +6,3 @@ Remove the server from the release package and have user install dotnet tool ins
 Add detailed build instructions for the server
 
 Add detailed instructions for modifying existing Wpf and WinForms app
-
