@@ -30,6 +30,10 @@
 	<SelfContained>True</SelfContained>
 	<EnablePackageValidation>true</EnablePackageValidation>
 	<PackageValidationBaseline>6.0.0</PackageValidationBaseline>
+	<PublishRepositoryUrl>true</PublishRepositoryUrl>
+	<IncludeSymbols>true</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	<EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'">
