@@ -40,6 +40,8 @@
     <PackageReleaseNotes>Update to Maui 6.0.408</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+	<EnablePackageValidation>true</EnablePackageValidation>
+	<PackageValidationBaseline>6.0.0</PackageValidationBaseline>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">
@@ -49,6 +51,10 @@
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.6.0" />
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Grpc.AspNetCore" Version="2.47.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.47.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.0" />

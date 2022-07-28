@@ -3,7 +3,7 @@
   <PropertyGroup>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-    <TargetFramework>net6.0</TargetFramework>
+	 <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
     <Platforms>x64;AnyCPU</Platforms>
@@ -17,8 +17,6 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <PackageTags></PackageTags>
-    <AssemblyVersion>0.0.1.0</AssemblyVersion>
-    <FileVersion>0.0.1.0</FileVersion>
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
@@ -30,6 +28,8 @@
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
 	<SelfContained>True</SelfContained>
+	<EnablePackageValidation>true</EnablePackageValidation>
+	<PackageValidationBaseline>6.0.0</PackageValidationBaseline>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'">
@@ -54,7 +54,11 @@
 
   <ItemGroup>
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.21.3" />
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Google.Protobuf" Version="3.21.4" />
     <PackageReference Include="Grpc.Net.Client" Version="2.47.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.7" />
     <PackageReference Include="Grpc.Tools" Version="2.47.0">

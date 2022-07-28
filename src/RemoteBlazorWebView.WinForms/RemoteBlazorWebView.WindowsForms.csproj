@@ -27,6 +27,8 @@
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReleaseNotes>Update to Maui 6.0.408</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+	<EnablePackageValidation>true</EnablePackageValidation>
+	<PackageValidationBaseline>6.0.0</PackageValidationBaseline>
   </PropertyGroup>
 
   <ItemGroup>
@@ -49,8 +51,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.419" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.424" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
    
   </ItemGroup>

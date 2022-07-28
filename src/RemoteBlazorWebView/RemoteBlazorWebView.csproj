@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFrameworks>net6.0</TargetFrameworks>
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
@@ -24,6 +24,8 @@
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<SelfContained>True</SelfContained>
+		<EnablePackageValidation>true</EnablePackageValidation>
+	    <PackageValidationBaseline>6.0.0</PackageValidationBaseline>
 	</PropertyGroup>
 
 	<Target Name="SetPackageVersion" DependsOnTargets="Build">
@@ -33,6 +35,10 @@
 	</Target>
 
 	<ItemGroup>
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Microsoft.AspNetCore.Components" Version="6.0.7" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.7" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="6.0.7" />
