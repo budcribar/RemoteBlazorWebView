@@ -61,7 +61,7 @@ Global
 		ServerNoAuth|x86 = ServerNoAuth|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|Any CPU.ActiveCfg = Release|Any CPU
+		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|Any CPU.ActiveCfg = Release|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|x64.ActiveCfg = Debug|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|x64.Build.0 = Debug|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Authorization|x86.ActiveCfg = Authorization|Any CPU
@@ -136,8 +136,8 @@ Global
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|Any CPU.ActiveCfg = Release|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|x64.ActiveCfg = Release|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.ServerNoAuth|x86.ActiveCfg = Release|Any CPU
-		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
-		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.Build.0 = Debug|Any CPU
+		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.ActiveCfg = Debug|x64
+		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|Any CPU.Build.0 = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x64.ActiveCfg = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x64.Build.0 = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x86.ActiveCfg = Debug|Any CPU
