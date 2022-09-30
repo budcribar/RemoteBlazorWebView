@@ -316,7 +316,10 @@ namespace PeakSWC.RemoteBlazorWebView
 				StaticContentHotReloadManager.TryReplaceResponseContent(_contentRootRelativeToAppRoot, requestUri, ref statusCode, ref content, headers);
 
 				var headerString = GetHeaderString(headers);
-				eventArgs.Response = _coreWebView2Environment!.CreateWebResourceResponse(content, statusCode, statusMessage, headerString);
+
+				var autoCloseStream = new AutoCloseOnReadCompleteStream(content);
+
+				eventArgs.Response = _coreWebView2Environment!.CreateWebResourceResponse(autoCloseStream, statusCode, statusMessage, headerString);
 			}
 #elif WEBVIEW2_MAUI
 			// No-op here because all the work is done in the derived WinUIWebViewManager
