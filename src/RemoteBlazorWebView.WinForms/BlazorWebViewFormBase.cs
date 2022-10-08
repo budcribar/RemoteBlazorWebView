@@ -295,9 +295,9 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			// Everything below is overridden to protect the control collection as read-only.
 			public override bool IsReadOnly => true;
 
-			public override void Add(Control value) => throw new NotSupportedException();
+			public override void Add(Control? value) => throw new NotSupportedException();
 			public override void Clear() => throw new NotSupportedException();
-			public override void Remove(Control value) => throw new NotSupportedException();
+			public override void Remove(Control? value) => throw new NotSupportedException();
 			public override void SetChildIndex(Control child, int newIndex) => throw new NotSupportedException();
 		}
 	}

@@ -118,7 +118,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 				else
 				{
 					var asyncResult = _dispatchThreadControl.BeginInvoke(workItem);
-					return await Task<TResult>.Factory.FromAsync(asyncResult, result => (TResult)_dispatchThreadControl.EndInvoke(result));
+					return await Task<TResult>.Factory.FromAsync(asyncResult, result => (TResult)_dispatchThreadControl.EndInvoke(result)!);
 				}
 			}
 			catch (Exception ex)

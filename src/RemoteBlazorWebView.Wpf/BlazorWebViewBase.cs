@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
@@ -82,6 +83,17 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		private WebView2WebViewManager? _webviewManager;
 		private bool _isDisposed;
 
+		static BlazorWebViewBase()
+		{
+			// By default, prevent the BlazorWebViewBase from receiving focus. Focus should typically be directed
+			// to the underlying WebView2 control.
+			FocusableProperty.OverrideMetadata(typeof(BlazorWebViewBase), new FrameworkPropertyMetadata(false));
+
+			// Listen for changes to the IsTabStop property so we can manipulate how tab navigation affects
+			// the BlazorWebViewBase's subtree.
+			IsTabStopProperty.OverrideMetadata(typeof(BlazorWebViewBase), new FrameworkPropertyMetadata(OnIsTabStopPropertyChanged));
+		}
+
 		/// <summary>
 		/// Creates a new instance of <see cref="BlazorWebViewBase"/>.
 		/// </summary>
@@ -96,6 +108,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			{
 				VisualTree = new FrameworkElementFactory(typeof(WebView2Control), WebViewTemplateChildName)
 			};
+
+			ApplyTabNavigation(IsTabStop);
 		}
 
 		/// <summary>
@@ -172,6 +186,16 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		private static void OnHostPagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnHostPagePropertyChanged(e);
 
 		private void OnHostPagePropertyChanged(DependencyPropertyChangedEventArgs e) => StartWebViewCoreIfPossible();
+
+		private static void OnIsTabStopPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebViewBase)d).OnIsTabStopPropertyChanged(e);
+
+		private void OnIsTabStopPropertyChanged(DependencyPropertyChangedEventArgs e) => ApplyTabNavigation((bool)e.NewValue);
+
+		private void ApplyTabNavigation(bool isTabStop)
+		{
+			var keyboardNavigationMode = isTabStop ? KeyboardNavigationMode.Local : KeyboardNavigationMode.None;
+			KeyboardNavigation.SetTabNavigation(this, keyboardNavigationMode);
+		}
 
 		private bool RequiredStartupPropertiesSet =>
 			_webview != null &&
