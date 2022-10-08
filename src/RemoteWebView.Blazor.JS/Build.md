@@ -25,6 +25,7 @@ nvm use 16.13.0
   cd RemoteWebView.Blazor.JS
   yarn install
   cd .\web.js\ 
+  yarn install
 ```
 
 * Add RemoteWebView.Blazor.JS\protoc\bin to your path variable

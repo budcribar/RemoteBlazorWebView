@@ -2,7 +2,7 @@ import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
 import { Blazor } from '../web.js/src/GlobalExports';
 import { shouldAutoStart } from '../web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
-import {  sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged } from '../web.js/src/Platform/WebView/WebViewIpcSender';
+import { sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
 import { fetchAndInvokeInitializers } from '../web.js/src/JSInitializers/JSInitializers.WebView';
 
 import { initializeRemoteWebView } from './RemoteWebView';
@@ -26,7 +26,7 @@ async function boot(): Promise<void> {
     });
 
     navigationManagerFunctions.enableNavigationInterception();
-    navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged);
+    navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged, sendLocationChanging);
 
     //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
 

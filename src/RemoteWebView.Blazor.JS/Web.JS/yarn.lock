@@ -977,23 +977,23 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@7.0.0-preview.6.22330.3":
-  version "7.0.0-preview.6.22330.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.0-preview.6.22330.3.tgz#7aa87a052b4d1ccefb64f7e79fc53b547961e37b"
-  integrity sha512-kNM42aOnrJHENKC59gSOpwRErtdoOuctwDVh4KjCr7MdqlR4I9IkiFR25VP6km4ESoaeqZPWNrDX9BqLXQUj4Q==
+"@microsoft/dotnet-js-interop@7.0.0-rc.1.22427.2":
+  version "7.0.0-rc.1.22427.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.0-rc.1.22427.2.tgz#910b092f3f53fb7f12f945143ecedf00f2e32dd4"
+  integrity sha512-b6/QO+0y7CTUad0IsYXpvJ99EYbxPjqyfpBGbTpH6Wjms8tNiqH1DuyludrREKImXEkSKJBRUoscYzp+2DIxgg==
 
-"@microsoft/signalr-protocol-msgpack@7.0.0-preview.6.22330.3":
-  version "7.0.0-preview.6.22330.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.0-preview.6.22330.3.tgz#fe54f87a46632abd7d7d85d8572c838e2b1045cb"
-  integrity sha512-TocAvpWFi4mmzIC8hcpqrWWRv7hEo8Js+T3H42ebd8GzP8q2abE6UIWBj+2h9LwJz43ldnmFfhGt8FIoyh2PYg==
+"@microsoft/signalr-protocol-msgpack@7.0.0-rc.1.22427.2":
+  version "7.0.0-rc.1.22427.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.0-rc.1.22427.2.tgz#279fc3e04405537b40b496de9301729b9370c39b"
+  integrity sha512-tLQ+qsJs8OzKhhW7k9XoR1WJQGF7EyHf9aPNU94p36F1mZXvb+1P0BfCwAi40D5sJ7aommfd+feJwaLGTo876w==
   dependencies:
-    "@microsoft/signalr" ">=7.0.0-preview.6.22330.3"
+    "@microsoft/signalr" ">=7.0.0-rc.1.22427.2"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@7.0.0-preview.6.22330.3", "@microsoft/signalr@>=7.0.0-preview.6.22330.3":
-  version "7.0.0-preview.6.22330.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.0-preview.6.22330.3.tgz#e256bedb43323bbdb2f29d6786dea670dd9795c3"
-  integrity sha512-F0q81JXEoIfkhK3mNPpjJmFsCm2B6mvSTQMQC8mNtcZtOlDpcSS4CuvGQt/lnsgo9kDhQln/s11lYxQax3P/+A==
+"@microsoft/signalr@7.0.0-rc.1.22427.2", "@microsoft/signalr@>=7.0.0-rc.1.22427.2":
+  version "7.0.0-rc.1.22427.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.0-rc.1.22427.2.tgz#2811241760ca2c6060c819d33c3866a79e873037"
+  integrity sha512-NPRRh54eEC6bkwhDQNCBXncCXEGLATf2s+wXwc/30n0ZMYYmK1YGdENOrsywBXQ0cqVynq79Z+/kYjNIj0/SPw==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^2.0.2"
@@ -2688,10 +2688,10 @@ terser-webpack-plugin@^5.1.3:
     source-map "^0.6.1"
     terser "^5.7.2"
 
-terser@^5.13.1:
-  version "5.14.2"
-  resolved "https://registry.yarnpkg.com/terser/-/terser-5.14.2.tgz#9ac9f22b06994d736174f4091aa368db896f1c10"
-  integrity sha512-oL0rGeM/WFQCUd0y2QrWxYnq7tfSuKBiqTjRPWrRgB46WD/kiwHwF8T23z78H6Q6kGCuuHcPB+KULHRdxvVGQA==
+terser@^5.14.2:
+  version "5.15.1"
+  resolved "https://registry.yarnpkg.com/terser/-/terser-5.15.1.tgz#8561af6e0fd6d839669c73b92bdd5777d870ed6c"
+  integrity sha512-K1faMUvpm/FBxjBXud0LWVAGxmvoPbZbfTCYbSgaaYQaIXI3/TdI7a7ZGA73Zrou6Q8Zmz3oeUTsp/dj+ag2Xw==
   dependencies:
     "@jridgewell/source-map" "^0.3.2"
     acorn "^8.5.0"
