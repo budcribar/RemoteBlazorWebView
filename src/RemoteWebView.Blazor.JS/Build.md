@@ -22,7 +22,7 @@ nvm use 16.13.0
 ```
   
   npm install -g yarn
-  cd RemoteWebView.Blazor.JS
+  cd RemoteWebView.Blazor.JS\Web.JS
   yarn install
   cd .\web.js\ 
 ```
