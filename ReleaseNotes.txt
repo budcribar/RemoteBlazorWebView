@@ -1,1 +1,1 @@
-- Update to Maui 6.0.400
+- Update to Maui 6.0.547 based on aspnetcore 6.0.8
