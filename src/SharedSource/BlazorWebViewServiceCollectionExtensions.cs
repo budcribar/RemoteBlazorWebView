@@ -54,14 +54,14 @@ namespace PeakSWC.RemoteBlazorWebView
 #endif
 		}
 
-/// <summary>
-/// Enables Developer tools on the underlying WebView controls.
-/// </summary>
-/// <param name="services">The <see cref="IServiceCollection"/>.</param>
-/// <returns>The <see cref="IServiceCollection"/>.</returns>
-public static IServiceCollection AddRemoteBlazorWebViewDeveloperTools(this IServiceCollection services)
-{
-	return services.AddSingleton<BlazorWebViewDeveloperTools>(new BlazorWebViewDeveloperTools { Enabled = true });
-}
+		/// <summary>
+		/// Enables Developer tools on the underlying WebView controls.
+		/// </summary>
+		/// <param name="services">The <see cref="IServiceCollection"/>.</param>
+		/// <returns>The <see cref="IServiceCollection"/>.</returns>
+		public static IServiceCollection AddRemoteBlazorWebViewDeveloperTools(this IServiceCollection services)
+		{
+			return services.AddSingleton<BlazorWebViewDeveloperTools>(new BlazorWebViewDeveloperTools { Enabled = true });
+		}
 	}
 }
