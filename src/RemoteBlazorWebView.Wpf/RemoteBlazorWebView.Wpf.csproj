@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>- built on aspnet 7.0.0rc1</PackageReleaseNotes>
+		<PackageReleaseNotes>- built on maui 7.0.49 and aspnet 7.0.0</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.0-rc.1.6683" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.49" />
 	</ItemGroup>
 
 	<ItemGroup>
