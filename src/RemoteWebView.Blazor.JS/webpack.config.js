@@ -1,13 +1,11 @@
 const path = require('path');
 const webpack = require('webpack');
-const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const TerserJsPlugin = require("terser-webpack-plugin");
 const { DuplicatesPlugin } = require("inspectpack/plugin");
 
 module.exports = (env, args) => ({
     resolve: {
         extensions: ['.ts', '.js'],
-        plugins: [new TsconfigPathsPlugin()]
     },
     devtool: false,
     module: {
