@@ -8,11 +8,6 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView
 {
 
-    public interface IUserService
-    {
-        Task<List<string>> GetUserGroups(string oid);
-    }
-
     public class UserService : IUserService
     {
         private readonly Task<ProtectedApiCallHelper> _graphApi;
