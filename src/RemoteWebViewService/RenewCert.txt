@@ -7,7 +7,7 @@
 
 4. Run the Certify the web application
 
-Copy the cert to the azure portal for admin.remotewebview.org
+Copy the cert to the azure portal for admin.remotewebview.com
 
 
 

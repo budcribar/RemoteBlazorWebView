@@ -48,20 +48,20 @@
 
  
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.7.0" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.49.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.49.0" />
+    <PackageReference Include="Azure.Identity" Version="1.8.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.50.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.50.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.1" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.45.0-preview" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
    
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
    
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.8" NoWarn="NU1605" />    
- 
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.5" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.10" />    
+
+	  <PackageReference Include="Microsoft.Identity.Web" Version="1.25.10" />
+	  <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.10" />
   </ItemGroup>
 
   <ItemGroup>
