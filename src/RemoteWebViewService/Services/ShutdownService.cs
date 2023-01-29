@@ -43,6 +43,7 @@ namespace PeakSWC.RemoteWebView.Services
                     foreach (var t in tasks)
                         t.Dispose();
                 }
+                // TODO: do a catch and log errors
                 finally
                 {
                     client.Dispose();
