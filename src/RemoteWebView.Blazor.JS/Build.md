@@ -37,5 +37,5 @@ cd RemoteWebView.Blazor.JS
 npm run build:production
 ```
 
-
+ find . -name '*.ts' -exec unix2dos {} \;
 

@@ -977,23 +977,23 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@7.0.0-rc.1.22427.2":
-  version "7.0.0-rc.1.22427.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.0-rc.1.22427.2.tgz#910b092f3f53fb7f12f945143ecedf00f2e32dd4"
-  integrity sha512-b6/QO+0y7CTUad0IsYXpvJ99EYbxPjqyfpBGbTpH6Wjms8tNiqH1DuyludrREKImXEkSKJBRUoscYzp+2DIxgg==
+"@microsoft/dotnet-js-interop@7.0.2":
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.2.tgz#f3e9a13e00a8b2f91cd9e10911a5f314b4a748bd"
+  integrity sha512-FFlgHuXRTsonaga2R5PIthR8edu8Im8AuO4WoIj3F3ocVWBDUJshnmAr91WtePu6GCah2M/YdiXzxAdh87JusA==
 
-"@microsoft/signalr-protocol-msgpack@7.0.0-rc.1.22427.2":
-  version "7.0.0-rc.1.22427.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.0-rc.1.22427.2.tgz#279fc3e04405537b40b496de9301729b9370c39b"
-  integrity sha512-tLQ+qsJs8OzKhhW7k9XoR1WJQGF7EyHf9aPNU94p36F1mZXvb+1P0BfCwAi40D5sJ7aommfd+feJwaLGTo876w==
+"@microsoft/signalr-protocol-msgpack@7.0.2":
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.2.tgz#67b9619c60e423144676f3fc22473d91790904b4"
+  integrity sha512-aODnmApl9pYVdLYHT0oRIMU51e+XnNhTSTLbH3sHo2RxSgrljSU5FssF1IVq836sd/2Ka5AB/kH3ZArp/QDz2A==
   dependencies:
-    "@microsoft/signalr" ">=7.0.0-rc.1.22427.2"
+    "@microsoft/signalr" ">=7.0.2"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@7.0.0-rc.1.22427.2", "@microsoft/signalr@>=7.0.0-rc.1.22427.2":
-  version "7.0.0-rc.1.22427.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.0-rc.1.22427.2.tgz#2811241760ca2c6060c819d33c3866a79e873037"
-  integrity sha512-NPRRh54eEC6bkwhDQNCBXncCXEGLATf2s+wXwc/30n0ZMYYmK1YGdENOrsywBXQ0cqVynq79Z+/kYjNIj0/SPw==
+"@microsoft/signalr@7.0.2", "@microsoft/signalr@>=7.0.2":
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.2.tgz#00cd9444de903602ddbea1f9f629995a1fda31ae"
+  integrity sha512-U+o33K2m6nnMojZzBrjrApKgYfiQ0A0t4I2F5oFJObgfzRSDS9v0YoYgkmva5nbPftUp3YcR5XmH0S/1+BZT6Q==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^2.0.2"
