@@ -186,7 +186,7 @@ namespace PeakSWC.RemoteWebView
 
                 if (ServiceDictionary.TryGetValue(guid, out var serviceState))
                 {
-                    if (serviceState.EnableMirrors)
+                    if (serviceState.EnableMirrors && serviceState.InUse)
                     {
                         serviceState.User = context.User.GetDisplayName() ?? "";
                         serviceState.ConnectionId.Add(context.Connection.Id);
