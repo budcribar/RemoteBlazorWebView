@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Update to Maui 6.0.547 based on aspnetcore 6.0.8</PackageReleaseNotes>
+		<PackageReleaseNotes>Update to Maui 6.0.552 and aspnetcore 6.0.10</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
