@@ -204,7 +204,6 @@ namespace PeakSWC.RemoteWebView
 
                             await stream.CopyToAsync(context.Response.Body);
                             serviceState.ConnectionId.Add(context.Connection.Id);
-
                         }
                         else context.Response.StatusCode = 400;
                     }
