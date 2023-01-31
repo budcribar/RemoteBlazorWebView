@@ -37,5 +37,6 @@ cd RemoteWebView.Blazor.JS
 npm run build:production
 ```
 
- find . -name '*.ts' -exec unix2dos {} \;
+cd /mnt/c/users/Arti_BlizzardPV3/source/repos/RemoteBlazorWebView/src
+ sudo find . -name '*.cs' -exec unix2dos {} \;
 
