@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -108,7 +107,6 @@ namespace PeakSWC.RemoteWebView
             });
         }
 
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -205,6 +203,8 @@ namespace PeakSWC.RemoteWebView
                             context.Response.ContentType = "text/html";
 
                             await stream.CopyToAsync(context.Response.Body);
+                            serviceState.ConnectionId.Add(context.Connection.Id);
+
                         }
                         else context.Response.StatusCode = 400;
                     }
@@ -307,6 +307,7 @@ namespace PeakSWC.RemoteWebView
                             //TextReader tr = new StreamReader(stream);
                             //var text = await tr.ReadToEndAsync();
                             //await context.Response.WriteAsync(text);
+                            serviceState.ConnectionId.Add(context.Connection.Id);
                         }
                         else context.Response.StatusCode = 400;
                     }
