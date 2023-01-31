@@ -85,6 +85,12 @@ function setNotAllowedCursor(isPrimary:boolean): void {
         for (var idx = 0; idx < l.length; ++idx) {
             l[idx].style.cursor = 'not-allowed';
         }
+
+        var sel = document.getElementsByTagName('select');
+
+        for (var idx = 0; idx < sel.length; ++idx) {
+            sel[idx].style.cursor = 'not-allowed';
+        }
     }
 }
 
