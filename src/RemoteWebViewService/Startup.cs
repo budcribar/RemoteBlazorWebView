@@ -185,6 +185,7 @@ namespace PeakSWC.RemoteWebView
                     if (serviceState.EnableMirrors && serviceState.InUse)
                     {
                         serviceState.User = context.User.GetDisplayName() ?? "";
+                        serviceState.ConnectionId.Add(context.Connection.Id);
 
                         if (serviceState.IPC.ClientResponseStream != null)
                             await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
@@ -203,7 +204,6 @@ namespace PeakSWC.RemoteWebView
                             context.Response.ContentType = "text/html";
 
                             await stream.CopyToAsync(context.Response.Body);
-                            serviceState.ConnectionId.Add(context.Connection.Id);
                         }
                         else context.Response.StatusCode = 400;
                     }
@@ -292,6 +292,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (!serviceState.Refresh)
                     {
+                        serviceState.ConnectionId.Add(context.Connection.Id);
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetService<RemoteFileResolver>();
@@ -306,7 +307,7 @@ namespace PeakSWC.RemoteWebView
                             //TextReader tr = new StreamReader(stream);
                             //var text = await tr.ReadToEndAsync();
                             //await context.Response.WriteAsync(text);
-                            serviceState.ConnectionId.Add(context.Connection.Id);
+                            
                         }
                         else context.Response.StatusCode = 400;
                     }
