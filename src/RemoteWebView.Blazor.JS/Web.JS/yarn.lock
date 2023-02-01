@@ -1196,23 +1196,23 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@6.0.8":
-  version "6.0.8"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.8.tgz#2671ccc1051f6998d603e5d7bc6de990bc090a38"
-  integrity sha512-f3LvO3mmIIrqKmb87pDccqfUeRFuezx52A9+Pd7SMxlN2jW/KvFLqnsF2+sz4NotDRafWVdjhKUcyX+9I/LAzA==
+"@microsoft/dotnet-js-interop@6.0.10":
+  version "6.0.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-6.0.10.tgz#3932e3bdf5b605a94f08c9e52bf8eb3673e155f2"
+  integrity sha512-LnJWTMMIxCfJhXVz6Bo+6ZrjrhL2Q5cgt72ieuJH34nj2+dwIZdFtTi1Xn6PKbmWuyQG4aQAIt/P1qR7ql58fg==
 
-"@microsoft/signalr-protocol-msgpack@6.0.8":
-  version "6.0.8"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.8.tgz#603a6690765d4faf79647ec867a7781f6e8fbc70"
-  integrity sha512-I61CJaCmoLHWLet52yRSP6w0nOQHivBbACwB5uPlUTK+3qAb2QnjjWpPLIOcXnJVg10r/7J+rRDlNgsib3yrcQ==
+"@microsoft/signalr-protocol-msgpack@6.0.10":
+  version "6.0.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-6.0.10.tgz#242d0a16fe57b9670299f2b9d15eea344b2735cc"
+  integrity sha512-Xj3QuH/HMcLGtc+iZjE8BH/auQVn4FQY9adv7M/wsMpT9TEe1iQJKjD0Hlh+Y42ioNaO0MFVlfFXhkYUK7y5QQ==
   dependencies:
-    "@microsoft/signalr" ">=6.0.8"
+    "@microsoft/signalr" ">=6.0.10"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@6.0.8":
-  version "6.0.8"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.8.tgz#e55b4488b352c580c08bab381110cdfe42d4e53c"
-  integrity sha512-TgvNf8opondnX6nqN2AvWThOMl+CjPwxonhAbBpmLveECcnTuBibJQdiCUA4iwjBz26k2HIiiJ25DYgqXIJVQw==
+"@microsoft/signalr@6.0.10":
+  version "6.0.10"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.10.tgz#d2b5ce72e035dfa4c285b5e658388804e85abb86"
+  integrity sha512-ND9LiIYac+ZDgCgW2QzpNfe9BTiOtjc2AX/2GtFIhRGhEzx5CixcNANg2VGj27IAxycAPPnEoy7+QA31Eil7QQ==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^1.0.7"
@@ -1220,14 +1220,14 @@
     node-fetch "^2.6.7"
     ws "^7.4.5"
 
-"@microsoft/signalr@>=6.0.8":
-  version "6.0.9"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-6.0.9.tgz#50f0960e2858e2c8b1656dd0810af12639302fa9"
-  integrity sha512-DGVYe3ycT2PfRU7m3xCbv1HjhvClKl2VB1HyFlvf8SqBGXz3Cx+oalNWGYrGIgADA6Q2xaB4GaDmDdprTa2U0Q==
+"@microsoft/signalr@>=6.0.10":
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.2.tgz#00cd9444de903602ddbea1f9f629995a1fda31ae"
+  integrity sha512-U+o33K2m6nnMojZzBrjrApKgYfiQ0A0t4I2F5oFJObgfzRSDS9v0YoYgkmva5nbPftUp3YcR5XmH0S/1+BZT6Q==
   dependencies:
     abort-controller "^3.0.0"
-    eventsource "^1.0.7"
-    fetch-cookie "^0.11.0"
+    eventsource "^2.0.2"
+    fetch-cookie "^2.0.3"
     node-fetch "^2.6.7"
     ws "^7.4.5"
 
@@ -2413,6 +2413,11 @@ eventsource@^1.0.7:
   resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-1.1.2.tgz#bc75ae1c60209e7cb1541231980460343eaea7c2"
   integrity sha512-xAH3zWhgO2/3KIniEKYPr8plNSzlGINOUqYj0m0u7AB81iRw8b/3E73W6AuU+6klLbaSFmZnaETQ2lXPfAydrA==
 
+eventsource@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-2.0.2.tgz#76dfcc02930fb2ff339520b6d290da573a9e8508"
+  integrity sha512-IzUmBGPR3+oUG9dUeXynyNmf91/3zUSJg1lCktzKw47OXuhco54U3r9B7O4XX+Rb1Itm9OZ2b0RkTs10bICOxA==
+
 execa@^5.0.0:
   version "5.1.1"
   resolved "https://registry.yarnpkg.com/execa/-/execa-5.1.1.tgz#f80ad9cbf4298f7bd1d4c9555c21e93741c411dd"
@@ -2502,6 +2507,14 @@ fetch-cookie@^0.11.0:
   integrity sha512-BQm7iZLFhMWFy5CZ/162sAGjBfdNWb7a8LEqqnzsHFhxT/X/SVj/z2t2nu3aJvjlbQkrAlTUApplPRjWyH4mhA==
   dependencies:
     tough-cookie "^2.3.3 || ^3.0.1 || ^4.0.0"
+
+fetch-cookie@^2.0.3:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/fetch-cookie/-/fetch-cookie-2.1.0.tgz#6e127909912f9e527533b045aab555c06b33801b"
+  integrity sha512-39+cZRbWfbibmj22R2Jy6dmTbAWC+oqun1f1FzQaNurkPDUP4C38jpeZbiXCR88RKRVDp8UcDrbFXkNhN+NjYg==
+  dependencies:
+    set-cookie-parser "^2.4.8"
+    tough-cookie "^4.0.0"
 
 file-entry-cache@^6.0.1:
   version "6.0.1"
@@ -3988,6 +4001,11 @@ serialize-javascript@^6.0.0:
   integrity sha512-Qr3TosvguFt8ePWqsvRfrKyQXIiW+nGbYpy8XK24NQHE83caxWt+mIymTT19DGFbNWNLfEwsrkSmN64lVWB9ag==
   dependencies:
     randombytes "^2.1.0"
+
+set-cookie-parser@^2.4.8:
+  version "2.5.1"
+  resolved "https://registry.yarnpkg.com/set-cookie-parser/-/set-cookie-parser-2.5.1.tgz#ddd3e9a566b0e8e0862aca974a6ac0e01349430b"
+  integrity sha512-1jeBGaKNGdEq4FgIrORu/N570dwoPYio8lSoYLWmX7sQ//0JY08Xh9o5pBcgmHQ/MbsYp/aZnOe1s1lIsbLprQ==
 
 set-value@^4.0.1:
   version "4.1.0"

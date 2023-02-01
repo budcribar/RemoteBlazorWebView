@@ -1,1 +1,1 @@
-- Update to Maui 6.0.552 and aspnetcore 6.0.10
+- Update to Maui 6.0.552 and aspnetcore 6.0.10 debug off
