@@ -26,7 +26,11 @@ namespace PeakSWC.RemoteWebView
                 browserResponseStreamList.Add(serverStreamWriter);
                 if (browserResponseStreamList.Count > 1)
                 {
-                    messageHistory.ForEach(m => serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult());
+                    messageHistory.ForEach(m => {
+                        serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult();
+                        if (m.Request.Contains("BeginInvokeJS")) 
+                            Task.Delay(100).Wait();
+                    });
                 }
             }
             return isPrimary;
