@@ -50,7 +50,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="7.0.58" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="7.0.59" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
    
   </ItemGroup>
