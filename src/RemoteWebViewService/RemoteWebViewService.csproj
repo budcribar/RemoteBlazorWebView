@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
   <PropertyGroup>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
@@ -41,12 +40,9 @@
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">
     <Optimize>False</Optimize>
   </PropertyGroup>
-
- 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.8.1" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
@@ -54,27 +50,24 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.12.0-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-   
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-   
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="7.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.2" NoWarn="NU1605" />    
- 
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.2" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.Identity.Web" Version="1.25.10" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.10" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
       <Pack>True</Pack>
     </None>
     <None Include="..\..\README.md">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <None Update="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -82,8 +75,13 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
+    <None Update="Settings.job">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
-
-  <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
-  
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties appsettings_1json__JsonSchema="" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>
