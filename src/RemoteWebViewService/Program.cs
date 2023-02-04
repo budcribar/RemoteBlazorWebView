@@ -21,12 +21,6 @@ namespace PeakSWC.RemoteWebView
                     if (!File.Exists("appsettings.json"))
                         webBuilder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 5001, listenOptions => { listenOptions.UseHttps(); }));
 
-                    // Comment out for App Service
-                    webBuilder.UseKestrel();
-
-                    // Uncomment for App Service
-                    // webBuilder.UseIISIntegration();
-
                     webBuilder.UseStartup<Startup>();
                 });
     }

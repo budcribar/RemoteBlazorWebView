@@ -30,7 +30,7 @@
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
     <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">True</PublishSingleFile>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
