@@ -72,9 +72,7 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="Settings.job">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+   
   </ItemGroup>
   <ProjectExtensions>
     <VisualStudio>
