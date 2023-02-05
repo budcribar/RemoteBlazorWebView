@@ -25,10 +25,9 @@
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
-    <DefineConstants Condition=" '$(TargetFramework)' == 'net5' ">NET5</DefineConstants>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
-    <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">True</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
