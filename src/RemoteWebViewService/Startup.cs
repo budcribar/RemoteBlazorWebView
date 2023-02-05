@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -107,6 +108,13 @@ namespace PeakSWC.RemoteWebView
             });
         }
 
+        private AuthorizationPolicy GetAuthorizationPolicy =>
+#if AUTHORIZATION         
+              new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+#else
+              new AuthorizationPolicyBuilder().AllowAnyUser().Build();
+#endif
+
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -146,33 +154,19 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGet("/mirror/{id:guid}", Mirror());
-                endpoints.MapGet("/app/{id:guid}", Start())
-#if AUTHORIZATION     
-                .RequireAuthorization()
-#endif
-                ;
+                endpoints.MapGet("/app/{id:guid}", Start()).RequireAuthorization(GetAuthorizationPolicy);
+
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                endpoints.MapGet("/{id:guid}", StartOrRefresh())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
+                endpoints.MapGet("/{id:guid}", StartOrRefresh()).RequireAuthorization(GetAuthorizationPolicy);
+
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
-                endpoints.MapGet("/wait/{id:guid}", Wait())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).RequireAuthorization(GetAuthorizationPolicy);
+
+                endpoints.MapGet("/wait/{id:guid}", Wait()).RequireAuthorization(GetAuthorizationPolicy);
                 endpoints.MapGet("/test", () => "Hello World!");
                 endpoints.MapFallbackToFile("index.html");
             });
         }
-
 
         private RequestDelegate Mirror()
         {

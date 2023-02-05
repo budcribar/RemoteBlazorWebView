@@ -26,9 +26,10 @@
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
+    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">linux-x64</RuntimeIdentifier>
+	<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
