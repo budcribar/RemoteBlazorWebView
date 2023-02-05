@@ -112,7 +112,7 @@ namespace PeakSWC.RemoteWebView
 #if AUTHORIZATION         
               new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 #else
-              new AuthorizationPolicyBuilder().AllowAnyUser().Build();
+              new AuthorizationPolicyBuilder().Build();
 #endif
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
