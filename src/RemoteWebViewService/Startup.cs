@@ -168,6 +168,7 @@ namespace PeakSWC.RemoteWebView
                 .RequireAuthorization()
 #endif
                 ;
+                endpoints.MapGet("/test", () => "Hello World!");
                 endpoints.MapFallbackToFile("index.html");
             });
         }
