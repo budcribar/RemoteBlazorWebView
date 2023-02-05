@@ -23,7 +23,6 @@ using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.FileProviders;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -190,7 +189,7 @@ namespace PeakSWC.RemoteWebView
 
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        IFileInfo fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
                         using (Stream stream = fi.CreateReadStream())
                         {
@@ -288,7 +287,7 @@ namespace PeakSWC.RemoteWebView
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        IFileInfo fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
                         using (Stream stream = fi.CreateReadStream())
                         {

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -31,8 +30,7 @@ namespace PeakSWC.RemoteWebView
         public string Id { get; init; } = string.Empty;
         public string ClientId { get; set; } = string.Empty;
         public ConcurrentBag<string> ConnectionId { get; set; } = new();
-        public bool EnableMirrors { get; set; } = false;    
-        
+        public bool EnableMirrors { get; set; } = false;       
         public string Group { get; init;  } = string.Empty;
         public int Pid { get; init; } = 0;
         public string ProcessName {  get; init; } = string.Empty;
