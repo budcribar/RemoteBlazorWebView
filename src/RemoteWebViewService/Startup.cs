@@ -23,6 +23,7 @@ using static System.Net.Mime.MediaTypeNames;
 using Channel = System.Threading.Channels.Channel;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.FileProviders;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -146,7 +147,7 @@ namespace PeakSWC.RemoteWebView
 #endif
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
-            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetService<RemoteFileResolver>() });
+            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetRequiredService<RemoteFileResolver>() });
 
             app.UseEndpoints(endpoints =>
             {
@@ -188,18 +189,15 @@ namespace PeakSWC.RemoteWebView
                             await channel.Writer.WriteAsync($"Connect:{guid}");
 
                         var home = serviceState.HtmlHostPath;
-                        var rfr = context.RequestServices.GetService<RemoteFileResolver>();
-                        var fi = rfr?.GetFileInfo($"/{guid}/{home}");
-                        context.Response.ContentLength = fi?.Length;
-                        using var stream = fi?.CreateReadStream();
-                        if (stream != null)
+                        var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
+                        IFileInfo fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        context.Response.ContentLength = fi.Length;
+                        using (Stream stream = fi.CreateReadStream())
                         {
                             context.Response.StatusCode = 200;
                             context.Response.ContentType = "text/html";
-
                             await stream.CopyToAsync(context.Response.Body);
                         }
-                        else context.Response.StatusCode = 400;
                     }
                     else
                     {
@@ -289,21 +287,15 @@ namespace PeakSWC.RemoteWebView
                         serviceState.ConnectionId.Add(context.Connection.Id);
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
-                        var rfr = context.RequestServices.GetService<RemoteFileResolver>();
-                        var fi = rfr?.GetFileInfo($"/{guid}/{home}");
-                        context.Response.ContentLength = fi?.Length;
-                        using var stream = fi?.CreateReadStream();
-                        if (stream != null)
+                        var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
+                        IFileInfo fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        context.Response.ContentLength = fi.Length;
+                        using (Stream stream = fi.CreateReadStream())
                         {
                             context.Response.StatusCode = 200;
                             context.Response.ContentType = "text/html";
                             await stream.CopyToAsync(context.Response.Body);
-                            //TextReader tr = new StreamReader(stream);
-                            //var text = await tr.ReadToEndAsync();
-                            //await context.Response.WriteAsync(text);
-                            
                         }
-                        else context.Response.StatusCode = 400;
                     }
                     else
                     {
