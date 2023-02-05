@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
@@ -39,9 +39,7 @@
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Authorization|x64'">
-    <Optimize>False</Optimize>
-  </PropertyGroup>
+ 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.8.1" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
@@ -79,8 +77,8 @@
     </None>
   </ItemGroup>
   <ProjectExtensions>
-    <VisualStudio>
+    <!--<VisualStudio>
       <UserProperties appsettings_1json__JsonSchema="" />
-    </VisualStudio>
+    </VisualStudio>-->
   </ProjectExtensions>
 </Project>
