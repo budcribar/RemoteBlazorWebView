@@ -145,12 +145,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-
-                endpoints.MapGet("/mirror/{id:guid}", Mirror())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif  
-                ;
+                endpoints.MapGet("/mirror/{id:guid}", Mirror());
                 endpoints.MapGet("/app/{id:guid}", Start())
 #if AUTHORIZATION     
                 .RequireAuthorization()
