@@ -77,8 +77,8 @@
     </None>
   </ItemGroup>
   <ProjectExtensions>
-    <!--<VisualStudio>
+    <VisualStudio>
       <UserProperties appsettings_1json__JsonSchema="" />
-    </VisualStudio>-->
+    </VisualStudio>
   </ProjectExtensions>
 </Project>
