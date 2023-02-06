@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -19,6 +20,7 @@ namespace PeakSWC.RemoteWebView
 
     public class ServiceState : IDisposable
     {
+        public IRequestCookieCollection Cookies { get; set; }
         private CancellationTokenSource CancellationTokenSource { get; }
         public ILogger<RemoteWebViewService> Logger;
         public CancellationToken Token { get; }

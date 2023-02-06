@@ -37,6 +37,7 @@ namespace PeakSWC.RemoteWebView
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            var s = Configuration.GetValue<string>("Secret");
         }
 
 
@@ -228,7 +229,7 @@ namespace PeakSWC.RemoteWebView
                     }
                     else
                     {
-
+                        serviceState.Cookies = context.Request.Cookies;
                         serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
