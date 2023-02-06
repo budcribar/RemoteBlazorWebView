@@ -23,8 +23,9 @@ Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurs
 Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 # Publish the web site server
 dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
-dotnet publish -c Authorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
+
 
 dotnet build -c Release .\src\RemoteWebViewService
 dotnet tool uninstall PeakSWC.RemoteWebViewService -g
