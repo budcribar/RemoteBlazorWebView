@@ -16,9 +16,9 @@ namespace PeakSWC.RemoteWebView
 
         public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
             {
-                if (!File.Exists("appsettings.json"))
-                    webBuilder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 5001, listenOptions => { listenOptions.UseHttps(); }));
-
+#if NOAUTHORIZATION
+                webBuilder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 5001, listenOptions => { listenOptions.UseHttps(); }));
+#endif
                 webBuilder.UseStartup<Startup>();
             });     
     }
