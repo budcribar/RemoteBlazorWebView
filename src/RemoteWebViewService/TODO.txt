@@ -35,5 +35,10 @@ Both the server and the Restarted app need to know when id has been restarted
 Race is between the Refreshed client waiting to create entry into dictionary and AckRestart waiting for id to be removed 
 
 
+1. Update certificate programatically
 
+2. Find bug in BeginInvokeJS error
+Receive:__bwv:["BeginInvokeJS",3,"import","[\u0022/_content/HPI.SharedComponents/js/main-layout-funcs.js\u0022]",1,0]
+
+3. Add authorization on mirror endpoint
 
