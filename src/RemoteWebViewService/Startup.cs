@@ -38,7 +38,6 @@ namespace PeakSWC.RemoteWebView
             Configuration = configuration;
         }
 
-
         private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
             IConfidentialClientApplication confidentialClientApplication =
@@ -78,8 +77,6 @@ namespace PeakSWC.RemoteWebView
             services.AddOptions();
             services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
             services.AddAuthorization();
-
-
 #else
             services.AddTransient<IUserService, MockUserService>();
 #endif 
@@ -145,6 +142,8 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                endpoints.MapGet("/mirror/{id:guid}", Mirror());
+                endpoints.MapGet("/app/{id:guid}", Start()).ConditionallyRequireAuthorization();
 
                 endpoints.MapGet("/mirror/{id:guid}", Mirror());
                 endpoints.MapGet("/app/{id:guid}", Start())
@@ -153,22 +152,13 @@ namespace PeakSWC.RemoteWebView
 #endif
                 ;
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                endpoints.MapGet("/{id:guid}", StartOrRefresh())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
+                endpoints.MapGet("/{id:guid}", StartOrRefresh()).ConditionallyRequireAuthorization();
+
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
-                endpoints.MapGet("/wait/{id:guid}", Wait())
-#if AUTHORIZATION
-                .RequireAuthorization()
-#endif
-                ;
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).ConditionallyRequireAuthorization();
+
+                endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/test", () => "Hello World!");
                 endpoints.MapFallbackToFile("index.html");
             });
         }
