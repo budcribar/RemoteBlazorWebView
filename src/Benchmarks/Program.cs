@@ -54,7 +54,7 @@ namespace PeakSWC.RemoteWebView
 		{
 			public static void Main(string[] args)
 			{
-                var channel = GrpcChannel.ForAddress(@"https://linux.remoteblazorwebview.com/",//:8585",
+                var channel = GrpcChannel.ForAddress(@"https://server.remoteblazorwebview.com/",
                        new GrpcChannelOptions
                        {
                            HttpHandler = new SocketsHttpHandler
@@ -70,7 +70,7 @@ namespace PeakSWC.RemoteWebView
 				Google.Protobuf.WellKnownTypes.Empty request = new Google.Protobuf.WellKnownTypes.Empty();
                 var ids = client.GetIds(request);
 
-                var summary = BenchmarkRunner.Run<FileReadInitRequest>();
+                //var summary = BenchmarkRunner.Run<FileReadInitRequest>();
 			}
 		}
 	}
