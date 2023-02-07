@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Update to Maui 6.0.552 and aspnetcore 6.0.10 debug off</PackageReleaseNotes>
+		<PackageReleaseNotes>Add Authorization and fix race condition in mirror endpoint</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 

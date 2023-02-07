@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>x64</Platforms>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet.Annotations" Version="0.13.4" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.4" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet.Annotations" Version="0.13.4" />
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.4" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\RemoteWebViewService\RemoteWebViewService.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\RemoteWebViewService\RemoteWebViewService.csproj" />
+	</ItemGroup>
 
 </Project>

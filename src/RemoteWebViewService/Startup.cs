@@ -142,15 +142,9 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-                endpoints.MapGet("/mirror/{id:guid}", Mirror());
+                endpoints.MapGet("/mirror/{id:guid}", Mirror()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/app/{id:guid}", Start()).ConditionallyRequireAuthorization();
 
-                endpoints.MapGet("/mirror/{id:guid}", Mirror());
-                endpoints.MapGet("/app/{id:guid}", Start())
-#if AUTHORIZATION     
-                .RequireAuthorization()
-#endif
-                ;
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
                 endpoints.MapGet("/{id:guid}", StartOrRefresh()).ConditionallyRequireAuthorization();
 
@@ -158,7 +152,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).ConditionallyRequireAuthorization();
 
                 endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/test", () => "Hello World!");
+                endpoints.MapGet("/test", () => "Server started successfully");
                 endpoints.MapFallbackToFile("index.html");
             });
         }

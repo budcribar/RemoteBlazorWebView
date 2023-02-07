@@ -157,7 +157,8 @@ namespace PeakSWC.RemoteWebView
                 else if (!string.IsNullOrEmpty(serviceState.ImportId))
                 {
                     // Need to wait for previous BeginInvokeJS to finish
-                    serviceState.ImportResetEvent.Wait(context.CancellationToken);
+                  
+                    //  serviceState.ImportResetEvent.Wait(context.CancellationToken);
                     serviceState.ImportId = string.Empty;
                 }
 

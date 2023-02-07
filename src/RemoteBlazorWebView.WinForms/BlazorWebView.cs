@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Web.WebView2.Core;
 using PeakSWC.RemoteWebView;
 using System;
 using System.ComponentModel;
@@ -17,6 +18,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
     public partial class BlazorWebView : BlazorWebViewFormBase, IBlazorWebView
     {
+        public CoreWebView2CookieManager CookieManager => WebView.CoreWebView2.CookieManager;
         private bool IsRefreshing { get; set; } = false;
 
         public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir, HostPage);
@@ -169,6 +171,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
-        public Task WaitForInitialitionComplete() => Task.CompletedTask;
+        public Task WaitForInitializationComplete() => Task.CompletedTask;
     }
 }

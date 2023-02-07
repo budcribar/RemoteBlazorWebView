@@ -3,8 +3,11 @@ using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -114,7 +117,7 @@ namespace PeakSWC.RemoteWebView
 
                                         case "created":                                     
                                             completed.Set();
-                                            await BlazorWebView.WaitForInitialitionComplete();
+                                            await BlazorWebView.WaitForInitializationComplete();
                                             FireReadyToConnect();
                                             break;
 
@@ -141,10 +144,38 @@ namespace PeakSWC.RemoteWebView
                                             cts.Cancel();
                                             break;
 
-                                        case "connected":
-                                            var split = message.Response.Split(":");
-                                            if (split.Length == 3)
-                                                FireConnected(split[1],split[2]);
+                                        case "connected": 
+                                            IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(message.Cookies);
+                                            if (cookiesDictionary != null)
+                                            {
+                                                Dispacher?.InvokeAsync(() =>
+                                                {
+                                                    try
+                                                    {
+                                                        // CookieManager could be null in Photino
+                                                        foreach (var name in cookiesDictionary.Keys)
+                                                        {
+                                                            var cookie = BlazorWebView.CookieManager.CreateCookie(name, cookiesDictionary[name], BlazorWebView.ServerUri.Host, "/");
+                                                            BlazorWebView.CookieManager.AddOrUpdateCookie(cookie);
+                                                        }
+                                                    }
+                                                    catch { }
+                                                    
+                                                });
+                                                
+                                                  
+                                            }
+
+                                            // connected:url|user
+                                            try
+                                            {
+                                                var split = message.Response.Split("|");
+                                                var user = split[1];
+                                                var ip = split[0].Substring(split[0].IndexOf(":") + 1);
+                                                FireConnected(ip, user);
+                                            }
+                                            catch { }
+                                               
                                             connected = true;
                                             break;
                                     }

@@ -1,1 +1,1 @@
-- Update to Maui 6.0.552 and aspnetcore 6.0.10 debug off
+- Add Authorization and fix race condition in mirror endpoint
