@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Web.WebView2.Core;
 using PeakSWC.RemoteWebView;
 using PhotinoNET;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,6 +14,7 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemoteBlazorWebViewWindow : PhotinoWindow, IBlazorWebView
     {
+        public CoreWebView2CookieManager CookieManager => default!;
         public Uri? ServerUri { get; set; }
         public string Group { get; set; } = "test";
         public string Markup { get; set; } = "";

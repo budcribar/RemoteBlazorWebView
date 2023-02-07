@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.Web.WebView2.Core;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -24,5 +25,7 @@ namespace PeakSWC.RemoteWebView
         public void NavigateToString(string htmlContent);
 
         public Task WaitForInitialitionComplete();
+
+        public CoreWebView2CookieManager CookieManager {get;}
     }
 }
