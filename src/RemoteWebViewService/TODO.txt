@@ -53,3 +53,18 @@ __bwv:["EndInvokeJS",14,false,"[14,false,\"JS object instance with ID 1 does not
 
 $1ab5cb4d-f75b-4da7-a9d2-84c20411b242¹
 __bwv:["EndInvokeJS",6,false,"[6,false,\"JS object instance addStyleSheetRef with ID 1 does not exist (has it been disposed?).\\nError: JS object instance addStyleSheetRef with ID 1 does not exist (has it been disposed?).\\n    at E (https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:340506)\\n    at https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:341377\\n    at new Promise (<anonymous>)\\n    at beginInvokeJSFromDotNet (https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:341358)\\n    at https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:380732\\n    at onMessage (https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:380753)\\n    at https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:11656\\n    at Array.forEach (<anonymous>)\\n    at e.rawOnMessage (https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:11618)\\n    at https://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/_framework/blazor.webview.js:1:9425\"]"]"Lhttps://server.remoteblazorwebview.com/1ab5cb4d-f75b-4da7-a9d2-84c20411b242/*$33788d2d-83ad-4c6e-bd2f-b34629675d8b
+
+
+beginInvokeJSFromDotNet Blazor._internal.attachWebRendererInterop id:0
+blazor.webview.js:1 beginInvokeJSFromDotNet import id:0
+blazor.webview.js:1 beginInvokeJSFromDotNet Blazor._internal.PageTitle.getAndRemoveExistingTitle id:0
+blazor.webview.js:1 beginInvokeJSFromDotNet Blazor._internal.domWrapper.focusBySelector id:0
+blazor.webview.js:1 beginInvokeJSFromDotNet import id:0
+blazor.webview.js:1 beginInvokeJSFromDotNet addStyleSheetRef id:1
+blazor.webview.js:1 beginInvokeJSFromDotNet setRtl id:2
+6blazor.webview.js:1 beginInvokeJSFromDotNet removeStyleSheetRef id:1
+2blazor.webview.js:1 beginInvokeJSFromDotNet removeScriptSrc id:1
+blazor.webview.js:1 beginInvokeJSFromDotNet setFontClass id:2
+blazor.webview.js:1 beginInvokeJSFromDotNet setThemeClass id:2
+blazor.webview.js:1 beginInvokeJSFromDotNet o1lJsFunctions.setFocus id:0
+
