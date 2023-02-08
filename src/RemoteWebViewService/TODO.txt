@@ -32,7 +32,7 @@ AckRestart() -> Wait until client shuts down by waiting until id is removed from
 
 Both the server and the Restarted app need to know when id has been restarted
 
-Race is between the Refreshed client waiting to create entry into dictionary and AckRestart waiting for id to be removed 
+Race is __bwv:["EndInvokeJS",9,false,"[9,false,\"JS object instance with ID 1 does not exist (has it been disposed?).\\nError: JS object instance with ID 1 does not exist (has it been disposed?).\\n    at E (https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:340506)\\n    at https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:341372\\n    at new Promise (<anonymous>)\\n    at beginInvokeJSFromDotNet (https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:341353)\\n    at https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:380613\\n    at onMessage (https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:380634)\\n    at https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:11656\\n    at Array.forEach (<anonymous>)\\n    at e.rawOnMessage (https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:11618)\\n    at https://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/_framework/blazor.webview.js:1:9425\"]"]"Lhttps://server.remoteblazorwebview.com/4e955d73-84b4-4f87-89f0-3b4885ff86a9/*$b86d7c78-afda-4d33-b451-ae7d3ae9f94dbetween the Refreshed client waiting to create entry into dictionary and AckRestart waiting for id to be removed 
 
 
 1. Update certificate programatically
@@ -41,4 +41,13 @@ Race is between the Refreshed client waiting to create entry into dictionary and
 Receive:__bwv:["BeginInvokeJS",3,"import","[\u0022/_content/HPI.SharedComponents/js/main-layout-funcs.js\u0022]",1,0]
 
 3. Add authorization on mirror endpoint
+
+
+
+
+Receive:__bwv:["BeginInvokeJS",2,"Blazor._internal.attachWebRendererInterop","[0,{\u0022__dotNetObject\u0022:1},{},{}]",3,0]
+Receive:__bwv:["BeginInvokeJS",2,"Blazor._internal.attachWebRendererInterop","[0,{\u0022__dotNetObject\u0022:1},{},{}]",3,0]
+
+
+__bwv:["EndInvokeJS",14,false,"[14,false,\"JS object instance with ID 1 does not exist (has it been disposed?).\\nError: JS object instance with ID 1 does not exist (has it been disposed?).\\n    at E (https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:340506)\\n    at https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:341372\\n    at new Promise (<anonymous>)\\n    at beginInvokeJSFromDotNet (https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:341353)\\n    at https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:380613\\n    at onMessage (https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:380634)\\n    at https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:11656\\n    at Array.forEach (<anonymous>)\\n    at e.rawOnMessage (https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:11618)\\n    at https://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/_framework/blazor.webview.js:1:9425\"]"]"Lhttps://server.remoteblazorwebview.com/61955dfd-316a-4398-b56e-f13638cd10b6/*$99ebdcf7-17f6-481d-bf4b-45bf33f6a6a2
 
