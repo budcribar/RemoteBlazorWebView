@@ -54,8 +54,9 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            var IsPrimary = serviceState.IPC.BrowserResponseStream(responseStream);
+            
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
+            var IsPrimary = serviceState.IPC.BrowserResponseStream(responseStream, serviceState, linkedToken);
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)
@@ -79,6 +80,12 @@ namespace PeakSWC.RemoteWebView
             // Skip messages from read only client
             if (serviceState.ClientId != request.ClientId)
             {
+                if (request.Message.Contains("EndInvokeJS"))
+                {
+                    var split = request.Message.Split(",");
+                    if (split.Length >= 2 && serviceState.ImportId == split[1])
+                        serviceState.ImportResetEvent.Set();
+                }
                 _logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }

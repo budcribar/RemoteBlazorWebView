@@ -145,7 +145,23 @@ namespace PeakSWC.RemoteWebView
         {
             if (_serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                serviceState.IPC.SendMessage(request.Message).AsTask().Wait();  
+                serviceState.IPC.SendMessage(request.Message).AsTask().Wait();
+              
+                if (request.Message.Contains("BeginInvokeJS") && request.Message.Contains("import"))
+                {
+                    serviceState.ImportResetEvent.Reset();
+                    serviceState.ImportId = request.Message.Split(",")[1];
+                   
+                }
+
+                else if (!string.IsNullOrEmpty(serviceState.ImportId))
+                {
+                    // Need to wait for previous BeginInvokeJS to finish
+                    serviceState.ImportResetEvent.Wait(context.CancellationToken);
+                    serviceState.ImportId = string.Empty;
+                }
+
+
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
 
