@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace PeakSWC.RemoteWebView
         private readonly List<StringRequest> messageHistory = new ();
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
-        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter) {
+        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter, ServiceState serviceState, CancellationTokenSource linkedToken) {
             bool isPrimary = true;
             lock (browserResponseStreamList)
             {
@@ -27,9 +28,13 @@ namespace PeakSWC.RemoteWebView
                 if (browserResponseStreamList.Count > 1)
                 {
                     messageHistory.ForEach(m => {
-                        serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult();
-                        if (m.Request.Contains("BeginInvokeJS")) 
-                            Task.Delay(100).Wait();
+                        serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult();    
+                        if (m.Request.Contains("EndInvokeJS"))
+                        {
+                            var split = m.Request.Split(","); 
+                            if (split.Length >= 2 && serviceState.ImportId == split[1])
+                            serviceState.ImportResetEvent.Set();
+                        }                         
                     });
                 }
             }
