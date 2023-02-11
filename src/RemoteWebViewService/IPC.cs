@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Azure.Core;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -26,7 +27,7 @@ namespace PeakSWC.RemoteWebView
                 isPrimary = messageHistory.Count == 0;
                 browserResponseStreamList.Add(serverStreamWriter);
                 if (browserResponseStreamList.Count > 1)
-                    messageHistory.ForEach(m => serverStreamWriter.WriteAsync(m).GetAwaiter().GetResult());    
+                    messageHistory.ForEach(m => WriteMessage( serverStreamWriter,m,true));    
             }
             return isPrimary;
             
@@ -39,6 +40,16 @@ namespace PeakSWC.RemoteWebView
         {
             var message = $"{eventName}:{JsonSerializer.Serialize(args)}";
             return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
+        }
+
+        private void WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
+        {
+            serverStreamWriter.WriteAsync(message).GetAwaiter().GetResult();
+            if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
+            {
+                if (isMirror)
+                    Task.Delay(1000).Wait();
+            }
         }
 
         public async ValueTask SendMessage(string message)
@@ -73,7 +84,7 @@ namespace PeakSWC.RemoteWebView
                             // Skip EndInvokeDotNet on the mirrors
                             if (i == 0 || !m.Request.Contains("EndInvokeDotNet"))
                             {
-                                stream.WriteAsync(m).GetAwaiter().GetResult();
+                                WriteMessage(stream, m, i>1);
                                 logger.LogInformation($"WebView -> Browser {m.Id} {m.Request}");
                             }
 
