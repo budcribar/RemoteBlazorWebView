@@ -13,11 +13,15 @@ using System.Threading.Tasks;
 using System.Windows;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using Microsoft.AspNetCore.Components.WebView;
+using System.Runtime.CompilerServices;
+using Microsoft.Web.WebView2.Core;
+
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
     public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
     {
+        public CoreWebView2CookieManager CookieManager  => WebView.CoreWebView2.CookieManager;
         private bool IsRefreshing { get; set; } = false;
 
         #region Properties
