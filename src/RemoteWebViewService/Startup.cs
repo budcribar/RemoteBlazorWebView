@@ -221,7 +221,7 @@ namespace PeakSWC.RemoteWebView
                     }
                     else
                     {
-
+                        serviceState.Cookies = context.Request.Cookies;
                         serviceState.InUse = true;
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
