@@ -124,7 +124,7 @@ internal struct StaticFileContext
 
             var serviceDictionary = _context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
             HttpContext context = _context;
-            var guid = serviceDictionary.Values.Where(x => x.ConnectionId.Contains(context.Connection.Id)).First().Id;
+            var guid = serviceDictionary.Values.Where(x => x.ConnectionId.Contains(context.Connection.Id)).FirstOrDefault()?.Id;
             var path = $"/{guid}{_subPath.Value!}";
             return path;
         }
