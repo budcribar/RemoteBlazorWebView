@@ -16,10 +16,10 @@
        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
      </PackageReference>
     <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
-    <PackageReference Include="Selenium.WebDriver" Version="4.8.0" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.8.1" />
     <PackageReference Include="Selenium.WebDriver.MSEdgeDriver" Version="109.0.1518.61" />
    <Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.21.12" />
+    <PackageReference Include="Google.Protobuf" Version="3.22.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.51.0" />
     <PackageReference Include="Grpc.Net.Client.Web" Version="2.51.0" />
    
