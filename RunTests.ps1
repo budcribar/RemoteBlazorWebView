@@ -16,16 +16,29 @@ Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 Write-Host -ForegroundColor GREEN "Clean artifacts"
 # Start with a clean solution
 
+Get-ChildItem .\src\RemoteWebView.Blazor.JS -include node_modules,dist -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem .\src -Exclude RemoteWebView.Blazor.JS | Get-ChildItem -include bin,obj,publish,publishNoAuth,publishAuth,artifacts   -Recurse | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ..\RemoteBlazorWebViewTutorial\ -include bin,obj,publish,publishEmbedded, embedded -Exclude EBWebView -Recurse -Force | ForEach-Object ($_) { Remove-Item $_.FullName -Force -Recurse }
 Get-ChildItem ${env:HOMEPATH}\.nuget\packages\Peak* | remove-item -Force -Recurse
+
+Write-Host -ForegroundColor GREEN "Install node_modules"
+
+$currentDirectory = Get-Location
+Set-Location .\src\RemoteWebView.Blazor.JS
+yarn install
+Set-Location .\Web.JS
+yarn install
+Set-Location $currentDirectory
+
+Write-Host -ForegroundColor GREEN "Build remote.blazor.desktop.js"
+Set-Location .\src\RemoteWebView.Blazor.JS
+npm run build:production
+Set-Location $currentDirectory
 
 Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 # Publish the web site server
 dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
 dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
-
-
 
 dotnet build -c Release .\src\RemoteWebViewService
 dotnet tool uninstall PeakSWC.RemoteWebViewService -g
@@ -45,6 +58,7 @@ if ($env:EnvBuildMode -eq 'Debug') {
 } else {
 	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 7.*-* 
 }
+
 
 Write-Host -ForegroundColor GREEN "Publish WinFormsApp"
 # Publish WinFormsApp
