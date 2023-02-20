@@ -6,7 +6,7 @@ import { sendRenderCompleted } from '../web.js/src/Platform/WebView/WebViewIpcSe
 import { setApplicationIsTerminated, tryDeserializeMessage } from '../web.js/src/Platform/WebView/WebViewIpcCommon';
 import { showErrorNotification } from '../web.js/src/BootErrors';
 import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
-import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
+import { internalFunctions as navigationManagerFunctions, NavigationOptions } from '../web.js/src/Services/NavigationManager';
 
 const messageHandlers = {
 
@@ -19,6 +19,7 @@ const messageHandlers = {
             const batchData = base64ToArrayBuffer(batchDataBase64);
             renderBatch(0, new OutOfProcessRenderBatch(batchData));
             sendRenderCompleted(batchId, null);
+           
         } catch (ex) {
             sendRenderCompleted(batchId, (ex as Error).toString());
         }
@@ -36,7 +37,18 @@ const messageHandlers = {
 
     'SendByteArrayToJS': receiveBase64ByteArray,
 
-    'Navigate': navigationManagerFunctions.navigateTo,
+    'Navigate': (uri: string, options: NavigationOptions): void => {
+        const baseHref = document.querySelector('base')?.href;
+        if (uri.startsWith('/') && baseHref) {
+            uri = `${baseHref}${uri.substring(1)}`;
+        }
+        navigationManagerFunctions.navigateTo(uri, options);
+    },
+       
+
+    'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
+
+    'EndLocationChanging': navigationManagerFunctions.endLocationChanging,
 };
 
 function receiveBase64ByteArray(id: number, base64Data: string) {

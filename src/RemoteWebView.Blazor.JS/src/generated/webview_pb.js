@@ -1629,7 +1629,8 @@ proto.webview.WebMessageResponse.prototype.toObject = function(opt_includeInstan
 proto.webview.WebMessageResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     response: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    url: jspb.Message.getFieldWithDefault(msg, 2, "")
+    url: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    cookies: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -1674,6 +1675,10 @@ proto.webview.WebMessageResponse.deserializeBinaryFromReader = function(msg, rea
       var value = /** @type {string} */ (reader.readString());
       msg.setUrl(value);
       break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setCookies(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1717,6 +1722,13 @@ proto.webview.WebMessageResponse.serializeBinaryToWriter = function(message, wri
       f
     );
   }
+  f = message.getCookies();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -1753,6 +1765,24 @@ proto.webview.WebMessageResponse.prototype.getUrl = function() {
  */
 proto.webview.WebMessageResponse.prototype.setUrl = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional string cookies = 3;
+ * @return {string}
+ */
+proto.webview.WebMessageResponse.prototype.getCookies = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.webview.WebMessageResponse} returns this
+ */
+proto.webview.WebMessageResponse.prototype.setCookies = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
@@ -3023,7 +3053,8 @@ proto.webview.SendSequenceMessageRequest.toObject = function(includeInstance, ms
     sequence: jspb.Message.getFieldWithDefault(msg, 2, 0),
     message: jspb.Message.getFieldWithDefault(msg, 3, ""),
     url: jspb.Message.getFieldWithDefault(msg, 4, ""),
-    clientid: jspb.Message.getFieldWithDefault(msg, 5, "")
+    clientid: jspb.Message.getFieldWithDefault(msg, 5, ""),
+    cookies: jspb.Message.getFieldWithDefault(msg, 6, "")
   };
 
   if (includeInstance) {
@@ -3079,6 +3110,10 @@ proto.webview.SendSequenceMessageRequest.deserializeBinaryFromReader = function(
     case 5:
       var value = /** @type {string} */ (reader.readString());
       msg.setClientid(value);
+      break;
+    case 6:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setCookies(value);
       break;
     default:
       reader.skipField();
@@ -3141,6 +3176,13 @@ proto.webview.SendSequenceMessageRequest.serializeBinaryToWriter = function(mess
   if (f.length > 0) {
     writer.writeString(
       5,
+      f
+    );
+  }
+  f = message.getCookies();
+  if (f.length > 0) {
+    writer.writeString(
+      6,
       f
     );
   }
@@ -3234,6 +3276,24 @@ proto.webview.SendSequenceMessageRequest.prototype.getClientid = function() {
  */
 proto.webview.SendSequenceMessageRequest.prototype.setClientid = function(value) {
   return jspb.Message.setProto3StringField(this, 5, value);
+};
+
+
+/**
+ * optional string cookies = 6;
+ * @return {string}
+ */
+proto.webview.SendSequenceMessageRequest.prototype.getCookies = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.webview.SendSequenceMessageRequest} returns this
+ */
+proto.webview.SendSequenceMessageRequest.prototype.setCookies = function(value) {
+  return jspb.Message.setProto3StringField(this, 6, value);
 };
 
 

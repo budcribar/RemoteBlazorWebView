@@ -156,6 +156,9 @@ export class WebMessageResponse extends jspb.Message {
   getUrl(): string;
   setUrl(value: string): void;
 
+  getCookies(): string;
+  setCookies(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): WebMessageResponse.AsObject;
   static toObject(includeInstance: boolean, msg: WebMessageResponse): WebMessageResponse.AsObject;
@@ -170,6 +173,7 @@ export namespace WebMessageResponse {
   export type AsObject = {
     response: string,
     url: string,
+    cookies: string,
   }
 }
 
@@ -371,6 +375,9 @@ export class SendSequenceMessageRequest extends jspb.Message {
   getClientid(): string;
   setClientid(value: string): void;
 
+  getCookies(): string;
+  setCookies(value: string): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): SendSequenceMessageRequest.AsObject;
   static toObject(includeInstance: boolean, msg: SendSequenceMessageRequest): SendSequenceMessageRequest.AsObject;
@@ -388,6 +395,7 @@ export namespace SendSequenceMessageRequest {
     message: string,
     url: string,
     clientid: string,
+    cookies: string,
   }
 }
 
