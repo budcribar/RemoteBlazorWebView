@@ -3,7 +3,7 @@
   <PropertyGroup>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
     <Platforms>x64;AnyCPU</Platforms>
@@ -55,14 +55,14 @@
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.22.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.51.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="7.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0-preview.1.23112.2" />
 	
 	  <PackageReference Include="Grpc.Tools" Version="2.51.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="8.0.0-preview.1.23110.8" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1587.40" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
   </ItemGroup>

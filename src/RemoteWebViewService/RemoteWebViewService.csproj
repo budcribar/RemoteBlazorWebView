@@ -4,7 +4,7 @@
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
-    <TargetFramework>net7</TargetFramework>
+    <TargetFramework>net8</TargetFramework>
     <OutputType>Exe</OutputType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
@@ -45,12 +45,12 @@
     <PackageReference Include="Azure.Identity" Version="1.8.2" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.51.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0-preview.1.23110.8" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.12.0-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="7.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.3" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0-preview.1.23112.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.0-preview.1.23112.2" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.Identity.Web" Version="1.26.0" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.26.0" />
   </ItemGroup>

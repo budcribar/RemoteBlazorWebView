@@ -4,7 +4,7 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<DefineConstants>$(DefineConstants);WEBVIEW2_WPF</DefineConstants>
-		<TargetFramework>net7.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
 		<Authors>Bud Cribar</Authors>
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.59" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.0-preview.1.7762" />
 	</ItemGroup>
 
 	<ItemGroup>

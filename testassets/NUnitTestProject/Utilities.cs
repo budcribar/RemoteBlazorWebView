@@ -56,7 +56,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\x64\debug\net7.0-windows";  
+            var exePath = @"bin\x64\debug\net8.0-windows";  
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -93,7 +93,7 @@ namespace WebdriverTestProject
         public static string BlazorWpfDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net7.0-windows";
+            var exePath = @"bin\x64\debug\net8.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
@@ -134,7 +134,7 @@ namespace WebdriverTestProject
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\debug\net7.0";
+            var exePath = @"bin\debug\net8.0";
             return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
         }
 
