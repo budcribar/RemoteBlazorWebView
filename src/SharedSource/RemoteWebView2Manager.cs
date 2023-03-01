@@ -6,6 +6,7 @@ using System;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using PeakSWC.RemoteBlazorWebView;
+using Microsoft.Extensions.Logging;
 #if WEBVIEW2_WINFORMS
 using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
@@ -28,7 +29,7 @@ namespace PeakSWC.RemoteWebView
         Uri url;
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
-        public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized)
+        public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized,logger)
         {
             BlazorWebView = blazorWebView;
             RemoteWebView = new RemoteWebView(

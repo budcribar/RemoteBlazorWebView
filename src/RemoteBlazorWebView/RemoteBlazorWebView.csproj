@@ -7,10 +7,10 @@
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
-		<Description>.NET 7 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
+		<Description>.NET 8 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
 		<GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageDescription>.NET 7 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
+		<PackageDescription>.NET 8 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
 		<Copyright>Peak Software Consulting, LLC</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageIcon>favicon-32x32.png</PackageIcon>
