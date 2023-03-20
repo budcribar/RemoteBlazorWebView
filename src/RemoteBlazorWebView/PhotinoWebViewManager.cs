@@ -59,8 +59,15 @@ namespace PeakSWC.RemoteWebView
             if (url.StartsWith(AppBaseUri, StringComparison.Ordinal)
                 && TryGetResponseContent(url, !hasFileExtension, out var statusCode, out var statusMessage, out var content, out var headers))
             {
-                headers.TryGetValue("Content-Type", out contentType);
-                return content;
+                if (headers.TryGetValue("Content-Type", out contentType))
+                {
+                    return content;
+                }
+                else
+                {
+                    contentType = "text/html; charset=utf-8";
+                    return content;
+                }  
             }
             else
             {
