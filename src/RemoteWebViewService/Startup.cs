@@ -1,28 +1,25 @@
-﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+﻿
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.Services;
-using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
-using System.Reflection;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
-using Channel = System.Threading.Channels.Channel;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Authorization;
+#if AUTHORIZATION
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Client;
+using System.Net.Http;
+using Microsoft.Identity.Web.UI;
+#endif
 
 namespace PeakSWC.RemoteWebView
 {
@@ -127,7 +124,7 @@ namespace PeakSWC.RemoteWebView
             app.UseRouting();
 
             // Must be between UseRouting() and UseEndPoints()
-            app.UseCors("CorPolicy");
+            app.UseCors("CorsPolicy");
 
             app.UseCookiePolicy();
 #if AUTHORIZATION
