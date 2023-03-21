@@ -1,7 +1,4 @@
 ﻿
-Add the auth cookie to the mirror endpoint
-
-
 1. WebView.NavigateToUrl http://app/
 	-> (Startup.cs endpoints.MapGet("/app", async context => can we server the index.html here and avoid the hack to NavigateTo("/")?
 
@@ -22,7 +19,6 @@ Browser->Server Refresh -> Restart()
 Client-> FireRefreshed -> Restart Client
 
 Client is now trying to restart itself and sending the Server a  shutting down message
-
 
 
 
@@ -67,4 +63,6 @@ blazor.webview.js:1 beginInvokeJSFromDotNet setRtl id:2
 blazor.webview.js:1 beginInvokeJSFromDotNet setFontClass id:2
 blazor.webview.js:1 beginInvokeJSFromDotNet setThemeClass id:2
 blazor.webview.js:1 beginInvokeJSFromDotNet o1lJsFunctions.setFocus id:0
+
+
 
