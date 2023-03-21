@@ -141,19 +141,16 @@ namespace PeakSWC.RemoteWebView
             return Task.FromResult(new Empty());
         }
 
-        public override Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
+        public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
             if (_serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                serviceState.IPC.SendMessage(request.Message).AsTask().Wait();
-              
-               
+                await serviceState.IPC.SendMessage(request.Message);
 
-
-                return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
+                return new SendMessageResponse { Id = request.Id, Success = true };
             }
 
-            return Task.FromResult( new SendMessageResponse { Id = request.Id, Success = false });
+            return new SendMessageResponse { Id = request.Id, Success = false };
         }
 
         public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
@@ -171,7 +168,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true });
                         _shutdownService.Shutdown(id);
-                        break; ;
+                        break;
                     }
 
                     if (message.Initialize)

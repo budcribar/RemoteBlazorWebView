@@ -102,7 +102,7 @@ namespace PeakSWC.RemoteWebView
         {
             List<EventResponse> GetEventResponses()
             {
-                EventLog eventLog = new();
+                using EventLog eventLog = new();
                 eventLog.Log = "Application";
                
                 var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
