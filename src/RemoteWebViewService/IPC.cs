@@ -1,7 +1,9 @@
 ﻿using Azure.Core;
 using Grpc.Core;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -16,39 +18,44 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
-        private readonly List<IServerStreamWriter<StringRequest>> browserResponseStreamList = new();
         private readonly List<StringRequest> messageHistory = new ();
+        private ConcurrentDictionary<IServerStreamWriter<StringRequest>, BlockingCollection<StringRequest>> observers = new();
+        private IServerStreamWriter<StringRequest>? primaryStream;
+        private ILogger<RemoteWebViewService> logger;
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
         public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter, ServiceState serviceState, CancellationTokenSource linkedToken) {
-            bool isPrimary = true;
-            lock (browserResponseStreamList)
+         
+            lock (messageHistory)
             {
-                isPrimary = messageHistory.Count == 0;
-                browserResponseStreamList.Add(serverStreamWriter);
-                if (browserResponseStreamList.Count > 1)
-                    messageHistory.ForEach(m => WriteMessage( serverStreamWriter,m,true));    
+                if (messageHistory.Count == 0)
+                    primaryStream = serverStreamWriter;
+
+                var messages = new BlockingCollection<StringRequest>();
+                foreach (var message in messageHistory)
+                {
+                    messages.Add(message);
+                }
+
+                observers.TryAdd(serverStreamWriter, messages);
             }
-            return isPrimary;
-            
+
+            Task.Run(() => ProcessMessages(serverStreamWriter,linkedToken.Token));
+
+            return primaryStream != null;        
         }
 
         public Task ClientTask { get; }
         public Task BrowserTask { get; }
 
-        public ValueTask SendMessage(string eventName, params object[] args)
+       
+        private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
-            var message = $"{eventName}:{JsonSerializer.Serialize(args)}";
-            return browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
-        }
-
-        private void WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
-        {
-            serverStreamWriter.WriteAsync(message).GetAwaiter().GetResult();
+            await serverStreamWriter.WriteAsync(message);
             if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
             {
                 if (isMirror)
-                    Task.Delay(1000).Wait();
+                    await Task.Delay(1000);
             }
         }
 
@@ -59,6 +66,7 @@ namespace PeakSWC.RemoteWebView
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
+            this.logger = logger;
             ClientTask = Task.Factory.StartNew(async () =>
             {
                 await foreach (var m in responseChannel.Reader.ReadAllAsync(token))
@@ -73,27 +81,38 @@ namespace PeakSWC.RemoteWebView
             {
                 await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
                 {
-                    lock (browserResponseStreamList)
+                    lock (messageHistory)
                     {
                         if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
                             messageHistory.Add(m);
-                        // Serialize the write
-                        int i = 0;
-                        foreach (var stream in browserResponseStreamList)
+                        foreach (var observer in observers.Keys)
                         {
-                            // Skip EndInvokeDotNet on the mirrors
-                            if (i == 0 || !m.Request.Contains("EndInvokeDotNet"))
-                            {
-                                WriteMessage(stream, m, i>1);
-                                logger.LogInformation($"WebView -> Browser {m.Id} {m.Request}");
-                            }
-
-                            i++;
+                            observers[observer].Add(m);
                         }
                     }
+
+                   
                 }
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
+        }
+
+        public async Task ProcessMessages(IServerStreamWriter<StringRequest> serverStreamWriter, CancellationToken cancellationToken)
+        {
+            bool isPrimary = serverStreamWriter == primaryStream;
+
+            if (observers.TryGetValue(serverStreamWriter, out var updates))
+            {
+                foreach (var request in updates.GetConsumingEnumerable(cancellationToken))
+                {
+                    if (isPrimary || !request.Request.Contains("EndInvokeDotNet"))
+                    {
+                        await WriteMessage(serverStreamWriter, request, !isPrimary);
+                        logger.LogInformation($"WebView -> Browser {request.Id} {request.Request}");
+                    }
+                       
+                }
+            }
         }
 
         public ValueTask ReceiveMessage(WebMessageResponse message)
