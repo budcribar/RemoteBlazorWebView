@@ -4,9 +4,9 @@ using Newtonsoft.Json;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -30,22 +30,18 @@ namespace PeakSWC.RemoteWebView
                 _shutdownService.Shutdown(request.Id);
                 return Task.FromResult(new ClientIdMessageRequest());
             }
-            else
-            {
-                var guid = Guid.NewGuid().ToString();
-                var isPrimary = false;
-                if (string.IsNullOrEmpty(serviceState.ClientId))
-                {
-                    isPrimary = true;
-                    serviceState.ClientId = guid;
-                }
-                   
 
-                return Task.FromResult(new ClientIdMessageRequest { Id = guid, ClientId = guid, IsPrimary=isPrimary });
+            var guid = Guid.NewGuid().ToString();
+            var isPrimary = false;
+            if (string.IsNullOrEmpty(serviceState.ClientId))
+            {
+                isPrimary = true;
+                serviceState.ClientId = guid;
             }
+
+            return Task.FromResult(new ClientIdMessageRequest { Id = guid, ClientId = guid, IsPrimary = isPrimary });
         }
 
-       
         public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
@@ -54,9 +50,9 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            
+
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-            var IsPrimary = serviceState.IPC.BrowserResponseStream(responseStream, serviceState, linkedToken);
+            var isPrimary = serviceState.IPC.BrowserResponseStream(responseStream, serviceState, linkedToken);
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)
@@ -65,7 +61,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if(IsPrimary)
+                if (isPrimary)
                     _shutdownService.Shutdown(request.Id, ex);
             }
 
@@ -83,7 +79,7 @@ namespace PeakSWC.RemoteWebView
                 _logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
-               
+
             var state = serviceState.BrowserIPC;
 
             if (state == null)
@@ -100,10 +96,10 @@ namespace PeakSWC.RemoteWebView
                         string serializedCookies = string.Empty;
                         if (serviceState.Cookies != null)
                             serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
-                   
+
                         request.Cookies = serializedCookies;
                     }
-                       
+
                     serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies });
                     state.SequenceNum++;
                 }
