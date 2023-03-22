@@ -18,28 +18,45 @@ public interface IObserver
 
 public class TemperatureData : IObservable
 {
-    private ConcurrentDictionary<IObserver, byte> _observers;
+    private ConcurrentDictionary<IObserver, Queue<float>> _observers;
     private List<float> _temperatures;
-    private object _temperatureLock;
+    private object _lock;
 
     public TemperatureData()
     {
-        _observers = new ConcurrentDictionary<IObserver, byte>();
+        _observers = new ConcurrentDictionary<IObserver, Queue<float>>();
         _temperatures = new List<float>();
-        _temperatureLock = new object();
+        _lock = new object();
     }
 
     public async Task RegisterObserverAsync(IObserver observer)
     {
         IReadOnlyList<float> temperatureData;
 
-        lock (_temperatureLock)
+        lock (_lock)
         {
-            _observers.TryAdd(observer, 0);
             temperatureData = _temperatures.ToList().AsReadOnly();
+            _observers.TryAdd(observer, new Queue<float>());
         }
 
         await observer.UpdateHistory(temperatureData);
+
+        ProcessPendingTemperatureUpdates(observer);
+    }
+
+    private void ProcessPendingTemperatureUpdates(IObserver observer)
+    {
+        lock (_lock)
+        {
+            if (_observers.TryGetValue(observer, out var pendingUpdates))
+            {
+                while (pendingUpdates.Count > 0)
+                {
+                    float temperature = pendingUpdates.Dequeue();
+                    observer.Update(temperature);
+                }
+            }
+        }
     }
 
     public void RemoveObserver(IObserver observer)
@@ -51,13 +68,14 @@ public class TemperatureData : IObservable
     {
         foreach (var observer in _observers.Keys)
         {
+            _observers[observer].Enqueue(temperature);
             observer.Update(temperature);
         }
     }
 
     public void AddTemperature(float temperature)
     {
-        lock (_temperatureLock)
+        lock (_lock)
         {
             _temperatures.Add(temperature);
             NotifyObservers(temperature);
