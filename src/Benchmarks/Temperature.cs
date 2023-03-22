@@ -11,7 +11,6 @@ public interface IObservable
 
 public interface IObserver
 {
-    void Update(float temperature);
     Task UpdateHistory(IReadOnlyList<float> temperatureHistory);
 }
 
@@ -29,9 +28,12 @@ public class TemperatureData : IObservable
 
     public async Task RegisterObserverAsync(IObserver observer)
     {
+        BlockingCollection<float> observerTemperatures;
+
         lock (_lock)
         {
-            var observerTemperatures = new BlockingCollection<float>();
+            observerTemperatures = new BlockingCollection<float>();
+
             foreach (var temperature in _temperatures)
             {
                 observerTemperatures.Add(temperature);
@@ -62,20 +64,16 @@ public class TemperatureData : IObservable
         }
     }
 
-    public void NotifyObservers(float temperature)
-    {
-        foreach (var observer in _observers.Keys)
-        {
-            _observers[observer].Add(temperature);
-        }
-    }
-
     public void AddTemperature(float temperature)
     {
         lock (_lock)
         {
             _temperatures.Add(temperature);
-            NotifyObservers(temperature);
+
+            foreach (var observer in _observers.Keys)
+            {
+                _observers[observer].Add(temperature);
+            }
         }
     }
 }
@@ -90,11 +88,6 @@ public class TemperatureDisplay : IObserver
         _temperatureData = temperatureData;
         _displayId = displayId;
         await _temperatureData.RegisterObserverAsync(this);
-    }
-
-    public void Update(float temperature)
-    {
-        DisplayTemperature(temperature);
     }
 
     public async Task UpdateHistory(IReadOnlyList<float> temperatureHistory)
@@ -112,11 +105,6 @@ public class TemperatureDisplay : IObserver
         {
             await writer.WriteLineAsync($"Temperature: {temperature}");
         }
-    }
-
-    public void DisplayTemperature(float temperature)
-    {
-        Console.WriteLine($"Temperature: {temperature}");
     }
 }
 
