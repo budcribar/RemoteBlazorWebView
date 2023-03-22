@@ -7,7 +7,7 @@ namespace PeakSWC.RemoteWebView
 {
     public interface IUserService
     {
-        Task<List<string>> GetUserGroups(string oid);
+        Task<IReadOnlyList<string>> GetUserGroups(string oid);
     }
 
     public class UserService : IUserService
@@ -51,7 +51,7 @@ namespace PeakSWC.RemoteWebView
             return groups;
         }
 
-        public async Task<List<string>> GetUserGroups(string oid)
+        public async Task<IReadOnlyList<string>> GetUserGroups(string oid)
         {
             List<string> groups = new();
             var groupText = await (await _graphApi).CallWebApiAndProcessResultAsync($"https://graph.microsoft.com/v1.0/groups");

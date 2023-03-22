@@ -19,12 +19,12 @@ namespace PeakSWC.RemoteWebView
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
         private readonly List<StringRequest> messageHistory = new ();
-        private ConcurrentDictionary<IServerStreamWriter<StringRequest>, BlockingCollection<StringRequest>> observers = new();
+        private readonly ConcurrentDictionary<IServerStreamWriter<StringRequest>, BlockingCollection<StringRequest>> observers = new();
         private IServerStreamWriter<StringRequest>? primaryStream;
-        private ILogger<RemoteWebViewService> logger;
+        private readonly ILogger<RemoteWebViewService> logger;
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
-        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter, ServiceState serviceState, CancellationTokenSource linkedToken) {
+        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter, CancellationTokenSource linkedToken) {
          
             lock (messageHistory)
             {
