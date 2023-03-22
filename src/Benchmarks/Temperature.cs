@@ -41,26 +41,29 @@ public class TemperatureData : IObservable
 
     private async Task ProcessPendingTemperatureUpdates(IObserver observer)
     {
-        List<float> pendingUpdates;
+        float? nextTemperature;
 
-        lock (_lock)
+        do
         {
-            if (_observers.TryGetValue(observer, out var queue))
+            lock (_lock)
             {
-                pendingUpdates = queue.ToList();
-                queue.Clear();
+                if (_observers.TryGetValue(observer, out var queue) && queue.Count > 0)
+                {
+                    nextTemperature = queue.Dequeue();
+                }
+                else
+                {
+                    nextTemperature = null;
+                }
             }
-            else
-            {
-                return;
-            }
-        }
 
-        foreach (float temperature in pendingUpdates)
-        {
-            await observer.UpdateHistory(new List<float> { temperature });
-        }
+            if (nextTemperature.HasValue)
+            {
+                await observer.UpdateHistory(new List<float> { nextTemperature.Value });
+            }
+        } while (nextTemperature.HasValue);
     }
+
 
     public void RemoveObserver(IObserver observer)
     {
