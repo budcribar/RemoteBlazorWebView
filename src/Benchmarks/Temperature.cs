@@ -31,20 +31,15 @@ public class TemperatureData : IObservable
 
     public async Task RegisterObserverAsync(IObserver observer)
     {
-        IReadOnlyList<float> temperatureData;
-
         lock (_lock)
         {
-            temperatureData = _temperatures.ToList().AsReadOnly();
-            _observers.TryAdd(observer, new Queue<float>());
+            _observers.TryAdd(observer, new Queue<float>(_temperatures));
         }
 
-        await observer.UpdateHistory(temperatureData);
-
-        ProcessPendingTemperatureUpdates(observer);
+        await ProcessPendingTemperatureUpdates(observer);
     }
 
-    private void ProcessPendingTemperatureUpdates(IObserver observer)
+    private async Task ProcessPendingTemperatureUpdates(IObserver observer)
     {
         lock (_lock)
         {
@@ -53,7 +48,7 @@ public class TemperatureData : IObservable
                 while (pendingUpdates.Count > 0)
                 {
                     float temperature = pendingUpdates.Dequeue();
-                    observer.Update(temperature);
+                    await observer.UpdateHistory(new List<float> { temperature });
                 }
             }
         }
@@ -69,7 +64,6 @@ public class TemperatureData : IObservable
         foreach (var observer in _observers.Keys)
         {
             _observers[observer].Enqueue(temperature);
-            observer.Update(temperature);
         }
     }
 
