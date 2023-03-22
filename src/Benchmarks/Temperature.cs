@@ -11,7 +11,7 @@ public interface IObservable
 
 public interface IObserver
 {
-    Task UpdateHistory(IReadOnlyList<float> temperatureHistory);
+    Task UpdateHistory(float temperature);
 }
 
 public class TemperatureData : IObservable
@@ -51,7 +51,7 @@ public class TemperatureData : IObservable
         {
             foreach (float temperature in updates.GetConsumingEnumerable())
             {
-                await observer.UpdateHistory(new List<float> { temperature });
+                await observer.UpdateHistory(temperature);
             }
         }
     }
@@ -90,21 +90,16 @@ public class TemperatureDisplay : IObserver
         await _temperatureData.RegisterObserverAsync(this);
     }
 
-    public async Task UpdateHistory(IReadOnlyList<float> temperatureHistory)
+    public async Task UpdateHistory(float temperature)
     {
-        await WriteTemperatureHistoryToFileAsync(temperatureHistory);
+        await WriteTemperatureToFileAsync(temperature);
     }
 
-    private async Task WriteTemperatureHistoryToFileAsync(IEnumerable<float> temperatureHistory)
+    private async Task WriteTemperatureToFileAsync(float temperature)
     {
         string fileName = $"TemperatureHistory_Display{_displayId}.txt";
-        using StreamWriter writer = new StreamWriter(fileName, false);
-        await writer.WriteLineAsync("Temperature history:");
-
-        foreach (var temperature in temperatureHistory)
-        {
-            await writer.WriteLineAsync($"Temperature: {temperature}");
-        }
+        using StreamWriter writer = new StreamWriter(fileName, true);
+        await writer.WriteLineAsync($"Temperature: {temperature}");
     }
 }
 
