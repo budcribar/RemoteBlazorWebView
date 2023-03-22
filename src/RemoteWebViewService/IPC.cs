@@ -40,6 +40,7 @@ namespace PeakSWC.RemoteWebView
                 observers.TryAdd(serverStreamWriter, messages);
             }
 
+            // TODO Keep track of tasks
             Task.Run(() => ProcessMessages(serverStreamWriter,linkedToken.Token));
 
             return primaryStream != null;        
