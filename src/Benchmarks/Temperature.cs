@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 public interface IObservable
@@ -18,22 +17,27 @@ public interface IObserver
 
 public class TemperatureData : IObservable
 {
-    private ConcurrentDictionary<IObserver, Queue<float>> _observers;
+    private ConcurrentDictionary<IObserver, BlockingCollection<float>> _observers;
     private List<float> _temperatures;
-    private readonly object _monitor;
+    private readonly object _lock = new object();
 
     public TemperatureData()
     {
-        _observers = new ConcurrentDictionary<IObserver, Queue<float>>();
+        _observers = new ConcurrentDictionary<IObserver, BlockingCollection<float>>();
         _temperatures = new List<float>();
-        _monitor = new object();
     }
 
     public async Task RegisterObserverAsync(IObserver observer)
     {
-        lock (_monitor)
+        lock (_lock)
         {
-            _observers.TryAdd(observer, new Queue<float>(_temperatures));
+            var observerTemperatures = new BlockingCollection<float>();
+            foreach (var temperature in _temperatures)
+            {
+                observerTemperatures.Add(temperature);
+            }
+
+            _observers.TryAdd(observer, observerTemperatures);
         }
 
         await ProcessPendingTemperatureUpdates(observer);
@@ -41,47 +45,34 @@ public class TemperatureData : IObservable
 
     private async Task ProcessPendingTemperatureUpdates(IObserver observer)
     {
-        while (true)
+        if (_observers.TryGetValue(observer, out var updates))
         {
-            float? nextTemperature;
-
-            lock (_monitor)
+            foreach (float temperature in updates.GetConsumingEnumerable())
             {
-                if (_observers.TryGetValue(observer, out var queue) && queue.Count > 0)
-                {
-                    nextTemperature = queue.Dequeue();
-                }
-                else
-                {
-                    Monitor.Wait(_monitor);
-                    continue;
-                }
+                await observer.UpdateHistory(new List<float> { temperature });
             }
-
-            await observer.UpdateHistory(new List<float> { nextTemperature.Value });
         }
     }
 
     public void RemoveObserver(IObserver observer)
     {
-        _observers.TryRemove(observer, out _);
+        if (_observers.TryRemove(observer, out var updates))
+        {
+            updates.CompleteAdding();
+        }
     }
 
     public void NotifyObservers(float temperature)
     {
-        lock (_monitor)
+        foreach (var observer in _observers.Keys)
         {
-            foreach (var observer in _observers.Keys)
-            {
-                _observers[observer].Enqueue(temperature);
-            }
-            Monitor.PulseAll(_monitor);
+            _observers[observer].Add(temperature);
         }
     }
 
     public void AddTemperature(float temperature)
     {
-        lock (_monitor)
+        lock (_lock)
         {
             _temperatures.Add(temperature);
             NotifyObservers(temperature);
