@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -31,11 +30,11 @@ namespace PeakSWC.RemoteWebView.Services
 
             if (_serviceDictionary.Remove(id, out var client))
             {
-                client.IPC.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });
+                client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });
                 client.InUse = false;
                 client.Cancel();
 
-                Task[] tasks = new List<Task?> { client.FileReaderTask, client.PingTask, client.IPC.BrowserTask, client.IPC.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
+                Task[] tasks = new List<Task?> { client.FileReaderTask, client.PingTask, client.IPC?.BrowserTask, client.IPC?.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
 
                 try
                 {
