@@ -52,7 +52,7 @@ namespace PeakSWC.RemoteWebView
 
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-            var isPrimary = serviceState.IPC.BrowserResponseStream(responseStream, serviceState, linkedToken);
+            var isPrimary = serviceState.IPC.BrowserResponseStream(responseStream, linkedToken);
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)

@@ -307,7 +307,6 @@ namespace PeakSWC.RemoteWebView
 
                         // Shutdown since client did not respond to restart request
                         context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
-                        await Task.CompletedTask;
                     }
                    
                 }

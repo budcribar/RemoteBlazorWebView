@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteWebView
         private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
         private readonly IUserService _userService;
 
-        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, List<string> groups)
+        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
             var list = new ClientResponseList();
             list.ClientResponses.AddRange(_serviceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
