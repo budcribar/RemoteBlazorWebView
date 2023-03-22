@@ -20,18 +20,18 @@ public class TemperatureData : IObservable
 {
     private ConcurrentDictionary<IObserver, Queue<float>> _observers;
     private List<float> _temperatures;
-    private object _lock;
+    private readonly object _monitor;
 
     public TemperatureData()
     {
         _observers = new ConcurrentDictionary<IObserver, Queue<float>>();
         _temperatures = new List<float>();
-        _lock = new object();
+        _monitor = new object();
     }
 
     public async Task RegisterObserverAsync(IObserver observer)
     {
-        lock (_lock)
+        lock (_monitor)
         {
             _observers.TryAdd(observer, new Queue<float>(_temperatures));
         }
@@ -41,11 +41,11 @@ public class TemperatureData : IObservable
 
     private async Task ProcessPendingTemperatureUpdates(IObserver observer)
     {
-        float? nextTemperature;
-
-        do
+        while (true)
         {
-            lock (_lock)
+            float? nextTemperature;
+
+            lock (_monitor)
             {
                 if (_observers.TryGetValue(observer, out var queue) && queue.Count > 0)
                 {
@@ -53,17 +53,14 @@ public class TemperatureData : IObservable
                 }
                 else
                 {
-                    nextTemperature = null;
+                    Monitor.Wait(_monitor);
+                    continue;
                 }
             }
 
-            if (nextTemperature.HasValue)
-            {
-                await observer.UpdateHistory(new List<float> { nextTemperature.Value });
-            }
-        } while (nextTemperature.HasValue);
+            await observer.UpdateHistory(new List<float> { nextTemperature.Value });
+        }
     }
-
 
     public void RemoveObserver(IObserver observer)
     {
@@ -72,15 +69,19 @@ public class TemperatureData : IObservable
 
     public void NotifyObservers(float temperature)
     {
-        foreach (var observer in _observers.Keys)
+        lock (_monitor)
         {
-            _observers[observer].Enqueue(temperature);
+            foreach (var observer in _observers.Keys)
+            {
+                _observers[observer].Enqueue(temperature);
+            }
+            Monitor.PulseAll(_monitor);
         }
     }
 
     public void AddTemperature(float temperature)
     {
-        lock (_lock)
+        lock (_monitor)
         {
             _temperatures.Add(temperature);
             NotifyObservers(temperature);
