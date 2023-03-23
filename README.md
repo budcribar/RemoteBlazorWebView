@@ -22,8 +22,6 @@ As a seamless replacement for the Microsoft.AspNetCore.Components.WebView.Window
 
 You do not need to build this repo unless you want to customize the RemoteWebViewService. Run the following command to install the RemoteWebViewService
 
-*** Note The recent name change from RemoteableWebViewService to RemoteWebViewService
-
 ```console
 dotnet tool update -g PeakSWC.RemoteWebViewService --version 7.*-* 
 ```
