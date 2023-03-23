@@ -28,7 +28,7 @@ async function boot(): Promise<void> {
     navigationManagerFunctions.enableNavigationInterception();
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged, sendLocationChanging);
 
-    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+    // sendAttachPage is done in initializeRemoteWebView()
 
     await jsInitializer.invokeAfterStartedCallbacks(Blazor);
 }

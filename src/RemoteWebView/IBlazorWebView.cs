@@ -24,7 +24,7 @@ namespace PeakSWC.RemoteWebView
         
         public void NavigateToString(string htmlContent);
 
-        public Task WaitForInitialitionComplete();
+        public Task WaitForInitializationComplete();
 
         public CoreWebView2CookieManager CookieManager {get;}
     }

@@ -132,7 +132,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             {
                 _markup = value;
                 Invalidate();
-                //StartWebViewCoreIfPossible();
             }
         }
         private string _markup = "";
@@ -172,6 +171,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
-        public Task WaitForInitialitionComplete() => Task.CompletedTask;
+        public Task WaitForInitializationComplete() => Task.CompletedTask;
     }
 }
