@@ -76,7 +76,7 @@ namespace PeakSWC.RemoteWebView
              this.LoadRawString(htmlContent);
         }
 
-        public async Task WaitForInitialitionComplete()
+        public async Task WaitForInitializationComplete()
         {
             while(true)
             {

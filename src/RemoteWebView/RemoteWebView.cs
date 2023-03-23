@@ -62,7 +62,7 @@ namespace PeakSWC.RemoteWebView
         #endregion
 
         public string HostHtmlPath { get; } = string.Empty;
-        public Dispatcher? Dispacher { get; set; }
+        public Dispatcher? Dispatcher { get; set; }
 
         protected WebViewIPC.WebViewIPCClient? Client
         {
@@ -117,7 +117,7 @@ namespace PeakSWC.RemoteWebView
 
                                         case "created":                                     
                                             completed.Set();
-                                            await BlazorWebView.WaitForInitialitionComplete();
+                                            await BlazorWebView.WaitForInitializationComplete();
                                             FireReadyToConnect();
                                             break;
 
@@ -148,7 +148,7 @@ namespace PeakSWC.RemoteWebView
                                             IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(message.Cookies);
                                             if (cookiesDictionary != null)
                                             {
-                                                Dispacher?.InvokeAsync(() =>
+                                                Dispatcher?.InvokeAsync(() =>
                                                 {
                                                     try
                                                     {
@@ -278,27 +278,27 @@ namespace PeakSWC.RemoteWebView
 
                 void Shutdown()
                 {
-                    Dispacher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+                    Dispatcher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
                 }
 
                 void FireReadyToConnect()
                 {
-                    Dispacher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
                 }
 
                 void FireConnected(string ip, string user)
                 {
-                    Dispacher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
+                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
                 }
 
                 void FireDisconnected(Exception exception)
                 {
-                    Dispacher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
+                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
                 }
 
                 void FireRefreshed()
                 {
-                    Dispacher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
                 }
             }
         }
@@ -337,7 +337,7 @@ namespace PeakSWC.RemoteWebView
         {
             BlazorWebView = blazorWebView;
             HostHtmlPath = hostHtmlPath;
-            Dispacher = dispatcher;
+            Dispatcher = dispatcher;
             FileProvider = fileProvider;
             BlazorWebView.Markup = string.IsNullOrWhiteSpace(BlazorWebView.Markup) ? GenMarkup(BlazorWebView.ServerUri, BlazorWebView.Id) : BlazorWebView.Markup;
             BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;

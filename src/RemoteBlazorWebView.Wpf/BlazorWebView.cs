@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                  name: nameof(EnableMirrors),
                  propertyType: typeof(bool),
                  ownerType: typeof(BlazorWebView),
-                 typeMetadata: new PropertyMetadata(OnMarkupPropertyChanged));
+                 typeMetadata: new PropertyMetadata(OnEnableMirrorsPropertyChanged));
         #endregion
 
         public Uri? ServerUri
@@ -90,6 +90,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private static void OnMarkupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnMarkupPropertyChanged(e);
 
         private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+
+        private static void OnEnableMirrorsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnEnableMirrorsPropertyChanged(e);
+
+        private void OnEnableMirrorsPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private Guid id = Guid.Empty;
         public Guid Id
@@ -167,6 +171,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
 
-        public Task WaitForInitialitionComplete() => Task.CompletedTask;
+        public Task WaitForInitializationComplete() => Task.CompletedTask;
     }
 }
