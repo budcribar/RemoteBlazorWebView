@@ -170,8 +170,8 @@ namespace PeakSWC.RemoteWebView
                                             try
                                             {
                                                 var split = message.Response.Split("|");
-                                                var user = split[1];
-                                                var ip = split[0].Substring(split[0].IndexOf(":") + 1);
+                                                var user = split.Length == 2 ? split[1] : "";
+                                                var ip = split[0].Substring(split[0].IndexOf(":") + 1).Replace(":", "");
                                                 FireConnected(ip, user);
                                             }
                                             catch { }
