@@ -40,6 +40,14 @@
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="appsettings.json.save" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.json.save">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.8.2" />
@@ -67,6 +75,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -76,8 +89,6 @@
    
   </ItemGroup>
   <ProjectExtensions>
-    <VisualStudio>
-      <UserProperties appsettings_1json__JsonSchema="" />
-    </VisualStudio>
+    <VisualStudio><UserProperties /></VisualStudio>
   </ProjectExtensions>
 </Project>

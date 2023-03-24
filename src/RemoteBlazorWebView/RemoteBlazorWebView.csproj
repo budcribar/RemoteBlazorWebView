@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>- built on maui 7.0.59 and aspnet 7.0.4</PackageReleaseNotes>
+		<PackageReleaseNotes>Fix default service endpoint</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
