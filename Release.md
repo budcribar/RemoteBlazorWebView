@@ -13,4 +13,6 @@
 - Create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
 - Copy the webwindow.proto file to the RemoteWebViewAdmin project
 - Copy the RemoteWebViewService to the WebWindow server
+- *** Test out the instructions to change the Port !!!!!
+
 
