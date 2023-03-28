@@ -10,6 +10,7 @@ namespace PeakSWC.RemoteWebView
     {
         public static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
             CreateHostBuilder(args).Build().Run();
         }
 
