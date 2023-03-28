@@ -11,17 +11,15 @@ namespace PeakSWC.RemoteWebView
     {
         public static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
             CreateHostBuilder(args).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
             {
-#if NOAUTHORIZATION
-                webBuilder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 5001, listenOptions => {
-                    listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-                    listenOptions.UseHttps();
-                }));
-#endif
+                if (!File.Exists("appsettings.json"))
+                    webBuilder.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, 5001, listenOptions => { listenOptions.UseHttps(); }));
+                
                 webBuilder.UseStartup<Startup>();
             });     
     }
