@@ -54,9 +54,9 @@ if ($env:EnvBuildMode -eq 'Debug') {
 	if (Test-Path $file) {
 		Remove-Item $file -Recurse
 	}
-	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 7.*-* 
+	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 8.*-* 
 } else {
-	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 7.*-* 
+	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 8.*-* 
 }
 
 
