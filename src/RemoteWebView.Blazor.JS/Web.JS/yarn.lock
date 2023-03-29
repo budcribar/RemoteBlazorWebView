@@ -977,23 +977,23 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@8.0.0-preview.1.23112.2":
-  version "8.0.0-preview.1.23112.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-8.0.0-preview.1.23112.2.tgz#e2f01e666876972543711533a9b369df4f1a0ca6"
-  integrity sha512-pn8jWVbTrqgFK4akvtM2DSk0uM8S45UkQHxKbC7l0V0Iwna/XNEsnPNtYn617u+7YkHL3YczzNV9OpsNhaoKsg==
+"@microsoft/dotnet-js-interop@8.0.0-preview.2.23153.2":
+  version "8.0.0-preview.2.23153.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-8.0.0-preview.2.23153.2.tgz#f72e9f50a53ef1a4f97522400baaeaa806137cd8"
+  integrity sha512-hN1BMA5o3c7e+EiK8A4YR5Kn4Fr81FDqDq+f8JUfAxjpsa4eqsTEXQT7bcau5qRW/BaFFzflAsYXpa3lbcgM5Q==
 
-"@microsoft/signalr-protocol-msgpack@8.0.0-preview.1.23112.2":
-  version "8.0.0-preview.1.23112.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-8.0.0-preview.1.23112.2.tgz#31b0a58120ef974ac67983c6e88ee07be49c942e"
-  integrity sha512-SgsCT4tpep0KrhK2VD2i+v/+EXtzUDEbCq8eRnGswm74HvdhZN+z9GmsQqc0B0imnbPCI32C4G4/d7OcEgkXwA==
+"@microsoft/signalr-protocol-msgpack@8.0.0-preview.2.23153.2":
+  version "8.0.0-preview.2.23153.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-8.0.0-preview.2.23153.2.tgz#15c56d95630a048fdf016d39ff8e09e1ae421b2c"
+  integrity sha512-uUMtR+d8TqjtHgaczSI4DOYY3QyrdrNe4bNxRkRtVe/W61FczW+CxhN7RBNkkdYOUeyrnlFSDQsxEnTUi+4uPQ==
   dependencies:
-    "@microsoft/signalr" ">=8.0.0-preview.1.23112.2"
+    "@microsoft/signalr" ">=8.0.0-preview.2.23153.2"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@8.0.0-preview.1.23112.2", "@microsoft/signalr@>=8.0.0-preview.1.23112.2":
-  version "8.0.0-preview.1.23112.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-8.0.0-preview.1.23112.2.tgz#47ea78e26826b34259d7d0a744e3f1c4079f23be"
-  integrity sha512-LCA54VWd15sBa/jO5jMuCMeqi9L0wEsjJFwQgd2Y5DpscU3Ba4AbBjc1/WCQ19jASxXxjFU0G+gM5dEQXBzq5g==
+"@microsoft/signalr@8.0.0-preview.2.23153.2", "@microsoft/signalr@>=8.0.0-preview.2.23153.2":
+  version "8.0.0-preview.2.23153.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-8.0.0-preview.2.23153.2.tgz#504f073e9c7adc558d608eeb91b6624c5ef8d074"
+  integrity sha512-UZAbUrlHh25VForyVjbknizVxd+St8QC0HXGSBCrn4aIdvVBHNlEUD4rbApbgBZbuf942wb18Rvt83Tn3nZEmQ==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^2.0.2"
