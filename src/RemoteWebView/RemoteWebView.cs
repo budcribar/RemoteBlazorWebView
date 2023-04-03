@@ -24,20 +24,29 @@ namespace PeakSWC.RemoteWebView
     {
         public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage, string manifestRoot = "embedded")
         {
-            IFileProvider? provider = null;
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
             var entryAssembly = Assembly.GetEntryAssembly()!;
 
             try
             {
-                provider = new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), Path.Combine(manifestRoot, root));
+                return new PhysicalFileProvider(contentRootDir);
             }
             catch (Exception) { }
-          
-            if (provider == null)
-                provider = new PhysicalFileProvider(contentRootDir);
 
-            return provider;
+            try
+            {
+                return new ManifestEmbeddedFileProvider(new FixedManifestEmbeddedAssembly(entryAssembly), Path.Combine(manifestRoot, root));
+            }
+            catch (Exception) { }
+
+            try
+            {
+                return new EmbeddedFileProvider(entryAssembly);
+            }
+            catch (Exception) { }
+
+            return new NullFileProvider();
+
         }
         public static void Restart(IBlazorWebView blazorWebView)
         {
