@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>- built on maui 7.0.59 and aspnet 7.0.4</PackageReleaseNotes>
+		<PackageReleaseNotes>- built on maui 7.0.59 and aspnet 7.0.5</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 

@@ -13,8 +13,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Web;
-
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 #if WEBVIEW2_WINFORMS
 using System.Diagnostics;
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
@@ -29,19 +29,16 @@ using System.Reflection;
 using System.Diagnostics;
 using PeakSWC.RemoteBlazorWebView.Wpf;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Web.WebView2;
-using Microsoft.AspNetCore.Components.WebView;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 using System.Reflection;
+using Microsoft.AspNetCore.Components.WebView;
+using Microsoft.AspNetCore.Components;
 #elif WEBVIEW2_MAUI
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using WebView2Control = Microsoft.UI.Xaml.Controls.WebView2;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Storage.Streams;
 using Launcher = Windows.System.Launcher;
 #endif
 
@@ -64,7 +61,7 @@ namespace PeakSWC.RemoteBlazorWebView
 		protected static readonly string AppOrigin = $"https://{AppHostAddress}/";
 
 		internal static readonly Uri AppOriginUri = new(AppOrigin);
-
+		private readonly ILogger _logger;
 		private readonly WebView2Control _webview;
 		private readonly Task<bool> _webviewReadyTask;
 		private readonly string _contentRootRelativeToAppRoot;
@@ -89,6 +86,7 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// <param name="urlLoading">Callback invoked when a url is about to load.</param>
 		/// <param name="blazorWebViewInitializing">Callback invoked before the webview is initialized.</param>
 		/// <param name="blazorWebViewInitialized">Callback invoked after the webview is initialized.</param>
+		/// <param name="logger">Logger to send log messages to.</param>
 		internal WebView2WebViewManager(
 			WebView2Control webview,
 			IServiceProvider services,
@@ -99,7 +97,8 @@ namespace PeakSWC.RemoteBlazorWebView
 			string hostPagePathWithinFileProvider,
 			Action<UrlLoadingEventArgs> urlLoading,
 			Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing,
-			Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)
+			Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized,
+			ILogger logger)
 			: base(services, dispatcher, AppOriginUri, fileProvider, jsComponents, hostPagePathWithinFileProvider)
 
 		{
@@ -121,6 +120,7 @@ namespace PeakSWC.RemoteBlazorWebView
 			}
 #endif
 
+			_logger = logger;
 			_webview = webview;
 			_urlLoading = urlLoading;
 			_blazorWebViewInitializing = blazorWebViewInitializing;
@@ -148,6 +148,7 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// <param name="contentRootRelativeToAppRoot">Path to the app's content root relative to the application root directory.</param>
 		/// <param name="hostPagePathWithinFileProvider">Path to the host page within the <paramref name="fileProvider"/>.</param>
 		/// <param name="blazorWebViewHandler">The <see cref="BlazorWebViewHandler" />.</param>
+		/// <param name="logger">Logger to send log messages to.</param>
 		internal WebView2WebViewManager(
 			WebView2Control webview,
 			IServiceProvider services,
@@ -156,7 +157,8 @@ namespace PeakSWC.RemoteBlazorWebView
 			JSComponentConfigurationStore jsComponents,
 			string contentRootRelativeToAppRoot,
 			string hostPagePathWithinFileProvider,
-			BlazorWebViewHandler blazorWebViewHandler
+			BlazorWebViewHandler blazorWebViewHandler,
+			ILogger logger
 		)
 			: base(services, dispatcher, AppOriginUri, fileProvider, jsComponents, hostPagePathWithinFileProvider)
 		{
@@ -169,6 +171,7 @@ namespace PeakSWC.RemoteBlazorWebView
 					$"Please add all the required services by calling '{nameof(IServiceCollection)}.{nameof(BlazorWebViewServiceCollectionExtensions.AddMauiBlazorWebView)}' in the application startup code.");
 			}
 
+			_logger = logger;
 			_webview = webview;
 			_blazorWebViewHandler = blazorWebViewHandler;
 			_contentRootRelativeToAppRoot = contentRootRelativeToAppRoot;
@@ -189,6 +192,7 @@ namespace PeakSWC.RemoteBlazorWebView
 
 				if (isWebviewInitialized)
 				{
+					_logger.NavigatingToUri(absoluteUri);
 					_webview.Source = absoluteUri;
 				}
 			});
@@ -223,6 +227,8 @@ namespace PeakSWC.RemoteBlazorWebView
 			}
 			catch (FileNotFoundException)
 			{
+				_logger.FailedToCreateWebView2Environment();
+
 				// This method needs to be invoked even if the WebView2 Runtime is not installed,
 				// since it is reponsible for creating the warning label and WebView2 Runtime
 				// download link.
@@ -230,7 +236,9 @@ namespace PeakSWC.RemoteBlazorWebView
 				return false;
 			}
 
+			_logger.StartingWebView2();
 			await _webview.EnsureCoreWebView2Async();
+			_logger.StartedWebView2();
 
 			var developerTools = _blazorWebViewHandler.DeveloperTools;
 #elif WEBVIEW2_WINFORMS || WEBVIEW2_WPF
@@ -240,9 +248,11 @@ namespace PeakSWC.RemoteBlazorWebView
 				browserExecutableFolder: args.BrowserExecutableFolder,
 				userDataFolder: userDataFolder,
 				options: args.EnvironmentOptions)
-				.ConfigureAwait(true);
+			.ConfigureAwait(true);
 
+			_logger.StartingWebView2();
 			await _webview.EnsureCoreWebView2Async(_coreWebView2Environment);
+			_logger.StartedWebView2();
 
 			var developerTools = _developerTools;
 #endif
@@ -311,6 +321,8 @@ namespace PeakSWC.RemoteBlazorWebView
 
 			var requestUri = QueryStringHelper.RemovePossibleQueryString(eventArgs.Request.Uri);
 
+			_logger.HandlingWebRequest(requestUri);
+
 			if (TryGetResponseContent(requestUri, allowFallbackOnHostPage, out var statusCode, out var statusMessage, out var content, out var headers))
 			{
 				StaticContentHotReloadManager.TryReplaceResponseContent(_contentRootRelativeToAppRoot, requestUri, ref statusCode, ref content, headers);
@@ -319,7 +331,13 @@ namespace PeakSWC.RemoteBlazorWebView
 
 				var autoCloseStream = new AutoCloseOnReadCompleteStream(content);
 
+				_logger.ResponseContentBeingSent(requestUri, statusCode);
+
 				eventArgs.Response = _coreWebView2Environment!.CreateWebResourceResponse(autoCloseStream, statusCode, statusMessage, headerString);
+			}
+			else
+			{
+				_logger.ReponseContentNotFound(requestUri);
 			}
 #elif WEBVIEW2_MAUI
 			// No-op here because all the work is done in the derived WinUIWebViewManager
@@ -345,6 +363,7 @@ namespace PeakSWC.RemoteBlazorWebView
 #elif WEBVIEW2_MAUI
 				_blazorWebViewHandler.UrlLoading(callbackArgs);
 #endif
+				_logger.NavigationEvent(uri, callbackArgs.UrlLoadingStrategy);
 
 				if (callbackArgs.UrlLoadingStrategy == UrlLoadingStrategy.OpenExternally)
 				{
@@ -368,6 +387,8 @@ namespace PeakSWC.RemoteBlazorWebView
 
 		private void LaunchUriInExternalBrowser(Uri uri)
 		{
+			_logger.LaunchExternalBrowser(uri);
+
 #if WEBVIEW2_WINFORMS || WEBVIEW2_WPF
 			using (var launchBrowser = new Process())
 			{

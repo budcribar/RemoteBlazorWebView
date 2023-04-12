@@ -49,8 +49,8 @@ namespace EditWebView
                 Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
 
                 Replace("internal class WebView2WebViewManager", "public class WebView2WebViewManager");
-                ReplaceFirst("using Microsoft.AspNetCore.Components.WebView;", "");
-
+       
+                ReplaceFirst("#elif WEBVIEW2_MAUI", "using Microsoft.AspNetCore.Components.WebView;\nusing Microsoft.AspNetCore.Components;\n#elif WEBVIEW2_MAUI");
             }
             if (fileName == "UrlLoadingEventArgs.cs")
             {
@@ -98,7 +98,7 @@ namespace EditWebView
 
                 //Replace("var fileProvider = CreateFileProvider(contentRootDirFullPath);", "var customFileProvider = CreateFileProvider(contentRootDirFullPath);\n            IFileProvider fileProvider = customFileProvider == null ? new PhysicalFileProvider(contentRootDirFullPath) 	: customFileProvider;");              
                 Replace("new WebView2WebViewManager", "CreateWebViewManager");
-                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");             
+                Replace("private void StartWebViewCoreIfPossible()", "public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)\n\t\t{\n\t\t\treturn new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized,logger);\n\t\t}\n\t\tprotected void StartWebViewCoreIfPossible()");
                 Replace("BlazorWebView", Path.GetFileNameWithoutExtension(fileName));
 
                 Replace("BlazorWebViewBaseInit", "BlazorWebViewInit");

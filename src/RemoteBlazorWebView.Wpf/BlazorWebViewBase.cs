@@ -15,7 +15,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
@@ -226,9 +229,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			StartWebViewCoreIfPossible();
 		}
 
-		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized)
+		public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
 		{
-			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized);
+			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized,logger);
 		}
 		protected void StartWebViewCoreIfPossible()
 		{
@@ -238,6 +241,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			{
 				return;
 			}
+
+			var logger = Services.GetService<ILogger<BlazorWebViewBase>>() ?? NullLogger<BlazorWebViewBase>.Instance;
 
 			// We assume the host page is always in the root of the content directory, because it's
 			// unclear there's any other use case. We can add more options later if so.
@@ -256,6 +261,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			var hostPageRelativePath = Path.GetRelativePath(contentRootDirFullPath, hostPageFullPath);
 			var contentRootDirRelativePath = Path.GetRelativePath(appRootDir, contentRootDirFullPath);
 
+			logger.CreatingFileProvider(contentRootDirFullPath, hostPageRelativePath);
 			var fileProvider = CreateFileProvider(contentRootDirFullPath);
 
 			_webviewManager = CreateWebViewManager(
@@ -268,15 +274,20 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 				hostPageRelativePath,
 				(args) => UrlLoading?.Invoke(this, args),
 				(args) => BlazorWebViewInitializing?.Invoke(this, args),
-				(args) => BlazorWebViewInitialized?.Invoke(this, args));
+				(args) => BlazorWebViewInitialized?.Invoke(this, args),
+				logger);
 
 			StaticContentHotReloadManager.AttachToWebViewManagerIfEnabled(_webviewManager);
 
 			foreach (var rootComponent in RootComponents)
 			{
+				logger.AddingRootComponent(rootComponent.ComponentType.FullName ?? string.Empty, rootComponent.Selector, rootComponent.Parameters?.Count ?? 0);
+
 				// Since the page isn't loaded yet, this will always complete synchronously
 				_ = rootComponent.AddToWebViewManagerAsync(_webviewManager);
 			}
+
+			logger.StartingInitialNavigation("/");
 			_webviewManager.Navigate("/");
 		}
 
