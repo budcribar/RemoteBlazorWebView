@@ -11,6 +11,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.DependencyInjection;
@@ -294,6 +295,23 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		protected override ControlCollection CreateControlsInstance()
 		{
 			return new BlazorWebViewFormBaseControlCollection(this);
+		}
+
+		/// <summary>
+		/// Calls the specified <paramref name="workItem"/> asynchronously and passes in the scoped services available to Razor components.
+		/// </summary>
+		/// <param name="workItem">The action to call.</param>
+		/// <returns>Returns a <see cref="Task"/> representing <c>true</c> if the <paramref name="workItem"/> was called, or <c>false</c> if it was not called because Blazor is not currently running.</returns>
+		/// <exception cref="ArgumentNullException">Thrown if <paramref name="workItem"/> is <c>null</c>.</exception>
+		public virtual async Task<bool> TryDispatchAsync(Action<IServiceProvider> workItem)
+		{
+			ArgumentNullException.ThrowIfNull(workItem);
+			if (_webviewManager is null)
+			{
+				return false;
+			}
+
+			return await _webviewManager.TryDispatchAsync(workItem);
 		}
 
 		/// <summary>
