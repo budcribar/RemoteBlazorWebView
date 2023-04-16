@@ -1,1 +1,1 @@
-- Fix default service endpoint
+- Added instructions on how to create a single file executable including wwwroot files
