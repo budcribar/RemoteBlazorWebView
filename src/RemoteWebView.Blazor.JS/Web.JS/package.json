@@ -9,9 +9,9 @@
     "MonoPlatform.*"
   ],
   "scripts": {
-    "preclean": "yarn install --mutex network --frozen-lockfile",
+    "preclean": "yarn install --mutex network --frozen-lockfile || yarn install --mutex network --frozen-lockfile",
     "clean": "node node_modules/rimraf/bin.js ./dist/Debug ./dist/Release",
-    "prebuild": "yarn run clean && yarn install --mutex network --frozen-lockfile",
+    "prebuild": "yarn run clean && yarn install --mutex network --frozen-lockfile || yarn install --mutex network --frozen-lockfile",
     "lint": "eslint -c ./src/.eslintrc.js --ext .ts ./src",
     "build": "yarn run build:debug && yarn run build:production",
     "build:debug": "cd src && node ../node_modules/webpack-cli/bin/cli.js --mode development --config ./webpack.config.js",
@@ -20,9 +20,9 @@
   "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.8",
-    "@microsoft/dotnet-js-interop": "8.0.0-preview.2.23153.2",
-    "@microsoft/signalr": "8.0.0-preview.2.23153.2",
-    "@microsoft/signalr-protocol-msgpack": "8.0.0-preview.2.23153.2",
+    "@microsoft/dotnet-js-interop": "8.0.0-preview.3.23177.8",
+    "@microsoft/signalr": "8.0.0-preview.3.23177.8",
+    "@microsoft/signalr-protocol-msgpack": "8.0.0-preview.3.23177.8",
     "@types/dotnet": "./@types/dotnet",
     "@types/jsdom": "^16.2.14",
     "@typescript-eslint/eslint-plugin": "^5.26.0",
@@ -31,10 +31,10 @@
     "eslint-plugin-header": "^3.1.1",
     "inspectpack": "^4.7.1",
     "rimraf": "^3.0.2",
-    "terser": "^5.16.8",
+    "terser": "^5.14.2",
     "ts-loader": "^9.2.6",
     "typescript": "^4.5.4",
-    "webpack": "^5.76.3",
+    "webpack": "^5.72.1",
     "webpack-cli": "^4.9.2"
   }
 }
