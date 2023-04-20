@@ -13,6 +13,27 @@ $env:EnvBuildMode = $Mode # Developer or Release
 Write-Host -ForegroundColor GREEN ("Build:",$Build)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
+# Get the path of the script's directory
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+# Append the relative path to the script's directory
+$relativePath = "src\RemoteWebView.Blazor.JS\protoc\bin"
+$newPath = Join-Path -Path $scriptDir -ChildPath $relativePath
+
+# Check if the newPath is already in the Path environment variable
+$paths = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User) -split ";"
+$alreadyExists = $paths.Contains($newPath)
+
+if (-not $alreadyExists) {
+    # Add newPath to the Path environment variable
+    $newPathVariable = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User) + ";$newPath"
+    [System.Environment]::SetEnvironmentVariable("Path", $newPathVariable, [System.EnvironmentVariableTarget]::User)
+    Write-Host "Path added: $newPath"
+} else {
+    Write-Host "Path already exists: $newPath"
+}
+
+
 Write-Host -ForegroundColor GREEN "Clean artifacts"
 # Start with a clean solution
 
