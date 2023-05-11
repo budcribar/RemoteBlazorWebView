@@ -977,23 +977,23 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@7.0.3":
-  version "7.0.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.3.tgz#82f2cceccdef50b73b5b2d3aae6e77be4cc8664e"
-  integrity sha512-p3OBiVBTM63siw+gx+9TjXVYCJq0kVhKfZT3CaI6cycNIpj10XPUQWUuhy0367ST7JaokYitrPoImW5MtlV2Mg==
+"@microsoft/dotnet-js-interop@7.0.5":
+  version "7.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.5.tgz#9d4d6e9caec1bfa9ca755533efb6f5e0482330ed"
+  integrity sha512-wQokT1JpX0A8rtdc/BCGfL0ulbAGPZZDqZrA40TwrGrx/tAoPosEJE1fGuHGSX63OQXLdFj3OJZPtokT+CKL6g==
 
-"@microsoft/signalr-protocol-msgpack@7.0.3":
-  version "7.0.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.3.tgz#a1ff5acc9ef0e08ab5b7865029d350b2a6f5d5bf"
-  integrity sha512-3oQvNbUM461tIrvf1UHGzg+KYU8a8m4IQPGSOrdF+dzsTH6o47OnUf6rPZ+WHTSIHW6/qDUM2LF6DyLZ321HhQ==
+"@microsoft/signalr-protocol-msgpack@7.0.5":
+  version "7.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.5.tgz#2236ea7763cddf9d0dfedb915c5535754302241c"
+  integrity sha512-6J/5Dt4SSr2prLk6ehDbYvZfT+ST3oO1GiMmZRfGB3KYJ63R50JlygIVASzskZBC1C+gDpAZ7SrdZoBrM8SlYQ==
   dependencies:
-    "@microsoft/signalr" ">=7.0.3"
+    "@microsoft/signalr" ">=7.0.5"
     "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@7.0.3", "@microsoft/signalr@>=7.0.3":
-  version "7.0.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.3.tgz#fe5449bdb2c5170e97c8ce84cddd86b0760a7293"
-  integrity sha512-gQbrCQxvC/djy+/GBHFpNnAqubGLe0Hrp3ZO8x8NRGAU8jhj3QcHuxhq6N5Z3A0zI6IE/fMfX2xSheQxOwA3ZA==
+"@microsoft/signalr@7.0.5", "@microsoft/signalr@>=7.0.5":
+  version "7.0.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.5.tgz#e7a984ac1f1b6a488170e9cb2f2f46a5d97d5f80"
+  integrity sha512-j84syCKlXkQAOQhyrzRmW7w/M2UXQ6OKcXXFIVNjmiiZbEGIvSvJDRAuyMFjArdQOXz+etJgd58H/prTbyTCrA==
   dependencies:
     abort-controller "^3.0.0"
     eventsource "^2.0.2"
