@@ -39,6 +39,11 @@ npm run build:production
 
 
 open ubuntu
+* install unix2dos if not installed
+sudo apt-get update
+sudo apt install -y dos2unix
+
+
 cd /mnt/c/users/Arti_BlizzardPV3/source/repos/RemoteBlazorWebView/src
  sudo find . -name '*.ts' -exec unix2dos {} \;
 
