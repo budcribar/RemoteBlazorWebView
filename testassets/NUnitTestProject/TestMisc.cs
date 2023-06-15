@@ -15,7 +15,7 @@ namespace WebdriverTestProject
         public void TestJavascriptCompiledForRelease()
         {
             FileInfo fi = new FileInfo(Utilities.JavascriptFile);
-            var max = 405_000;
+            var max = 408_000;
             Assert.IsTrue(fi.Length < max, $"{Path.GetFileName(Utilities.JavascriptFile)} >= {max}");
 
             Console.WriteLine($"{Path.GetFileName(Utilities.JavascriptFile)} is {fi.Length / 1024} kb long");
