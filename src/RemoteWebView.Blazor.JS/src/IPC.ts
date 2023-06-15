@@ -7,6 +7,7 @@ import { setApplicationIsTerminated, tryDeserializeMessage } from '../web.js/src
 import { showErrorNotification } from '../web.js/src/BootErrors';
 import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
 import { internalFunctions as navigationManagerFunctions, NavigationOptions } from '../web.js/src/Services/NavigationManager';
+import { dispatcher } from '../web.js/src/Boot.WebView';
 
 const messageHandlers = {
 
@@ -31,9 +32,9 @@ const messageHandlers = {
         showErrorNotification();
     },
 
-    'BeginInvokeJS': DotNet.jsCallDispatcher.beginInvokeJSFromDotNet,
+    'BeginInvokeJS': dispatcher.beginInvokeJSFromDotNet.bind(dispatcher),
 
-    'EndInvokeDotNet': DotNet.jsCallDispatcher.endInvokeDotNetFromJS,
+    'EndInvokeDotNet': dispatcher.endInvokeDotNetFromJS.bind(dispatcher),
 
     'SendByteArrayToJS': receiveBase64ByteArray,
 
@@ -53,7 +54,7 @@ const messageHandlers = {
 
 function receiveBase64ByteArray(id: number, base64Data: string) {
     const data = base64ToArrayBuffer(base64Data);
-    DotNet.jsCallDispatcher.receiveByteArray(id, data);
+    dispatcher.receiveByteArray(id, data);
 }
 
 

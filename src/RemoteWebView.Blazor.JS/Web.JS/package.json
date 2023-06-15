@@ -20,9 +20,9 @@
   "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.8",
-    "@microsoft/dotnet-js-interop": "8.0.0-preview.4.23260.4",
-    "@microsoft/signalr": "8.0.0-preview.4.23260.4",
-    "@microsoft/signalr-protocol-msgpack": "8.0.0-preview.4.23260.4",
+    "@microsoft/dotnet-js-interop": "8.0.0-preview.5.23302.2",
+    "@microsoft/signalr": "8.0.0-preview.5.23302.2",
+    "@microsoft/signalr-protocol-msgpack": "8.0.0-preview.5.23302.2",
     "@types/dotnet": "./@types/dotnet",
     "@types/jsdom": "^16.2.14",
     "@typescript-eslint/eslint-plugin": "^5.26.0",
