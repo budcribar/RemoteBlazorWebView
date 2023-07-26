@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Built on asp.net 7.0.7 and Maui 7.0.86</PackageReleaseNotes>
+		<PackageReleaseNotes>Built on asp.net 7.0.9 and Maui 7.0.92</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
