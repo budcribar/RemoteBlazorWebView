@@ -980,17 +980,29 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@microsoft/dotnet-js-interop@link:../../JSInterop/Microsoft.JSInterop.JS/src":
-  version "0.0.0"
-  uid ""
+"@microsoft/dotnet-js-interop@7.0.9":
+  version "7.0.9"
+  resolved "https://registry.yarnpkg.com/@microsoft/dotnet-js-interop/-/dotnet-js-interop-7.0.9.tgz#1c4a2e77540403a36bb8a4178232474ef1973d49"
+  integrity sha512-iwmD5fweE68jilbjrzj8HzzF7n+SEnhl+AOAJAQW84t+NNlFd1IDhiiOCEM6jvo0k5bpNbNOp7BoEcy68JFgIw==
 
-"@microsoft/signalr-protocol-msgpack@link:../../SignalR/clients/ts/signalr-protocol-msgpack":
-  version "0.0.0"
-  uid ""
+"@microsoft/signalr-protocol-msgpack@7.0.9":
+  version "7.0.9"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr-protocol-msgpack/-/signalr-protocol-msgpack-7.0.9.tgz#88209c62d9d17fe2c32ed32e675908c17ba8f42d"
+  integrity sha512-BiB3xXW88IYn80BP/OBkpjyi24q/xmsBylq48NacESCMX1XHq/DIr8PVo2lA4LVfpow1+Fu6YUGzstUbUlCflA==
+  dependencies:
+    "@microsoft/signalr" ">=7.0.9"
+    "@msgpack/msgpack" "^2.7.0"
 
-"@microsoft/signalr@link:../../SignalR/clients/ts/signalr":
-  version "0.0.0"
-  uid ""
+"@microsoft/signalr@7.0.9", "@microsoft/signalr@>=7.0.9":
+  version "7.0.9"
+  resolved "https://registry.yarnpkg.com/@microsoft/signalr/-/signalr-7.0.9.tgz#bc0ba8f38b0cb3621c5f18b56d8096190689a3ca"
+  integrity sha512-aGfBLAYTh+6ydYvLXV/jcocWr8KKmTOgWyl/mDx5Hzrii1aAfrn+bpBNzrl5sto5ehsHCdTIzTCuOCT3baIjOw==
+  dependencies:
+    abort-controller "^3.0.0"
+    eventsource "^2.0.2"
+    fetch-cookie "^2.0.3"
+    node-fetch "^2.6.7"
+    ws "^7.4.5"
 
 "@msgpack/msgpack@^2.7.0":
   version "2.7.2"
