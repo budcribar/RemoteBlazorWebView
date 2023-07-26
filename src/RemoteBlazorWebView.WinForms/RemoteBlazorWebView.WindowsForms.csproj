@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on maui 8.0.0-preview.4.8333</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 8.0.0-preview.5.8529</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
