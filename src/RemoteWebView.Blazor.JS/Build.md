@@ -40,7 +40,7 @@ npm run build:production
 
 open ubuntu
 cd /mnt/c/users/Arti_BlizzardPV3/source/repos/RemoteBlazorWebView/src
- sudo find . -name '*.ts' -exec unix2dos {} \;
- sudo find . -name '*.cs' -exec unix2dos {} \;
+sudo find . \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' \) -exec unix2dos {} \;
+
 
 
