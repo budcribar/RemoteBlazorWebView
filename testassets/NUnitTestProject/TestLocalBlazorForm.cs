@@ -6,6 +6,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
+    
+
+
+
 namespace WebdriverTestProject
 {
     [TestClass]
@@ -23,9 +27,32 @@ namespace WebdriverTestProject
         public void Setup()
         {
             startingDirectory = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
-            driver = new EdgeDriver(new EdgeOptions { UseWebView = true, BinaryLocation = Path.GetFileName(this.BinaryLocation()) });
-            // Wait for page to load 
+            string binaryLocation = BinaryLocation();
+
+            if (string.IsNullOrEmpty(binaryLocation))
+            {
+                throw new InvalidOperationException("BinaryLocation cannot be null or empty.");
+            }
+
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(binaryLocation) ?? string.Empty);
+
+            EdgeOptions options = new EdgeOptions
+            {
+                UseWebView = true,
+                BinaryLocation = binaryLocation
+            };
+
+            try
+            {
+                driver = new EdgeDriver(options);
+            }
+            catch (Exception ex)
+            {
+                // You can replace this with any logging mechanism you prefer
+                Console.WriteLine($"An error occurred while setting up the Edge driver: {ex.Message}");
+            }
+
+            // Wait for page to load
             Thread.Sleep(1000);
         }
 
