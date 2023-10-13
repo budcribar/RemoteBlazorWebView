@@ -6,8 +6,8 @@ var OutOfProcessRenderBatch_1 = require("../web.js/src/Rendering/RenderBatch/Out
 var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
 var WebViewIpcCommon_1 = require("../web.js/src/Platform/WebView/WebViewIpcCommon");
 var BootErrors_1 = require("../web.js/src/BootErrors");
-var dotnet_js_interop_1 = require("../web.js/node_modules/@microsoft/dotnet-js-interop");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
+var Boot_WebView_1 = require("../web.js/src/Boot.WebView");
 var messageHandlers = {
     'AttachToDocument': function (componentId, elementSelector) {
         (0, Renderer_1.attachRootComponentToElement)(elementSelector, componentId);
@@ -27,14 +27,16 @@ var messageHandlers = {
         console.error("".concat(message, "\n").concat(stackTrace));
         (0, BootErrors_1.showErrorNotification)();
     },
-    'BeginInvokeJS': dotnet_js_interop_1.DotNet.jsCallDispatcher.beginInvokeJSFromDotNet,
-    'EndInvokeDotNet': dotnet_js_interop_1.DotNet.jsCallDispatcher.endInvokeDotNetFromJS,
+    'BeginInvokeJS': Boot_WebView_1.dispatcher.beginInvokeJSFromDotNet.bind(Boot_WebView_1.dispatcher),
+    'EndInvokeDotNet': Boot_WebView_1.dispatcher.endInvokeDotNetFromJS.bind(Boot_WebView_1.dispatcher),
     'SendByteArrayToJS': receiveBase64ByteArray,
     'Navigate': NavigationManager_1.internalFunctions.navigateTo,
+    'SetHasLocationChangingListeners': NavigationManager_1.internalFunctions.setHasLocationChangingListeners,
+    'EndLocationChanging': NavigationManager_1.internalFunctions.endLocationChanging,
 };
 function receiveBase64ByteArray(id, base64Data) {
     var data = base64ToArrayBuffer(base64Data);
-    dotnet_js_interop_1.DotNet.jsCallDispatcher.receiveByteArray(id, data);
+    Boot_WebView_1.dispatcher.receiveByteArray(id, data);
 }
 function base64ToArrayBuffer(base64) {
     var binaryString = atob(base64);

@@ -38,15 +38,8 @@ const messageHandlers = {
 
     'SendByteArrayToJS': receiveBase64ByteArray,
 
-    'Navigate': (uri: string, options: NavigationOptions): void => {
-        const baseHref = document.querySelector('base')?.href;
-        if (uri.startsWith('/') && baseHref) {
-            uri = `${baseHref}${uri.substring(1)}`;
-        }
-        navigationManagerFunctions.navigateTo(uri, options);
-    },
+    'Navigate': navigationManagerFunctions.navigateTo,
        
-
     'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
 
     'EndLocationChanging': navigationManagerFunctions.endLocationChanging,

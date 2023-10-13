@@ -4,9 +4,10 @@ import { shouldAutoStart } from '../web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
 import { sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
 import { fetchAndInvokeInitializers } from '../web.js/src/JSInitializers/JSInitializers.WebView';
-
+import { setDispatcher } from '../web.js/src/Boot.WebView';
 import { initializeRemoteWebView } from './RemoteWebView';
-
+import { receiveDotNetDataStream } from '../web.js/src/StreamingInterop';
+import { dispatcher } from '../web.js/src/Boot.WebView';
 let started = false;
 
 async function boot(): Promise<void> {
@@ -15,15 +16,19 @@ async function boot(): Promise<void> {
     }
     started = true;
 
-    const jsInitializer = await fetchAndInvokeInitializers();
-
-    initializeRemoteWebView();
-
-    DotNet.attachDispatcher({
+    const dispatcher = DotNet.attachDispatcher({
         beginInvokeDotNetFromJS: sendBeginInvokeDotNetFromJS,
         endInvokeJSFromDotNet: sendEndInvokeJSFromDotNet,
         sendByteArray: sendByteArray,
     });
+
+    setDispatcher(dispatcher);
+
+    const jsInitializer = await fetchAndInvokeInitializers();
+
+    initializeRemoteWebView();
+
+    Blazor._internal.receiveWebViewDotNetDataStream = receiveWebViewDotNetDataStream;
 
     navigationManagerFunctions.enableNavigationInterception();
     navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged, sendLocationChanging);
@@ -33,7 +38,13 @@ async function boot(): Promise<void> {
     await jsInitializer.invokeAfterStartedCallbacks(Blazor);
 }
 
+function receiveWebViewDotNetDataStream(streamId: number, data: any, bytesRead: number, errorMessage: string): void {
+    receiveDotNetDataStream(dispatcher, streamId, data, bytesRead, errorMessage);
+}
+
 Blazor.start = boot;
+window['DotNet'] = DotNet;
+
 
 if (shouldAutoStart()) {
     boot();

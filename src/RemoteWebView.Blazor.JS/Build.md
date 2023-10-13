@@ -28,6 +28,8 @@ nvm use 16.13.0
   yarn install
 ```
 
+* npm install -g protoc-gen-ts
+
 * Add RemoteWebView.Blazor.JS\protoc\bin to your path variable
 * Verify you can run "protoc -h" from a terminal window 
 * Now you should be able to build remote.blazor.desktop.js using the following command

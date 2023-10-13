@@ -14,7 +14,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -42,11 +42,14 @@ var BootCommon_1 = require("../web.js/src/BootCommon");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
 var JSInitializers_WebView_1 = require("../web.js/src/JSInitializers/JSInitializers.WebView");
+var Boot_WebView_1 = require("../web.js/src/Boot.WebView");
 var RemoteWebView_1 = require("./RemoteWebView");
+var StreamingInterop_1 = require("../web.js/src/StreamingInterop");
+var Boot_WebView_2 = require("../web.js/src/Boot.WebView");
 var started = false;
 function boot() {
     return __awaiter(this, void 0, void 0, function () {
-        var jsInitializer;
+        var dispatcher, jsInitializer;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -54,28 +57,34 @@ function boot() {
                         throw new Error('Blazor has already started.');
                     }
                     started = true;
-                    return [4 /*yield*/, (0, JSInitializers_WebView_1.fetchAndInvokeInitializers)()];
-                case 1:
-                    jsInitializer = _a.sent();
-                    (0, RemoteWebView_1.initializeRemoteWebView)();
-                    dotnet_js_interop_1.DotNet.attachDispatcher({
+                    dispatcher = dotnet_js_interop_1.DotNet.attachDispatcher({
                         beginInvokeDotNetFromJS: WebViewIpcSender_1.sendBeginInvokeDotNetFromJS,
                         endInvokeJSFromDotNet: WebViewIpcSender_1.sendEndInvokeJSFromDotNet,
                         sendByteArray: WebViewIpcSender_1.sendByteArray,
                     });
+                    (0, Boot_WebView_1.setDispatcher)(dispatcher);
+                    return [4 /*yield*/, (0, JSInitializers_WebView_1.fetchAndInvokeInitializers)()];
+                case 1:
+                    jsInitializer = _a.sent();
+                    (0, RemoteWebView_1.initializeRemoteWebView)();
+                    GlobalExports_1.Blazor._internal.receiveWebViewDotNetDataStream = receiveWebViewDotNetDataStream;
                     NavigationManager_1.internalFunctions.enableNavigationInterception();
-                    NavigationManager_1.internalFunctions.listenForNavigationEvents(WebViewIpcSender_1.sendLocationChanged);
-                    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+                    NavigationManager_1.internalFunctions.listenForNavigationEvents(WebViewIpcSender_1.sendLocationChanged, WebViewIpcSender_1.sendLocationChanging);
+                    // sendAttachPage is done in initializeRemoteWebView()
                     return [4 /*yield*/, jsInitializer.invokeAfterStartedCallbacks(GlobalExports_1.Blazor)];
                 case 2:
-                    //sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+                    // sendAttachPage is done in initializeRemoteWebView()
                     _a.sent();
                     return [2 /*return*/];
             }
         });
     });
 }
+function receiveWebViewDotNetDataStream(streamId, data, bytesRead, errorMessage) {
+    (0, StreamingInterop_1.receiveDotNetDataStream)(Boot_WebView_2.dispatcher, streamId, data, bytesRead, errorMessage);
+}
 GlobalExports_1.Blazor.start = boot;
+window['DotNet'] = dotnet_js_interop_1.DotNet;
 if ((0, BootCommon_1.shouldAutoStart)()) {
     boot();
 }

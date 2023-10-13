@@ -14,6 +14,9 @@ let started = false;
 
 export let dispatcher: DotNet.ICallDispatcher;
 
+export function setDispatcher(newDispatcher: DotNet.ICallDispatcher) {
+    dispatcher = newDispatcher;
+}
 async function boot(): Promise<void> {
   if (started) {
     throw new Error('Blazor has already started.');

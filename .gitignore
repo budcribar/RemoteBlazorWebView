@@ -33,3 +33,7 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /testassets/NUnitTestProject/TestResults/logFile.html
 /src/RemoteWebView.Blazor.JS/package-lock.json
 /remoteblazorwebview.pfx
+/node_modules/.bin
+/node_modules
+/package-lock.json
+/src/RemoteWebView.Blazor.JS/yarn-error.log

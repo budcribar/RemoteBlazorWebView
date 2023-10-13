@@ -26,6 +26,7 @@ namespace WebdriverTestProject
         [TestInitialize]
         public void Setup()
         {
+           
             startingDirectory = Directory.GetCurrentDirectory();
             string binaryLocation = BinaryLocation();
 
@@ -36,9 +37,16 @@ namespace WebdriverTestProject
 
             Directory.SetCurrentDirectory(Path.GetDirectoryName(binaryLocation) ?? string.Empty);
 
+            //Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--remote-debugging-port=9222");
+            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? ""), "WebView2");
+            Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
+
             EdgeOptions options = new EdgeOptions
-            {
+            {     
+                 
                 UseWebView = true,
+                //BrowserVersion = "117",
                 BinaryLocation = binaryLocation
             };
 
