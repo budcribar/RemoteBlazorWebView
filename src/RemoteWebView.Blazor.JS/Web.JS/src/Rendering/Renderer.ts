@@ -24,7 +24,7 @@ export function attachRootComponentToLogicalElement(browserRendererId: number, l
   browserRenderer.attachRootComponentToLogicalElement(componentId, logicalElement, appendContent);
 }
 
-export function attachRootComponentToElement(elementSelector: string, componentId: number, browserRendererId?: number): void {
+export function attachRootComponentToElement(elementSelector: string, componentId: number, browserRendererId: number): void {
   const afterElementSelector = '::after';
   const beforeElementSelector = '::before';
   let appendContent = false;
@@ -47,7 +47,7 @@ export function attachRootComponentToElement(elementSelector: string, componentI
   attachRootComponentToLogicalElement(browserRendererId || 0, toLogicalElement(element, /* allow existing contents */ true), componentId, appendContent);
 }
 
-export function getRendererer(browserRendererId: number): BrowserRenderer {
+export function getRendererer(browserRendererId: number): BrowserRenderer | undefined {
   return browserRenderers[browserRendererId];
 }
 

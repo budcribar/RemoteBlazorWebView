@@ -54,14 +54,14 @@
   <ItemGroup>
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
     <PackageReference Include="Google.Protobuf" Version="3.24.3" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0-preview.7.23375.9" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.58.0-pre1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0-rc.2.23480.2" />
 	
 	  <PackageReference Include="Grpc.Tools" Version="2.58.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="8.0.0-preview.7.23375.6" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="8.0.0-rc.2.23479.6" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2045.28" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>

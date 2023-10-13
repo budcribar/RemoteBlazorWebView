@@ -37,3 +37,6 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /node_modules
 /package-lock.json
 /src/RemoteWebView.Blazor.JS/yarn-error.log
+/src/RemoteWebView.Blazor.JS/src/IPC.js
+/src/RemoteWebView.Blazor.JS/src/IPC.js.map
+/src/RemoteWebView.Blazor.JS/Web.JS/yarn.lock

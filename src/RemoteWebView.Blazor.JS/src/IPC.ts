@@ -8,7 +8,7 @@ import { showErrorNotification } from '../web.js/src/BootErrors';
 import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
 import { internalFunctions as navigationManagerFunctions, NavigationOptions } from '../web.js/src/Services/NavigationManager';
 import { dispatcher } from './Boot.Desktop'
-
+import { WebRendererId } from '../web.js/src/Rendering/WebRendererId';
 
 
 function receiveBase64ByteArray(id: number, base64Data: string) {
@@ -31,13 +31,13 @@ export function receiveMessage(message: string) {
     const messageHandlers = {
 
         'AttachToDocument': (componentId: number, elementSelector: string) => {
-            attachRootComponentToElement(elementSelector, componentId);
+            attachRootComponentToElement(elementSelector, componentId, WebRendererId.WebView);
         },
 
         'RenderBatch': (batchId: number, batchDataBase64: string) => {
             try {
                 const batchData = base64ToArrayBuffer(batchDataBase64);
-                renderBatch(0, new OutOfProcessRenderBatch(batchData));
+                renderBatch(WebRendererId.WebView, new OutOfProcessRenderBatch(batchData));
                 sendRenderCompleted(batchId, null);
 
             } catch (ex) {
@@ -58,6 +58,8 @@ export function receiveMessage(message: string) {
         'SendByteArrayToJS': receiveBase64ByteArray,
 
         'Navigate': navigationManagerFunctions.navigateTo,
+
+        'Refresh': navigationManagerFunctions.refresh,
 
         'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
 
