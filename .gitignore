@@ -33,3 +33,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /testassets/NUnitTestProject/TestResults/logFile.html
 /src/RemoteWebView.Blazor.JS/package-lock.json
 /remoteblazorwebview.pfx
+/package-lock.json
+/node_modules
