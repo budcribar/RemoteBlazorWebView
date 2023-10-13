@@ -7,43 +7,9 @@ import { setApplicationIsTerminated, tryDeserializeMessage } from '../web.js/src
 import { showErrorNotification } from '../web.js/src/BootErrors';
 import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
 import { internalFunctions as navigationManagerFunctions, NavigationOptions } from '../web.js/src/Services/NavigationManager';
-import { dispatcher } from '../web.js/src/Boot.WebView';
+import { dispatcher } from './Boot.Desktop'
 
-const messageHandlers = {
 
-    'AttachToDocument': (componentId: number, elementSelector: string) => {
-        attachRootComponentToElement(elementSelector, componentId);
-    },
-
-    'RenderBatch': (batchId: number, batchDataBase64: string) => {
-        try {
-            const batchData = base64ToArrayBuffer(batchDataBase64);
-            renderBatch(0, new OutOfProcessRenderBatch(batchData));
-            sendRenderCompleted(batchId, null);
-           
-        } catch (ex) {
-            sendRenderCompleted(batchId, (ex as Error).toString());
-        }
-    },
-
-    'NotifyUnhandledException': (message: string, stackTrace: string) => {
-        setApplicationIsTerminated();
-        console.error(`${message}\n${stackTrace}`);
-        showErrorNotification();
-    },
-
-    'BeginInvokeJS': dispatcher.beginInvokeJSFromDotNet.bind(dispatcher),
-
-    'EndInvokeDotNet': dispatcher.endInvokeDotNetFromJS.bind(dispatcher),
-
-    'SendByteArrayToJS': receiveBase64ByteArray,
-
-    'Navigate': navigationManagerFunctions.navigateTo,
-       
-    'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
-
-    'EndLocationChanging': navigationManagerFunctions.endLocationChanging,
-};
 
 function receiveBase64ByteArray(id: number, base64Data: string) {
     const data = base64ToArrayBuffer(base64Data);
@@ -62,6 +28,41 @@ function base64ToArrayBuffer(base64: string) {
 }
 
 export function receiveMessage(message: string) {
+    const messageHandlers = {
+
+        'AttachToDocument': (componentId: number, elementSelector: string) => {
+            attachRootComponentToElement(elementSelector, componentId);
+        },
+
+        'RenderBatch': (batchId: number, batchDataBase64: string) => {
+            try {
+                const batchData = base64ToArrayBuffer(batchDataBase64);
+                renderBatch(0, new OutOfProcessRenderBatch(batchData));
+                sendRenderCompleted(batchId, null);
+
+            } catch (ex) {
+                sendRenderCompleted(batchId, (ex as Error).toString());
+            }
+        },
+
+        'NotifyUnhandledException': (message: string, stackTrace: string) => {
+            setApplicationIsTerminated();
+            console.error(`${message}\n${stackTrace}`);
+            showErrorNotification();
+        },
+
+        'BeginInvokeJS': dispatcher.beginInvokeJSFromDotNet.bind(dispatcher),
+
+        'EndInvokeDotNet': dispatcher.endInvokeDotNetFromJS.bind(dispatcher),
+
+        'SendByteArrayToJS': receiveBase64ByteArray,
+
+        'Navigate': navigationManagerFunctions.navigateTo,
+
+        'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
+
+        'EndLocationChanging': navigationManagerFunctions.endLocationChanging,
+    };
     console.log("Receive:" + message);
     const parsedMessage = tryDeserializeMessage(message);
     if (parsedMessage) {

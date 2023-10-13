@@ -65,4 +65,15 @@ blazor.webview.js:1 beginInvokeJSFromDotNet setThemeClass id:2
 blazor.webview.js:1 beginInvokeJSFromDotNet o1lJsFunctions.setFocus id:0
 
 
+10/13/2023
+function getInteropMethods(rendererId: number): DotNet.DotNetObject {
+  const interopMethods = interopMethodsByRenderer.get(rendererId);
+  if (!interopMethods) {
+    throw new Error(`No interop methods are registered for renderer ${rendererId}`);
+  }
+
+  return interopMethods;
+}
+
+attachWebRendererInterop
 

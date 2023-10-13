@@ -4,25 +4,22 @@ import { shouldAutoStart } from '../web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
 import { sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
 import { fetchAndInvokeInitializers } from '../web.js/src/JSInitializers/JSInitializers.WebView';
-import { setDispatcher } from '../web.js/src/Boot.WebView';
 import { initializeRemoteWebView } from './RemoteWebView';
 import { receiveDotNetDataStream } from '../web.js/src/StreamingInterop';
-import { dispatcher } from '../web.js/src/Boot.WebView';
-let started = false;
 
+let started = false;
+export let dispatcher: DotNet.ICallDispatcher;
 async function boot(): Promise<void> {
     if (started) {
         throw new Error('Blazor has already started.');
     }
     started = true;
 
-    const dispatcher = DotNet.attachDispatcher({
+    dispatcher = DotNet.attachDispatcher({
         beginInvokeDotNetFromJS: sendBeginInvokeDotNetFromJS,
         endInvokeJSFromDotNet: sendEndInvokeJSFromDotNet,
         sendByteArray: sendByteArray,
     });
-
-    setDispatcher(dispatcher);
 
     const jsInitializer = await fetchAndInvokeInitializers();
 
