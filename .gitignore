@@ -35,3 +35,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /remoteblazorwebview.pfx
 /package-lock.json
 /node_modules
+/src/RemoteWebView.Blazor.JS/Web.JS/yarn.lock
