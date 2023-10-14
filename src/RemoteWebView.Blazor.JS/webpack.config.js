@@ -21,7 +21,7 @@ module.exports = (env, args) => ({
         providedExports: true,
         usedExports: true,
         innerGraph: true,
-        minimize: false,
+        minimize: true,
         minimizer: [new TerserJsPlugin({
             terserOptions: {
                 ecma: 2019,

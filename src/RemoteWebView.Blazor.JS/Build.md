@@ -40,8 +40,12 @@ npm run build:production
 ```
 
 
+sudo apt update
+
+
+
 open ubuntu
-cd /mnt/c/users/Arti_BlizzardPV3/source/repos/RemoteBlazorWebView/src
+cd /mnt/c/users/budcr/source/repos/RemoteBlazorWebView/src
 sudo find . \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' \) -exec unix2dos {} \;
 
 

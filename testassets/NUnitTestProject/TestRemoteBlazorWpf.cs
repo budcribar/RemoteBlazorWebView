@@ -8,6 +8,7 @@ using PeakSWC.RemoteWebView;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteBlazorWpf
     {
-        protected static readonly List<EdgeDriver> _driver = new();
+        protected static List<ChromeDriver> _driver ;
         protected readonly string url = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
         protected static string[] ids = Array.Empty<string>();
@@ -51,6 +52,10 @@ namespace WebdriverTestProject
 
         public async virtual Task Startup(int numClients)
         {
+            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? ""), "WebView2");
+            Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
+            _driver = new();
             Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
             KillClient();
 
