@@ -26,7 +26,7 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on maui 8.0.0-preview.5.8529</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 8.0.0-rc.2.9373</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
@@ -53,8 +53,8 @@
 
   <ItemGroup>
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-    <PackageReference Include="Google.Protobuf" Version="3.24.3" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.58.0-pre1" />
+    <PackageReference Include="Google.Protobuf" Version="3.24.4" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0-rc.2.23480.2" />
 	
 	  <PackageReference Include="Grpc.Tools" Version="2.58.0">
