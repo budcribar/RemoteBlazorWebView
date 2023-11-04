@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.96" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.100" />
 	</ItemGroup>
 
 	<ItemGroup>
