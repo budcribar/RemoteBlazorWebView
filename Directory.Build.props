@@ -3,6 +3,5 @@
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
     <VersionPrefix>8.0.0</VersionPrefix>
-	<VersionSuffix>rc2</VersionSuffix>
   </PropertyGroup>
 </Project>

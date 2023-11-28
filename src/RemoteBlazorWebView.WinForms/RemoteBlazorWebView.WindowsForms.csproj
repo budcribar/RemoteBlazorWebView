@@ -49,9 +49,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0-rc.2.23480.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.0-rc.2.9373" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0-rc.2.23479.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
    
   </ItemGroup>
 
