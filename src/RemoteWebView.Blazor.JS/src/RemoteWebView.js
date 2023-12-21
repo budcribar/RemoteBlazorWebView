@@ -33,7 +33,7 @@ function sendMessage(message) {
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                // console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             }
             else {
                 console.log("grpc error", code, msg, trailers);
@@ -83,13 +83,15 @@ function setNotAllowedCursor(isPrimary) {
 function initializeRemoteWebView() {
     window.external.sendMessage = sendMessage;
     var message = new webview_pb_1.IdMessageRequest();
-    var id = window.location.pathname.split('/')[1];
-    if (id == 'mirror')
-        id = window.location.pathname.split('/')[2];
+    var pathParts = window.location.pathname.split('/');
+    var id = pathParts[1];
+    if (id === 'mirror')
+        id = pathParts[2];
     message.setId(id);
+    var locationOrigin = window.location.origin;
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.GetClientId, {
         request: message,
-        host: window.location.origin,
+        host: locationOrigin,
         onMessage: function (message) {
             //console.info("ClientId: " + message.getId());
             clientId = message.getClientid();
@@ -100,7 +102,7 @@ function initializeRemoteWebView() {
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                console.log("all ok:" + clientId);
+                //console.log("all ok:" + clientId)
             }
             else {
                 console.error("grpc error", code, msg, trailers);
@@ -109,7 +111,7 @@ function initializeRemoteWebView() {
     });
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.ReceiveMessage, {
         request: message,
-        host: window.location.origin,
+        host: locationOrigin,
         onMessage: function (message) {
             //console.info("Received: " + message.getRequest());
             (0, IPC_1.receiveMessage)(message.getRequest());

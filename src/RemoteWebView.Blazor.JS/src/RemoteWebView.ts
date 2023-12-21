@@ -31,7 +31,7 @@ export function sendMessage(message: string) {
         },
         onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                // console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             } else {
                 console.log("grpc error", code, msg, trailers);
                 showErrorNotification();
@@ -98,14 +98,17 @@ export function initializeRemoteWebView() {
     (window.external as any).sendMessage = sendMessage;
 
     var message = new IdMessageRequest();
-    var id = window.location.pathname.split('/')[1];
-    if (id == 'mirror') id = window.location.pathname.split('/')[2];
+    const pathParts = window.location.pathname.split('/');
+    let id = pathParts[1];
+    if (id === 'mirror') id = pathParts[2];
+
     message.setId(id);
+    const locationOrigin = window.location.origin;
 
     grpc.invoke(BrowserIPC.GetClientId,
         {
             request: message,
-            host: window.location.origin,
+            host: locationOrigin,
             onMessage: (message: ClientIdMessageRequest) => {
                 //console.info("ClientId: " + message.getId());
                 clientId = message.getClientid();
@@ -119,7 +122,7 @@ export function initializeRemoteWebView() {
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
-                    console.log("all ok:" + clientId)
+                    //console.log("all ok:" + clientId)
                 } else {
                     console.error("grpc error", code, msg, trailers);
                 }
@@ -130,7 +133,7 @@ export function initializeRemoteWebView() {
     grpc.invoke(BrowserIPC.ReceiveMessage,
         {
             request: message,
-            host: window.location.origin,
+            host: locationOrigin,
             onMessage: (message: StringRequest) => {
                 //console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());
