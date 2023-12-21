@@ -1,6 +1,8 @@
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+#if AUTHORIZATION
 using Newtonsoft.Json;
+#endif
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -92,12 +94,13 @@ namespace PeakSWC.RemoteWebView
                     if (request.Message == "connected:")
                     {
                         request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
-
+#if AUTHORIZATION
                         string serializedCookies = string.Empty;
                         if (serviceState.Cookies != null)
                             serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
 
                         request.Cookies = serializedCookies;
+#endif
                     }
 
                     serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies });

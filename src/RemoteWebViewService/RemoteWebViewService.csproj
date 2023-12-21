@@ -9,6 +9,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
     <Nullable>enable</Nullable>
+	
     <LangVersion>latest</LangVersion>
     <PackAsTool Condition="'$(Configuration)' == 'Release'">true</PackAsTool>
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
@@ -26,7 +27,8 @@
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
+	<PublishAot  Condition="'$(Configuration)' == 'NoAuthorization'">true</PublishAot>
+    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
 	<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>
@@ -55,12 +57,12 @@
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.59.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.0" NoWarn="NU1605" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="2.15.3" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="2.15.3" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="2.16.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="2.16.0" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">

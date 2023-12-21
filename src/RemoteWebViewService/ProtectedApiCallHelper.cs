@@ -22,8 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#if AUTHORIZATION
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -88,3 +90,5 @@ public class ProtectedApiCallHelper
         }
     }
 } 
+
+#endif

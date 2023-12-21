@@ -66,17 +66,17 @@ namespace PeakSWC.RemoteWebView
         private static string? ResolveRelativeToAssembly()
         {
             var assembly = Assembly.GetEntryAssembly();
-            if (string.IsNullOrEmpty(assembly?.Location))
+            var baseDirectory = AppContext.BaseDirectory;
+
+            if (assembly == null || string.IsNullOrEmpty(baseDirectory))
             {
                 return null;
             }
 
-            var name = Path.GetFileNameWithoutExtension(assembly.Location);
+            var name = Path.GetFileNameWithoutExtension(assembly.GetName().Name);
 
-            return Path.Combine(Path.GetDirectoryName(assembly.Location)!, $"{name}.staticwebassets.runtime.json");
+            return Path.Combine(baseDirectory, $"{name}.staticwebassets.runtime.json");
         }
-
-        
        
     }
 }

@@ -1,12 +1,8 @@
-﻿using Azure.Core;
-using Grpc.Core;
-using Microsoft.AspNetCore.Hosting.Server;
+﻿using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -123,11 +119,11 @@ namespace PeakSWC.RemoteWebView
 
         public Task LocationChanged(Point point)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }) ?? Task.CompletedTask);
         }
         public Task SizeChanged(Size size)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }) ?? Task.CompletedTask);
         }
     }
 }

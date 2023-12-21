@@ -1,15 +1,11 @@
-﻿using Newtonsoft.Json.Linq;
+﻿#if AUTHORIZATION
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public interface IUserService
-    {
-        Task<IReadOnlyList<string>> GetUserGroups(string oid);
-    }
-
     public class UserService : IUserService
     {
         private readonly Task<ProtectedApiCallHelper> _graphApi;
@@ -73,3 +69,4 @@ namespace PeakSWC.RemoteWebView
         }
     }
 }
+#endif

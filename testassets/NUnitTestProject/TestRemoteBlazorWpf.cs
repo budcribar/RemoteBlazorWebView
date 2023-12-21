@@ -22,7 +22,7 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteBlazorWpf
     {
-        protected static List<ChromeDriver> _driver ;
+        protected static List<ChromeDriver> _driver = new();
         protected readonly string url = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
         protected static string[] ids = Array.Empty<string>();
@@ -52,7 +52,7 @@ namespace WebdriverTestProject
 
         public async virtual Task Startup(int numClients)
         {
-            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? ""), "WebView2");
+            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
             Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
             Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
             _driver = new();
