@@ -30,7 +30,16 @@ namespace WebdriverTestProject
             startingDirectory = Directory.GetCurrentDirectory();
             var binary = BinaryLocation();
             //Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
-            driver = new EdgeDriver(new EdgeOptions { UseWebView = true, BinaryLocation = BinaryLocation()  });
+            var options = new EdgeOptions
+            {
+                UseWebView = true,
+                BinaryLocation = BinaryLocation()
+            };
+            options.SetLoggingPreference("performance", LogLevel.All);
+         
+            driver = new EdgeDriver(options);
+       
+          
             // Wait for page to load 
             Thread.Sleep(1000);
         }
