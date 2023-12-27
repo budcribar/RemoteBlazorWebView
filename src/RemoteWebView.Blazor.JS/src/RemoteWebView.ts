@@ -40,58 +40,34 @@ export function sendMessage(message: string) {
     });
 }
 
-function setNotAllowedCursor(isPrimary:boolean): void {
-    if (!isPrimary) {
-        document.body.style.cursor = 'not-allowed';
-      
-        var a = document.getElementsByTagName('a');
+function makePageReadOnly() {
+    // Create the overlay element
+    var overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0px'; 
+    overlay.style.left = '0px'; 
+    overlay.style.width = '100%'; 
+    overlay.style.height = '100%'; 
+    overlay.style.zIndex = '10000';
+    overlay.style.background = 'transparent';
+    overlay.style.cursor = 'not-allowed';
+    // Append the overlay to the body
+    document.body.appendChild(overlay);
 
-        for (var idx = 0; idx < a.length; ++idx) {
-            a[idx].style.cursor = 'not-allowed';
-        }
+    // Disable scrolling
+    document.body.style.overflow = 'hidden';
 
-        var b = document.getElementsByTagName('button');
+    // Bind events for keyboard
+    window.addEventListener('keydown', preventInteraction, true);
+    window.addEventListener('keyup', preventInteraction, true);
 
-        for (var idx = 0; idx < b.length; ++idx) {
-            b[idx].style.cursor = 'not-allowed';
-        }
-
-        var s = document.getElementsByTagName('span');
-
-        for (var idx = 0; idx < s.length; ++idx) {
-            s[idx].style.cursor = 'not-allowed';
-        }
-
-        var d = document.getElementsByTagName('div');
-
-        for (var idx = 0; idx < d.length; ++idx) {
-            d[idx].style.cursor = 'not-allowed';
-        }
-
-        var i = document.getElementsByTagName('input');
-
-        for (var idx = 0; idx < i.length; ++idx) {
-            i[idx].style.cursor = 'not-allowed';
-        }
-
-        var t = document.getElementsByTagName('textarea');
-
-        for (var idx = 0; idx < t.length; ++idx) {
-            t[idx].style.cursor = 'not-allowed';
-        }
-
-        var l = document.getElementsByTagName('li');
-
-        for (var idx = 0; idx < l.length; ++idx) {
-            l[idx].style.cursor = 'not-allowed';
-        }
-
-        var sel = document.getElementsByTagName('select');
-
-        for (var idx = 0; idx < sel.length; ++idx) {
-            sel[idx].style.cursor = 'not-allowed';
-        }
+    function preventInteraction(event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
+
+    document.body.style.userSelect = 'none';
+    document.body.setAttribute('oncontextmenu', 'return false;');
 }
 
 export function initializeRemoteWebView() {
@@ -114,7 +90,8 @@ export function initializeRemoteWebView() {
                 sendMessage("connected:");
                 sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
 
-                setNotAllowedCursor(isPrimary);
+                if (!isPrimary)
+                    makePageReadOnly();             
 
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
@@ -134,7 +111,8 @@ export function initializeRemoteWebView() {
             onMessage: (message: StringRequest) => {
                 //console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());
-                setNotAllowedCursor(isPrimary);
+                if (!isPrimary)
+                    makePageReadOnly();
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
