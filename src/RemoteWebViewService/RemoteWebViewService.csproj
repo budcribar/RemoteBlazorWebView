@@ -28,6 +28,7 @@
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
 	<PublishAot  Condition="'$(Configuration)' == 'NoAuthorization'">true</PublishAot>
+	<PublishTrimmed  Condition="'$(Configuration)' == 'NoAuthorization'">true</PublishTrimmed>
     <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
