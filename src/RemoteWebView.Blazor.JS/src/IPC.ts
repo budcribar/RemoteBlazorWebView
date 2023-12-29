@@ -68,7 +68,7 @@ function base64ToArrayBuffer(base64: string) {
 }
 
 export function receiveMessage(message: string) {
-    console.log("Receive:" + message);
+    //console.log("Receive:" + message);
     const parsedMessage = tryDeserializeMessage(message);
     if (parsedMessage) {
         if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {
