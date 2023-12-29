@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace WebdriverTestProject
 {
@@ -188,13 +189,30 @@ namespace WebdriverTestProject
             p.StartInfo.WorkingDirectory = directory;
             p.Start();
 
+
+            // Try to prevent COMException 0x8007139F
+            while (p.MainWindowHandle == IntPtr.Zero)
+            {
+                // Refresh process property values
+                p.Refresh();
+
+                // Wait a bit before checking again
+                Thread.Sleep(100);
+            }
+
             Console.WriteLine($"Clients started in {sw.Elapsed}");
 
             return p;
         }
 
         public static int Count(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).Count();
-        public static void Kill(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).ToList().ForEach(x => x.Kill());
+        public static void Kill(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).ToList().ForEach(x =>
+        {
+            x.Kill();
+            // Wait for exit before re-starting
+            x.WaitForExit();
+        });
+            
         #endregion
     }
 }
