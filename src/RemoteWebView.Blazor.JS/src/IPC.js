@@ -30,7 +30,16 @@ var messageHandlers = {
     'BeginInvokeJS': dotnet_js_interop_1.DotNet.jsCallDispatcher.beginInvokeJSFromDotNet,
     'EndInvokeDotNet': dotnet_js_interop_1.DotNet.jsCallDispatcher.endInvokeDotNetFromJS,
     'SendByteArrayToJS': receiveBase64ByteArray,
-    'Navigate': NavigationManager_1.internalFunctions.navigateTo,
+    'Navigate': function (uri, options) {
+        var _a;
+        var baseHref = (_a = document.querySelector('base')) === null || _a === void 0 ? void 0 : _a.href;
+        if (uri.startsWith('/') && baseHref) {
+            uri = "".concat(baseHref).concat(uri.substring(1));
+        }
+        NavigationManager_1.internalFunctions.navigateTo(uri, options);
+    },
+    'SetHasLocationChangingListeners': NavigationManager_1.internalFunctions.setHasLocationChangingListeners,
+    'EndLocationChanging': NavigationManager_1.internalFunctions.endLocationChanging,
 };
 function receiveBase64ByteArray(id, base64Data) {
     var data = base64ToArrayBuffer(base64Data);
@@ -46,7 +55,7 @@ function base64ToArrayBuffer(base64) {
     return result;
 }
 function receiveMessage(message) {
-    console.log("Receive:" + message);
+    //console.log("Receive:" + message);
     var parsedMessage = (0, WebViewIpcCommon_1.tryDeserializeMessage)(message);
     if (parsedMessage) {
         if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {

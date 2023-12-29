@@ -33,7 +33,7 @@ function sendMessage(message) {
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                //console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             }
             else {
                 console.log("grpc error", code, msg, trailers);
