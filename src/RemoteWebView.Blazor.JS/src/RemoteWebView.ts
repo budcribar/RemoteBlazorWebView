@@ -31,7 +31,7 @@ export function sendMessage(message: string) {
         },
         onEnd: (code, msg, trailers) => {
             if (code == grpc.Code.OK) {
-                console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                //console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
             } else {
                 console.log("grpc error", code, msg, trailers);
                 showErrorNotification();
