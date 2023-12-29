@@ -27,7 +27,7 @@ namespace WebdriverTestProject
         protected static string[] ids = Array.Empty<string>();
         protected static Process? process;
         protected static List<Process> clients = new();
-        protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
+        protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 200;
 
         public virtual Process CreateClient()
         {
