@@ -46,15 +46,30 @@ namespace PeakSWC.RemoteWebView
 
         }
         public static void Restart(IBlazorWebView blazorWebView)
-        {
+        {        
             var psi = new ProcessStartInfo
             {
                 FileName = Process.GetCurrentProcess().MainModule?.FileName
             };
             psi.ArgumentList.Add($"-u={blazorWebView.ServerUri}");
             psi.ArgumentList.Add($"-i={blazorWebView.Id}");
+            Process p = new();
+            p.StartInfo = psi;
+            p.Start();
 
-            Process.Start(psi);
+            int i = 0;
+            // Try to prevent COMException 0x8007139F
+            while (p.MainWindowHandle == IntPtr.Zero)
+            {
+                // Refresh process property values
+                p.Refresh();
+
+                // Wait a bit before checking again
+                Thread.Sleep(100);
+                i++;
+                if (i >= 100)
+                    break;
+            }
         }
 
 
