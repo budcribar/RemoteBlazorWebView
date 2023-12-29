@@ -2,10 +2,12 @@ import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
 import { Blazor } from '../web.js/src/GlobalExports';
 import { shouldAutoStart } from '../web.js/src/BootCommon';
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
-import { sendAttachPage, sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
+import { sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
 import { fetchAndInvokeInitializers } from '../web.js/src/JSInitializers/JSInitializers.WebView';
 import { initializeRemoteWebView } from './RemoteWebView';
 import { receiveDotNetDataStream } from '../web.js/src/StreamingInterop';
+import { WebRendererId } from '../web.js/src/Rendering/WebRendererId';
+
 
 let started = false;
 export let dispatcher: DotNet.ICallDispatcher;
@@ -27,8 +29,8 @@ async function boot(): Promise<void> {
 
     Blazor._internal.receiveWebViewDotNetDataStream = receiveWebViewDotNetDataStream;
 
-    navigationManagerFunctions.enableNavigationInterception();
-    navigationManagerFunctions.listenForNavigationEvents(sendLocationChanged, sendLocationChanging);
+    navigationManagerFunctions.enableNavigationInterception(WebRendererId.WebView);
+    navigationManagerFunctions.listenForNavigationEvents(WebRendererId.WebView, sendLocationChanged, sendLocationChanging);
 
     // sendAttachPage is done in initializeRemoteWebView()
 

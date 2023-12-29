@@ -45,6 +45,7 @@ var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSende
 var JSInitializers_WebView_1 = require("../web.js/src/JSInitializers/JSInitializers.WebView");
 var RemoteWebView_1 = require("./RemoteWebView");
 var StreamingInterop_1 = require("../web.js/src/StreamingInterop");
+var WebRendererId_1 = require("../web.js/src/Rendering/WebRendererId");
 var started = false;
 function boot() {
     return __awaiter(this, void 0, void 0, function () {
@@ -66,8 +67,8 @@ function boot() {
                     jsInitializer = _a.sent();
                     (0, RemoteWebView_1.initializeRemoteWebView)();
                     GlobalExports_1.Blazor._internal.receiveWebViewDotNetDataStream = receiveWebViewDotNetDataStream;
-                    NavigationManager_1.internalFunctions.enableNavigationInterception();
-                    NavigationManager_1.internalFunctions.listenForNavigationEvents(WebViewIpcSender_1.sendLocationChanged, WebViewIpcSender_1.sendLocationChanging);
+                    NavigationManager_1.internalFunctions.enableNavigationInterception(WebRendererId_1.WebRendererId.WebView);
+                    NavigationManager_1.internalFunctions.listenForNavigationEvents(WebRendererId_1.WebRendererId.WebView, WebViewIpcSender_1.sendLocationChanged, WebViewIpcSender_1.sendLocationChanging);
                     // sendAttachPage is done in initializeRemoteWebView()
                     return [4 /*yield*/, jsInitializer.invokeAfterStartedCallbacks(GlobalExports_1.Blazor)];
                 case 2:

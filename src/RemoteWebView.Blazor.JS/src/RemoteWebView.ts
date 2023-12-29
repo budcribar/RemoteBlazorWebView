@@ -114,7 +114,8 @@ export function initializeRemoteWebView() {
             onMessage: (message: StringRequest) => {
                 //console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());
-                setNotAllowedCursor(isPrimary);
+                if (!isPrimary)
+                    makePageReadOnly();    
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
                 if (code == grpc.Code.OK) {
