@@ -12,3 +12,5 @@ msedgedriver.exe needs to be installed in the user's path i.e. C:\Program Files 
 * Rebuild Solution in Debug
 
 * Run Unit Tests
+
+* Note TestRemotePackageBlazorForm.cs and TestRemoteBlazorWebView have been removed from testing
