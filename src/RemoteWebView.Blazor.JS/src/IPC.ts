@@ -62,7 +62,7 @@ export function receiveMessage(message: string) {
 
         'EndLocationChanging': navigationManagerFunctions.endLocationChanging,
     };
-    console.log("Receive:" + message);
+    // console.log("Receive:" + message);
     const parsedMessage = tryDeserializeMessage(message);
     if (parsedMessage) {
         if (messageHandlers.hasOwnProperty(parsedMessage.messageType)) {
