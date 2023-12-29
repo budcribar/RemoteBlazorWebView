@@ -36,7 +36,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Built on asp.net 7.0.12 and Maui 7.0.96</PackageReleaseNotes>
+    <PackageReleaseNotes>Built on asp.net 7.0.14 and Maui 7.0.101</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
