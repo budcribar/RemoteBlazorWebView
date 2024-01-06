@@ -8,7 +8,6 @@ import { sendAttachPage} from '../web.js/src/Platform/WebView/WebViewIpcSender';
 
 var sequenceNum: number = 1;
 var clientId: string 
-var isPrimary: boolean = true;
 
 export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
@@ -85,12 +84,12 @@ export function initializeRemoteWebView() {
             onMessage: (message: ClientIdMessageRequest) => {
                 //console.info("ClientId: " + message.getId());
                 clientId = message.getClientid();
-                isPrimary = message.getIsprimary();
+                window['Blazor'].isPrimary = message.getIsprimary();
 
                 sendMessage("connected:");
                 sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
 
-                if (!isPrimary)
+                if (!window['Blazor'].isPrimary)
                     makePageReadOnly();             
 
             },
@@ -111,7 +110,7 @@ export function initializeRemoteWebView() {
             onMessage: (message: StringRequest) => {
                 //console.info("Received: " + message.getRequest());
                 receiveMessage(message.getRequest());
-                if (!isPrimary)
+                if (!window['Blazor'].isPrimary)
                     makePageReadOnly();
             },
             onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {

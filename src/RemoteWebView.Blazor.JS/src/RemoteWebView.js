@@ -10,7 +10,6 @@ var BootErrors_1 = require("../web.js/src/BootErrors");
 var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
 var sequenceNum = 1;
 var clientId;
-var isPrimary = true;
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
@@ -81,10 +80,10 @@ function initializeRemoteWebView() {
         onMessage: function (message) {
             //console.info("ClientId: " + message.getId());
             clientId = message.getClientid();
-            isPrimary = message.getIsprimary();
+            window['Blazor'].isPrimary = message.getIsprimary();
             sendMessage("connected:");
             (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
-            if (!isPrimary)
+            if (!window['Blazor'].isPrimary)
                 makePageReadOnly();
         },
         onEnd: function (code, msg, trailers) {
@@ -102,7 +101,7 @@ function initializeRemoteWebView() {
         onMessage: function (message) {
             //console.info("Received: " + message.getRequest());
             (0, IPC_1.receiveMessage)(message.getRequest());
-            if (!isPrimary)
+            if (!window['Blazor'].isPrimary)
                 makePageReadOnly();
         },
         onEnd: function (code, msg, trailers) {
