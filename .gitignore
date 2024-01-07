@@ -40,3 +40,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/src/IPC.js
 /src/RemoteWebView.Blazor.JS/src/IPC.js.map
 /src/RemoteWebView.Blazor.JS/Web.JS/yarn.lock
+/src/RemoteWebViewService/Program.cs.save
