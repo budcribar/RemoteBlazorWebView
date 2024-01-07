@@ -28,13 +28,13 @@
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
     <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
-    <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">linux-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
 	<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
-    <Platforms>linux-x64</Platforms>
+    <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Built on asp.net 7.0.14 and Maui 7.0.101</PackageReleaseNotes>
     <DebugType>full</DebugType>
