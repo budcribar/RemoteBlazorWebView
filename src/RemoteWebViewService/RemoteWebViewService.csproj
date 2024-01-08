@@ -27,7 +27,7 @@
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-w	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishAot>
+	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishAot>
 	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishTrimmed>
     <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
@@ -45,9 +45,6 @@ w	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">false</Publish
   </PropertyGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="appsettings.json.added" />
   </ItemGroup>
  
   <ItemGroup>
