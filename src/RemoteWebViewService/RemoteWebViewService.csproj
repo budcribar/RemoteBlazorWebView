@@ -27,8 +27,8 @@
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-	<PublishAot  Condition="'$(Configuration)' == 'NoAuthorization'">true</PublishAot>
-	<PublishTrimmed  Condition="'$(Configuration)' == 'NoAuthorization'">true</PublishTrimmed>
+w	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishAot>
+	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishTrimmed>
     <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
     <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
@@ -44,18 +44,17 @@
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="appsettings.json.save" />
+    <None Remove="appsettings.json.added" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="appsettings.json.save">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
+    <Content Include="appsettings.json.added" />
   </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.4" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.59.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.59.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
@@ -79,6 +78,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
