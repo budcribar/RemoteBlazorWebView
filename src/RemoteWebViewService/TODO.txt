@@ -1,4 +1,17 @@
-﻿
+﻿Publish tips
+	1. NOAUTHORIZATION-x64
+	2. Target Runtime Portable
+	3. PublishAot false
+    4. Publish trimmed false
+
+	or
+	1. AzureNoAuth-x64
+	2. Target Runtime Portable
+	3. RuntimeId = win-x64 => no
+
+
+
+
 1. WebView.NavigateToUrl http://app/
 	-> (Startup.cs endpoints.MapGet("/app", async context => can we server the index.html here and avoid the hack to NavigateTo("/")?
 

@@ -7,10 +7,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.Services;
+using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -156,7 +159,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/status/{id:guid}", Status()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/test", () => "Hello World!");
+                endpoints.MapGet("/test", Version());
                 endpoints.MapFallbackToFile("index.html");
             });
         }
@@ -279,6 +282,25 @@ namespace PeakSWC.RemoteWebView
 
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse));
+            };
+        }
+
+        private RequestDelegate Version()
+        {
+            return async context =>
+            {
+                // Get the version of the currently executing assembly
+                var assembly = Assembly.GetExecutingAssembly();
+                var assemblyVersion = assembly.GetName().Version?.ToString() ?? "Version not found";
+
+                // Create the version string
+                string versionString = $"Version {assemblyVersion}";
+
+                // Set the response content type to plain text
+                context.Response.ContentType = "text/plain";
+
+                // Write the version string to the response
+                await context.Response.WriteAsync(versionString);
             };
         }
 

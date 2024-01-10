@@ -63,7 +63,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (isPrimary)
+                if (isPrimary && serviceState.ClientId == request.Id)
                     _shutdownService.Shutdown(request.Id, ex);
             }
 
@@ -103,7 +103,7 @@ namespace PeakSWC.RemoteWebView
 #endif
                     }
 
-                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies });
+                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies }).GetAwaiter().GetResult();
                     state.SequenceNum++;
                 }
                 else
@@ -111,7 +111,7 @@ namespace PeakSWC.RemoteWebView
 
                 while (state.MessageDictionary.ContainsKey(state.SequenceNum))
                 {
-                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = state.MessageDictionary[state.SequenceNum].Message, Url = state.MessageDictionary[state.SequenceNum].Url, Cookies = state.MessageDictionary[state.SequenceNum].Cookies });
+                    serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = state.MessageDictionary[state.SequenceNum].Message, Url = state.MessageDictionary[state.SequenceNum].Url, Cookies = state.MessageDictionary[state.SequenceNum].Cookies }).GetAwaiter().GetResult();
                     state.SequenceNum++;
                 }
             }

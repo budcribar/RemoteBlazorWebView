@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
+	<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
@@ -26,13 +27,19 @@
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <IsPackable>true</IsPackable>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
-    <Configurations>Debug;Release;Authorization;NoAuthorization</Configurations>
-	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishAot>
-	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">false</PublishTrimmed>
-    <PublishSingleFile Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishSingleFile>
-    <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
-    <RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
-	<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>
+    <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
+
+    <!-- Change to true when publishing locally -->
+	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishAot>
+	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishTrimmed>
+	<!--<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>-->
+	<PublishAot Condition="'$(Configuration)' == 'AzureNoAuth'">False</PublishAot>
+	<PublishTrimmed Condition="'$(Configuration)' == 'AzureNoAuth'">False</PublishTrimmed>
+	  <!--  <RuntimeIdentifier Condition="'$(Configuration)' == 'AzureNoAuth'">win-x64</RuntimeIdentifier>-->
+
+	  <PublishSingleFile Condition="'$(Configuration)' == 'Authorization'">False</PublishSingleFile>
+	<RuntimeIdentifier Condition="'$(Configuration)' == 'Authorization'">win-x64</RuntimeIdentifier>
+	
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
     <NoWarn>NU5100</NoWarn>
@@ -42,6 +49,9 @@
     <PackageReleaseNotes>maui 8.0.3</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureNoAuth|x64'">
+    <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
