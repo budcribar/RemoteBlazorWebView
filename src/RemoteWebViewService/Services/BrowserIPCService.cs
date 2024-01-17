@@ -52,9 +52,8 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-            var isPrimary = serviceState.IPC.BrowserResponseStream(responseStream, linkedToken);
+            serviceState.IPC.BrowserResponseStream(responseStream, linkedToken);
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)
@@ -63,8 +62,10 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (isPrimary && serviceState.ClientId == request.Id)
-                    _shutdownService.Shutdown(request.Id, ex);
+                if (serviceState.IsMirroredConnection.Contains(context.GetHttpContext().Connection.Id))
+                    return;                  
+
+                _shutdownService.Shutdown(request.Id, ex);
             }
 
             return;

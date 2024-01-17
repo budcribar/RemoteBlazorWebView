@@ -19,7 +19,7 @@
 		<PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="120.0.6099.10900" />
 		<PackageReference Include="Selenium.WebDriver" Version="4.16.2" />
 		<PackageReference Include="Selenium.WebDriver.MSEdgeDriver" Version="119.0.2151.42" />
-		<PackageReference Include="WebView2.Runtime.X64" Version="120.0.2210.121" />
+		<PackageReference Include="WebView2.Runtime.X64" Version="120.0.2210.133" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		<PackageReference Include="Google.Protobuf" Version="3.25.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.60.0" />

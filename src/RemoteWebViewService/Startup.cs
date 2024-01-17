@@ -176,6 +176,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         serviceState.User = context.User.GetDisplayName() ?? "";
                         serviceState.ConnectionId.Add(context.Connection.Id);
+                        serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
                         if (serviceState.IPC.ClientResponseStream != null)
                             await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });

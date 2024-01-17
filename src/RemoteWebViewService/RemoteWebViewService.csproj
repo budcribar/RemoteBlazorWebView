@@ -30,8 +30,8 @@
     <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
 
     <!-- Change to true when publishing locally -->
-	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishAot>
-	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">False</PublishTrimmed>
+	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishAot>
+	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishTrimmed>
 	<!--<RuntimeIdentifier Condition="'$(Configuration)' == 'NoAuthorization'">win-x64</RuntimeIdentifier>-->
 	<PublishAot Condition="'$(Configuration)' == 'AzureNoAuth'">False</PublishAot>
 	<PublishTrimmed Condition="'$(Configuration)' == 'AzureNoAuth'">False</PublishTrimmed>
@@ -55,6 +55,12 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
+    <None Remove="appsettings.json.save" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.json.save">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
  
   <ItemGroup>
@@ -85,9 +91,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
-    <Content Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
