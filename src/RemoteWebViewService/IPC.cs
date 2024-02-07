@@ -98,7 +98,7 @@ namespace PeakSWC.RemoteWebView
 
         }
 
-        public async Task ProcessMessages(IServerStreamWriter<StringRequest> serverStreamWriter, CancellationToken cancellationToken)
+        private async Task ProcessMessages(IServerStreamWriter<StringRequest> serverStreamWriter, CancellationToken cancellationToken)
         {
             bool isPrimary = serverStreamWriter == primaryStream;
 
