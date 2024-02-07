@@ -57,12 +57,12 @@
     <PackageReference Include="Grpc.Net.Client" Version="2.60.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.0" />
 	
-	  <PackageReference Include="Grpc.Tools" Version="2.60.0">
+	  <PackageReference Include="Grpc.Tools" Version="2.61.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2277.86" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
