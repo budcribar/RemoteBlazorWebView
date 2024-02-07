@@ -49,16 +49,29 @@ namespace PeakSWC.RemoteWebView
             this.Dispatcher.InvokeAsync(() =>
             {
                 var url = sender?.ToString() ?? "";
-                if (BlazorWebView.ServerUri != null && url.StartsWith(BlazorWebView.ServerUri.ToString()))
+                var tempServerUri = BlazorWebView.ServerUri?.ToString() ?? "";
+
+                // Check if the ServerUri has a port and ends with '0'
+                var uri = new Uri(tempServerUri);
+                if (uri.Port % 10 == 0)
                 {
-                    url = url.Replace(BlazorWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
+                    // Reconstruct the URI without the last '0' in the port
+                    var port = uri.Port / 10; // Remove the last '0'
+                    var host = uri.Host;
+                    tempServerUri = $"{uri.Scheme}://{host}:{port}";
+                }
+
+                if (tempServerUri != null && url.StartsWith(tempServerUri.ToString()))
+                {
+                    url = url.Replace(tempServerUri.ToString(), this.url?.ToString() ?? "");
                     url = url.Replace(BlazorWebView.Id.ToString() + $"/", "");
                     if (url.EndsWith(RemoteWebView.HostHtmlPath)) url = url.Replace(RemoteWebView.HostHtmlPath, "");
                 }
 
                 MessageReceived(new Uri(url), e);
             });
-           
+
+
         }
 
         protected override void NavigateCore(Uri absoluteUri)
