@@ -2,8 +2,7 @@
   "profiles": {
     "RemoteWebViewService": {
       "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "https://localhost:5001/test",
+      "launchUrl": "https://localhost:5001/version",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
