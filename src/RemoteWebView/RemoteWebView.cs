@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
@@ -229,46 +230,60 @@ namespace PeakSWC.RemoteWebView
                         try
                         {
                             await files.RequestStream.WriteAsync(new FileReadRequest {Id = BlazorWebView.Id.ToString(), Init = new () });
+                            Channel<FileReadRequest> channel = Channel.CreateUnbounded<FileReadRequest>();
+                            _ = Task.Factory.StartNew(async () => {
+                                await foreach (var m in channel.Reader.ReadAllAsync(cts.Token))
+                                {
+                                    await files.RequestStream.WriteAsync(m);
+                                }
+                            
+                            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-                            await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
+                            await Parallel.ForEachAsync(files.ResponseStream.ReadAllAsync(cts.Token), async (message, cts) =>
                             {
-                                try
-                                {
-                                    var path = message.Path[(message.Path.IndexOf("/") + 1)..];
-
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
-
-                                    using var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
-                                    if (stream == null)
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                    else
-                                    {
-                                        var buffer = new Byte[8 * 1024];
-                                        int bytesRead = 0;
-
-                                        while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
-                                        {
-                                            ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
-                                        }
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                    }
-
-                                }
-                                catch (FileNotFoundException)
-                                {
-                                    // TODO Warning to user?
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                }
-                                catch (Exception ex)
-                                {
-                                    FireDisconnected(ex);
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                }
-                            }
+                                await ProcessFile(message, channel, cts);
+                            });
+                           
                         } catch (Exception ex)
                         {
                             FireDisconnected(ex);
+                        }
+
+                        async Task ProcessFile(FileReadResponse message, Channel<FileReadRequest> channel,CancellationToken ct)
+                        {
+                            try
+                            {
+                                var path = message.Path[(message.Path.IndexOf("/") + 1)..];
+
+                                await channel.Writer.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } }, ct);
+
+                                using var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
+                                if (stream == null)
+                                    await channel.Writer.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } },ct);
+                                else
+                                {
+                                    var buffer = new Byte[8 * 1024];
+                                    int bytesRead = 0;
+
+                                    while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                    {
+                                        ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                        await channel.Writer.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } },ct);
+                                    }
+                                    await channel.Writer.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } }, ct);
+                                }
+
+                            }
+                            catch (FileNotFoundException)
+                            {
+                                // TODO Warning to user?
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } },ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                FireDisconnected(ex);
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } }, ct);
+                            }
                         }
                     }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
