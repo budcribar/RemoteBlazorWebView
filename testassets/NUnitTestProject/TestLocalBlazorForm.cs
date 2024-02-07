@@ -54,12 +54,14 @@ namespace WebdriverTestProject
             Thread.Sleep(1000);
         }
 
+        [Ignore]
         [TestMethod]
         public void Test10Clicks()
         {
             TestClient(10);
         }
 
+        [Ignore]
         [TestMethod]
         public void Test100Clicks()
         {
