@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Built on asp.net 7.0.14 and Maui 7.0.101</PackageReleaseNotes>
+		<PackageReleaseNotes>Built on asp.net 7.0.15 and Maui 7.0.101</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>
@@ -32,12 +32,12 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="7.0.14" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.14" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="7.0.15" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.15" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
-		<PackageReference Include="Microsoft.JSInterop" Version="7.0.14" />
-		<PackageReference Include="Photino.Blazor" Version="2.6.0" />
+		<PackageReference Include="Microsoft.JSInterop" Version="7.0.15" />
+		<PackageReference Include="Photino.Blazor" Version="2.7.0" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
 	</ItemGroup>
 
