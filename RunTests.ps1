@@ -53,7 +53,13 @@ Set-Location $currentDirectory
 
 Write-Host -ForegroundColor GREEN "Build remote.blazor.desktop.js"
 Set-Location .\src\RemoteWebView.Blazor.JS
-npm run build:production
+if ($env:EnvBuildMode -eq 'Debug') {
+	npm run build:debug
+}
+else {
+	npm run build:production
+}
+
 Set-Location $currentDirectory
 
 Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
