@@ -8,7 +8,7 @@ namespace ServerStartupTimer
 {
     class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main(string[] _args)
         {
 
             static void KillExistingProcesses(string processName)
@@ -72,7 +72,7 @@ namespace ServerStartupTimer
                     Console.WriteLine($"Time to fourth request: {stopwatch.ElapsedMilliseconds} ms");
                 }
 
-                process.Kill(); // Stop the server
+                process?.Kill(); // Stop the server
             }
         }
 
@@ -83,11 +83,9 @@ namespace ServerStartupTimer
             {
                 try
                 {
-                    using (var client = new TcpClient())
-                    {
-                        await client.ConnectAsync(host, port);
-                        portOpen = true;
-                    }
+                    using var client = new TcpClient();
+                    await client.ConnectAsync(host, port);
+                    portOpen = true;
                 }
                 catch
                 {

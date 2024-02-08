@@ -27,6 +27,14 @@ using Microsoft.Identity.Web.UI;
 
 namespace PeakSWC.RemoteWebView
 {
+    public class GrpcBaseUriResponse
+    {
+        public String grpcBaseUri {  get; set; } = string.Empty;
+    }
+    public class StatusResponse
+    {
+        public bool connected { get; set; }
+    }
     public class Startup
     {
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; } = new();
@@ -153,7 +161,7 @@ namespace PeakSWC.RemoteWebView
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/status/{id:guid}", Status()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/grpcbaseurl", GrpcBaseUri()).ConditionallyRequireAuthorization();           
+                endpoints.MapGet("/grpcbaseuri", GrpcBaseUri()).ConditionallyRequireAuthorization();           
                 endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/test", Version());
                 endpoints.MapFallbackToFile("index.html");
@@ -272,13 +280,13 @@ namespace PeakSWC.RemoteWebView
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
-                var response = new
+                var response = new StatusResponse
                 {
-                    Connected = ServiceDictionary.ContainsKey(guid)
+                    connected = ServiceDictionary.ContainsKey(guid)
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase}));
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse));
             };
         }
 
@@ -286,15 +294,15 @@ namespace PeakSWC.RemoteWebView
         {
             return async context =>
             {
-                var baseUri = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}";
+                var baseUri = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}/";
 
-                var response = new 
+                var response = new GrpcBaseUriResponse
                 {
-                    GrpcBaseUri =  baseUri,
+                    grpcBaseUri =  baseUri,
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.GrpcBaseUriResponse));
             };
         }
 
