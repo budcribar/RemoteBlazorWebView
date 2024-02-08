@@ -16,6 +16,10 @@ namespace PeakSWC.RemoteWebView
         public void FireRefreshed(RefreshedEventArgs args);
         public void FireReadyToConnect(ReadyToConnectEventArgs args);
         public Uri? ServerUri { get; set; }
+
+        public Uri? GrpcBaseUri { get; set; }
+
+        public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri);
         public string Group { get; set; }
         public Guid Id { get; set; }
         public bool EnableMirrors { get; set; }

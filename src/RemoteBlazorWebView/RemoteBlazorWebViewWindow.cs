@@ -40,6 +40,8 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
+        public Uri? GrpcBaseUri { get; set; }
+
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
         public event EventHandler<RefreshedEventArgs>? Refreshed;
@@ -92,6 +94,11 @@ namespace PeakSWC.RemoteWebView
                 }
             }
            
+        }
+
+        public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)
+        {
+            return RemoteWebView.GetGrpcBaseUriAsync(serverUri);
         }
     }
 }

@@ -24,6 +24,27 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public override IFileProvider CreateFileProvider(string contentRootDir) => RemoteWebView.RemoteWebView.CreateFileProvider(contentRootDir, HostPage);
 
+        private Uri? _grpcBaseUri;
+
+        /// <summary>
+        /// Uri of the RemoteWebView GRPC service.
+        /// This property must be set to a valid value for the Blazor components to start.
+        /// </summary>
+
+        [TypeConverter(typeof(UriTypeConverter))]
+        [Category("Behavior")]
+        [Description(@"Uri of the RemoteWebView GRPC service.")]
+        public Uri? GrpcBaseUri
+        {
+            get => _grpcBaseUri;
+            set
+            {
+                _grpcBaseUri = value;
+                Invalidate();
+                StartWebViewCoreIfPossible();
+            }
+        }
+
         private Uri? _serverUri;
 
         /// <summary>
@@ -168,6 +189,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         }
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
+
+        public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 

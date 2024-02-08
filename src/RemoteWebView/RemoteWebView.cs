@@ -5,6 +5,7 @@ using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.FileProviders;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -56,8 +57,10 @@ namespace PeakSWC.RemoteWebView
             };
             psi.ArgumentList.Add($"-u={blazorWebView.ServerUri}");
             psi.ArgumentList.Add($"-i={blazorWebView.Id}");
-            Process p = new();
-            p.StartInfo = psi;
+            Process p = new()
+            {
+                StartInfo = psi
+            };
             p.Start();
 
             int i = 0;
@@ -88,42 +91,66 @@ namespace PeakSWC.RemoteWebView
         public string HostHtmlPath { get; } = string.Empty;
         public Dispatcher? Dispatcher { get; set; }
 
-        private Uri? _grpcBaseUri;
-        private readonly HttpClient _httpClient = new HttpClient();
-
-        private async Task InitializeGrpcBaseUriAsync()
+        public static async Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)
         {
-            if (_grpcBaseUri == null)
+            Uri? _grpcBaseUri;
+   
+            try
             {
-                try
+                var handler = new HttpClientHandler
                 {
-                    var jsonResponse = await _httpClient.GetStringAsync($"{BlazorWebView.ServerUri}/GrpcBaseUri");
+                    AutomaticDecompression = DecompressionMethods.GZip |
+                                DecompressionMethods.Deflate |
+                                DecompressionMethods.Brotli
+                };
 
-                    var response = System.Text.Json.JsonSerializer.Deserialize<dynamic>(jsonResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var _httpClient = new HttpClient(handler);
+                var jsonResponse = await _httpClient.GetStringAsync($"{serverUri}grpcbaseuri");
 
-                    if (response != null && response.GrpcBaseUri != null)
+                // TODO wtf does this happen?
+                jsonResponse = jsonResponse.Replace("://:", "https://localhost:");
+
+                var json = JObject.Parse(jsonResponse);
+                if (json.TryGetValue("grpcBaseUri", out JToken? grpcBaseUriToken))
+                {
+                    string grpcBaseUri = grpcBaseUriToken?.ToString() ?? string.Empty;
+
+                    if (Uri.TryCreate(grpcBaseUri, UriKind.Absolute, out Uri? parsedUri))
                     {
-                        _grpcBaseUri = new Uri(response.GrpcBaseUri.ToString());
+                        _grpcBaseUri = parsedUri;
                     }
                     else
                     {
-                        _grpcBaseUri = BlazorWebView.ServerUri;
+                        // Handle invalid URI
+                        _grpcBaseUri = serverUri; // Or some other fallback logic
                     }
                 }
-                catch (Exception)
+
+                else
                 {
-                    _grpcBaseUri = BlazorWebView.ServerUri;
+                    _grpcBaseUri = serverUri;
                 }
             }
+            catch (Exception)
+            {
+                _grpcBaseUri = serverUri;
+            }
+
+            return _grpcBaseUri;
+           
         }
-        protected async Task<WebViewIPC.WebViewIPCClient?> Client()
+
+        protected WebViewIPC.WebViewIPCClient? Client()
         {
-            await InitializeGrpcBaseUriAsync();
-            if (BlazorWebView.ServerUri == null || _grpcBaseUri == null) return null;
+            if (BlazorWebView.ServerUri == null) return null;
+
+            // Default to the http server
+            if (BlazorWebView.GrpcBaseUri == null)
+                BlazorWebView.GrpcBaseUri = BlazorWebView.ServerUri;
 
             if (client == null)
             {
-                var channel = GrpcChannel.ForAddress(_grpcBaseUri,
+                var channel = GrpcChannel.ForAddress(BlazorWebView.GrpcBaseUri,
                     new GrpcChannelOptions
                     {
                         HttpHandler = new SocketsHttpHandler
@@ -141,7 +168,7 @@ namespace PeakSWC.RemoteWebView
                 var completed = new ManualResetEventSlim();
                 Exception? exception = null;
 
-                Task.Factory.StartNew(async () =>
+                _ = Task.Factory.StartNew(async () =>
                 {
                     bool connected = false;
                     try
@@ -225,7 +252,7 @@ namespace PeakSWC.RemoteWebView
                                         {
                                             var split = message.Response.Split("|");
                                             var user = split.Length == 2 ? split[1] : "";
-                                            var ip = split[0].Substring(split[0].IndexOf(":") + 1).Replace(":", "");
+                                            var ip = split[0].Substring(split[0].IndexOf(':') + 1).Replace(":", "");
                                             FireConnected(ip, user);
                                         }
                                         catch { }
@@ -256,7 +283,7 @@ namespace PeakSWC.RemoteWebView
                     throw exception;
                 }
 
-                Task.Factory.StartNew(async () =>
+                _ = Task.Factory.StartNew(async () =>
                 {
                     var files = client.FileReader();
                     try
@@ -267,7 +294,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             try
                             {
-                                var path = message.Path[(message.Path.IndexOf("/") + 1)..];
+                                var path = message.Path[(message.Path.IndexOf('/') + 1)..];
 
                                 await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
 
@@ -306,7 +333,7 @@ namespace PeakSWC.RemoteWebView
                     }
                 }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-                Task.Factory.StartNew(async () =>
+                _ = Task.Factory.StartNew(async () =>
                 {
                     var pings = client.Ping();
 
@@ -333,27 +360,27 @@ namespace PeakSWC.RemoteWebView
         }
         void Shutdown()
         {
-            Dispatcher?.InvokeAsync(async () => (await Client())?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+            Dispatcher?.InvokeAsync(() => Client()?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
         }
 
         void FireReadyToConnect()
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri! )));
         }
 
         void FireConnected(string ip, string user)
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!, ip, user)));
         }
 
         void FireDisconnected(Exception exception)
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!, exception)));
         }
 
         void FireRefreshed()
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!)));
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
@@ -396,16 +423,16 @@ namespace PeakSWC.RemoteWebView
             BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
         }
 
-        public async Task NavigateToUrl(string url) { _ = await Client(); }
+        public void NavigateToUrl(string url) { _ = Client(); }
 
-        public async Task SendMessage(string message)
+        public void SendMessage(string message)
         {
-            (await Client())?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
+            Client()?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
         }
 
-        public async Task Initialize()
+        public void Initialize()
         {
-            _ = await Client();
+            _ = Client();
         }
     }
 }

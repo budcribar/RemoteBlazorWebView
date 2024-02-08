@@ -33,6 +33,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             ownerType: typeof(BlazorWebView),
             typeMetadata: new PropertyMetadata(OnServerUriPropertyChanged));
 
+        public static readonly DependencyProperty GrpcBaseUriProperty = DependencyProperty.Register(
+          name: nameof(GrpcBaseUri),
+          propertyType: typeof(Uri),
+          ownerType: typeof(BlazorWebView),
+          typeMetadata: new PropertyMetadata(OnGrpcBaseUriPropertyChanged));
+
         public static readonly DependencyProperty GroupProperty = DependencyProperty.Register(
                    name: nameof(Group),
                    propertyType: typeof(string),
@@ -58,6 +64,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(UriProperty, value);
         }
 
+        public Uri? GrpcBaseUri
+        {
+            get => (Uri?)GetValue(GrpcBaseUriProperty);
+            set => SetValue(GrpcBaseUriProperty, value);
+        }
+
+
         public string Group
         {
             get => (string)GetValue(GroupProperty);
@@ -79,6 +92,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServerUriPropertyChanged(e);
 
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+
+        private static void OnGrpcBaseUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGrpcBaseUriPropertyChanged(e);
+
+        private void OnGrpcBaseUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnIdPropertyChanged(e);
 
@@ -168,6 +185,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         }
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
+
+        public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
