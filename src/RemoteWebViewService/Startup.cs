@@ -27,11 +27,6 @@ using Microsoft.Identity.Web.UI;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class StatusResponse
-    {
-        public bool Connected { get; set; }
-    }
-
     public class Startup
     {
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; } = new();
@@ -158,6 +153,7 @@ namespace PeakSWC.RemoteWebView
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", StartOrRefresh()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/status/{id:guid}", Status()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/grpcbaseurl", GrpcBaseUri()).ConditionallyRequireAuthorization();           
                 endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/test", Version());
                 endpoints.MapFallbackToFile("index.html");
@@ -276,13 +272,29 @@ namespace PeakSWC.RemoteWebView
             {
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
 
-                var response = new StatusResponse
+                var response = new
                 {
                     Connected = ServiceDictionary.ContainsKey(guid)
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse));
+                await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase}));
+            };
+        }
+
+        private RequestDelegate GrpcBaseUri()
+        {
+            return async context =>
+            {
+                var baseUri = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}";
+
+                var response = new 
+                {
+                    GrpcBaseUri =  baseUri,
+                };
+
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
             };
         }
 

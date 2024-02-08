@@ -13,13 +13,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebView 
+    public class RemoteWebView
     {
         public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage, string manifestRoot = "embedded")
         {
@@ -48,7 +49,7 @@ namespace PeakSWC.RemoteWebView
 
         }
         public static void Restart(IBlazorWebView blazorWebView)
-        {        
+        {
             var psi = new ProcessStartInfo
             {
                 FileName = Process.GetCurrentProcess().MainModule?.FileName
@@ -87,243 +88,272 @@ namespace PeakSWC.RemoteWebView
         public string HostHtmlPath { get; } = string.Empty;
         public Dispatcher? Dispatcher { get; set; }
 
-        protected WebViewIPC.WebViewIPCClient? Client
+        private Uri? _grpcBaseUri;
+        private readonly HttpClient _httpClient = new HttpClient();
+
+        private async Task InitializeGrpcBaseUriAsync()
         {
-            get
+            if (_grpcBaseUri == null)
             {
-                if (BlazorWebView.ServerUri == null) return null;
-
-                if (client == null)
+                try
                 {
-                    var channel = GrpcChannel.ForAddress(BlazorWebView.ServerUri, 
-                        new GrpcChannelOptions {
-                        HttpHandler = new SocketsHttpHandler {
-                        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-                        KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                        KeepAlivePingTimeout = TimeSpan.FromSeconds(50),   // 30 seconds is not enough to pass stress tests
-                        EnableMultipleHttp2Connections = true
-                    } });
+                    var jsonResponse = await _httpClient.GetStringAsync($"{BlazorWebView.ServerUri}/GrpcBaseUri");
 
-                    client = new WebViewIPC.WebViewIPCClient(channel);
-                   
-                    var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group= BlazorWebView.Group, HostName = Dns.GetHostName(), Pid= Environment.ProcessId, ProcessName= Process.GetCurrentProcess().ProcessName, EnableMirrors=BlazorWebView.EnableMirrors}, cancellationToken: cts.Token); 
-                    var completed = new ManualResetEventSlim();
-                    Exception? exception = null;
+                    var response = System.Text.Json.JsonSerializer.Deserialize<dynamic>(jsonResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
-                    Task.Factory.StartNew(async () =>
+                    if (response != null && response.GrpcBaseUri != null)
                     {
-                        bool connected = false;
-                        try
-                        {
-                            await foreach (var message in events.ResponseStream.ReadAllAsync())
-                            {
-                                var command = message.Response[..message.Response.IndexOf(':')];
-                              
-                                try
-                                {
-                                    switch (command)
-                                    {
-                                        case "browserAttached":
-                                            _ = Task.Run(async () =>
-                                            {
-                                                // TODO Create property for timeout value
-                                                await Task.Delay(TimeSpan.FromSeconds(60));
-
-                                                if (!connected)
-                                                {
-                                                    FireDisconnected(new Exception("Browser connection timed out"));
-                                                    cts.Cancel();
-                                                }
-                                            });
-                                            completed.Set();
-                                            break;
-
-                                        case "created":                                     
-                                            completed.Set();
-                                            await BlazorWebView.WaitForInitializationComplete();
-                                            FireReadyToConnect();
-                                            break;
-
-                                        case "createFailed":
-                                            exception = new Exception("WebView Create failed - Id must be unique");
-                                            completed.Set();
-                                            break;
-
-                                        case "__bwv":
-                                            OnWebMessageReceived?.Invoke(message.Url, message.Response);
-                                            break;
-
-                                        case "refreshed":
-                                            lock (bootLock)
-                                            {
-                                                Shutdown();
-                                                FireRefreshed();
-                                                cts.Cancel();
-                                            }
-                                            break;
-
-                                        case "shutdown":
-                                            FireDisconnected(new Exception("Server shut down connection"));
-                                            cts.Cancel();
-                                            break;
-
-                                        case "connected": 
-                                            IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(message.Cookies);
-                                            if (cookiesDictionary != null)
-                                            {
-                                                Dispatcher?.InvokeAsync(() =>
-                                                {
-                                                    try
-                                                    {
-                                                        // CookieManager could be null in Photino
-                                                        foreach (var name in cookiesDictionary.Keys)
-                                                        {
-                                                            var cookie = BlazorWebView.CookieManager.CreateCookie(name, cookiesDictionary[name], BlazorWebView.ServerUri.Host, "/");
-                                                            //BlazorWebView.CookieManager.AddOrUpdateCookie(cookie);
-                                                        }
-                                                    }
-                                                    catch { }
-                                                    
-                                                });
-                                                
-                                                  
-                                            }
-
-                                            // connected:url|user
-                                            try
-                                            {
-                                                var split = message.Response.Split("|");
-                                                var user = split.Length == 2 ? split[1] : "";
-                                                var ip = split[0].Substring(split[0].IndexOf(":") + 1).Replace(":", "");
-                                                FireConnected(ip, user);
-                                            }
-                                            catch { }
-                                               
-                                            connected = true;
-                                            break;
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    exception = ex;
-                                    completed.Set();
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            exception = ex;
-                            completed.Set();
-                        }
-                    }, cts.Token);
-
-                    completed.Wait();
-
-                    if (exception != null)
-					{
-                        FireDisconnected(exception);
-                        throw exception;
+                        _grpcBaseUri = new Uri(response.GrpcBaseUri.ToString());
                     }
-
-                    Task.Factory.StartNew(async () =>
+                    else
                     {
-                        var files = client.FileReader();
-                        try
-                        {
-                            await files.RequestStream.WriteAsync(new FileReadRequest {Id = BlazorWebView.Id.ToString(), Init = new () });
-
-                            await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
-                            {
-                                try
-                                {
-                                    var path = message.Path[(message.Path.IndexOf("/") + 1)..];
-
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
-
-                                    using var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
-                                    if (stream == null)
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                    else
-                                    {
-                                        var buffer = new Byte[8 * 1024];
-                                        int bytesRead = 0;
-
-                                        while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
-                                        {
-                                            ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
-                                        }
-                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                    }
-
-                                }
-                                catch (FileNotFoundException)
-                                {
-                                    // TODO Warning to user?
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                }
-                                catch (Exception ex)
-                                {
-                                    FireDisconnected(ex);
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                }
-                            }
-                        } catch (Exception ex)
-                        {
-                            FireDisconnected(ex);
-                        }
-                    }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
-                    Task.Factory.StartNew(async () => {
-                        var pings = client.Ping();
-
-                        try
-                        {
-                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = BlazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = 30 });
-
-                            await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
-                            {
-                                if (message.Cancelled) throw new Exception("Ping timeout exceeded");
-
-                                await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            FireDisconnected(ex);
-                        }
-
-                    }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
+                        _grpcBaseUri = BlazorWebView.ServerUri;
+                    }
                 }
-                return client;
-
-
-                void Shutdown()
+                catch (Exception)
                 {
-                    Dispatcher?.InvokeAsync(() => Client?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
-                }
-
-                void FireReadyToConnect()
-                {
-                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
-                }
-
-                void FireConnected(string ip, string user)
-                {
-                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
-                }
-
-                void FireDisconnected(Exception exception)
-                {
-                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
-                }
-
-                void FireRefreshed()
-                {
-                    Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+                    _grpcBaseUri = BlazorWebView.ServerUri;
                 }
             }
+        }
+        protected async Task<WebViewIPC.WebViewIPCClient?> Client()
+        {
+            await InitializeGrpcBaseUriAsync();
+            if (BlazorWebView.ServerUri == null || _grpcBaseUri == null) return null;
+
+            if (client == null)
+            {
+                var channel = GrpcChannel.ForAddress(_grpcBaseUri,
+                    new GrpcChannelOptions
+                    {
+                        HttpHandler = new SocketsHttpHandler
+                        {
+                            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                            KeepAlivePingTimeout = TimeSpan.FromSeconds(50),   // 30 seconds is not enough to pass stress tests
+                            EnableMultipleHttp2Connections = true
+                        }
+                    });
+
+                client = new WebViewIPC.WebViewIPCClient(channel);
+
+                var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
+                var completed = new ManualResetEventSlim();
+                Exception? exception = null;
+
+                Task.Factory.StartNew(async () =>
+                {
+                    bool connected = false;
+                    try
+                    {
+                        await foreach (var message in events.ResponseStream.ReadAllAsync())
+                        {
+                            var command = message.Response[..message.Response.IndexOf(':')];
+
+                            try
+                            {
+                                switch (command)
+                                {
+                                    case "browserAttached":
+                                        _ = Task.Run(async () =>
+                                        {
+                                            // TODO Create property for timeout value
+                                            await Task.Delay(TimeSpan.FromSeconds(60));
+
+                                            if (!connected)
+                                            {
+                                                FireDisconnected(new Exception("Browser connection timed out"));
+                                                cts.Cancel();
+                                            }
+                                        });
+                                        completed.Set();
+                                        break;
+
+                                    case "created":
+                                        completed.Set();
+                                        await BlazorWebView.WaitForInitializationComplete();
+                                        FireReadyToConnect();
+                                        break;
+
+                                    case "createFailed":
+                                        exception = new Exception("WebView Create failed - Id must be unique");
+                                        completed.Set();
+                                        break;
+
+                                    case "__bwv":
+                                        OnWebMessageReceived?.Invoke(message.Url, message.Response);
+                                        break;
+
+                                    case "refreshed":
+                                        lock (bootLock)
+                                        {
+                                            Shutdown();
+                                            FireRefreshed();
+                                            cts.Cancel();
+                                        }
+                                        break;
+
+                                    case "shutdown":
+                                        FireDisconnected(new Exception("Server shut down connection"));
+                                        cts.Cancel();
+                                        break;
+
+                                    case "connected":
+                                        IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(message.Cookies);
+                                        if (cookiesDictionary != null)
+                                        {
+                                            Dispatcher?.InvokeAsync(() =>
+                                            {
+                                                try
+                                                {
+                                                    // CookieManager could be null in Photino
+                                                    foreach (var name in cookiesDictionary.Keys)
+                                                    {
+                                                        var cookie = BlazorWebView.CookieManager.CreateCookie(name, cookiesDictionary[name], BlazorWebView.ServerUri.Host, "/");
+                                                        //BlazorWebView.CookieManager.AddOrUpdateCookie(cookie);
+                                                    }
+                                                }
+                                                catch { }
+
+                                            });
+
+
+                                        }
+
+                                        // connected:url|user
+                                        try
+                                        {
+                                            var split = message.Response.Split("|");
+                                            var user = split.Length == 2 ? split[1] : "";
+                                            var ip = split[0].Substring(split[0].IndexOf(":") + 1).Replace(":", "");
+                                            FireConnected(ip, user);
+                                        }
+                                        catch { }
+
+                                        connected = true;
+                                        break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                exception = ex;
+                                completed.Set();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exception = ex;
+                        completed.Set();
+                    }
+                }, cts.Token);
+
+                completed.Wait();
+
+                if (exception != null)
+                {
+                    FireDisconnected(exception);
+                    throw exception;
+                }
+
+                Task.Factory.StartNew(async () =>
+                {
+                    var files = client.FileReader();
+                    try
+                    {
+                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Init = new() });
+
+                        await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
+                        {
+                            try
+                            {
+                                var path = message.Path[(message.Path.IndexOf("/") + 1)..];
+
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Length = new FileReadLengthRequest { Path = message.Path, Length = FileProvider.GetFileInfo(path).Length } });
+
+                                using var stream = FileProvider.GetFileInfo(path).CreateReadStream() ?? null;
+                                if (stream == null)
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                else
+                                {
+                                    var buffer = new Byte[8 * 1024];
+                                    int bytesRead = 0;
+
+                                    while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
+                                    {
+                                        ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                        await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
+                                    }
+                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                }
+
+                            }
+                            catch (FileNotFoundException)
+                            {
+                                // TODO Warning to user?
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                            }
+                            catch (Exception ex)
+                            {
+                                FireDisconnected(ex);
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = BlazorWebView.Id.ToString(), Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        FireDisconnected(ex);
+                    }
+                }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                Task.Factory.StartNew(async () =>
+                {
+                    var pings = client.Ping();
+
+                    try
+                    {
+                        await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = BlazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = 30 });
+
+                        await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
+                        {
+                            if (message.Cancelled) throw new Exception("Ping timeout exceeded");
+
+                            await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        FireDisconnected(ex);
+                    }
+
+                }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+            }
+            return client;
+        }
+        void Shutdown()
+        {
+            Dispatcher?.InvokeAsync(async () => (await Client())?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+        }
+
+        void FireReadyToConnect()
+        {
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
+        }
+
+        void FireConnected(string ip, string user)
+        {
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, ip, user)));
+        }
+
+        void FireDisconnected(Exception exception)
+        {
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri, exception)));
+        }
+
+        void FireRefreshed()
+        {
+            Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri)));
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
@@ -366,16 +396,16 @@ namespace PeakSWC.RemoteWebView
             BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
         }
 
-        public void NavigateToUrl(string url) { _ = Client; }
+        public async Task NavigateToUrl(string url) { _ = await Client(); }
 
-        public void SendMessage(string message)
+        public async Task SendMessage(string message)
         {
-            Client?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
+            (await Client())?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
         }
 
-        public void Initialize()
+        public async Task Initialize()
         {
-            _ = Client;
+            _ = await Client();
         }
     }
 }
