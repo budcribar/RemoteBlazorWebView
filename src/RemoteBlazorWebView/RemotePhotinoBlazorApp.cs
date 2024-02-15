@@ -37,6 +37,7 @@ namespace PeakSWC.RemoteWebView
             MainWindow.SetTop(100);
 
             MainWindow.ServerUri = serverUrl;
+            MainWindow.GrpcBaseUri = MainWindow.GetGrpcBaseUriAsync(serverUrl).Result;
             MainWindow.Id = id;
 
             MainWindow.RegisterCustomSchemeHandler(PhotinoWebViewManager.BlazorAppScheme, HandleWebRequest);

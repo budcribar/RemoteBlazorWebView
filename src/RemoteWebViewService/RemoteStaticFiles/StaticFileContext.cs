@@ -122,11 +122,7 @@ internal struct StaticFileContext
             if (splits.Length > 1 && Guid.TryParse(splits[1], out var _))
                 return _subPath.Value!;
 
-            var serviceDictionary = _context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
-            HttpContext context = _context;
-            var guid = serviceDictionary.Values.Where(x => x.ConnectionId.Contains(context.Connection.Id)).FirstOrDefault()?.Id;
-            var path = $"/{guid}{_subPath.Value!}";
-            return path;
+            return _subPath.Value!;
         }
     }
 

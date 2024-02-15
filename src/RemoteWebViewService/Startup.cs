@@ -179,7 +179,6 @@ namespace PeakSWC.RemoteWebView
                     if (serviceState.EnableMirrors && serviceState.InUse)
                     {
                         serviceState.User = context.User.GetDisplayName() ?? "";
-                        serviceState.ConnectionId.Add(context.Connection.Id);
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
                         if (serviceState.IPC.ClientResponseStream != null)
@@ -335,7 +334,6 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (!serviceState.Refresh)
                     {
-                        serviceState.ConnectionId.Add(context.Connection.Id);
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();

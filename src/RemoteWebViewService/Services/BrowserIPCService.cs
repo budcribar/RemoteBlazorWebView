@@ -44,7 +44,7 @@ namespace PeakSWC.RemoteWebView
             return Task.FromResult(new ClientIdMessageRequest { Id = guid, ClientId = guid, IsPrimary = isPrimary });
         }
 
-        public override async Task ReceiveMessage(IdMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
+        public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
@@ -62,10 +62,10 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (serviceState.IsMirroredConnection.Contains(context.GetHttpContext().Connection.Id))
-                    return;                  
-
-                _shutdownService.Shutdown(request.Id, ex);
+                if (request.IsPrimary)
+                {
+                    _shutdownService.Shutdown(request.Id, ex);
+                }
             }
 
             return;
@@ -77,7 +77,7 @@ namespace PeakSWC.RemoteWebView
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
             // Skip messages from read only client
-            if (serviceState.ClientId != request.ClientId)
+            if (!request.IsPrimary)
             {
                 _logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });

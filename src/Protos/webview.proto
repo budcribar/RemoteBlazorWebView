@@ -89,6 +89,13 @@ message SendSequenceMessageRequest {
     string url = 4;
     string clientId = 5;
     string cookies = 6;
+    bool isPrimary = 7;
+}
+
+message ReceiveMessageRequest {
+    string id = 1;
+    string clientId = 2;
+    bool isPrimary = 3;
 }
 
 message SendMessageResponse {
@@ -116,7 +123,7 @@ service WebViewIPC {
 }
 
 service BrowserIPC {
-    rpc ReceiveMessage(IdMessageRequest) returns (stream StringRequest);
+    rpc ReceiveMessage(ReceiveMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
     rpc GetClientId(IdMessageRequest) returns (ClientIdMessageRequest);  
 }

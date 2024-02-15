@@ -1,7 +1,7 @@
 import { receiveMessage } from './IPC';
 import { grpc } from "@improbable-eng/grpc-web";
 import { BrowserIPC } from "./generated/webview_pb_service";
-import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, IdMessageRequest, ClientIdMessageRequest } from "./generated/webview_pb";
+import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
 import { showErrorNotification } from '../web.js/src/BootErrors';
 import { sendAttachPage} from '../web.js/src/Platform/WebView/WebViewIpcSender';
@@ -26,19 +26,25 @@ if (!window.RemoteBlazor) {
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true; 
+const locationOrigin = window.location.origin;
 
 export function sendMessage(message: string) {
     var req = new SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
-    if (id == 'mirror') id = window.location.pathname.split('/')[2];
+    if (id == 'mirror') {
+        id = window.location.pathname.split('/')[2];
+       
+    }
     req.setId(id);
     req.setClientid(window.RemoteBlazor.clientId);
     req.setMessage(message);
     req.setSequence(window.RemoteBlazor.sequenceNum++);
     req.setUrl(navigationManagerFunctions.getLocationHref())
+    req.setIsprimary(window.RemoteBlazor.isPrimary);
+
     grpc.invoke(BrowserIPC.SendMessage, {
         request: req,
-        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : window.location.origin,
+        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
         onMessage: (message: SendMessageResponse) => {
             if (!message.getSuccess()) {
                 var error = `Client ${id} is unresponsive`
@@ -90,44 +96,29 @@ function makePageReadOnly() {
 export function initializeRemoteWebView() {
     (window.external as any).sendMessage = sendMessage;
 
-    var message = new IdMessageRequest();
+  
     const pathParts = window.location.pathname.split('/');
     let id = pathParts[1];
-    if (id === 'mirror') id = pathParts[2];
+    if (id === 'mirror') {
+        id = pathParts[2];
+        window.RemoteBlazor.isPrimary = false;
+        makePageReadOnly();    
+    }
 
+    window.RemoteBlazor.clientId = (window.crypto as any).randomUUID();
+
+    sendMessage("connected:");
+    sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+
+    var message = new ReceiveMessageRequest();
     message.setId(id);
-    const locationOrigin = window.location.origin;
-
-    grpc.invoke(BrowserIPC.GetClientId,
-        {
-            request: message,
-            host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : window.location.origin,
-            onMessage: (message: ClientIdMessageRequest) => {
-                console.info("BrowserIPC.GetClientId: " + message.getClientid());
-                window.RemoteBlazor.clientId = message.getClientid();
-                window.RemoteBlazor.isPrimary = message.getIsprimary();
-
-                sendMessage("connected:");
-                sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
-
-                if (!window.RemoteBlazor.isPrimary)
-                    makePageReadOnly();             
-
-            },
-            onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
-                if (code == grpc.Code.OK) {
-                    console.log("BrowserIPC.GetClientId:onEnd:" + window.RemoteBlazor.clientId)
-                } else {
-                    console.error("BrowserIPC.GetClientId:grpc error", code, msg, trailers);
-                }
-            }
-
-        });
+    message.setClientid(window.RemoteBlazor.clientId);
+    message.setIsprimary(window.RemoteBlazor.isPrimary);
 
     grpc.invoke(BrowserIPC.ReceiveMessage,
         {
             request: message,
-            host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : window.location.origin,
+            host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
             onMessage: (message: StringRequest) => {
                 console.info("BrowserIPC.ReceiveMessage: " + message.getRequest());
                 receiveMessage(message.getRequest());
