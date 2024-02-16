@@ -22,13 +22,6 @@ message IdMessageRequest {
     string id = 1;
 }
 
-message ClientIdMessageRequest {
-    string id = 1;
-    string clientId = 2;
-    bool isPrimary = 3;
-}
-
-
 message CreateWebViewRequest {
   string id = 1;
   string htmlHostPath = 2;
@@ -125,7 +118,6 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(ReceiveMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
-    rpc GetClientId(IdMessageRequest) returns (ClientIdMessageRequest);  
 }
 
 enum ClientState {

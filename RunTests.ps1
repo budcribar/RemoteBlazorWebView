@@ -1,7 +1,8 @@
 
  Param(
         [string] $Mode = 'Developer',
-        [switch] $Build = $false
+        [switch] $Build = $false,
+		[switch] $Rust = $false
     )
 
 # .\RunTests.ps1  -Build:$true
@@ -11,6 +12,7 @@
 $env:EnvBuildMode = $Mode # Developer or Release
 
 Write-Host -ForegroundColor GREEN ("Build:",$Build)
+Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
 # Get the path of the script's directory
@@ -62,29 +64,57 @@ else {
 
 Set-Location $currentDirectory
 
-Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
-# Publish the web site server
-dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
-dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
+if ($Rust -eq $true)
+{
+	 Write-Host -ForegroundColor GREEN "Build Release http_to_grpc_bridge"
+	 Set-Location .\..\http_to_grpc_bridge
+	 cargo b --release
+	 cargo build --release
+     if (-not $?)
+     {
+        Write-Host -ForegroundColor Red "Cargo build failed. Exiting..."
+        exit 1
+     } else
+	 {
+		Write-Host -ForegroundColor Green "http_to_grpc_bridge Build succeeded. Copying executable..."
+        $sourcePath = ".\target\release\http_to_grpc_bridge.exe"
+        $destinationPath = "$currentDirectory\..\http_to_grpc_bridge\http_to_grpc_bridge.exe"
+        
+        # Copy the file, allowing overwrite
+        Copy-Item -Path $sourcePath -Destination $destinationPath -Force
+        
+        Write-Host -ForegroundColor Green "Copy completed."
+	 }
+	 Set-Location $currentDirectory
+	 $env:Rust = "true"
+} else
+{
+    Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
+	# Publish the web site server
+	dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+	dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
-dotnet build -c Release .\src\RemoteWebViewService
-dotnet tool uninstall PeakSWC.RemoteWebViewService -g
+	dotnet build -c Release .\src\RemoteWebViewService
+	dotnet tool uninstall PeakSWC.RemoteWebViewService -g
 
-if ($env:EnvBuildMode -eq 'Debug') {
-	# remove the cached version!!
-	$file = Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' 
-	if (Test-Path $file) {
-		Remove-Item $file
+	if ($env:EnvBuildMode -eq 'Debug') {
+		# remove the cached version!!
+		$file = Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' 
+		if (Test-Path $file) {
+			Remove-Item $file
+		}
+
+		$file = Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' 
+		if (Test-Path $file) {
+			Remove-Item $file -Recurse
+		}
+		dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 8.*-* 
+	} else {
+		dotnet tool update -g  PeakSWC.RemoteWebViewService --version 8.*-* 
 	}
 
-	$file = Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' 
-	if (Test-Path $file) {
-		Remove-Item $file -Recurse
-	}
-	dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 8.*-* 
-} else {
-	dotnet tool update -g  PeakSWC.RemoteWebViewService --version 8.*-* 
 }
+
 
 
 Write-Host -ForegroundColor GREEN "Publish WinFormsApp"

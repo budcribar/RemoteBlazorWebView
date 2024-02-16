@@ -25,25 +25,6 @@ namespace PeakSWC.RemoteWebView
             _shutdownService = shutdownService;
         }
 
-        public override Task<ClientIdMessageRequest> GetClientId(IdMessageRequest request, ServerCallContext context)
-        {
-            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
-            {
-                _shutdownService.Shutdown(request.Id);
-                return Task.FromResult(new ClientIdMessageRequest());
-            }
-
-            var guid = Guid.NewGuid().ToString();
-            var isPrimary = false;
-            if (string.IsNullOrEmpty(serviceState.ClientId))
-            {
-                isPrimary = true;
-                serviceState.ClientId = guid;
-            }
-
-            return Task.FromResult(new ClientIdMessageRequest { Id = guid, ClientId = guid, IsPrimary = isPrimary });
-        }
-
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
@@ -53,7 +34,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-            serviceState.IPC.BrowserResponseStream(responseStream, linkedToken);
+            serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(   responseStream, request.ClientId, request.IsPrimary), linkedToken);
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)

@@ -9,7 +9,7 @@ namespace WebdriverTestProject
     public class Utilities
     {
         #region Server
-        public static Process StartServer()
+        public static Process StartCsharpServer()
         {
 
             Stopwatch sw = new();
@@ -29,6 +29,35 @@ namespace WebdriverTestProject
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
         }
+
+        public static Process StartServer()
+        {
+            string? envVarValue = Environment.GetEnvironmentVariable(variable: "Rust");
+            if (envVarValue != null) return StartRustServer();
+            return StartCsharpServer();
+        }
+
+        public static Process StartRustServer()
+        {
+
+            Stopwatch sw = new();
+            sw.Start();
+
+            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "http_to_grpc_bridge")?.Kill();
+            var relative = @"..\..\..\..\..\..\http_to_grpc_bridge";
+            var executable = @"http_to_grpc_bridge.exe";
+            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
+
+            Process process = new();
+            process.StartInfo.FileName = Path.GetFullPath(f);
+            process.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative);
+            process.StartInfo.UseShellExecute = true;
+
+            process.Start();
+            Console.WriteLine($"Started server in {sw.Elapsed}");
+            return process;
+        }
+
 
         public static Process StartServerFromPackage()
         {

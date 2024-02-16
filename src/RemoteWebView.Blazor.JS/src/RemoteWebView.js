@@ -8,22 +8,28 @@ var webview_pb_1 = require("./generated/webview_pb");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var BootErrors_1 = require("../web.js/src/BootErrors");
 var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
-var sequenceNum = 1;
-var clientId;
-var isPrimary = true;
+if (!window.RemoteBlazor) {
+    window.RemoteBlazor = {};
+}
+window.RemoteBlazor.sequenceNum = 1;
+window.RemoteBlazor.clientId = '';
+window.RemoteBlazor.isPrimary = true;
+var locationOrigin = window.location.origin;
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
-    if (id == 'mirror')
+    if (id == 'mirror') {
         id = window.location.pathname.split('/')[2];
+    }
     req.setId(id);
-    req.setClientid(clientId);
+    req.setClientid(window.RemoteBlazor.clientId);
     req.setMessage(message);
-    req.setSequence(sequenceNum++);
+    req.setSequence(window.RemoteBlazor.sequenceNum++);
     req.setUrl(NavigationManager_1.internalFunctions.getLocationHref());
+    req.setIsprimary(window.RemoteBlazor.isPrimary);
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.SendMessage, {
         request: req,
-        host: window.location.origin,
+        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
         onMessage: function (message) {
             if (!message.getSuccess()) {
                 var error = "Client ".concat(id, " is unresponsive");
@@ -33,7 +39,7 @@ function sendMessage(message) {
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message + " clientId:" + clientId);
+                //console.log("sent:" + req.getSequence() + ":" + message + " window.RemoteBlazor.clientId:" + clientId);
             }
             else {
                 console.log("grpc error", code, msg, trailers);
@@ -70,46 +76,32 @@ function makePageReadOnly() {
 }
 function initializeRemoteWebView() {
     window.external.sendMessage = sendMessage;
-    var message = new webview_pb_1.IdMessageRequest();
     var pathParts = window.location.pathname.split('/');
     var id = pathParts[1];
-    if (id === 'mirror')
+    if (id === 'mirror') {
         id = pathParts[2];
+        window.RemoteBlazor.isPrimary = false;
+        makePageReadOnly();
+    }
+    window.RemoteBlazor.clientId = window.crypto.randomUUID();
+    sendMessage("connected:");
+    (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
+    var message = new webview_pb_1.ReceiveMessageRequest();
     message.setId(id);
-    var locationOrigin = window.location.origin;
-    grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.GetClientId, {
-        request: message,
-        host: locationOrigin,
-        onMessage: function (message) {
-            //console.info("ClientId: " + message.getId());
-            clientId = message.getClientid();
-            isPrimary = message.getIsprimary();
-            sendMessage("connected:");
-            (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
-            if (!isPrimary)
-                makePageReadOnly();
-        },
-        onEnd: function (code, msg, trailers) {
-            if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("all ok:" + clientId)
-            }
-            else {
-                console.error("grpc error", code, msg, trailers);
-            }
-        }
-    });
+    message.setClientid(window.RemoteBlazor.clientId);
+    message.setIsprimary(window.RemoteBlazor.isPrimary);
     grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.ReceiveMessage, {
         request: message,
-        host: locationOrigin,
+        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
         onMessage: function (message) {
-            //console.info("Received: " + message.getRequest());
+            console.info("BrowserIPC.ReceiveMessage: " + message.getRequest());
             (0, IPC_1.receiveMessage)(message.getRequest());
-            if (!isPrimary)
+            if (!window.RemoteBlazor.isPrimary)
                 makePageReadOnly();
         },
         onEnd: function (code, msg, trailers) {
             if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("all ok")
+                console.log("BrowserIPC.ReceiveMessage:onEnd:ok");
             }
             else {
                 console.error("grpc error", code, msg, trailers);

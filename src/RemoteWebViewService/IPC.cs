@@ -15,17 +15,16 @@ namespace PeakSWC.RemoteWebView
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
         private readonly List<StringRequest> messageHistory = new ();
-        private readonly ConcurrentDictionary<IServerStreamWriter<StringRequest>, BlockingCollection<StringRequest>> observers = new();
-        private IServerStreamWriter<StringRequest>? primaryStream;
+        private readonly ConcurrentDictionary<BrowserResponseNode, BlockingCollection<StringRequest>> observers = new();
+       
         private readonly ILogger<RemoteWebViewService> logger;
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
-        public bool BrowserResponseStream (IServerStreamWriter<StringRequest> serverStreamWriter, CancellationTokenSource linkedToken) {
+        public void BrowserResponseStream ( BrowserResponseNode brn, CancellationTokenSource linkedToken) {
          
             lock (messageHistory)
             {
-                if (messageHistory.Count == 0)
-                    primaryStream = serverStreamWriter;
+                
 
                 var messages = new BlockingCollection<StringRequest>();
                 foreach (var message in messageHistory)
@@ -33,13 +32,11 @@ namespace PeakSWC.RemoteWebView
                     messages.Add(message);
                 }
 
-                observers.TryAdd(serverStreamWriter, messages);
+                observers.TryAdd(brn, messages);
             }
 
             // TODO Keep track of tasks
-            Task.Run(() => ProcessMessages(serverStreamWriter,linkedToken.Token));
-
-            return primaryStream != null;        
+            Task.Run(() => ProcessMessages(brn,linkedToken.Token));  
         }
 
         public Task ClientTask { get; }
@@ -94,17 +91,16 @@ namespace PeakSWC.RemoteWebView
 
         }
 
-        private async Task ProcessMessages(IServerStreamWriter<StringRequest> serverStreamWriter, CancellationToken cancellationToken)
+        private async Task ProcessMessages(BrowserResponseNode brn, CancellationToken cancellationToken)
         {
-            bool isPrimary = serverStreamWriter == primaryStream;
-
-            if (observers.TryGetValue(serverStreamWriter, out var updates))
+          
+            if (observers.TryGetValue(brn, out var updates))
             {
                 foreach (var request in updates.GetConsumingEnumerable(cancellationToken))
                 {
-                    if (isPrimary || !request.Request.Contains("EndInvokeDotNet"))
+                    if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet"))
                     {
-                        await WriteMessage(serverStreamWriter, request, !isPrimary);
+                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary);
                         logger.LogInformation($"WebView -> Browser {request.Id} {request.Request}");
                     }
                        
