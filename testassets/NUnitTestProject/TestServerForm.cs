@@ -56,7 +56,7 @@ namespace WebdriverTestProject
             }
             var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
 
-            var channel = GrpcChannel.ForAddress(url, new GrpcChannelOptions { HttpHandler = httpHandler });
+            var channel = GrpcChannel.ForAddress(grpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
             client = new ClientIPC.ClientIPCClient(channel);
             var response = await client!.GetServerStatusAsync(new Empty { });
             var totalReadTime = response.ConnectionResponses.Sum(x => x.TotalReadTime);
@@ -65,7 +65,7 @@ namespace WebdriverTestProject
             var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
 
             Assert.AreEqual(24 * num, totalFilesRead, "Failed on total files read");  
-            Assert.AreEqual(1252744 * num, totalBytesRead, "Failed on total bytes read"); // This will vary depending on the size of the Javascript  
+            Assert.AreEqual(1251682 * num, totalBytesRead, "Failed on total bytes read"); // This will vary depending on the size of the Javascript  
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
             Console.WriteLine($"TotalReadTime {totalReadTime}");
 

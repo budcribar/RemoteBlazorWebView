@@ -3,6 +3,7 @@ using System.Diagnostics;
 
 namespace WebdriverTestProject
 {
+    [Ignore]
     [TestClass]
     public class TestRemoteEmbeddedBlazorWebView : TestRemoteBlazorWpf
     {

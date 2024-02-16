@@ -24,6 +24,7 @@ namespace WebdriverTestProject
     {
         protected static List<ChromeDriver> _driver = new();
         protected readonly string url = @"https://localhost:5001/";
+        protected string grpcUrl = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
         protected static string[] ids = Array.Empty<string>();
         protected static Process? process;
@@ -58,6 +59,8 @@ namespace WebdriverTestProject
             _driver = new();
             Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
             KillClient();
+
+           
 
             process = StartServer();
             
@@ -113,7 +116,11 @@ namespace WebdriverTestProject
         [TestInitialize]
         public void Setup()
         {
-            channel = GrpcChannel.ForAddress(url);
+            string? envVarValue = Environment.GetEnvironmentVariable(variable: "Rust");
+            if (envVarValue != null)
+                grpcUrl = @"https://localhost:5002/";
+
+            channel = GrpcChannel.ForAddress(grpcUrl);
         }
 
         //[TestMethod]
@@ -195,7 +202,12 @@ namespace WebdriverTestProject
                 sw.Restart();
 
                 // Test refresh
-                for (int i = 0; i < numClients; i++) _driver[i].Navigate().Refresh();
+                for (int i = 0; i < numClients; i++)
+                {
+                    _driver[i].Navigate().Refresh();
+                    Thread.Sleep(1000);
+                    // Delay is needed otherwise WebView2 is crashing
+                }
 
                 for (int i = 0; i < numClients; i++)
                 {
