@@ -17,7 +17,7 @@ namespace WebdriverTestProject
     {
         private static EdgeDriver? driver;
         private static string startingDirectory = string.Empty;
-        private static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
+        private readonly static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 100;
         public virtual string BinaryLocation()
         {
             return Utilities.BlazorWinFormsAppExe();

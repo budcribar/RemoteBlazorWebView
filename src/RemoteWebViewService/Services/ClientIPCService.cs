@@ -11,54 +11,41 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ClientIPCService : ClientIPC.ClientIPCBase
+    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService) : ClientIPC.ClientIPCBase
     {
-        private readonly ILogger<ClientIPCService> _logger;
-        private readonly ConcurrentDictionary<string,Channel<string>> _serviceStateChannel;
-        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
-        private readonly IUserService _userService;
-
         private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
             var list = new ClientResponseList();
-            list.ClientResponses.AddRange(_serviceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            list.ClientResponses.AddRange(serviceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
             return responseStream.WriteAsync(list);
-        }
-
-        public ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string,Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService)
-        {
-            _logger = logger;
-            _serviceStateChannel = serviceStateChannel;
-            _serviceDictionary = serviceDictionary;
-            _userService = userService;
         }
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
             string id = request.Id;
-            _serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<string>());
+            serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<string>());
            
             try
             {
-                var groups = await _userService.GetUserGroups(request.Oid);
+                var groups = await userService.GetUserGroups(request.Oid);
                 
                 await WriteResponse(responseStream, groups);
 
-                await foreach (var state in _serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
+                await foreach (var state in serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
                 {
-                    _logger.LogInformation($"Client IPC: {state}");
+                    logger.LogInformation($"Client IPC: {state}");
                     await WriteResponse(responseStream, groups);
                 }
             }
             finally 
             {
-                _serviceStateChannel.Remove(id, out _);
+                serviceStateChannel.Remove(id, out _);
             }        
         }
 
         public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
         {
-            var groups = await _userService.GetUserGroups(request.Oid);
+            var groups = await userService.GetUserGroups(request.Oid);
             var response = new UserResponse();
             response.Groups.AddRange(groups);
             return response;
@@ -68,13 +55,13 @@ namespace PeakSWC.RemoteWebView
         {
             List<ConnectionResponse> GetConnectionResponses() 
             {
-                return _serviceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
+                return serviceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
             }
             List<TaskResponse> GetTaskResponses(string id)
             {
                 var responses = new List<TaskResponse>();
 
-                if (_serviceDictionary.TryGetValue(id, out ServiceState? ss))
+                if (serviceDictionary.TryGetValue(id, out ServiceState? ss))
                 {
                     if (ss.PingTask != null)
                         responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
@@ -108,7 +95,7 @@ namespace PeakSWC.RemoteWebView
                 var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
                 var entries = eventLog.Entries.Cast<EventLogEntry>().Where(x => x.TimeGenerated > DateTime.Now.Subtract(elapsedTime) && x.Source == "RemoteWebViewService").OrderByDescending(x => x.TimeGenerated);
 
-                List<EventResponse> results = new();
+                List<EventResponse> results = [];
                 foreach (var entry in entries) {
                     var er = new EventResponse { Timestamp = Timestamp.FromDateTime(entry.TimeGenerated.ToUniversalTime()) };
                     er.Messages.AddRange(entry.Message.Split(Environment.NewLine));

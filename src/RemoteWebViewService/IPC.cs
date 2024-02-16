@@ -14,7 +14,7 @@ namespace PeakSWC.RemoteWebView
     {
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
-        private readonly List<StringRequest> messageHistory = new ();
+        private readonly List<StringRequest> messageHistory = [];
         private readonly ConcurrentDictionary<BrowserResponseNode, BlockingCollection<StringRequest>> observers = new();
        
         private readonly ILogger<RemoteWebViewService> logger;

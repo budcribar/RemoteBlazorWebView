@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteWebView
         public bool InUse { get; set; } = false;
         public bool Refresh { get; set; } = false;
         public string Id { get; init; } = string.Empty;
-        public ConcurrentBag<string> IsMirroredConnection { get; set; } = new();
+        public ConcurrentBag<string> IsMirroredConnection { get; set; } = [];
         public bool EnableMirrors { get; set; } = false;       
         public string Group { get; init;  } = string.Empty;
         public int Pid { get; init; } = 0;

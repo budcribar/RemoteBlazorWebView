@@ -4,5 +4,4 @@
 // a specific target and scoped to a namespace, type, member, etc.
 
 using System.Diagnostics.CodeAnalysis;
-
-[assembly: SuppressMessage("CodeQuality", "IDE0052:Remove unread private members", Justification = "<Pending>", Scope = "member", Target = "~F:PeakSWC.RemoteWebView.BrowserIPCService._logger")]
+[assembly: SuppressMessage("Usage", "ASP0018:Unused route parameter", Justification = "<Pending>", Scope = "member", Target = "~M:PeakSWC.RemoteWebView.Startup.Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder,Microsoft.AspNetCore.Hosting.IWebHostEnvironment)")]

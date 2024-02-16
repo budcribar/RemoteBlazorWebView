@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace PeakSwc.StaticFiles
 {
-    internal class FileInfo : IFileInfo
+    internal partial class FileInfo : IFileInfo
     {
         private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
         private string path;
@@ -98,7 +98,7 @@ namespace PeakSwc.StaticFiles
                         using StreamReader sr = new(stream);
                         var contents = sr.ReadToEnd();
                         var initialLength = contents.Length;
-                        contents = Regex.Replace(contents, "<base.*href.*=.*(\"|').*/.*(\"|')", $"<base href=\"/{id}/\"", RegexOptions.Multiline);
+                        contents = HrefRegEx().Replace(contents, $"<base href=\"/{id}/\"");
                         if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
                         stream.Dispose();
                         stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
@@ -169,28 +169,22 @@ namespace PeakSwc.StaticFiles
         {
             return GetStream();
         }
+
+        [GeneratedRegex("<base.*href.*=.*(\"|').*/.*(\"|')", RegexOptions.Multiline)]
+        private static partial Regex HrefRegEx();
     }
 
-    public class RemoteFileResolver : IFileProvider
+    public class RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger) : IFileProvider
     {
-        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
-        private readonly ILogger<RemoteFileResolver> _logger;
-
-        public RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger)
-        {
-            _rootDictionary = rootDictionary;
-            _logger = logger;
-        }
-
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
-            _logger.LogError("Directory contents not supported");
+            logger.LogError("Directory contents not supported");
             return new NotFoundDirectoryContents();
         }
 
         public IFileInfo GetFileInfo(string subpath)
         {
-            return new FileInfo(_rootDictionary, subpath, _logger);
+            return new FileInfo(rootDictionary, subpath, logger);
         }
 
         public IChangeToken Watch(string _)

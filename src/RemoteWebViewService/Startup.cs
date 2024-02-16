@@ -15,6 +15,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 #if AUTHORIZATION
@@ -29,11 +30,13 @@ namespace PeakSWC.RemoteWebView
 {
     public class GrpcBaseUriResponse
     {
-        public String grpcBaseUri {  get; set; } = string.Empty;
+        [JsonPropertyName("grpcBaseUri")]
+        public String GrpcBaseUri {  get; set; } = string.Empty;
     }
     public class StatusResponse
     {
-        public bool connected { get; set; }
+        [JsonPropertyName("connected")]
+        public bool Connected { get; set; }
     }
     public class Startup
     {
@@ -66,7 +69,7 @@ namespace PeakSWC.RemoteWebView
 
             public void ConfigureServices(IServiceCollection services)
         {
-            services.AddResponseCompression(options => { options.MimeTypes.Concat(new[] { "application/octet-stream", "application/wasm" }); });
+            services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
 #if AUTHORIZATION
             services.AddTransient((sp) => CreateApiHelper());
             services.AddTransient<IUserService,UserService>();
@@ -191,12 +194,10 @@ namespace PeakSWC.RemoteWebView
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fi = rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
-                        using (Stream stream = fi.CreateReadStream())
-                        {
-                            context.Response.StatusCode = 200;
-                            context.Response.ContentType = "text/html";
-                            await stream.CopyToAsync(context.Response.Body);
-                        }
+                        using Stream stream = fi.CreateReadStream();
+                        context.Response.StatusCode = 200;
+                        context.Response.ContentType = "text/html";
+                        await stream.CopyToAsync(context.Response.Body);
                     }
                     else
                     {
@@ -281,7 +282,7 @@ namespace PeakSWC.RemoteWebView
 
                 var response = new StatusResponse
                 {
-                    connected = ServiceDictionary.ContainsKey(guid)
+                    Connected = ServiceDictionary.ContainsKey(guid)
                 };
 
                 context.Response.ContentType = "application/json";
@@ -297,7 +298,7 @@ namespace PeakSWC.RemoteWebView
 
                 var response = new GrpcBaseUriResponse
                 {
-                    grpcBaseUri =  baseUri,
+                    GrpcBaseUri =  baseUri,
                 };
 
                 context.Response.ContentType = "application/json";
@@ -339,12 +340,10 @@ namespace PeakSWC.RemoteWebView
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fi = rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
-                        using (Stream stream = fi.CreateReadStream())
-                        {
-                            context.Response.StatusCode = 200;
-                            context.Response.ContentType = "text/html";
-                            await stream.CopyToAsync(context.Response.Body);
-                        }
+                        using Stream stream = fi.CreateReadStream();
+                        context.Response.StatusCode = 200;
+                        context.Response.ContentType = "text/html";
+                        await stream.CopyToAsync(context.Response.Body);
                     }
                     else
                     {

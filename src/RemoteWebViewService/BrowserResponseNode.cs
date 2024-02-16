@@ -2,19 +2,10 @@
 
 namespace PeakSWC.RemoteWebView
 {
-    public class BrowserResponseNode
+    public class BrowserResponseNode(IServerStreamWriter<StringRequest> streamWriter, string clientId, bool isPrimary)
     {
-        public IServerStreamWriter<StringRequest> StreamWriter { get;set; }
-        public string ClientId { get; set; }
-        public bool IsPrimary { get; set; }
-
-        public BrowserResponseNode( IServerStreamWriter<StringRequest> streamWriter, string clientId, bool isPrimary)
-        {
-            StreamWriter = streamWriter;
-            ClientId = clientId;
-            IsPrimary = isPrimary;
-        }
-
-         
+        public IServerStreamWriter<StringRequest> StreamWriter { get; set; } = streamWriter;
+        public string ClientId { get; set; } = clientId;
+        public bool IsPrimary { get; set; } = isPrimary;
     }
 }

@@ -12,24 +12,13 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class BrowserIPCService : BrowserIPC.BrowserIPCBase
+    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ShutdownService shutdownService) : BrowserIPC.BrowserIPCBase
     {
-        private readonly ILogger<RemoteWebViewService> _logger;
-        private readonly ConcurrentDictionary<string, ServiceState> _serviceDictionary;
-        private readonly ShutdownService _shutdownService;
-
-        public BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ShutdownService shutdownService)
-        {
-            _logger = logger;
-            _serviceDictionary = serviceDictionary;
-            _shutdownService = shutdownService;
-        }
-
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            if (!serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
-                _shutdownService.Shutdown(request.Id);
+                shutdownService.Shutdown(request.Id);
                 return;
             }
 
@@ -45,7 +34,7 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.IsPrimary)
                 {
-                    _shutdownService.Shutdown(request.Id, ex);
+                    shutdownService.Shutdown(request.Id, ex);
                 }
             }
 
@@ -54,13 +43,13 @@ namespace PeakSWC.RemoteWebView
 
         public override Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            if (!_serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
+            if (!serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = false });
 
             // Skip messages from read only client
             if (!request.IsPrimary)
             {
-                _logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
+                logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
                 return Task.FromResult(new SendMessageResponse { Id = request.Id, Success = true });
             }
 
