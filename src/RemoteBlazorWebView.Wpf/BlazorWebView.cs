@@ -184,7 +184,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                Id = Id;
         }
 
-        public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
+        public void Restart()
+        {
+            (WebViewManager as RemoteWebView2Manager)?.Shutdown();
+            RemoteWebView.RemoteWebView.Restart(this);
+        }
 
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 

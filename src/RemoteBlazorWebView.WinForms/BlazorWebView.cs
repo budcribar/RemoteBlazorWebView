@@ -188,7 +188,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                  return new RemoteWebView2Manager(this, webview, services, dispatcher, fileProvider, store,hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized, logger);
         }
 
-        public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
+        public void Restart()
+        {
+            (WebViewManager as RemoteWebView2Manager)?.Shutdown();
+            RemoteWebView.RemoteWebView.Restart(this);
+        }
 
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
