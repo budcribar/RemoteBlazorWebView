@@ -57,11 +57,6 @@
     <None Remove="appsettings.json.added" />
     <None Remove="appsettings.json.save" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="appsettings.json.save">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.4" />
@@ -92,6 +87,9 @@
   <ItemGroup>
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\favicon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
