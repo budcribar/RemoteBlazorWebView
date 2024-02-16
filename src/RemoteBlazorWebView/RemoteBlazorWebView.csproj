@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Based on maui 8.0.3</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 8.0.6 - Note: Compatible with 8.0.1 or later of RemoteWebViewService</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 	</PropertyGroup>

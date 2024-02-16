@@ -8,7 +8,7 @@
 - Update the RemoteBlazorWebView.WindowsForms, RemoteBlazorWebView.Wpf, RemoteBlazorWebViewTutorial.Shared packages to the latest version
 - .\RunTests.ps1  -Mode Release
 - Verify RunTests.ps1 passes in release mode
-- Update both RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories with the artifacts/releaze.zip using the latest tag
+- Update both RemoteBlazorWebView and RemoteBlazorWebViewTutorial repositories with the artifacts/release.zip using the latest tag
 - Merge the changes into the dotnet6 branch
 - Create a new branch in both repositories RemoteBlazorWebView and RemoteBlazorWebViewTutorial
 - Copy the webwindow.proto file to the RemoteWebViewAdmin project
