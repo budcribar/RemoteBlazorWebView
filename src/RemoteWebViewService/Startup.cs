@@ -187,16 +187,14 @@ namespace PeakSWC.RemoteWebView
                 context.Response.ContentType = "image/x-icon";
 
                 // Find and stream the embedded file
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream == null)
                 {
-                    if (stream == null)
-                    {
-                        context.Response.StatusCode = 404;
-                        return;
-                    }
-
-                    await stream.CopyToAsync(context.Response.Body);
+                    context.Response.StatusCode = 404;
+                    return;
                 }
+
+                await stream.CopyToAsync(context.Response.Body);
             };
         }
 
