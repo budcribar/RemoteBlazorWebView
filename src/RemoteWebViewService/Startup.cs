@@ -346,7 +346,7 @@ namespace PeakSWC.RemoteWebView
                 // Create the version string
                 string versionString = $"Version {assemblyVersion}";
 
-                var contact = new ContactInfo { Company = "Peak Software Consulting, LLC", Email = "budcribar@msn.com", Name= "Bud Cribar" };
+                var contact = new ContactInfo { Company = "Peak Software Consulting, LLC", Email = "budcribar@msn.com", Name= "Bud Cribar", Url = "https://github.com/budcribar/RemoteBlazorWebView" };
                 var html = HtmlPageGenerator.GenerateContactPage(contact, versionString);
 
                 context.Response.ContentType = "text/html";

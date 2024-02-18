@@ -2,9 +2,10 @@
 {
     public class ContactInfo
     {
-        public string Name { get; set; }
-        public string Company { get; set; }
-        public string Email { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Company { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
     }
 
     public static class HtmlPageGenerator
@@ -59,15 +60,17 @@
     </style>
 </head>
 <body>
-    <div class=""card"">
-        <div class=""container"">
-            <h1>Contact Information</h1>
-            <p><span class=""label"">Name:</span> {contact.Name}</p>
-            <p><span class=""label"">Company:</span> {contact.Company}</p>
-            <p><span class=""label"">Email:</span> {contact.Email}</p>
-            <p><span class=""label"">Version:</span> {version}</p>
-        </div>
+   <div class=""card"">
+    <div class=""container"">
+        <h1>Contact Information</h1>
+        <p><span class=""label"">Name:</span> {contact.Name}</p>
+        <p><span class=""label"">Company:</span> {contact.Company}</p>
+        <p><span class=""label"">Email:</span> <a href=""mailto:{contact.Email}"">{contact.Email}</a></p>
+        <p><span class=""label"">Source:</span> <a href=""{contact.Url}"" target=""_blank"">{contact.Url}</a></p>
+        <p><span class=""label"">Version:</span> {version}</p>
     </div>
+</div>
+
 </body>
 </html>";
             return htmlTemplate;
