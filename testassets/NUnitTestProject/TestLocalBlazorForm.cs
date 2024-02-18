@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Internal.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -43,6 +44,9 @@ namespace WebdriverTestProject
 
             try
             {
+                Log.Handlers.Add(new FileLogHandler(Path.Combine(Path.GetDirectoryName(binary), "Selenium.log")));
+                Log.SetLevel(LogEventLevel.Trace);
+
                 driver = new EdgeDriver(options);
             }
             catch (Exception ex)
@@ -54,7 +58,7 @@ namespace WebdriverTestProject
             Thread.Sleep(1000);
         }
 
-        [Ignore]
+     
         [TestMethod]
         public void Test10Clicks()
         {

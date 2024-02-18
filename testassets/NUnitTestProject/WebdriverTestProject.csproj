@@ -18,7 +18,7 @@
 		<PackageReference Include="MSTest.TestFramework" Version="3.2.1" />
 		<PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="121.0.6167.8500" />
 		<PackageReference Include="Selenium.WebDriver" Version="4.17.0" />
-		<PackageReference Include="Selenium.WebDriver.MSEdgeDriver" Version="122.0.2348-pre" />
+		<PackageReference Include="Selenium.WebDriver.MSEdgeDriver" Version="121.0.2277.71-pre" />
 		<PackageReference Include="WebView2.Runtime.X64" Version="121.0.2277.128" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		<PackageReference Include="Google.Protobuf" Version="3.25.3" />
