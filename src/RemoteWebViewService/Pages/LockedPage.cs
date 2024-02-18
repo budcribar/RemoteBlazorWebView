@@ -1,7 +1,7 @@
 ﻿
 using System.Diagnostics.CodeAnalysis;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.Pages
 {
     public static class LockedPage
     {
@@ -11,7 +11,7 @@ namespace PeakSWC.RemoteWebView
                 user = string.Empty;
             else
                 user = "to: <b>" + user + "</b>";
-    
+
             string html = $"""
                 <!DOCTYPE html>
                 <html lang = 'en' style='height: 100%;' >

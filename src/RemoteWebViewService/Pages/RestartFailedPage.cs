@@ -1,10 +1,10 @@
-﻿namespace PeakSWC.RemoteWebView
+﻿namespace PeakSWC.RemoteWebView.Pages
 {
     public static class RestartFailedPage
     {
         public static string Html(string processName, int pid, string hostName)
         {
-           
+
 
             string html = $"""
                 <!DOCTYPE html>

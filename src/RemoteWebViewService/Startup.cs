@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
+using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -155,6 +156,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                endpoints.MapGet("/favicon.ico", Favicon()).AllowAnonymous();
                 endpoints.MapGet("/mirror/{id:guid}", Mirror()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/app/{id:guid}", Start()).ConditionallyRequireAuthorization();
 
@@ -169,6 +171,33 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/test", Version());
                 endpoints.MapFallbackToFile("index.html");
             });
+        }
+
+        private RequestDelegate Favicon()
+        {
+            return async context =>
+            {
+                // Specify the resource name, typically it is namespace.filename
+                var resourceName = "PeakSWC.RemoteWebView.Resources.favicon.ico";
+
+                // Get the assembly where the resource is embedded
+                var assembly = Assembly.GetExecutingAssembly();
+
+                // Set the correct content type for favicon.ico
+                context.Response.ContentType = "image/x-icon";
+
+                // Find and stream the embedded file
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                    {
+                        context.Response.StatusCode = 404;
+                        return;
+                    }
+
+                    await stream.CopyToAsync(context.Response.Body);
+                }
+            };
         }
 
         private RequestDelegate Mirror()
@@ -317,11 +346,13 @@ namespace PeakSWC.RemoteWebView
                 // Create the version string
                 string versionString = $"Version {assemblyVersion}";
 
-                // Set the response content type to plain text
-                context.Response.ContentType = "text/plain";
+                var contact = new ContactInfo { Company = "Peak Software Consulting, LLC", Email = "budcribar@msn.com", Name= "Bud Cribar" };
+                var html = HtmlPageGenerator.GenerateContactPage(contact, versionString);
+
+                context.Response.ContentType = "text/html";
 
                 // Write the version string to the response
-                await context.Response.WriteAsync(versionString);
+                await context.Response.WriteAsync(html);
             };
         }
 

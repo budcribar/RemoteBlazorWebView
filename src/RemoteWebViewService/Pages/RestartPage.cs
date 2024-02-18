@@ -1,5 +1,5 @@
 ﻿//
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.Pages
 {
     public static class RestartPage
     {
@@ -41,6 +41,6 @@ namespace PeakSWC.RemoteWebView
                 """;
             return html;
         }
-       
+
     }
 }

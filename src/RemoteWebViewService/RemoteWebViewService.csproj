@@ -54,6 +54,9 @@
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="GlobalSuppressions.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="appsettings.json.added" />
     <None Remove="appsettings.json.save" />
   </ItemGroup>
@@ -73,11 +76,12 @@
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="2.17.0" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
+    <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico">
       <PackagePath>
       </PackagePath>
       <Pack>True</Pack>
-    </None>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GlobalSuppressions.cs" />
     <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>
@@ -88,9 +92,6 @@
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\favicon.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.Development.json">
@@ -100,6 +101,9 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
    
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
   <ProjectExtensions>
     <VisualStudio><UserProperties /></VisualStudio>
