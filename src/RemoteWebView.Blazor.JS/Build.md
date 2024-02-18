@@ -46,7 +46,7 @@ sudo apt update
 
 open ubuntu
 cd /mnt/c/users/budcr/source/repos/RemoteBlazorWebView/src
-sudo find . \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' \) -exec unix2dos {} \;
+sudo find . \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' -o -name '*.js' -o -name '.yarnrc' -o -name '*.npmproj' \) -exec unix2dos {} \;
 
 
 
