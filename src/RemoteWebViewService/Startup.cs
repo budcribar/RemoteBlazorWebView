@@ -168,7 +168,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/status/{id:guid}", Status()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/grpcbaseuri", GrpcBaseUri()).ConditionallyRequireAuthorization();           
                 endpoints.MapGet("/wait/{id:guid}", Wait()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/test", Version());
+                endpoints.MapGet("/", Contact());
                 endpoints.MapFallbackToFile("index.html");
             });
         }
@@ -335,7 +335,7 @@ namespace PeakSWC.RemoteWebView
             };
         }
 
-        private RequestDelegate Version()
+        private RequestDelegate Contact()
         {
             return async context =>
             {
