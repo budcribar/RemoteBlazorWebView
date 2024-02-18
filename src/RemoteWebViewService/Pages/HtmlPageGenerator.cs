@@ -2,9 +2,9 @@
 {
     public class ContactInfo
     {
-        public string Name { get; set; } = string.Empty;
-        public string Company { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string Name { get; set; }
+        public string Company { get; set; }
+        public string Email { get; set; }
     }
 
     public static class HtmlPageGenerator
@@ -21,22 +21,36 @@
     <style>
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 40px;
-            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }}
+        .card {{
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+            transition: 0.3s;
+            width: 40%;
+            min-width: 300px;
+        }}
+        .card:hover {{
+            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
         }}
         .container {{
-            max-width: 600px;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 2px 16px;
         }}
         h1 {{
             color: #0056b3;
+            font-size: 24px;
             text-align: center;
+            margin-top: 16px;
         }}
         p {{
+            font-size: 16px;
             line-height: 1.6;
         }}
         .label {{
@@ -45,17 +59,20 @@
     </style>
 </head>
 <body>
-    <div class=""container"">
-        <h1>Contact Information</h1>
-        <p><span class=""label"">Name:</span> {contact.Name}</p>
-        <p><span class=""label"">Company:</span> {contact.Company}</p>
-        <p><span class=""label"">Email:</span> {contact.Email}</p>
-        <p><span class=""label"">Version:</span> {version}</p>
+    <div class=""card"">
+        <div class=""container"">
+            <h1>Contact Information</h1>
+            <p><span class=""label"">Name:</span> {contact.Name}</p>
+            <p><span class=""label"">Company:</span> {contact.Company}</p>
+            <p><span class=""label"">Email:</span> {contact.Email}</p>
+            <p><span class=""label"">Version:</span> {version}</p>
+        </div>
     </div>
 </body>
 </html>";
             return htmlTemplate;
         }
     }
+
 
 }
