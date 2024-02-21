@@ -23,6 +23,9 @@ namespace PeakSWC.RemoteWebView
         public string Group { get; set; }
         public Guid Id { get; set; }
         public bool EnableMirrors { get; set; }
+
+        public uint PingIntervalSeconds { get; set; }
+
         public string Markup { get; set; }
         public void Restart();
         

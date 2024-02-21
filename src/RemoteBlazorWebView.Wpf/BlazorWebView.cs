@@ -33,6 +33,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             ownerType: typeof(BlazorWebView),
             typeMetadata: new PropertyMetadata(OnServerUriPropertyChanged));
 
+        public static readonly DependencyProperty PingIntervalSecondsProperty = DependencyProperty.Register(
+        name: nameof(PingIntervalSeconds),
+        propertyType: typeof(uint),
+        ownerType: typeof(BlazorWebView),
+        typeMetadata: new PropertyMetadata(30U, OnPingIntervalSecondsPropertyChanged));
+
+
         public static readonly DependencyProperty GrpcBaseUriProperty = DependencyProperty.Register(
           name: nameof(GrpcBaseUri),
           propertyType: typeof(Uri),
@@ -70,6 +77,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(GrpcBaseUriProperty, value);
         }
 
+        public uint PingIntervalSeconds
+        {
+            get => (uint)GetValue(PingIntervalSecondsProperty);
+            set => SetValue(PingIntervalSecondsProperty, value);
+        }
+
 
         public string Group
         {
@@ -94,6 +107,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private static void OnGrpcBaseUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGrpcBaseUriPropertyChanged(e);
+
+        private static void OnPingIntervalSecondsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnPingIntervalSecondsPropertyChanged(e);
+
+        private void OnPingIntervalSecondsPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 
         private void OnGrpcBaseUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
 

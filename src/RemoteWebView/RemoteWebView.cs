@@ -91,6 +91,8 @@ namespace PeakSWC.RemoteWebView
         public string HostHtmlPath { get; } = string.Empty;
         public Dispatcher? Dispatcher { get; set; }
 
+        private uint PingIntervalSeconds {get;set;}
+
         public static async Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)
         {
             Uri? _grpcBaseUri;
@@ -147,6 +149,8 @@ namespace PeakSWC.RemoteWebView
             // Default to the http server
             if (BlazorWebView.GrpcBaseUri == null)
                 BlazorWebView.GrpcBaseUri = BlazorWebView.ServerUri;
+
+            PingIntervalSeconds = BlazorWebView.PingIntervalSeconds;
 
             if (client == null)
             {
@@ -339,7 +343,7 @@ namespace PeakSWC.RemoteWebView
 
                     try
                     {
-                        await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = BlazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = 30 });
+                        await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = BlazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = (int)PingIntervalSeconds });
 
                         await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token))
                         {

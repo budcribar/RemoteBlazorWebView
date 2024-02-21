@@ -41,6 +41,7 @@ namespace PeakSWC.RemoteWebView
         }
 
         public Uri? GrpcBaseUri { get; set; }
+        public uint PingIntervalSeconds { get; set; }
 
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;

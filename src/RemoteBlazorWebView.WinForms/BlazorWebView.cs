@@ -123,6 +123,23 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         /// Group that the user is a member of when signed in
         /// This property must be set to a valid value for the Blazor components to start.
         /// </summary>
+        /// 
+
+        private uint _pingIntervalSeconds = 30;
+        [Category("Behavior")]
+        [Description(@"Ping interval in seconds")]
+        public uint PingIntervalSeconds
+        {
+            get => _pingIntervalSeconds;
+            set
+            {
+                _pingIntervalSeconds = value;
+                Invalidate();
+            }
+        }
+        private void ResetPingIntervalSeconds() => _pingIntervalSeconds = 30;
+        private bool ShouldSerializePingIntervalSeconds() => _pingIntervalSeconds != 30;
+
 
         [Category("Behavior")]
         [Description(@"Group associated with the user.")]
