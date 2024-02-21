@@ -7,18 +7,18 @@ namespace WebdriverTestProject
 {
     public static class BlazorWebViewFactory
     {
-        private static Thread staThread;
+        private static Thread? staThread;
         private static AutoResetEvent threadInitialized = new AutoResetEvent(false);
         private static AutoResetEvent threadShutdown = new AutoResetEvent(false);
 
-        public static BlazorWebView CreateBlazorWebView()
+        public static BlazorWebView? CreateBlazorWebView()
         {
-            BlazorWebView control = null;
+            BlazorWebView? control = null;
 
             staThread = new Thread(() =>
             {
                 // Ensure an Application instance is available
-                Application app = null;
+                Application? app = null;
                 if (Application.Current == null)
                 {
                     app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };

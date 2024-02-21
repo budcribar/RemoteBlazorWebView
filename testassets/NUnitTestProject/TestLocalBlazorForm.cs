@@ -38,13 +38,14 @@ namespace WebdriverTestProject
             Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
             var options = new EdgeOptions
             {
+                BrowserVersion = "121.0",
                 UseWebView = true,
                 BinaryLocation = executable
             };
 
             try
             {
-                Log.Handlers.Add(new FileLogHandler(Path.Combine(Path.GetDirectoryName(binary), "Selenium.log")));
+                Log.Handlers.Add(new FileLogHandler(Path.Combine(Path.GetDirectoryName(binary) ?? "", "Selenium.log")));
                 Log.SetLevel(LogEventLevel.Trace);
 
                 driver = new EdgeDriver(options);
@@ -65,7 +66,6 @@ namespace WebdriverTestProject
             TestClient(10);
         }
 
-        [Ignore]
         [TestMethod]
         public void Test100Clicks()
         {
