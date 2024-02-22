@@ -4,6 +4,7 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -78,6 +79,7 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
+        private ILogger Logger { get; set; }
 
         #region private
 
@@ -168,6 +170,7 @@ namespace PeakSWC.RemoteWebView
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
+                Logger.LogInformation(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors  );
                 var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
                 var completed = new ManualResetEventSlim();
                 Exception? exception = null;
@@ -389,7 +392,7 @@ namespace PeakSWC.RemoteWebView
 
         public event EventHandler<string>? OnWebMessageReceived;
 
-        private static string GenMarkup(Uri? uri,Guid id)
+        public static string GenMarkup(Uri? uri,Guid id)
         {
             var color = "#f1f1f1";
             var hostname = Dns.GetHostName();
@@ -417,17 +420,17 @@ namespace PeakSWC.RemoteWebView
             return div;
         }
 
-        public RemoteWebView(IBlazorWebView blazorWebView,string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider)
+        public RemoteWebView(IBlazorWebView blazorWebView,string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, ILogger logger)
         {
             BlazorWebView = blazorWebView;
             HostHtmlPath = hostHtmlPath;
             Dispatcher = dispatcher;
             FileProvider = fileProvider;
-            BlazorWebView.Markup = string.IsNullOrWhiteSpace(BlazorWebView.Markup) ? GenMarkup(BlazorWebView.ServerUri, BlazorWebView.Id) : BlazorWebView.Markup;
-            BlazorWebView.Group = string.IsNullOrWhiteSpace(BlazorWebView.Group) ? "test" : BlazorWebView.Group;
+            Logger = logger;
+
         }
 
-        public void NavigateToUrl(string url) { _ = Client(); }
+        public void NavigateToUrl(string _url) { _ = Client(); }
 
         public void SendMessage(string message)
         {

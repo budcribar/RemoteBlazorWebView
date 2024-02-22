@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.FileProviders;
 using PhotinoNET;
 using Photino.Blazor;
+using Microsoft.Extensions.Logging;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -18,7 +19,7 @@ namespace PeakSWC.RemoteWebView
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
 
-        public RemotePhotinoWebViewManager(RemoteBlazorWebViewWindow window, IServiceProvider provider, Dispatcher dispatcher, Uri appBaseUri, IFileProvider fileProvider, JSComponentConfigurationStore jsComponents, string hostPageRelativePath)
+        public RemotePhotinoWebViewManager(RemoteBlazorWebViewWindow window, IServiceProvider provider, Dispatcher dispatcher, Uri appBaseUri, IFileProvider fileProvider, JSComponentConfigurationStore jsComponents, string hostPageRelativePath, ILogger logger)
             : base(window, provider, dispatcher, appBaseUri, fileProvider, jsComponents, hostPageRelativePath)
         {
             _window = window ?? throw new ArgumentNullException(nameof(window));
@@ -27,7 +28,8 @@ namespace PeakSWC.RemoteWebView
                 window,
                 hostPageRelativePath,
                 dispatcher,
-                new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(typeof(RemoteWebView).Assembly))
+                new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(typeof(RemoteWebView).Assembly)),
+                logger
                 );
 
             RemoteWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PeakSWC.RemoteWebView;
 using Photino.Blazor;
@@ -57,7 +58,7 @@ namespace PeakSWC.RemoteWebView
             if (serverUrl == null)
                 WindowManager = new PhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath);
             else
-                WindowManager = new RemotePhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath);
+                WindowManager = new RemotePhotinoWebViewManager(MainWindow, services, dispatcher, new Uri(PhotinoWebViewManager.AppBaseUri), fileProvider, jsComponents, hostPageRelativePath, NullLogger<RemoteBlazorWebViewWindow>.Instance);
             
             RootComponents = new BlazorWindowRootComponents(WindowManager, jsComponents);
             foreach (var component in rootComponents)

@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.Components.WebView;
 using System.Runtime.CompilerServices;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -24,6 +26,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
     {
         public CoreWebView2CookieManager CookieManager  => WebView.CoreWebView2.CookieManager;
         private bool IsRefreshing { get; set; } = false;
+
+        private ILogger<BlazorWebViewBase> Logger => Services.GetService<ILogger<BlazorWebViewBase>>() ?? NullLogger<BlazorWebViewBase>.Instance;
 
         #region Properties
 
@@ -50,7 +54,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                    name: nameof(Group),
                    propertyType: typeof(string),
                    ownerType: typeof(BlazorWebView),
-                   typeMetadata: new PropertyMetadata(OnGroupPropertyChanged));
+                   typeMetadata: new PropertyMetadata("test", OnGroupPropertyChanged));
 
         public static readonly DependencyProperty MarkupProperty = DependencyProperty.Register(
                   name: nameof(Markup),
@@ -96,6 +100,20 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(MarkupProperty, value);
         }
 
+        public override string HostPage
+        {
+            get => (string)GetValue(HostPageProperty);
+            set
+            {
+                var markup = (string)GetValue(MarkupProperty);
+                // Set a default Markup if necessary
+                if (ServerUri != null && Id != Guid.Empty && string.IsNullOrEmpty(markup))
+                    Markup = RemoteWebView.RemoteWebView.GenMarkup(ServerUri, Id);
+               
+                SetValue(HostPageProperty, value);
+            }
+        }
+
         public bool EnableMirrors
         {
             get => (bool)GetValue(EnableMirrorsProperty);
@@ -104,31 +122,55 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         private static void OnServerUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnServerUriPropertyChanged(e);
 
-        private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("ServerUri must be set before HostPage");
+            Logger.LogInformation("ServerUriPropertyChanged {e}", e.NewValue.ToString());
+        }
 
         private static void OnGrpcBaseUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGrpcBaseUriPropertyChanged(e);
 
         private static void OnPingIntervalSecondsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnPingIntervalSecondsPropertyChanged(e);
 
-        private void OnPingIntervalSecondsPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnPingIntervalSecondsPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("PingIntervalSeconds must be set before HostPage");
+            Logger.LogInformation("PingIntervalSecondsPropertyChanged {e}", e.NewValue.ToString()); 
+        }
 
-        private void OnGrpcBaseUriPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnGrpcBaseUriPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("GrpcBaseUri must be set before HostPage");
+            Logger.LogInformation("GrpcBaseUriPropertyChanged {e}", e.NewValue.ToString()); 
+        }
 
         private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnIdPropertyChanged(e);
 
-        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) { Logger.LogInformation("IdPropertyChanged {e}", e.NewValue.ToString()); }
 
         private static void OnGroupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGroupPropertyChanged(e);
 
-        private void OnGroupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnGroupPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("Group must be set before HostPage");
+            Logger.LogInformation("GroupPropertyChanged {e}", e.NewValue.ToString());
+        }
 
         private static void OnMarkupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnMarkupPropertyChanged(e);
 
-        private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("Markup must be set before HostPage");
+            Logger.LogInformation("MarkupPropertyChanged {e}", e.NewValue.ToString().Replace("\r\n", "").Replace(" ", "")); 
+        }
 
         private static void OnEnableMirrorsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnEnableMirrorsPropertyChanged(e);
 
-        private void OnEnableMirrorsPropertyChanged(DependencyPropertyChangedEventArgs _) { }
+        private void OnEnableMirrorsPropertyChanged(DependencyPropertyChangedEventArgs e) {
+            if (RequiredStartupPropertiesSet)
+                throw new ArgumentException("EnableMirrors must be set before HostPage");
+            Logger.LogInformation("EnableMirrorsPropertyChanged {e}", e.NewValue.ToString());
+        }
 
         private Guid id = Guid.Empty;
         public Guid Id

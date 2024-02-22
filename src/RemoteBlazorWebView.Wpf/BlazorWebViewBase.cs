@@ -140,7 +140,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
 		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
-		public string HostPage
+		public virtual string HostPage
 		{
 			get => (string)GetValue(HostPageProperty);
 			set => SetValue(HostPageProperty, value);
@@ -218,7 +218,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			KeyboardNavigation.SetTabNavigation(this, keyboardNavigationMode);
 		}
 
-		private bool RequiredStartupPropertiesSet =>
+		protected bool RequiredStartupPropertiesSet =>
 			_webview != null &&
 			HostPage != null &&
 			Services != null;
@@ -261,6 +261,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			}
 
 			var logger = Services.GetService<ILogger<BlazorWebViewBase>>() ?? NullLogger<BlazorWebViewBase>.Instance;
+
+			logger.LogInformation("WebViewCore Started");
 
 			// We assume the host page is always in the root of the content directory, because it's
 			// unclear there's any other use case. We can add more options later if so.
