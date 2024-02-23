@@ -262,8 +262,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 			var logger = Services.GetService<ILogger<BlazorWebViewBase>>() ?? NullLogger<BlazorWebViewBase>.Instance;
 
-			logger.LogInformation("WebViewCore Started");
-
 			// We assume the host page is always in the root of the content directory, because it's
 			// unclear there's any other use case. We can add more options later if so.
 			string appRootDir;

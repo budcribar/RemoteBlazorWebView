@@ -149,7 +149,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
 		private void OnServicesPropertyChanged() => StartWebViewCoreIfPossible();
 
-		private bool RequiredStartupPropertiesSet =>
+		protected bool RequiredStartupPropertiesSet =>
 			Created &&
 			_webview != null &&
 			HostPage != null &&
