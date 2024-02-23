@@ -77,7 +77,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		/// </summary>
 		[Category("Behavior")]
 		[Description(@"Path to the host page within the application's static files. Example: wwwroot\index.html.")]
-		public string? HostPage
+		public virtual string? HostPage
 		{
 			get => _hostPage;
 			set

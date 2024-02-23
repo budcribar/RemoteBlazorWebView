@@ -39,9 +39,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get => _grpcBaseUri;
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("GrpcBaseUri must be set before HostPage");
                 _grpcBaseUri = value;
                 Invalidate();
-                StartWebViewCoreIfPossible();
             }
         }
 
@@ -60,9 +61,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get => _serverUri;
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("ServerUri must be set before HostPage");
                 _serverUri = value;
                 Invalidate();
-                StartWebViewCoreIfPossible();
             }
         }
 
@@ -133,6 +135,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get => _pingIntervalSeconds;
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("PingIntervalSeconds must be set before HostPage");
                 _pingIntervalSeconds = value;
                 Invalidate();
             }
@@ -147,10 +151,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         {
             get => _group;
             set
-            {            
+            {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Group must be set before HostPage");
                 _group = value;
                 Invalidate();
-                //StartWebViewCoreIfPossible();
             }
         }
         private void ResetGroup() => _group = "test";
@@ -168,6 +173,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get => _markup;
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Markup must be set before HostPage");
                 _markup = value;
                 Invalidate();
             }
@@ -191,11 +198,30 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             get => _enableMirrors;
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("EnableMirrors must be set before HostPage");
                 _enableMirrors = value;
                 Invalidate();
             }
         }
        
+        public override string? HostPage
+        {
+            get => base.HostPage;
+            set
+            {
+                var markup = Markup;
+                // Set a default Markup if necessary
+                if (ServerUri != null && Id != Guid.Empty && string.IsNullOrEmpty(markup))
+                    Markup = RemoteWebView.RemoteWebView.GenMarkup(ServerUri, Id);
+
+                // Default to the http server
+                if (GrpcBaseUri == null)
+                    GrpcBaseUri = ServerUri;
+
+                base.HostPage = value;  
+            }
+        }
 
         public override WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
         {

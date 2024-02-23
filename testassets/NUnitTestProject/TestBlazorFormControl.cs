@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading;
-using PeakSWC.RemoteBlazorWebView.Wpf;
-using System.Windows;
+using PeakSWC.RemoteBlazorWebView.WindowsForms;
+//using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PeakSWC.RemoteBlazorWebView;
 using Microsoft.Extensions.Logging;
@@ -16,159 +16,102 @@ using System.Diagnostics;
 using PeakSWC.RemoteWebView;
 using Grpc.Net.Client;
 using System.Threading.Channels;
-using Microsoft.Web.WebView2.Core;
+using System.Windows.Forms;
+using System.Windows.Threading;
 
 namespace WebdriverTestProject
 {
 
-    public static class BlazorWebViewFactory
+    public static class BlazorWebViewFormFactory
     {
         private static Thread? staThread;
         private static AutoResetEvent threadInitialized = new AutoResetEvent(false);
         private static readonly AutoResetEvent threadShutdown = new AutoResetEvent(false);
-        public static Window? Window { get; set; } = null;
-
-
-        public static async Task<BlazorWebView?> CreateBlazorComponent (RootComponent rootComponent)
+        public static Form? MainForm { get; set; } = null;
+        public static BlazorWebView? CreateBlazorComponent (RootComponent rootComponent)
         {
             BlazorWebView? control = null;
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddRemoteWpfBlazorWebView();
+            serviceCollection.AddRemoteWindowsFormsBlazorWebView();
             //serviceCollection.AddRemoteBlazorWebViewDeveloperTools();
             serviceCollection.AddLogging(loggingBuilder =>
             {
                 loggingBuilder.SetMinimumLevel(LogLevel.Debug).AddFile("Logs.txt", retainedFileCountLimit: 1);
             });
 
-            threadInitialized = new AutoResetEvent(false);
-            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            
+            BlazorWebViewFormFactory.MainForm?.Invoke(() =>
             {
 
                 control = new BlazorWebView();
                 control.Services = serviceCollection.BuildServiceProvider();
                 control.RootComponents.Add(rootComponent);
 
-
-
-                if (Window != null)
+                if (MainForm != null)
                 {
-
-                   
-                    var bwv = Window.Content as BlazorWebView;
-
-                    if (bwv != null)
-                    {
-
-                        var tcs = new TaskCompletionSource<bool>();
-
-                        EventHandler<CoreWebView2NavigationCompletedEventArgs> handler = null;
-                        handler = (sender, args) =>
-                        {
-                          
-                            bwv.WebView.NavigationCompleted -= handler;
-                            tcs.SetResult(args.IsSuccess);
-                        };
-
-                      
-
-                        //bwv.WebView.CoreWebView2.NavigationCompleted += handler;
-                        //bwv.NavigateToString("about:blank");
-
-
-
-                        //await Task.Delay(1000); 
-
-                        // Await the TaskCompletionSource's task
-                        //bool navigationSucceeded = await tcs.Task;
-                        bool navigationSucceeded = true;
-                        if (navigationSucceeded)
-                        {
-                             await bwv.DisposeAsync();
-                        }
-                        await Task.Delay(2000);
-                    }
-
-                    Window.Content = control;
+                    MainForm.Controls.Clear();
+                    MainForm.Controls.Add(control);
+                    MainForm.Show();
                 }
                    
-
-                //Task.Delay(1000).Wait();
-                control.ApplyTemplate();
-                
+              
+                threadInitialized = new AutoResetEvent(false);
                 threadInitialized.Set();
             });
             threadInitialized.WaitOne();
             return control;
         }
 
-        public static Window? CreateBlazorWindow()
+        public static Form? CreateBlazorWindow()
         {
-            Window? dummyWindow = null;
+            Form? dummyWindow = null;
 
             staThread = new Thread(() =>
             {
-                // Ensure an Application instance is available
-                Application? app = null;
-                if (Application.Current == null)
-                {
-                    app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-                }
-                else
-                {
-                    app = Application.Current;
-                }
 
-                // Create a dummy window to enable dispatcher processing
-                dummyWindow = new Window
+                dummyWindow = new Form();
+                dummyWindow.Load += DummyWindowLoad;
+                dummyWindow.Visible = true;
+                dummyWindow.Width = 800;
+                dummyWindow.Height = 800;
+
+               
+
+                Application.ThreadException += (sender, e) =>
                 {
-                    Visibility = Visibility.Visible, // Keep the window hidden
-                    Width = 800,
-                    Height = 800
+                    var msg = e.ToString();
                 };
-                app.DispatcherUnhandledException += (sender, e) =>
-                {
+              
 
-                };
-                app.Startup += (sender, e) =>
-                {
-                    try
-                    {
-                       
-                        // You can perform additional control initialization here
-                        // dummyWindow.Content = control;
-
-                        threadInitialized.Set(); // Signal that the control is initialized
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.ToString());
-                    }
-
-                };
-
-                app.Exit += (sender, e) =>
+                Application.ApplicationExit += (sender, e) =>
                 {
                     threadShutdown.Set(); // Signal that the application is exiting
                 };
 
                 // Run the application with the dummy window
-                app.Run(dummyWindow);
+                Application.Run(dummyWindow);
             });
 
             staThread.SetApartmentState(ApartmentState.STA);
             staThread.Start();
 
             // Wait for the control to be initialized
-            threadInitialized.WaitOne();
+            threadInitialized.WaitOne(3000);
 
             return dummyWindow;
+        }
+
+        private static void DummyWindowLoad(object? sender, EventArgs e)
+        {
+            threadInitialized.Set();
         }
 
         public static void Shutdown()
         {
             // Signal the STA thread to shut down by shutting down the application
-            Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
-
+            MainForm?.Invoke(Application.Exit);
+            
+            
             // Wait for the thread to complete shutdown
             if (staThread != null)
             {
@@ -181,24 +124,18 @@ namespace WebdriverTestProject
     }
 
     [TestClass]
-    public class TestBlazorWpfControl
+    public class TestBlazorFormControl
     {
       
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestSetMirrorPropertyLate()
+        public void TestSetMirrorPropertyLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
-
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+            var rootComponent = new RootComponent ("#app", typeof(Home),new Dictionary<string, object?>() );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -211,23 +148,22 @@ namespace WebdriverTestProject
             });
         }
 
-  
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestGrouplLate()
+        public void TestGrouplLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+          (
+              "#app",
+               typeof(Home),
+               new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+          );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -239,19 +175,19 @@ namespace WebdriverTestProject
           
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestMarkupslLate()
+        public void TestMarkupslLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+          (
+              "#app",
+               typeof(Home),
+               new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+          );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -264,19 +200,19 @@ namespace WebdriverTestProject
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestSetPingIntervalLate ()
+        public void TestSetPingIntervalLate ()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
-               
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
+
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
               
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -288,19 +224,19 @@ namespace WebdriverTestProject
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
-        public async Task TestSetIdPropertyLate()
+        public void TestSetIdPropertyLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 webView.HostPage = @"wwwroot\index.html";
@@ -310,19 +246,19 @@ namespace WebdriverTestProject
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestGrpcBaseUriPropertyLate()
+        public void TestGrpcBaseUriPropertyLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 webView.HostPage = @"wwwroot\index.html";
@@ -331,41 +267,40 @@ namespace WebdriverTestProject
             });
         }
 
-        [Ignore]
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestServerUriPropertyLate()
+        public void TestServerUriPropertyLate()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+            (
+                "#app",
+                 typeof(Home),
+                 new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+            );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
                 webView.Id = Guid.NewGuid();             
                 webView.HostPage = @"wwwroot\index.html";
                 webView.ServerUri = new System.Uri("https://localhost:5001");
             });
         }
         [TestMethod]
-        public async Task TestMirrorPropertyOnTime()
+        public void TestMirrorPropertyOnTime()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -377,19 +312,19 @@ namespace WebdriverTestProject
         }
 
         [TestMethod]
-        public async Task TestPropertiesOnTime()
+        public void TestPropertiesOnTime()
         {
-            var rootComponent = new RootComponent()
-            {
-                Selector = "#app",
-                ComponentType = typeof(Home),
-                Parameters = new Dictionary<string, object?>()
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
 
-            };
-            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
-            await Application.Current.Dispatcher.InvokeAsync(() => {
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
@@ -431,7 +366,7 @@ namespace WebdriverTestProject
                 await Task.Delay(1000);
             }
 
-            BlazorWebViewFactory.Window = BlazorWebViewFactory.CreateBlazorWindow();
+            BlazorWebViewFormFactory.MainForm = BlazorWebViewFormFactory.CreateBlazorWindow();
             
             string directoryPath = @"."; // Specify the directory path
             string searchPattern = "Logs-*.txt"; // Pattern to match the file names
@@ -459,7 +394,7 @@ namespace WebdriverTestProject
         [ClassCleanup]
         public static void Cleanup()
         {
-            BlazorWebViewFactory.Shutdown();
+            BlazorWebViewFormFactory.Shutdown();
             process?.Kill();
         }
     }
