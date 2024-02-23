@@ -12,6 +12,10 @@ using System;
 using System.IO;
 using System.Linq.Expressions;
 using System.Windows.Controls;
+using System.Diagnostics;
+using PeakSWC.RemoteWebView;
+using Grpc.Net.Client;
+using System.Threading.Channels;
 
 namespace WebdriverTestProject
 {
@@ -155,7 +159,7 @@ namespace WebdriverTestProject
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
-                webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
+                //webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
 
                 webView.HostPage = @"wwwroot\index.html";
 
@@ -184,16 +188,7 @@ namespace WebdriverTestProject
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 webView.HostPage = @"wwwroot\index.html";
-                try
-                {
-                    webView.Group = "group";
-                }
-                catch (Exception)
-                {
-
-
-                }
-
+                webView.Group = "group";
             });
             }
 
@@ -329,7 +324,7 @@ namespace WebdriverTestProject
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
-                webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
+                //webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
                 webView.EnableMirrors = true;
                 webView.HostPage = @"wwwroot\index.html";         
 
@@ -353,7 +348,7 @@ namespace WebdriverTestProject
 
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
-                webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
+                webView.GrpcBaseUri = new System.Uri("https://localhost:5001");
                 webView.EnableMirrors = true;
                 webView.PingIntervalSeconds = 33;
                 webView.Group = "group";
@@ -363,11 +358,34 @@ namespace WebdriverTestProject
             });
         }
 
+        public static Process process;
         public TestContext? TestContext { get; set; }
 
         [ClassInitialize]
-        public static void Initialize(TestContext testContext)
-        { 
+        public static async Task InitializeAsync(TestContext testContext)
+        {
+             string grpcUrl = @"https://localhost:5001/";
+              GrpcChannel? channel;
+            string? envVarValue = Environment.GetEnvironmentVariable(variable: "Rust");
+            if (envVarValue != null)
+                grpcUrl = @"https://localhost:5002/";
+
+            channel = GrpcChannel.ForAddress(grpcUrl);
+            process = Utilities.StartServer();
+
+            for (int i = 0; i < 10; i++)
+            {
+                // Wait for server to spin up
+                try
+                {
+                    var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
+                    Assert.AreEqual(0, ids.Responses.Count, "Server has connections at startup");
+                    break;
+                }
+                catch (Exception) { }
+                await Task.Delay(1000);
+            }
+
             BlazorWebViewFactory.Window = BlazorWebViewFactory.CreateBlazorWindow();
             
             string directoryPath = @"."; // Specify the directory path
@@ -397,6 +415,7 @@ namespace WebdriverTestProject
         public static void Cleanup()
         {
             BlazorWebViewFactory.Shutdown();
+            process?.Kill();
         }
     }
 }

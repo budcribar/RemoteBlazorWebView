@@ -109,7 +109,11 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 // Set a default Markup if necessary
                 if (ServerUri != null && Id != Guid.Empty && string.IsNullOrEmpty(markup))
                     Markup = RemoteWebView.RemoteWebView.GenMarkup(ServerUri, Id);
-               
+
+                // Default to the http server
+                if (GrpcBaseUri == null)
+                    GrpcBaseUri = ServerUri;
+
                 SetValue(HostPageProperty, value);
             }
         }

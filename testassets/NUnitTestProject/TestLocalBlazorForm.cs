@@ -45,7 +45,7 @@ namespace WebdriverTestProject
 
             try
             {
-                Log.Handlers.Add(new FileLogHandler(Path.Combine(Path.GetDirectoryName(binary) ?? "", "Selenium.log")));
+                //Log.Handlers.Add(new FileLogHandler(Path.Combine(Path.GetDirectoryName(binary) ?? "", "Selenium.log")));
                 Log.SetLevel(LogEventLevel.Trace);
 
                 driver = new EdgeDriver(options);

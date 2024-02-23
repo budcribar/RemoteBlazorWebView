@@ -148,10 +148,6 @@ namespace PeakSWC.RemoteWebView
         {
             if (BlazorWebView.ServerUri == null) return null;
 
-            // Default to the http server
-            if (BlazorWebView.GrpcBaseUri == null)
-                BlazorWebView.GrpcBaseUri = BlazorWebView.ServerUri;
-
             PingIntervalSeconds = BlazorWebView.PingIntervalSeconds;
 
             if (client == null)
