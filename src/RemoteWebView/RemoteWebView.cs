@@ -63,20 +63,6 @@ namespace PeakSWC.RemoteWebView
                 StartInfo = psi
             };
             p.Start();
-
-            int i = 0;
-            // Try to prevent COMException 0x8007139F
-            while (p.MainWindowHandle == IntPtr.Zero)
-            {
-                // Refresh process property values
-                p.Refresh();
-
-                // Wait a bit before checking again
-                Thread.Sleep(100);
-                i++;
-                if (i >= 100)
-                    break;
-            }
         }
 
         private ILogger Logger { get; set; }
@@ -147,7 +133,7 @@ namespace PeakSWC.RemoteWebView
         protected WebViewIPC.WebViewIPCClient? Client()
         {
             if (BlazorWebView.ServerUri == null) return null;
-
+            if (BlazorWebView.GrpcBaseUri == null) return null;
             PingIntervalSeconds = BlazorWebView.PingIntervalSeconds;
 
             if (client == null)
