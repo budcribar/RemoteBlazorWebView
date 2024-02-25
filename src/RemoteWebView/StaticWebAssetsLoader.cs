@@ -65,7 +65,7 @@ namespace PeakSWC.RemoteWebView
                 return null;
             }
 
-            var name = Path.GetFileNameWithoutExtension(assembly.Location);
+            var name = assembly.GetName().Name;
 
             return Path.Combine(Path.GetDirectoryName(assembly.Location)!, $"{name}.staticwebassets.runtime.json");
         }
