@@ -23,8 +23,8 @@ namespace WebdriverTestProject
         public void Setup()
         {
             Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--remote-debugging-port=9222");
-            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
-            Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
+            //var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
+            //Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
             //Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
 
             startingDirectory = Directory.GetCurrentDirectory();
@@ -33,6 +33,7 @@ namespace WebdriverTestProject
             Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
             var options = new EdgeOptions
             {
+                BrowserVersion="121.0",
                 UseWebView = true,
                 BinaryLocation = executable
             };

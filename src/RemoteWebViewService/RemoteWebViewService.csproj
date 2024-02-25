@@ -36,7 +36,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Built on asp.net 7.0.15 and Maui 7.0.101</PackageReleaseNotes>
+    <PackageReleaseNotes>Built on asp.net 7.0.16 and Maui 7.0.101</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
@@ -57,8 +57,8 @@
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.12.0-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="7.0.15" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.15" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="7.0.16" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.16" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.Identity.Web" Version="2.16.1" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="2.16.1" />
   </ItemGroup>

@@ -190,7 +190,11 @@ namespace WebdriverTestProject
                 sw.Restart();
 
                 // Test refresh
-                for (int i = 0; i < numClients; i++) _driver[i].Navigate().Refresh();
+                for (int i = 0; i < numClients; i++) {
+                    _driver[i].Navigate().Refresh();
+                    Thread.Sleep(1000);
+                    // Delay is needed otherwise WebView2 is crashing
+                }
 
                 for (int i = 0; i < numClients; i++)
                 {
