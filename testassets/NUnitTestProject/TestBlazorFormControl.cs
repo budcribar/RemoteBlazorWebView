@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading;
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
-//using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PeakSWC.RemoteBlazorWebView;
 using Microsoft.Extensions.Logging;
@@ -11,13 +10,13 @@ using System.Threading.Tasks;
 using System;
 using System.IO;
 using System.Linq.Expressions;
-using System.Windows.Controls;
 using System.Diagnostics;
 using PeakSWC.RemoteWebView;
 using Grpc.Net.Client;
 using System.Threading.Channels;
 using System.Windows.Forms;
 using System.Windows.Threading;
+
 
 namespace WebdriverTestProject
 {
@@ -32,8 +31,9 @@ namespace WebdriverTestProject
         {
             BlazorWebView? control = null;
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton(new BlazorWebViewDeveloperTools { Enabled = true });
             serviceCollection.AddRemoteWindowsFormsBlazorWebView();
-            //serviceCollection.AddRemoteBlazorWebViewDeveloperTools();
+           
             serviceCollection.AddLogging(loggingBuilder =>
             {
                 loggingBuilder.SetMinimumLevel(LogLevel.Debug).AddFile("Logs.txt", retainedFileCountLimit: 1);
@@ -46,11 +46,24 @@ namespace WebdriverTestProject
                 control = new BlazorWebView();
                 control.Services = serviceCollection.BuildServiceProvider();
                 control.RootComponents.Add(rootComponent);
+             
 
                 if (MainForm != null)
                 {
                     MainForm.Controls.Clear();
+                    MainForm.SuspendLayout();
+                    control.Dock = System.Windows.Forms.DockStyle.Fill;
+                    control.Location = new System.Drawing.Point(0, 0);
+                    control.Size = new System.Drawing.Size(1440, 1215);
+                    control.StartPath = "/";
+
+                    MainForm.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
+                    MainForm.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+                    MainForm.ClientSize = new System.Drawing.Size(1440, 1215);
+
+                    control.Parent = BlazorWebViewFormFactory.MainForm;
                     MainForm.Controls.Add(control);
+                    MainForm.ResumeLayout(false);
                     MainForm.Show();
                 }
                    
@@ -337,6 +350,49 @@ namespace WebdriverTestProject
 
             });
         }
+
+        [TestMethod]
+        public void TestConnectedEvent()
+        {
+            var rootComponent = new RootComponent
+           (
+               "#app",
+                typeof(Home),
+                new Dictionary<string, object?>()
+
+           );
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
+            Assert.IsNotNull(webView);
+            AutoResetEvent threadInitialized = new AutoResetEvent(false);
+            BlazorWebViewFormFactory.MainForm?.Invoke(() => {
+
+                webView.Id = Guid.NewGuid();
+                webView.ServerUri = new System.Uri("https://localhost:5001");
+              
+                webView.EnableMirrors = true;
+                webView.Connected += (sender, e) =>
+                {
+                    webView.WebView.CoreWebView2.Navigate($"{e.Url}mirror/{e.Id}");
+                    var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
+                    BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
+                    Task.Delay(3000).Wait();
+                    threadInitialized.Set();
+                };
+                webView.ReadyToConnect += (sender, e) =>
+                {
+                    webView.NavigateToString($"<a href='{e.Url}app/{e.Id}' target='_blank'> {e.Url}app/{e.Id}</a>");
+                    Utilities.OpenUrlInBrowser($"{e.Url}app/{e.Id}");
+
+                };
+                webView.HostPage = @"wwwroot\index.html";
+                
+            });
+            Assert.IsTrue(threadInitialized.WaitOne(10000));
+
+           
+        }
+
+       
 
         public static Process process;
         public TestContext? TestContext { get; set; }

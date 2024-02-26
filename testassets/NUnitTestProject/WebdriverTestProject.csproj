@@ -18,7 +18,7 @@
 		</PackageReference>
 		<PackageReference Include="MSTest.TestFramework" Version="3.2.2" />
 		<PackageReference Include="PeakSWC.RemoteBlazorWebView.Wpf" Version="8.0.2" />
-		<PackageReference Include="PeakSWC.RemoteBlazorWebView.WindowsForms" Version="8.0.2" />
+		<!--<PackageReference Include="PeakSWC.RemoteBlazorWebView.WindowsForms" Version="8.0.2" />-->
 		<PackageReference Include="Selenium.WebDriver" Version="4.18.1" />
 		<PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.25.3" />
@@ -28,9 +28,28 @@
   <ItemGroup>
     <Compile Remove="TestRemotePackageBlazorForm.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteBlazorWebView.WinForms\RemoteBlazorWebView.WindowsForms.csproj" />
+    <ProjectReference Include="..\..\src\RemoteBlazorWebView\RemoteBlazorWebView.csproj" />
+  </ItemGroup>
 
   <ItemGroup> 
    <Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" /> 
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\css\app.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\css\site.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\favicon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\index.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

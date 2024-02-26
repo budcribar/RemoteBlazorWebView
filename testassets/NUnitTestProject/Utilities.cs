@@ -2,7 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+
 
 namespace WebdriverTestProject
 {
@@ -241,7 +245,116 @@ namespace WebdriverTestProject
             // Wait for exit before re-starting
             x.WaitForExit();
         });
-            
+
         #endregion
+
+        #region Javascript
+
+        public static void DeleteGeneratedJsFiles(string directoryPath)
+        {
+            try
+            {
+                string[] jsFiles = Directory.GetFiles(directoryPath, "*.js");
+                Regex filePattern = new Regex(@"^script\d+\.js$", RegexOptions.IgnoreCase);
+
+                foreach (string file in jsFiles)
+                {
+                    string fileName = Path.GetFileName(file);
+                    if (filePattern.IsMatch(fileName))
+                    {
+                        File.Delete(file);
+                        Console.WriteLine($"Deleted: {file}");
+                    }
+                }
+                Console.WriteLine("Target JavaScript files have been deleted.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+        }
+        public static void GenJavascript(int numberOfFiles = 10)
+        {
+            string basePath = @"wwwroot"; // Set your base path
+            string indexPath = Path.Combine(basePath, "index.html");
+
+            StringBuilder indexFileContent = new StringBuilder(File.Exists(indexPath) ? File.ReadAllText(indexPath) : "<html><head></head><body></body></html>");
+
+            for (int i = 1; i <= numberOfFiles; i++)
+            {
+                string fileName = $"script{i}.js";
+                string filePath = Path.Combine(basePath, fileName);
+                string randomString = GenerateRandomString(1000);
+                string checksum = CalculateChecksum(randomString);
+
+                string jsContent = $@"
+                const string = '{randomString}';
+                const checksum = '{checksum}';
+                function verifyChecksum() {{
+                    const calculatedChecksum = sha256(string);
+                    if(calculatedChecksum !== checksum) {{
+                        alert('Checksum verification failed for {fileName}.');
+                        throw new Error('Checksum verification failed.');
+                    }}
+                }}
+                async function sha256(message) {{
+                    const msgBuffer = new TextEncoder().encode(message);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    return hashHex;
+                }}
+                verifyChecksum();";
+
+                File.WriteAllText(filePath, jsContent);
+
+                // Add script tag for this file to index.html
+                int bodyEndIndex = indexFileContent.ToString().LastIndexOf("</body>");
+                indexFileContent.Insert(bodyEndIndex, $"<script src=\"{fileName}\"></script>\n");
+            }
+
+            File.WriteAllText(indexPath, indexFileContent.ToString());
+        }
+
+        static string GenerateRandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            Random random = new Random();
+            return new string(Enumerable.Repeat(chars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        static string CalculateChecksum(string input)
+        {
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+                StringBuilder sBuilder = new StringBuilder();
+                for (int i = 0; i < data.Length; i++)
+                {
+                    sBuilder.Append(data[i].ToString("x2"));
+                }
+                return sBuilder.ToString();
+            }
+        }
+        public static void OpenUrlInBrowser(string url)
+        {
+            try
+            {
+                // Use the default browser's executable to open the URL
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true // Important for .NET Core/5+/6+ compatibility
+                });
+                Console.WriteLine($"Opened {url} in the default browser.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to open URL: {ex.Message}");
+            }
+        }
     }
+
+    #endregion
 }
