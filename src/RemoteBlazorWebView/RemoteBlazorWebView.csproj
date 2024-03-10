@@ -23,6 +23,7 @@
 		<PackageReleaseNotes>Based on maui 8.0.7 </PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
 	<Target Name="SetPackageVersion" DependsOnTargets="Build">

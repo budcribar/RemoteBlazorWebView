@@ -61,7 +61,7 @@ namespace WebdriverTestProject
 
                         var tcs = new TaskCompletionSource<bool>();
 
-                        EventHandler<CoreWebView2NavigationCompletedEventArgs> handler = null;
+                        EventHandler<CoreWebView2NavigationCompletedEventArgs>? handler = null;
                         handler = (sender, args) =>
                         {
                           
@@ -403,7 +403,7 @@ namespace WebdriverTestProject
             });
         }
 
-        public static Process process;
+        public static Process? process;
         public TestContext? TestContext { get; set; }
 
         [ClassInitialize]

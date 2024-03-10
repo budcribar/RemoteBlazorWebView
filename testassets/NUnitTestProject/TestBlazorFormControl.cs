@@ -43,8 +43,10 @@ namespace WebdriverTestProject
             BlazorWebViewFormFactory.MainForm?.Invoke(() =>
             {
 
-                control = new BlazorWebView();
-                control.Services = serviceCollection.BuildServiceProvider();
+                control = new BlazorWebView
+                {
+                    Services = serviceCollection.BuildServiceProvider()
+                };
                 control.RootComponents.Add(rootComponent);
              
 
@@ -163,7 +165,7 @@ namespace WebdriverTestProject
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void TestGrouplLate()
+        public void TestGroupLate()
         {
             var rootComponent = new RootComponent
           (
@@ -188,7 +190,7 @@ namespace WebdriverTestProject
           
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void TestMarkupslLate()
+        public void TestMarkupLate()
         {
             var rootComponent = new RootComponent
           (
@@ -392,9 +394,53 @@ namespace WebdriverTestProject
            
         }
 
-       
+        [TestMethod]
+        public void TestJsDownload()
+        {
+            var rootComponent = new RootComponent ("#app", typeof(Home),null);
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
+            Assert.IsNotNull(webView);
+            AutoResetEvent threadInitialized = new AutoResetEvent(false);
+            BlazorWebViewFormFactory.MainForm?.Invoke(() =>
+            {
+                webView.Id = Guid.NewGuid();
+                webView.ServerUri = new System.Uri("https://localhost:5001");
 
-        public static Process process;
+                webView.EnableMirrors = true;
+                webView.Connected += (sender, e) =>
+                {
+                    webView.WebView.CoreWebView2.Navigate($"{e.Url}mirror/{e.Id}");
+                    var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
+                    BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
+                    //Task.Delay(60000).Wait();
+                    //threadInitialized.Set();
+                };
+                webView.ReadyToConnect += (sender, e) =>
+                {
+                    webView.NavigateToString($"<a href='{e.Url}app/{e.Id}' target='_blank'> {e.Url}app/{e.Id}</a>");
+                    Utilities.OpenUrlInBrowserWithDevTools($"{e.Url}app/{e.Id}");
+
+                };
+
+                // 800 1k files are marginal
+                // 80 10k fails
+                // 5, 100k fails
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                Console.WriteLine("Generating JS files");
+                Utilities.GenJavascript(50,100_000);
+                Console.WriteLine($"Done Generating JS files in {sw.Elapsed}");
+                webView.HostPage = @"wwwroot\index.html";
+
+            });
+            //Assert.IsTrue(threadInitialized.WaitOne(100_000));
+            Task.Delay(TimeSpan.FromSeconds(20)).Wait();
+
+        }
+
+
+
+        public static Process? process;
         public TestContext? TestContext { get; set; }
 
         [ClassInitialize]

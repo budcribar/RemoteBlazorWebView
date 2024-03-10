@@ -28,14 +28,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Based on maui 8.0.7 </PackageReleaseNotes>
     <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
+	<Platforms>x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Developer|x64'">
-    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Developer|AnyCPU'">
     <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
   </PropertyGroup>
 
@@ -62,7 +59,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2277.86" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2365.46" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 

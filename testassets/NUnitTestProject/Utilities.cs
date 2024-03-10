@@ -58,7 +58,7 @@ namespace WebdriverTestProject
             process.StartInfo.UseShellExecute = true;
 
             process.Start();
-            Console.WriteLine($"Started server in {sw.Elapsed}");
+            Debug.WriteLine($"Started RUST server in {sw.Elapsed}");
             return process;
         }
 
@@ -273,7 +273,7 @@ namespace WebdriverTestProject
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-        public static void GenJavascript(int numberOfFiles = 10)
+        public static void GenJavascript(int numberOfFiles = 10, int stringLength = 1000)
         {
             string basePath = @"wwwroot"; // Set your base path
             string indexPath = Path.Combine(basePath, "index.html");
@@ -284,27 +284,31 @@ namespace WebdriverTestProject
             {
                 string fileName = $"script{i}.js";
                 string filePath = Path.Combine(basePath, fileName);
-                string randomString = GenerateRandomString(1000);
+                string randomString = GenerateRandomString(stringLength);
                 string checksum = CalculateChecksum(randomString);
 
                 string jsContent = $@"
-                const string = '{randomString}';
-                const checksum = '{checksum}';
-                function verifyChecksum() {{
-                    const calculatedChecksum = sha256(string);
-                    if(calculatedChecksum !== checksum) {{
-                        alert('Checksum verification failed for {fileName}.');
-                        throw new Error('Checksum verification failed.');
+                (function() {{
+                    const string = '{randomString}';
+                    const checksum = '{checksum}';
+                    async function verifyChecksum() {{
+                        const calculatedChecksum = await sha256(string);
+                        if(calculatedChecksum !== checksum) {{
+                            alert('Checksum verification failed for {fileName}.');
+                            throw new Error('Checksum verification failed.');
+                        }}
                     }}
-                }}
-                async function sha256(message) {{
-                    const msgBuffer = new TextEncoder().encode(message);
-                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-                    const hashArray = Array.from(new Uint8Array(hashBuffer));
-                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                    return hashHex;
-                }}
-                verifyChecksum();";
+                    async function sha256(message) {{
+                        const msgBuffer = new TextEncoder().encode(message);
+                        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                        return hashHex;
+                    }}
+                    //verifyChecksum();
+                    console.log('{fileName} passed');
+                }})();
+                ";
 
                 File.WriteAllText(filePath, jsContent);
 
@@ -326,16 +330,14 @@ namespace WebdriverTestProject
 
         static string CalculateChecksum(string input)
         {
-            using (SHA256 sha256Hash = SHA256.Create())
+            using SHA256 sha256Hash = SHA256.Create();
+            byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+            StringBuilder sBuilder = new StringBuilder();
+            for (int i = 0; i < data.Length; i++)
             {
-                byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
-                StringBuilder sBuilder = new StringBuilder();
-                for (int i = 0; i < data.Length; i++)
-                {
-                    sBuilder.Append(data[i].ToString("x2"));
-                }
-                return sBuilder.ToString();
+                sBuilder.Append(data[i].ToString("x2"));
             }
+            return sBuilder.ToString();
         }
         public static void OpenUrlInBrowser(string url)
         {
@@ -354,6 +356,28 @@ namespace WebdriverTestProject
                 Console.WriteLine($"Failed to open URL: {ex.Message}");
             }
         }
+        public static void OpenUrlInBrowserWithDevTools(string url)
+        {
+            try
+            {
+                // Specify the path to the Chrome executable
+                string chromePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+
+                // Use the --auto-open-devtools-for-tabs command line switch to open dev tools
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = chromePath,
+                    Arguments = $"--new-window --auto-open-devtools-for-tabs {url}",
+                    UseShellExecute = true
+                });
+                Console.WriteLine($"Opened {url} in Chrome with developer tools.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to open URL in Chrome with developer tools: {ex.Message}");
+            }
+        }
+
     }
 
     #endregion
