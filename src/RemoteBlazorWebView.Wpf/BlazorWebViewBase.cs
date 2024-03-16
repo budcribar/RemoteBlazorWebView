@@ -140,7 +140,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// Path to the host page within the application's static files. For example, <code>wwwroot\index.html</code>.
 		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
-		public virtual string HostPage
+		public virtual string? HostPage
 		{
 			get => (string)GetValue(HostPageProperty);
 			set => SetValue(HostPageProperty, value);

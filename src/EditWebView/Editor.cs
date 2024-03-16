@@ -109,7 +109,8 @@ namespace EditWebView
                 InsertUsing("Microsoft.AspNetCore.Components.Web");
                 InsertUsing("Microsoft.AspNetCore.Components.WebView");
 
-                Replace("public string HostPage", "public virtual string HostPage");
+                Replace("public string HostPage", "public virtual string? HostPage");
+                Replace("public string? HostPage", "public virtual string? HostPage");
                 Replace("private bool RequiredStartupPropertiesSet =>", "protected bool RequiredStartupPropertiesSet =>");
                 //Replace("WebView2WebViewManager", "WebView2.WebView2WebViewManager");
             }
@@ -158,7 +159,7 @@ namespace EditWebView
             {
                 return;
             }
-            text = text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+            text = text[..pos] + replace + text[(pos + search.Length)..];
         }
 
         public void Comment(string target)
