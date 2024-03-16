@@ -8,7 +8,7 @@ namespace ServerStartupTimer
 {
     class Program
     {
-        static async Task Main(string[] _args)
+        static async Task Main(string[] _)
         {
 
             static void KillExistingProcesses(string processName)
