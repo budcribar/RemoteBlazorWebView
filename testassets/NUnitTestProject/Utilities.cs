@@ -20,9 +20,9 @@ namespace WebdriverTestProject
             sw.Start();
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
-            var relative = @"..\..\..\..\..\src\RemoteWebViewService\bin\publishNoAuth";
+            var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\publishNoAuth";
             var executable = @"RemoteWebViewService.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
+            var f = Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, executable);
 
             Process process = new();
             process.StartInfo.FileName = Path.GetFullPath(f);
@@ -48,9 +48,9 @@ namespace WebdriverTestProject
             sw.Start();
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "http_to_grpc_bridge")?.Kill();
-            var relative = @"..\..\..\..\..\..\http_to_grpc_bridge";
+            var relative = @"http_to_grpc_bridge";
             var executable = @"http_to_grpc_bridge.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), relative, executable);
+            var f = Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, executable);
 
             Process process = new();
             process.StartInfo.FileName = Path.GetFullPath(f);
@@ -89,24 +89,24 @@ namespace WebdriverTestProject
 
         public static string BlazorWinFormsDebugPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
             var exePath = @"bin\x64\debug\net8.0-windows";  
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
 
         public static string BlazorWinFormsPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
             var exePath = "publish";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWinFormsEmbeddedPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin";
             var exePath = "publishEmbedded";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWinFormsAppExe() => Path.Combine(BlazorWinFormsPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -126,9 +126,9 @@ namespace WebdriverTestProject
 
         public static string BlazorWpfDebugPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
             var exePath = @"bin\x64\debug\net8.0-windows";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWpfAppExe()
@@ -137,16 +137,16 @@ namespace WebdriverTestProject
         }
         public static string BlazorWpfPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
             var exePath = "publish";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWpfEmbeddedPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin";
             var exePath = "publishEmbedded";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWpfAppEmbeddedExe()
@@ -164,19 +164,21 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
 
+        private static string RelativeRoot => @"..\..\..\..\..\..\";
+
         #region WebView
         public static string BlazorWebViewDebugPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
             var exePath = @"bin\debug\net8.0";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWebViewPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
             var exePath = @"publish";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
         public static string BlazorWebViewDebugAppExe()
@@ -191,9 +193,9 @@ namespace WebdriverTestProject
 
         public static string BlazorWebViewEmbeddedPath()
         {
-            var relative = @"..\..\..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
+            var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin";
             var exePath = "publishEmbedded";
-            return Path.Combine(Directory.GetCurrentDirectory(), relative, exePath);
+            return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
       
 
@@ -210,7 +212,7 @@ namespace WebdriverTestProject
 
         #region Common
 
-        public static string JavascriptFile = @"..\..\..\..\..\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js";
+        public static string JavascriptFile = Path.Combine(RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js");
         public static Process StartProcess(string executable, string directory)
         {
             Stopwatch sw = new();

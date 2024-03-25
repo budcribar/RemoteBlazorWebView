@@ -60,6 +60,9 @@
     <None Remove="appsettings.json.added" />
     <None Remove="appsettings.json.save" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.json.save" />
+  </ItemGroup>
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.4" />

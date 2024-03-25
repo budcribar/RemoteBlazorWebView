@@ -53,9 +53,9 @@ namespace WebdriverTestProject
 
         public async virtual Task Startup(int numClients)
         {
-            var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
-            Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
-            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
+            //var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
+            //Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
+            //Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
             _driver = new();
             Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
             KillClient();
