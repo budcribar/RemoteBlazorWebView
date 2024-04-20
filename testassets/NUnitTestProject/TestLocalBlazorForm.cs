@@ -38,7 +38,7 @@ namespace WebdriverTestProject
             Directory.SetCurrentDirectory(Path.GetDirectoryName(BinaryLocation()) ?? string.Empty);
             var options = new EdgeOptions
             {
-                BrowserVersion = "121.0",
+                BrowserVersion = "123.0",
                 UseWebView = true,
                 BinaryLocation = executable
             };
