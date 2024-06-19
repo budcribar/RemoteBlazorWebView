@@ -186,7 +186,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			}
 			else
 			{
-				appRootDir = Environment.CurrentDirectory;
+				appRootDir = AppContext.BaseDirectory;
 			}
 			var hostPageFullPath = Path.GetFullPath(Path.Combine(appRootDir, HostPage!)); // HostPage is nonnull because RequiredStartupPropertiesSet is checked above
 			var contentRootDirFullPath = Path.GetDirectoryName(hostPageFullPath)!;

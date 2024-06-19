@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using EditWebView;
 
-string maui = "maui-8.0.20";
+string maui = "maui-8.0.60";
 string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
 string outputDir = "../../../../../RemoteBlazorWebView.WinForms";
 
