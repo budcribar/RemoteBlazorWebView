@@ -4,7 +4,7 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<DefineConstants>$(DefineConstants);WEBVIEW2_WPF</DefineConstants>
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<PackageId>PeakSWC.RemoteBlazorWebView.Wpf</PackageId>
 		<Authors>Bud Cribar</Authors>

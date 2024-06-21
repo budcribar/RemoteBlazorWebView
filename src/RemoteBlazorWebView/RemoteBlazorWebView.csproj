@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
@@ -33,11 +33,11 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.6" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.6" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-		<PackageReference Include="Microsoft.JSInterop" Version="8.0.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.0-preview.5.24306.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.0-preview.5.24306.11" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0-preview.5.24306.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0-preview.5.24306.7" />
+		<PackageReference Include="Microsoft.JSInterop" Version="9.0.0-preview.5.24306.11" />
 		<PackageReference Include="Photino.Blazor" Version="2.7.0" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
 	</ItemGroup>
