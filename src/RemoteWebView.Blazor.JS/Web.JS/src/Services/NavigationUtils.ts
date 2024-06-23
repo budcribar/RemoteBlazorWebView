@@ -122,8 +122,8 @@ function findAnchorTarget(event: MouseEvent): HTMLAnchorElement | SVGAElement | 
       if (candidate instanceof HTMLAnchorElement || candidate instanceof SVGAElement) {
         return candidate;
       }
-    } 
-  } 
+    }
+  }
   return null;
 }
 

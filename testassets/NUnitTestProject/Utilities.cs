@@ -89,7 +89,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\x64\debug\net8.0-windows";  
+            var exePath = @"bin\x64\debug\net9.0-windows";  
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -126,7 +126,7 @@ namespace WebdriverTestProject
         public static string BlazorWpfDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net8.0-windows";
+            var exePath = @"bin\x64\debug\net9.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
@@ -162,14 +162,14 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWinFormsApp() => Count("RemoteBlazorWebViewTutorial.WinFormsApp");
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
-
-        private static string RelativeRoot => @"..\..\..\..\..\..\..\";
+        private static string RelativeRoot => @"..\..\..\..\..\..\";
+        //private static string RelativeRoot => @"..\..\..\..\..\..\..\";
 
         #region WebView
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\debug\net8.0";
+            var exePath = @"bin\debug\net9.0";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 

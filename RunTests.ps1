@@ -53,6 +53,19 @@ Set-Location .\Web.JS
 yarn install
 Set-Location $currentDirectory
 
+Write-Host -ForegroundColor GREEN "Install dotnet-runtime"
+# Define the source and destination directories
+$sourceDir = "src/RemoteWebView.Blazor.JS/dotnet-runtime"
+$destDir = "src/RemoteWebView.Blazor.JS/Web.JS/node_modules"
+
+# Check if the destination directory exists, if not, create it
+if (-not (Test-Path -Path $destDir)) {
+    New-Item -ItemType Directory -Path $destDir
+}
+
+# Copy all files and directories from source to destination
+Copy-Item -Path "$sourceDir\*" -Destination $destDir -Recurse -Force
+
 Write-Host -ForegroundColor GREEN "Build remote.blazor.desktop.js"
 Set-Location .\src\RemoteWebView.Blazor.JS
 if ($env:EnvBuildMode -eq 'Debug') {

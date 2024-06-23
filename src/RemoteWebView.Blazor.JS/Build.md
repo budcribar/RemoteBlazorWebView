@@ -22,6 +22,7 @@ nvm use 16.13.0
 ```
   
   npm install -g yarn
+  npm install -g rollup
   cd RemoteWebView.Blazor.JS
   yarn install
   cd .\web.js\ 
@@ -47,6 +48,9 @@ sudo apt update
 open ubuntu
 cd /mnt/c/users/budcr/source/repos/RemoteBlazorWebView/src
 sudo find . \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' -o -name '*.js' -o -name '.yarnrc' -o -name '*.npmproj' \) -exec unix2dos {} \;
+
+sudo find . -path './node_modules' -prune -o \( -name '*.cs' -o -name '*.txt' -o -name '*.ts' -o -name '*.js' -o -name '.yarnrc' -o -name '*.npmproj' \) -exec unix2dos {} \;
+
 
 
 

@@ -1,6 +1,6 @@
 # RemoteBlazorWebView.Wpf.BlazorWebView
 
-RemoteBlazorWebView.Wpf.BlazorWebView is a powerful control based on the .NET 8 Blazor WebView Control for WPF applications. It allows you to interact with the user interface of a program developed using the BlazorWebView WPF control through a web browser by leveraging a cloud-based server.
+RemoteBlazorWebView.Wpf.BlazorWebView is a powerful control based on the .NET 9 Blazor WebView Control for WPF applications. It allows you to interact with the user interface of a program developed using the BlazorWebView WPF control through a web browser by leveraging a cloud-based server.
 
 The RemoteBlazorWebView.Wpf.BlazorWebView control facilitates remote interaction with your application's user interface by setting up a server (RemoteWebViewService) in the cloud and connecting your browser to it.
 
@@ -9,7 +9,7 @@ As a drop-in replacement for the Microsoft.AspNetCore.Components.WebView.Wpf.Bla
 
 # RemoteBlazorWebView.WindowsForms.BlazorWebView
 
-RemoteBlazorWebView.WindowsForms.BlazorWebView is a robust control built on the .NET 8 Blazor WebView WinForms Control, designed for Windows Forms applications. It allows you to engage with the user interface of a program created using the BlazorWebView WinForms control through a web browser, utilizing a cloud-based server.
+RemoteBlazorWebView.WindowsForms.BlazorWebView is a robust control built on the .NET 9 Blazor WebView WinForms Control, designed for Windows Forms applications. It allows you to engage with the user interface of a program created using the BlazorWebView WinForms control through a web browser, utilizing a cloud-based server.
 
 The RemoteBlazorWebView.WindowsForms.BlazorWebView control enables remote interaction with your application's user interface by establishing a server (RemoteWebViewService) in the cloud and directing your browser to connect with it.
 
@@ -23,7 +23,7 @@ As a seamless replacement for the Microsoft.AspNetCore.Components.WebView.Window
 You do not need to build this repo unless you want to customize the RemoteWebViewService. Run the following command to install the RemoteWebViewService
 
 ```console
-dotnet tool update -g PeakSWC.RemoteWebViewService --version 8.*-* 
+dotnet tool update -g PeakSWC.RemoteWebViewService --version 9.*-* 
 ```
 
 # Samples
