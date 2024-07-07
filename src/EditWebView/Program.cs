@@ -1,7 +1,44 @@
-﻿// See https://aka.ms/new-console-template for more information
+// See https://aka.ms/new-console-template for more information
 using EditWebView;
 
-string maui = "maui-9.0.0-preview.5.24307.10";
+//string maui = "maui-9.0.0-preview.5.24307.10";
+string aspNetUrl = "https://github.com/dotnet/aspnetcore/releases/tag/v9.0.0-preview.5.24306.11.zip";
+string mauiUrl = "https://github.com/dotnet/maui/releases/tag/9.0.0-preview.5.24307.10.zip";
+
+string url = aspNetUrl;
+
+string zipFile = Utility.GetAspNetCoreFilenameFromUrl(url);
+
+string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
+string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+if (!File.Exists(destinationPath))
+    await Utility.DownloadZipFileAsync(url, destinationPath);
+
+if(!Path.Exists(Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath))))
+    Utility.UnzipFile(destinationPath, destinationFolder);
+
+var webJSTarget = Path.Combine(@"../../../../../", @"RemoteWebView.Blazor.JS/Web.JS");
+
+// delete the WebJS directory
+Utility.DeleteDirectoryAndContents(webJSTarget);
+
+
+var webJSource = Path.Combine(Path.Combine(destinationPath.Replace(".zip",""), @"src/components/Web.JS"));
+// copy the WebJS directory
+Utility.CopyDirectory(webJSource, webJSTarget);
+
+url = mauiUrl;
+zipFile = Path.GetFileNameWithoutExtension(url);
+destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
+destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+if (!File.Exists(destinationPath))
+    await Utility.DownloadZipFileAsync(url, destinationPath);
+
+if (!Path.Exists(Path.Combine(destinationFolder, Utility.ExtractVersionFromPath(destinationPath))))
+    Utility.UnzipFile(destinationPath, destinationFolder);
+
+string maui = "maui-" + Utility.ExtractVersionFromPath(destinationPath);
 string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
 string outputDir = "../../../../../RemoteBlazorWebView.WinForms";
 
@@ -16,6 +53,15 @@ inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.User
 outputDir = "../../../../../SharedSource";
 
 ProcessFiles(inputDir, outputDir);
+
+var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), "../../../../../../"));
+
+foreach (var file in updated)
+{
+    Utility.ConvertUnixToWindowsLineEndings(Path.Combine("../../../../../../", file));
+    Utility.ConvertUtf8ToWindows1252(Path.Combine("../../../../../../", file));
+}
+   
 
 static void ProcessFiles(string inputDir, string outputDir)
 {

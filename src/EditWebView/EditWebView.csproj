@@ -8,4 +8,10 @@
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
+	
+	  <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+	</ItemGroup>
+
 </Project>
