@@ -44,3 +44,6 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb.d.ts
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb_service.d.ts
 /testassets/NUnitTestProject/msedgedriver.exe
+/src/RemoteWebView.Blazor.JS/.yarn/releases/yarn-4.3.1.cjs
+/src/RemoteWebView.Blazor.JS/Web.JS/.yarn
+/src/RemoteWebView.Blazor.JS/.yarn
