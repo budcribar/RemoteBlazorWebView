@@ -163,17 +163,11 @@ public static class Utility
         // get the directory name
         if (string.IsNullOrEmpty(lastPart))
         {
-            lastPart = Path.GetFileName(Path.GetDirectoryName(path));
+            lastPart = Path.GetFileName(Path.GetDirectoryName(path)) ?? "";
         }
 
+        return Path.GetFileNameWithoutExtension(lastPart) ?? "";
         // Try to parse the last part as a version
-        if (System.Version.TryParse(lastPart, out System.Version version))
-        {
-            return version.ToString();
-        }
-
-        // If parsing fails, return null or throw an exception
-        return null;
     }
 
     static Utility()

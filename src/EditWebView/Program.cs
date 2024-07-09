@@ -1,8 +1,8 @@
 // See https://aka.ms/new-console-template for more information
 using EditWebView;
 
-string aspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v8.0.6.zip";
-string mauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/8.0.61.zip";
+string aspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v8.0.7.zip";
+string mauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/8.0.70.zip";
 
 string url = aspNetUrl;
 
@@ -28,7 +28,7 @@ var webJSource = Path.Combine(Path.Combine(destinationPath.Replace(".zip",""), @
 Utility.CopyDirectory(webJSource, webJSTarget);
 
 url = mauiUrl;
-zipFile = Path.GetFileNameWithoutExtension(url);
+zipFile = Path.GetFileName(url);
 destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
 destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 if (!File.Exists(destinationPath))
