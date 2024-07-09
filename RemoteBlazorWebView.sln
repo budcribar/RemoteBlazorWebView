@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		azure-pipelines.yml = azure-pipelines.yml
 		Directory.Build.props = Directory.Build.props
+		src\RemoteWebView.Blazor.JS\package.json = src\RemoteWebView.Blazor.JS\package.json
+		src\RemoteWebView.Blazor.JS\Web.JS\package.json = src\RemoteWebView.Blazor.JS\Web.JS\package.json
 		README.md = README.md
 		..\RemoteBlazorWebViewTutorial\README.md = ..\RemoteBlazorWebViewTutorial\README.md
 		README.txt = README.txt
@@ -21,8 +23,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		RunTests.ps1 = RunTests.ps1
 		TODO.txt = TODO.txt
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebView.Blazor.JS", "src\RemoteWebView.Blazor.JS\RemoteWebView.Blazor.JS.csproj", "{BA890C82-9117-4554-864D-BE55C4B0564A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.WindowsForms", "src\RemoteBlazorWebView.WinForms\RemoteBlazorWebView.WindowsForms.csproj", "{17D4D295-890F-412B-A137-24E19BF8E430}"
 EndProject
@@ -85,34 +85,6 @@ Global
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|linux-x64.Build.0 = Release|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|x64.ActiveCfg = Release|x64
 		{AA110533-9A33-4884-B006-73742762B0F5}.Release|x64.Build.0 = Release|x64
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|linux-x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|linux-x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Authorization|x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.AzureNoAuth|linux-x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.AzureNoAuth|linux-x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.AzureNoAuth|x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.AzureNoAuth|x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Debug|linux-x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Debug|x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Developer|linux-x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Developer|linux-x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Developer|x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Developer|x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Embedded|linux-x64.ActiveCfg = Embedded|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Embedded|linux-x64.Build.0 = Embedded|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Embedded|x64.ActiveCfg = Embedded|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Embedded|x64.Build.0 = Embedded|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.NoAuthorization|linux-x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.NoAuthorization|linux-x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.NoAuthorization|x64.Build.0 = Debug|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|linux-x64.ActiveCfg = Release|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|linux-x64.Build.0 = Release|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.ActiveCfg = Release|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.Build.0 = Release|Any CPU
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|linux-x64.ActiveCfg = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|linux-x64.Build.0 = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x64.ActiveCfg = Debug|x64
@@ -306,7 +278,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AA110533-9A33-4884-B006-73742762B0F5} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
-		{BA890C82-9117-4554-864D-BE55C4B0564A} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{17D4D295-890F-412B-A137-24E19BF8E430} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{828D3EF0-391F-41B8-BB94-4055EA74CC10} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{F1CC0C20-31D5-4011-863E-5139B979C75A} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
