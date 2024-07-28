@@ -47,3 +47,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/.yarn/releases/yarn-4.3.1.cjs
 /src/RemoteWebView.Blazor.JS/Web.JS/.yarn
 /src/RemoteWebView.Blazor.JS/.yarn
+/yarn.lock
