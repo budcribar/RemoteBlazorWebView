@@ -69,14 +69,14 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.65.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.65.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-preview.6.24328.4" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0-preview.5.24306.7" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0-preview.6.24327.7" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-preview.5.24306.11" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.0-preview.5.24306.11" NoWarn="NU1605" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="2.19.1" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="2.19.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-preview.6.24328.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.0-preview.6.24328.4" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">

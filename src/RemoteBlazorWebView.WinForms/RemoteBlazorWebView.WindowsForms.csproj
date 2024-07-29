@@ -49,9 +49,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.0-preview.5.24306.11" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.0-preview.5.24307.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0-preview.5.24306.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.0-preview.6.24328.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.0-preview.6.24327.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0-preview.6.24327.7" />
    
   </ItemGroup>
 
