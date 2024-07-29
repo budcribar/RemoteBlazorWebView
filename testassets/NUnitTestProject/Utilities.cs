@@ -163,7 +163,7 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
 
-        private static string RelativeRoot => @"..\..\..\..\..\..\..\";
+        private static string RelativeRoot => @"..\..\..\..\..\..\";
 
         #region WebView
         public static string BlazorWebViewDebugPath()
