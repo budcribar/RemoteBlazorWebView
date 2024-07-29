@@ -127,10 +127,10 @@ public static class Utility
             throw new ArgumentException("Version cannot be null or empty.", nameof(version));
         }
 
-        // Validate version format (simple check for x.y.z format)
-        if (!Regex.IsMatch(version, @"^\d+\.\d+\.\d+$"))
+        // Validate version format (allows for preview and build numbers)
+        if (!Regex.IsMatch(version, @"^\d+\.\d+\.\d+(-[\w.]+)?$"))
         {
-            throw new ArgumentException("Invalid version format. Expected format: x.y.z", nameof(version));
+            throw new ArgumentException("Invalid version format. Expected format: x.y.z or x.y.z-preview.a.b", nameof(version));
         }
 
         return $"aspnetcore-{version}.zip";
@@ -138,13 +138,14 @@ public static class Utility
 
     public static string GetAspNetCoreFilenameFromUrl(string url)
     {
+        // url = https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip
         if (string.IsNullOrWhiteSpace(url))
         {
             throw new ArgumentException("URL cannot be null or empty.", nameof(url));
         }
 
         // Extract version from URL using regex
-        var match = Regex.Match(url, @"/v(\d+\.\d+\.\d+)\.zip$");
+        var match = Regex.Match(url, @"/v([\d.-]+(?:-[\w.]+)?)\.zip$");
         if (!match.Success)
         {
             throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
@@ -153,9 +154,14 @@ public static class Utility
         string version = match.Groups[1].Value;
         return GetAspNetCoreFilename(version);
     }
-
     public static string ExtractVersionFromPath(string path)
     {
+        // C:\Users\budcr\Downloads\9.0.0-preview.6.24327.7
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+        }
+
         // Get the last part of the path (filename or last directory name)
         string lastPart = Path.GetFileName(path);
 
@@ -166,16 +172,16 @@ public static class Utility
             lastPart = Path.GetFileName(Path.GetDirectoryName(path));
         }
 
-        // Try to parse the last part as a version
-        if (System.Version.TryParse(lastPart, out System.Version version))
+        // Use regex to match the version pattern
+        var match = Regex.Match(lastPart, @"^(\d+\.\d+\.\d+(?:-[\w.]+)?)$");
+        if (match.Success)
         {
-            return version.ToString();
+            return match.Groups[1].Value;
         }
 
-        // If parsing fails, return null or throw an exception
+        // If matching fails, return null or throw an exception
         return null;
     }
-
     static Utility()
     {
         // Register the code pages encoding provider

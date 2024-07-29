@@ -2,8 +2,8 @@
 using EditWebView;
 
 //string maui = "maui-9.0.0-preview.5.24307.10";
-string aspNetUrl = "https://github.com/dotnet/aspnetcore/releases/tag/v9.0.0-preview.5.24306.11.zip";
-string mauiUrl = "https://github.com/dotnet/maui/releases/tag/9.0.0-preview.5.24307.10.zip";
+string aspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
+string mauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
 
 string url = aspNetUrl;
 
@@ -29,27 +29,29 @@ var webJSource = Path.Combine(Path.Combine(destinationPath.Replace(".zip",""), @
 Utility.CopyDirectory(webJSource, webJSTarget);
 
 url = mauiUrl;
-zipFile = Path.GetFileNameWithoutExtension(url);
+zipFile = Path.GetFileNameWithoutExtension(url) + ".zip";
 destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
 destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 if (!File.Exists(destinationPath))
     await Utility.DownloadZipFileAsync(url, destinationPath);
 
-if (!Path.Exists(Path.Combine(destinationFolder, Utility.ExtractVersionFromPath(destinationPath))))
+string maui = Path.Combine(destinationFolder, "maui-" + Utility.ExtractVersionFromPath(Path.GetFileNameWithoutExtension(destinationPath))); 
+
+if (!Path.Exists(maui))
     Utility.UnzipFile(destinationPath, destinationFolder);
 
-string maui = "maui-" + Utility.ExtractVersionFromPath(destinationPath);
-string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
+
+string inputDir = Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms");
 string outputDir = "../../../../../RemoteBlazorWebView.WinForms";
 
 ProcessFiles(inputDir, outputDir);
 
-inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\Wpf");
+inputDir = Path.Combine(maui, @"src\BlazorWebView\src\Wpf");
 outputDir = "../../../../../RemoteBlazorWebView.Wpf";
 
 ProcessFiles(inputDir, outputDir);
 
-inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\SharedSource");
+inputDir = Path.Combine(maui, @"src\BlazorWebView\src\SharedSource");
 outputDir = "../../../../../SharedSource";
 
 ProcessFiles(inputDir, outputDir);

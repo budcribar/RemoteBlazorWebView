@@ -1,21 +1,21 @@
-﻿# Building remote.blazor.desktop.js
+# Building remote.blazor.desktop.js
 
 
 * Install Node Version Manager from https://github.com/coreybutler/nvm-windows
 
-* Verify that you have version 16.13.0 of node installed
+* Verify that you have version 22.3.0 of node installed
 ```
 nvm list 
 ```
 
 * If not, run the following command to install it
 ```
-nvm install 16.13.0
+nvm install 22.3.0
 ```
 
 * Using a powershell or cmd window with Admin privileges, set the node version
 ```
-nvm use 16.13.0
+nvm use 22.3.0
 ```
 
 * Install yarn globally and use it to install the dependencies
