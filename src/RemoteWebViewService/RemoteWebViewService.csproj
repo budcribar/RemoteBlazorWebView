@@ -66,9 +66,9 @@
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.12.0" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.63.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.63.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-preview.5.24306.11" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.65.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.65.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-preview.6.24328.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0-preview.5.24306.7" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />

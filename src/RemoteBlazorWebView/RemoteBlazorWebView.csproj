@@ -33,10 +33,10 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.0-preview.5.24306.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.0-preview.6.24328.4" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.0-preview.5.24306.11" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0-preview.5.24306.7" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0-preview.5.24306.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0-preview.6.24327.7" />
 		<PackageReference Include="Microsoft.JSInterop" Version="9.0.0-preview.5.24306.11" />
 		<PackageReference Include="Photino.Blazor" Version="2.7.0" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
