@@ -1,16 +1,16 @@
 using System;
-#if WEBVIEW2_WINFORMS
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
-#elif WEBVIEW2_WPF
 using PeakSWC.RemoteBlazorWebView.Wpf;
-#elif WEBVIEW2_MAUI
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.Maui.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+#if WEBVIEW2_WINFORMS
+#elif WEBVIEW2_WPF
+#elif WEBVIEW2_MAUI
 #else
 #error Must define WEBVIEW2_WINFORMS, WEBVIEW2_WPF, WEBVIEW2_MAUI
 #endif
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace PeakSWC.RemoteBlazorWebView
 {
@@ -24,20 +24,13 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// </summary>
 		/// <param name="services">The <see cref="IServiceCollection"/>.</param>
 		/// <returns>The <see cref="IServiceCollection"/>.</returns>
-#if WEBVIEW2_WINFORMS
 		public static IWindowsFormsBlazorWebViewBuilder AddRemoteWindowsFormsBlazorWebView(this IServiceCollection services)
-#elif WEBVIEW2_WPF
 		public static IWpfBlazorWebViewBuilder AddRemoteWpfBlazorWebView(this IServiceCollection services)
-#elif WEBVIEW2_MAUI
 #if ANDROID
 	    [System.Runtime.Versioning.SupportedOSPlatform("android23.0")]
 #elif IOS
 		[System.Runtime.Versioning.SupportedOSPlatform("ios11.0")]
-#endif
 		public static IMauiBlazorWebViewBuilder AddMauiBlazorWebView(this IServiceCollection services)
-#else
-#error Must define WEBVIEW2_WINFORMS, WEBVIEW2_WPF, WEBVIEW2_MAUI
-#endif
 		{
 			services.AddBlazorWebView();
 			services.TryAddSingleton(new BlazorWebViewDeveloperTools { Enabled = false });
@@ -48,20 +41,11 @@ namespace PeakSWC.RemoteBlazorWebView
 #elif WEBVIEW2_WINFORMS
 			services.TryAddSingleton(_ => new WindowsFormsBlazorMarkerService());
 			return new WindowsFormsBlazorWebViewBuilder(services);
-#elif WEBVIEW2_WPF
 			services.TryAddSingleton(_ => new WpfBlazorMarkerService());
 			return new WpfBlazorWebViewBuilder(services);
-#endif
 		}
-
-		/// <summary>
 		/// Enables Developer tools on the underlying WebView controls.
-		/// </summary>
-		/// <param name="services">The <see cref="IServiceCollection"/>.</param>
-		/// <returns>The <see cref="IServiceCollection"/>.</returns>
 		public static IServiceCollection AddRemoteBlazorWebViewDeveloperTools(this IServiceCollection services)
-		{
 			return services.AddSingleton<BlazorWebViewDeveloperTools>(new BlazorWebViewDeveloperTools { Enabled = true });
-		}
 	}
 }

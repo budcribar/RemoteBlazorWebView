@@ -1,4 +1,3 @@
-
 using EditWebView;
 using System;
 using System.IO;
@@ -8,47 +7,44 @@ class Program
 {
     private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
     private const string MauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
-    private const string RelativePath = "../../../../../";
 
     static async Task Main()
     {
-        try
-        {
-            Console.WriteLine("Starting processing of ASP.NET Core framework...");
-            await ProcessAspNetFramework(AspNetUrl);
+        await ProcessAspNetFramework(AspNetUrl);
+        await ProcessMauiFramework(MauiUrl);
 
-            Console.WriteLine("Starting processing of MAUI framework...");
-            await ProcessMauiFramework(MauiUrl);
-
-            Console.WriteLine("Updating local files...");
-            UpdateLocalFiles();
-
-            Console.WriteLine("All operations completed successfully.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-            Environment.Exit(1);
-        }
+        UpdateLocalFiles();
     }
 
     static async Task ProcessAspNetFramework(string url)
     {
-        var (destinationPath, _) = await DownloadAndExtractFramework(url);
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
         CopyWebJSFiles(destinationPath);
     }
 
     static async Task ProcessMauiFramework(string url)
     {
-        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
+        string zipFile = Utility.GetFilenameFromUrl(url);
+        string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
+        string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-        string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
+        if (!File.Exists(destinationPath))
+        {
+            await Utility.DownloadZipFileAsync(url, destinationPath);
+        }
 
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "SharedSource");
+        string extractedFolder = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
+        if (!Directory.Exists(extractedFolder))
+        {
+            Utility.UnzipFile(destinationPath, destinationFolder);
+        }
+
+        string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(zipFile));
+
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "../../../../../RemoteBlazorWebView.WinForms");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "../../../../../RemoteBlazorWebView.Wpf");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "../../../../../SharedSource");
     }
-
     static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
     {
         string zipFile = Utility.GetFilenameFromUrl(url);
@@ -57,14 +53,12 @@ class Program
 
         if (!File.Exists(destinationPath))
         {
-            Console.WriteLine($"Downloading {zipFile}...");
             await Utility.DownloadZipFileAsync(url, destinationPath);
         }
 
         string extractedFolder = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
         if (!Directory.Exists(extractedFolder))
         {
-            Console.WriteLine($"Extracting {zipFile}...");
             Utility.UnzipFile(destinationPath, destinationFolder);
         }
         else
@@ -77,10 +71,10 @@ class Program
 
     static void CopyWebJSFiles(string destinationPath)
     {
-        var webJSTarget = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RelativePath, "RemoteWebView.Blazor.JS", "Web.JS");
+        var webJSTarget = Path.Combine(@"../../../../../", @"RemoteWebView.Blazor.JS/Web.JS");
         Utility.DeleteDirectoryAndContents(webJSTarget);
 
-        var webJSource = Path.Combine(destinationPath.Replace(".zip", ""), "src", "components", "Web.JS");
+        var webJSource = Path.Combine(destinationPath.Replace(".zip", ""), @"src/components/Web.JS");
         Utility.CopyDirectory(webJSource, webJSTarget);
 
         Console.WriteLine($"Copied Web.JS files from {webJSource} to {webJSTarget}");
@@ -93,9 +87,11 @@ class Program
             throw new DirectoryNotFoundException($"Input directory not found: {inputDir}");
         }
 
-        string fullOutputDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RelativePath, outputDir));
-        Directory.CreateDirectory(fullOutputDir);
-        Console.WriteLine($"Processing files from {inputDir} to {fullOutputDir}");
+        if (!Directory.Exists(outputDir))
+        {
+            Directory.CreateDirectory(outputDir);
+            Console.WriteLine($"Created output directory: {outputDir}");
+        }
 
         var files = Directory.EnumerateFiles(inputDir, "*.*", SearchOption.AllDirectories);
         int processedCount = 0;
@@ -104,7 +100,8 @@ class Program
         foreach (var file in files)
         {
             string relativePath = Path.GetRelativePath(inputDir, file);
-            string outputPath = Path.Combine(fullOutputDir, relativePath);
+            string outputPath = Path.Combine(outputDir, relativePath);
+            string outputFileDir = Path.GetDirectoryName(outputPath);
 
             if (Path.GetExtension(file).Equals(".csproj", StringComparison.OrdinalIgnoreCase))
             {
@@ -114,9 +111,19 @@ class Program
 
             try
             {
+                if (!Directory.Exists(outputFileDir))
+                {
+                    Directory.CreateDirectory(outputFileDir);
+                }
+
+                // Create an Editor instance with the file path
                 var editor = new Editor(file);
+
+                // Apply edits
                 editor.ApplyEdits();
-                editor.WriteAllText(Path.GetDirectoryName(outputPath));
+
+                // Write the edited content to the output file
+                editor.WriteAllText(outputPath);
 
                 processedCount++;
                 Console.WriteLine($"Processed: {relativePath}");
@@ -129,39 +136,15 @@ class Program
 
         Console.WriteLine($"Processing complete. Files processed: {processedCount}, Files skipped: {skippedCount}");
     }
-
     static void UpdateLocalFiles()
     {
-        string currentDir = Directory.GetCurrentDirectory();
-        string repoRoot = FindRepositoryRoot(Path.Combine(currentDir, RelativePath));
-
-        if (string.IsNullOrEmpty(repoRoot))
-        {
-            Console.WriteLine("Could not find the root of the Git repository.");
-            return;
-        }
-
-        var updated = Utility.GetOutOfDateFiles(repoRoot);
+        var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), "../../../../../../"));
 
         foreach (var file in updated)
         {
-            string fullPath = Path.Combine(repoRoot, file);
+            string fullPath = Path.Combine("../../../../../../", file);
             Utility.ConvertUnixToWindowsLineEndings(fullPath);
             Utility.ConvertUtf8ToWindows1252(fullPath);
-            Console.WriteLine($"Updated: {file}");
         }
-    }
-
-    static string FindRepositoryRoot(string startingPath)
-    {
-        while (!string.IsNullOrEmpty(startingPath))
-        {
-            if (Directory.Exists(Path.Combine(startingPath, ".git")))
-            {
-                return startingPath;
-            }
-            startingPath = Directory.GetParent(startingPath)?.FullName;
-        }
-        return null;
     }
 }

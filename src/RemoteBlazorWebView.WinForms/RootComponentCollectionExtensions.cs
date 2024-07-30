@@ -1,9 +1,8 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Components;
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using Microsoft.AspNetCore.Components;
-using System.Collections.Generic;
 
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -26,15 +25,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		{
 			components.Add(new RootComponent(selector, typeof(TComponent), parameters));
 		}
-
-		/// <summary>
 		/// Removes the component associated with the specified <paramref name="selector"/> from the collection
 		/// specified by <paramref name="components" /> .
-		/// </summary>
 		/// <param name="components">The collection from which the component associated with the selector should be removed.</param>
 		/// <param name="selector">The selector associated with the component to be removed.</param>
 		public static void Remove(this RootComponentsCollection components, string selector)
-		{
 			for (var i = 0; i < components.Count; i++)
 			{
 				if (components[i].Selector.Equals(selector, StringComparison.Ordinal))
@@ -43,8 +38,6 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 					return;
 				}
 			}
-
 			throw new ArgumentException($"There is no root component with selector '{selector}'.", nameof(selector));
-		}
 	}
 }
