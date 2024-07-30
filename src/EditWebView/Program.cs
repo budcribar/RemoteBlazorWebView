@@ -91,7 +91,7 @@ class Program
             throw new DirectoryNotFoundException($"Input directory not found: {inputDir}");
         }
 
-        outputDir = Path.GetFullPath(Path.Combine(RepoPath, outputDir));
+        outputDir = Path.GetFullPath(Path.Combine(RepoPath, "src", outputDir));
 
         if (!Directory.Exists(outputDir))
         {
