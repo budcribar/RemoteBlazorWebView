@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Linq;
 
 namespace EditWebView
 {
@@ -200,6 +199,8 @@ namespace EditWebView
             text = Regex.Replace(text, pattern, $"namespace {newNamespace}$1");
         }
 
+
+
         private void InsertWebViewUsings()
         {
             InsertUsing("Microsoft.AspNetCore.Components.WebView");
@@ -334,11 +335,9 @@ namespace EditWebView
             text = Regex.Replace(text, @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
         }
 
-        public void WriteAllText(string outputDir)
+        public void WriteAllText(string outputPath)
         {
-            string fullPath = Path.Combine(outputDir, outputFileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-            File.WriteAllText(fullPath, text);
+            File.WriteAllText(Path.Combine(outputPath, outputFileName), text);
         }
 
         public void Replace(string oldValue, string newValue)
@@ -357,5 +356,7 @@ namespace EditWebView
         {
             text = text.Replace(target, $"//{target}");
         }
+
+
     }
 }
