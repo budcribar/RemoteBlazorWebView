@@ -7,6 +7,7 @@ class Program
 {
     private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
     private const string MauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
+    private const string RelativePath = "../../../../../";
 
     static async Task Main()
     {
@@ -41,10 +42,11 @@ class Program
 
         string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(zipFile));
 
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "../../../../../RemoteBlazorWebView.WinForms");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "../../../../../RemoteBlazorWebView.Wpf");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "../../../../../SharedSource");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), Path.Combine(RelativePath, "RemoteBlazorWebView.WinForms"));
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), Path.Combine(RelativePath, "RemoteBlazorWebView.Wpf"));
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), Path.Combine(RelativePath, "SharedSource"));
     }
+
     static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
     {
         string zipFile = Utility.GetFilenameFromUrl(url);
@@ -71,7 +73,7 @@ class Program
 
     static void CopyWebJSFiles(string destinationPath)
     {
-        var webJSTarget = Path.Combine(@"../../../../../", @"RemoteWebView.Blazor.JS/Web.JS");
+        var webJSTarget = Path.Combine(RelativePath, @"RemoteWebView.Blazor.JS/Web.JS");
         Utility.DeleteDirectoryAndContents(webJSTarget);
 
         var webJSource = Path.Combine(destinationPath.Replace(".zip", ""), @"src/components/Web.JS");
@@ -136,13 +138,14 @@ class Program
 
         Console.WriteLine($"Processing complete. Files processed: {processedCount}, Files skipped: {skippedCount}");
     }
+
     static void UpdateLocalFiles()
     {
-        var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), "../../../../../../"));
+        var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), RelativePath));
 
         foreach (var file in updated)
         {
-            string fullPath = Path.Combine("../../../../../../", file);
+            string fullPath = Path.Combine(RelativePath, file);
             Utility.ConvertUnixToWindowsLineEndings(fullPath);
             Utility.ConvertUtf8ToWindows1252(fullPath);
         }
