@@ -7,8 +7,8 @@ namespace EditWebView
     public class Editor
     {
         private string text;
-        private readonly string fileName;
-        private readonly string originalFileName;
+        private readonly string inputFileName;
+        private readonly string outputFileName;
         private readonly bool isWindowsForms;
 
         public Editor(string file)
@@ -17,20 +17,76 @@ namespace EditWebView
                 throw new FileNotFoundException($"File not found: {file}");
 
             text = File.ReadAllText(file);
-            originalFileName = Path.GetFileName(file);
+            inputFileName = Path.GetFileName(file);
             isWindowsForms = file.Contains("WindowsForms");
-            fileName = DetermineFileName(file);
+            outputFileName = DetermineOutputFileName(file);
         }
 
-        public Editor(string content, string fileName)
+        private void InsertUsings()
         {
-            text = content;
-            this.originalFileName = fileName;
-            isWindowsForms = fileName.Contains("WindowsForms");
-            this.fileName = DetermineFileName(fileName);
+            if (inputFileName == "RootComponent.cs" ||
+                inputFileName == "WpfDispatcher.cs" ||
+                inputFileName == "BlazorWebView.cs" ||
+                inputFileName == "WindowsFormsDispatcher.cs" ||
+                inputFileName == "RootComponentCollectionExtensions.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components");
+            }
+
+            if (inputFileName == "RootComponent.cs" ||
+                inputFileName == "BlazorWebView.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+            }
+
+            if (inputFileName == "StaticContentHotReloadManager.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components");
+                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+            }
+
+            // Ensure System is the first using statement if it exists
+            EnsureSystemIsFirst();
         }
 
-        private string DetermineFileName(string file)
+        private void InsertUsing(string nameSpace)
+        {
+            if (!text.Contains($"using {nameSpace};"))
+            {
+                // Find the last using statement
+                int lastUsingIndex = text.LastIndexOf("using ", StringComparison.Ordinal);
+                if (lastUsingIndex != -1)
+                {
+                    int endOfLine = text.IndexOf('\n', lastUsingIndex);
+                    if (endOfLine != -1)
+                    {
+                        text = text.Insert(endOfLine + 1, $"using {nameSpace};\n");
+                        return;
+                    }
+                }
+
+                // If no using statements found, insert at the beginning of the file
+                text = $"using {nameSpace};\n" + text;
+            }
+        }
+
+        private void EnsureSystemIsFirst()
+        {
+            var lines = text.Split('\n');
+            var usingStatements = lines.Where(l => l.TrimStart().StartsWith("using ")).ToList();
+            var otherLines = lines.Except(usingStatements).ToList();
+
+            var systemUsing = usingStatements.FirstOrDefault(u => u.Contains("using System;"));
+            if (systemUsing != null)
+            {
+                usingStatements.Remove(systemUsing);
+                usingStatements.Insert(0, systemUsing);
+            }
+
+            text = string.Join("\n", usingStatements.Concat(otherLines));
+        }
+
+        private string DetermineOutputFileName(string file)
         {
             var fileName = Path.GetFileName(file);
 
@@ -46,8 +102,11 @@ namespace EditWebView
         {
             ApplyCommonEdits();
 
-            switch (fileName)
+            switch (inputFileName)
             {
+                case "BlazorWebView.cs":
+                    EditBlazorWebView();
+                    break;
                 case "WebView2WebViewManager.cs":
                     EditWebView2WebViewManager();
                     break;
@@ -61,10 +120,6 @@ namespace EditWebView
                 case "BlazorWebViewServiceCollectionExtensions.cs":
                     EditBlazorWebViewServiceCollectionExtensions();
                     break;
-                case "BlazorWebViewBase.cs":
-                case "BlazorWebViewFormBase.cs":
-                    EditBlazorWebViewBase();
-                    break;
                 case "RootComponent.cs":
                     EditRootComponent();
                     break;
@@ -72,17 +127,18 @@ namespace EditWebView
                     EditStaticContentHotReloadManager();
                     break;
             }
-
-            if (originalFileName == "BlazorWebView.cs")
-            {
-                RenameBlazorWebViewClass();
-            }
         }
 
         private void ApplyCommonEdits()
         {
             ReplaceNamespaces();
             InsertUsings();
+        }
+
+        private void EditBlazorWebView()
+        {
+            RenameBlazorWebViewClass();
+            EditBlazorWebViewBase();
         }
 
         private void EditWebView2WebViewManager()
@@ -143,31 +199,7 @@ namespace EditWebView
             text = Regex.Replace(text, pattern, $"namespace {newNamespace}$1");
         }
 
-        private void InsertUsings()
-        {
-            if (fileName == "RootComponent.cs" ||
-                fileName == "WpfDispatcher.cs" ||
-                fileName == "BlazorWebViewBase.cs" ||
-                fileName == "WindowsFormsDispatcher.cs" ||
-                fileName == "BlazorWebViewFormBase.cs" ||
-                fileName == "RootComponentCollectionExtensions.cs")
-            {
-                InsertUsing("Microsoft.AspNetCore.Components");
-            }
-
-            if (fileName == "RootComponent.cs" ||
-                fileName == "BlazorWebViewBase.cs" ||
-                fileName == "BlazorWebViewFormBase.cs")
-            {
-                InsertUsing("Microsoft.AspNetCore.Components.WebView");
-            }
-
-            if (fileName == "StaticContentHotReloadManager.cs")
-            {
-                InsertUsing("Microsoft.AspNetCore.Components");
-                InsertUsing("Microsoft.AspNetCore.Components.WebView");
-            }
-        }
+        
 
         private void InsertWebViewUsings()
         {
@@ -305,7 +337,7 @@ namespace EditWebView
 
         public void WriteAllText(string outputPath)
         {
-            File.WriteAllText(outputPath, text);
+            File.WriteAllText(Path.Combine(outputPath, outputFileName), text);
         }
 
         public void Replace(string oldValue, string newValue)
@@ -325,21 +357,6 @@ namespace EditWebView
             text = text.Replace(target, $"//{target}");
         }
 
-        private void InsertUsing(string nameSpace)
-        {
-            if (!text.Contains($"using {nameSpace};"))
-            {
-                int insertPosition = text.IndexOf("using System;");
-                if (insertPosition != -1)
-                {
-                    text = text.Insert(insertPosition, $"using {nameSpace};\n");
-                }
-                else
-                {
-                    // If "using System;" is not found, insert at the beginning of the file
-                    text = $"using {nameSpace};\n" + text;
-                }
-            }
-        }
+        
     }
 }
