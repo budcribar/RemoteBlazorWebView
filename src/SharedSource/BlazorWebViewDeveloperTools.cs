@@ -5,7 +5,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 #elif WEBVIEW2_WPF
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 #elif WEBVIEW2_MAUI
-namespace Microsoft.AspNetCore.Components.WebView.Maui
+namespace PeakSWC.RemoteBlazorWebView.Maui
 #else
 #error Must define WEBVIEW2_WINFORMS, WEBVIEW2_WPF, WEBVIEW2_MAUI
 #endif
