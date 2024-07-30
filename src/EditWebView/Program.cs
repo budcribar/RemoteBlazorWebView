@@ -117,7 +117,7 @@ class Program
 
                 var editor = new Editor(file);
                 editor.ApplyEdits();
-                editor.WriteAllText(outputPath);
+                editor.WriteAllText(outputFileDir);  // Note: We're passing the directory, not the full path
 
                 processedCount++;
                 Console.WriteLine($"Processed: {relativePath}");
