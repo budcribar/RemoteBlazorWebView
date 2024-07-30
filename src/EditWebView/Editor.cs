@@ -54,7 +54,7 @@ namespace EditWebView
                 if (lastUsingIndex != -1)
                 {
                     lines = lines.Take(lastUsingIndex + 1)
-                        .Concat(usingsToAdd)
+                        .Concat(usingsToAdd.Where(u => !lines.Any(l => l.Trim() == u)))
                         .Concat(lines.Skip(lastUsingIndex + 1))
                         .ToArray();
                 }
@@ -170,12 +170,18 @@ namespace EditWebView
 
         private void ReplaceNamespaces()
         {
-            ReplaceNamespaceInFile("Microsoft.AspNetCore.Components.WebView.WindowsForms", "PeakSWC.RemoteBlazorWebView.WindowsForms");
-            ReplaceNamespaceInFile("Microsoft.AspNetCore.Components.WebView.Wpf", "PeakSWC.RemoteBlazorWebView.Wpf");
-            ReplaceNamespaceInFile("Microsoft.AspNetCore.Components.WebView.WebView2", "PeakSWC.RemoteBlazorWebView");
-            ReplaceNamespaceInFile("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart().StartsWith("using Microsoft.AspNetCore.Components.WebView"))
+                {
+                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+                }
+                else if (lines[i].Contains("Microsoft.AspNetCore.Components.WebView"))
+                {
+                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+                }
+            }
         }
-
         private void ReplaceNamespaceInFile(string oldNamespace, string newNamespace)
         {
             for (int i = 0; i < lines.Length; i++)
@@ -185,15 +191,16 @@ namespace EditWebView
                 {
                     lines[i] = lines[i].Replace(oldNamespace, newNamespace);
                 }
-
                 // Replace in namespace declarations
-                if (lines[i].TrimStart().StartsWith("namespace " + oldNamespace))
+                else if (lines[i].TrimStart().StartsWith("namespace " + oldNamespace))
                 {
                     lines[i] = lines[i].Replace(oldNamespace, newNamespace);
                 }
-
-                // Replace fully qualified type names
-                lines[i] = Regex.Replace(lines[i], $@"\b{Regex.Escape(oldNamespace)}\b", newNamespace);
+                // Replace fully qualified type names, but not in using statements
+                else if (!lines[i].TrimStart().StartsWith("using"))
+                {
+                    lines[i] = Regex.Replace(lines[i], $@"\b{Regex.Escape(oldNamespace)}\b", newNamespace);
+                }
             }
         }
 
