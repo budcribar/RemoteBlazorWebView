@@ -8,6 +8,8 @@ class Program
     private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
     private const string MauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
     private const string RelativePath = "../../../../../";
+    private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
+
 
     static async Task Main()
     {
@@ -42,9 +44,9 @@ class Program
 
         string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(zipFile));
 
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), Path.Combine(RelativePath, "RemoteBlazorWebView.WinForms"));
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), Path.Combine(RelativePath, "RemoteBlazorWebView.Wpf"));
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), Path.Combine(RelativePath, "SharedSource"));
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "SharedSource");
     }
 
     static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
@@ -89,6 +91,8 @@ class Program
             throw new DirectoryNotFoundException($"Input directory not found: {inputDir}");
         }
 
+        outputDir = Path.GetFullPath(Path.Combine(RepoPath, outputDir));
+
         if (!Directory.Exists(outputDir))
         {
             Directory.CreateDirectory(outputDir);
@@ -103,7 +107,7 @@ class Program
         {
             string relativePath = Path.GetRelativePath(inputDir, file);
             string outputPath = Path.Combine(outputDir, relativePath);
-            string outputFileDir = Path.GetDirectoryName(outputPath);
+            string outputFileDir = Path.GetDirectoryName(outputPath) ?? "";
 
             if (Path.GetExtension(file).Equals(".csproj", StringComparison.OrdinalIgnoreCase))
             {
@@ -125,7 +129,7 @@ class Program
                 editor.ApplyEdits();
 
                 // Write the edited content to the output file
-                editor.WriteAllText(outputPath);
+                editor.WriteAllText(outputFileDir);
 
                 processedCount++;
                 Console.WriteLine($"Processed: {relativePath}");
@@ -141,11 +145,11 @@ class Program
 
     static void UpdateLocalFiles()
     {
-        var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), RelativePath));
+        var updated = Utility.GetOutOfDateFiles(RepoPath);
 
         foreach (var file in updated)
         {
-            string fullPath = Path.Combine(RelativePath, file);
+            string fullPath = Path.Combine(RepoPath, file);
             Utility.ConvertUnixToWindowsLineEndings(fullPath);
             Utility.ConvertUtf8ToWindows1252(fullPath);
         }

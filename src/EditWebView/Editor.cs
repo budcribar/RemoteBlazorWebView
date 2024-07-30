@@ -335,9 +335,10 @@ namespace EditWebView
             text = Regex.Replace(text, @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
         }
 
-        public void WriteAllText(string outputPath)
+        public void WriteAllText(string outputDir)
         {
-            File.WriteAllText(Path.Combine(outputPath, outputFileName), text);
+            string outputPath = Path.Combine(outputDir, outputFileName);
+            File.WriteAllText(outputPath, text);
         }
 
         public void Replace(string oldValue, string newValue)

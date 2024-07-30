@@ -54,12 +54,12 @@ namespace EditWebView
             }
             catch (RepositoryNotFoundException)
             {
-                Console.WriteLine($"Error: Git repository not found at path: {repoPath}");
+                Console.WriteLine($"Warning: Git repository not found at path: {repoPath}");
                 return new List<string>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine($"An error occurred while accessing the git repository: {ex.Message}");
                 return new List<string>();
             }
         }
