@@ -1,3 +1,4 @@
+
 using EditWebView;
 using System;
 using System.IO;
@@ -43,9 +44,9 @@ class Program
 
         string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
 
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), Path.Combine(RelativePath, "RemoteBlazorWebView.WinForms"));
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), Path.Combine(RelativePath, "RemoteBlazorWebView.Wpf"));
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), Path.Combine(RelativePath, "SharedSource"));
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "SharedSource");
     }
 
     static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
@@ -76,7 +77,7 @@ class Program
 
     static void CopyWebJSFiles(string destinationPath)
     {
-        var webJSTarget = Path.Combine(RelativePath, "RemoteWebView.Blazor.JS", "Web.JS");
+        var webJSTarget = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RelativePath, "RemoteWebView.Blazor.JS", "Web.JS");
         Utility.DeleteDirectoryAndContents(webJSTarget);
 
         var webJSource = Path.Combine(destinationPath.Replace(".zip", ""), "src", "components", "Web.JS");
@@ -92,8 +93,9 @@ class Program
             throw new DirectoryNotFoundException($"Input directory not found: {inputDir}");
         }
 
-        Directory.CreateDirectory(outputDir);
-        Console.WriteLine($"Processing files from {inputDir} to {outputDir}");
+        string fullOutputDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RelativePath, outputDir));
+        Directory.CreateDirectory(fullOutputDir);
+        Console.WriteLine($"Processing files from {inputDir} to {fullOutputDir}");
 
         var files = Directory.EnumerateFiles(inputDir, "*.*", SearchOption.AllDirectories);
         int processedCount = 0;
@@ -102,8 +104,7 @@ class Program
         foreach (var file in files)
         {
             string relativePath = Path.GetRelativePath(inputDir, file);
-            string outputPath = Path.Combine(outputDir, relativePath);
-            string outputFileDir = Path.GetDirectoryName(outputPath);
+            string outputPath = Path.Combine(fullOutputDir, relativePath);
 
             if (Path.GetExtension(file).Equals(".csproj", StringComparison.OrdinalIgnoreCase))
             {
@@ -113,11 +114,9 @@ class Program
 
             try
             {
-                Directory.CreateDirectory(outputFileDir);
-
                 var editor = new Editor(file);
                 editor.ApplyEdits();
-                editor.WriteAllText(outputFileDir);  // Note: We're passing the directory, not the full path
+                editor.WriteAllText(Path.GetDirectoryName(outputPath));
 
                 processedCount++;
                 Console.WriteLine($"Processed: {relativePath}");
@@ -134,7 +133,7 @@ class Program
     static void UpdateLocalFiles()
     {
         string currentDir = Directory.GetCurrentDirectory();
-        string repoRoot = FindRepositoryRoot(currentDir);
+        string repoRoot = FindRepositoryRoot(Path.Combine(currentDir, RelativePath));
 
         if (string.IsNullOrEmpty(repoRoot))
         {

@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Linq;
-using System.Collections.Generic;
 
 namespace EditWebView
 {
@@ -22,6 +21,70 @@ namespace EditWebView
             inputFileName = Path.GetFileName(file);
             isWindowsForms = file.Contains("WindowsForms");
             outputFileName = DetermineOutputFileName(file);
+        }
+
+        private void InsertUsings()
+        {
+            if (inputFileName == "RootComponent.cs" ||
+                inputFileName == "WpfDispatcher.cs" ||
+                inputFileName == "BlazorWebView.cs" ||
+                inputFileName == "WindowsFormsDispatcher.cs" ||
+                inputFileName == "RootComponentCollectionExtensions.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components");
+            }
+
+            if (inputFileName == "RootComponent.cs" ||
+                inputFileName == "BlazorWebView.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+            }
+
+            if (inputFileName == "StaticContentHotReloadManager.cs")
+            {
+                InsertUsing("Microsoft.AspNetCore.Components");
+                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+            }
+
+            // Ensure System is the first using statement if it exists
+            EnsureSystemIsFirst();
+        }
+
+        private void InsertUsing(string nameSpace)
+        {
+            if (!text.Contains($"using {nameSpace};"))
+            {
+                // Find the last using statement
+                int lastUsingIndex = text.LastIndexOf("using ", StringComparison.Ordinal);
+                if (lastUsingIndex != -1)
+                {
+                    int endOfLine = text.IndexOf('\n', lastUsingIndex);
+                    if (endOfLine != -1)
+                    {
+                        text = text.Insert(endOfLine + 1, $"using {nameSpace};\n");
+                        return;
+                    }
+                }
+
+                // If no using statements found, insert at the beginning of the file
+                text = $"using {nameSpace};\n" + text;
+            }
+        }
+
+        private void EnsureSystemIsFirst()
+        {
+            var lines = text.Split('\n');
+            var usingStatements = lines.Where(l => l.TrimStart().StartsWith("using ")).ToList();
+            var otherLines = lines.Except(usingStatements).ToList();
+
+            var systemUsing = usingStatements.FirstOrDefault(u => u.Contains("using System;"));
+            if (systemUsing != null)
+            {
+                usingStatements.Remove(systemUsing);
+                usingStatements.Insert(0, systemUsing);
+            }
+
+            text = string.Join("\n", usingStatements.Concat(otherLines));
         }
 
         private string DetermineOutputFileName(string file)
@@ -75,20 +138,8 @@ namespace EditWebView
 
         private void EditBlazorWebView()
         {
-            // Rename the class
-            string newClassName = isWindowsForms ? "BlazorWebViewFormBase" : "BlazorWebViewBase";
-            text = Regex.Replace(text, @"class\s+BlazorWebView\s*:", $"class {newClassName} :");
-
-            // Update any references to BlazorWebView within the file
-            text = Regex.Replace(text, @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
-
-            // Apply specific edits for BlazorWebView
-            CommentOutPragmas();
-            AddAllowExternalDropProperty();
-            AddWebViewManagerProperty();
-            ReplaceCreateWebViewManager();
-            MakeHostPageVirtual();
-            MakeRequiredStartupPropertiesSetProtected();
+            RenameBlazorWebViewClass();
+            EditBlazorWebViewBase();
         }
 
         private void EditWebView2WebViewManager()
@@ -112,6 +163,16 @@ namespace EditWebView
             ReplaceNamespace("Microsoft.Extensions.DependencyInjection", "PeakSWC.RemoteBlazorWebView");
             ReplaceAddMethods();
             UpdateDeveloperToolsMethod();
+        }
+
+        private void EditBlazorWebViewBase()
+        {
+            CommentOutPragmas();
+            AddAllowExternalDropProperty();
+            AddWebViewManagerProperty();
+            ReplaceCreateWebViewManager();
+            MakeHostPageVirtual();
+            MakeRequiredStartupPropertiesSetProtected();
         }
 
         private void EditRootComponent()
@@ -139,116 +200,10 @@ namespace EditWebView
             text = Regex.Replace(text, pattern, $"namespace {newNamespace}$1");
         }
 
-        private void InsertUsings()
-        {
-            var usingsToInsert = new List<string>();
-
-            // Always add System first if it's not already present
-            if (!text.Contains("using System;"))
-            {
-                usingsToInsert.Add("System");
-            }
-
-            if (inputFileName == "RootComponent.cs" ||
-                inputFileName == "WpfDispatcher.cs" ||
-                inputFileName == "BlazorWebView.cs" ||
-                inputFileName == "WindowsFormsDispatcher.cs" ||
-                inputFileName == "RootComponentCollectionExtensions.cs")
-            {
-                usingsToInsert.Add("Microsoft.AspNetCore.Components.WebView");
-                usingsToInsert.Add("Microsoft.AspNetCore.Components");
-            }
-
-            if (inputFileName == "StaticContentHotReloadManager.cs")
-            {
-                usingsToInsert.Add("Microsoft.AspNetCore.Components.WebView");
-                usingsToInsert.Add("Microsoft.AspNetCore.Components");
-            }
-
-            if (usingsToInsert.Count > 0)
-            {
-                InsertUsingsAfterCopyright(usingsToInsert);
-            }
-        }
-
-        private void InsertUsingsAfterCopyright(List<string> usingsToInsert)
-        {
-            int copyrightEnd = text.IndexOf("*/");
-            if (copyrightEnd == -1)
-            {
-                copyrightEnd = text.IndexOf("using ");
-            }
-            else
-            {
-                copyrightEnd += 2; // Move past the */
-            }
-
-            if (copyrightEnd != -1)
-            {
-                string existingUsings = text.Substring(copyrightEnd);
-                var allUsings = new List<string>();
-
-                // Add existing using statements
-                foreach (var line in existingUsings.Split('\n'))
-                {
-                    if (line.TrimStart().StartsWith("using "))
-                    {
-                        allUsings.Add(line.Trim());
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                // Add new using statements
-                foreach (var newUsing in usingsToInsert)
-                {
-                    string usingStatement = $"using {newUsing};";
-                    if (!allUsings.Contains(usingStatement))
-                    {
-                        allUsings.Add(usingStatement);
-                    }
-                }
-
-                // Sort the using statements, keeping System first
-                allUsings = allUsings.OrderBy(u => u == "using System;" ? 0 : 1)
-                                     .ThenBy(u => u)
-                                     .ToList();
-
-                string newUsingBlock = string.Join("\n", allUsings);
-                text = text.Substring(0, copyrightEnd) + "\n" + newUsingBlock + "\n" + text.Substring(text.IndexOf('\n', copyrightEnd + 1) + 1);
-            }
-            else
-            {
-                string newUsings = string.Join("\n", usingsToInsert.Select(u => $"using {u};"));
-                text = newUsings + "\n" + text;
-            }
-        }
-
         private void InsertWebViewUsings()
         {
             InsertUsing("Microsoft.AspNetCore.Components.WebView");
             InsertUsing("Microsoft.AspNetCore.Components");
-        }
-
-        private void InsertUsing(string nameSpace)
-        {
-            if (!text.Contains($"using {nameSpace};"))
-            {
-                int lastUsingIndex = text.LastIndexOf("using ", StringComparison.Ordinal);
-                if (lastUsingIndex != -1)
-                {
-                    int endOfLine = text.IndexOf('\n', lastUsingIndex);
-                    if (endOfLine != -1)
-                    {
-                        text = text.Insert(endOfLine + 1, $"using {nameSpace};\n");
-                        return;
-                    }
-                }
-
-                text = $"using {nameSpace};\n" + text;
-            }
         }
 
         private void AddNavigateToStringMethod()
@@ -368,9 +323,22 @@ namespace EditWebView
             text = Regex.Replace(text, pattern, replacement);
         }
 
+        private void RenameBlazorWebViewClass()
+        {
+            string newClassName = isWindowsForms ? "BlazorWebViewFormBase" : "BlazorWebViewBase";
+
+            // Rename the class
+            text = Regex.Replace(text, @"class\s+BlazorWebView\s*:", $"class {newClassName} :");
+
+            // Update any references to BlazorWebView within the file
+            text = Regex.Replace(text, @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
+        }
+
         public void WriteAllText(string outputDir)
         {
-            File.WriteAllText(Path.Combine(outputDir, outputFileName), text);
+            string fullPath = Path.Combine(outputDir, outputFileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+            File.WriteAllText(fullPath, text);
         }
 
         public void Replace(string oldValue, string newValue)
