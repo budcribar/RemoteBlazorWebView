@@ -59,28 +59,28 @@ namespace EditWebView
                 case "BlazorWebViewBase.cs":
                     EditBlazorWebViewBase();
                     break;
+                case "RootComponent.cs":
+                    EditRootComponent();
+                    break;
+                case "StaticContentHotReloadManager.cs":
+                    EditStaticContentHotReloadManager();
+                    break;
             }
         }
 
         private void ApplyCommonEdits()
         {
             ReplaceNamespaces();
-            InsertUsings();  // This will now be more selective
-
-            if (fileName == "WebView2WebViewManager.cs")
-            {
-                InsertWebViewUsing();
-            }
+            InsertUsings();
         }
 
-       
         private void EditWebView2WebViewManager()
         {
             AddNavigateToStringMethod();
             ReplaceUsings();
             ReplaceAddMethods();
             MakeClassPublic();
-            InsertWebViewUsing();
+            InsertWebViewUsings();
         }
 
         private void EditUrlLoadingEventArgs()
@@ -89,18 +89,12 @@ namespace EditWebView
             MakeStaticMethodPublic();
         }
 
-        public void ReplaceNamespace(string oldNamespace, string newNamespace)
-        {
-            string pattern = $@"namespace\s+{Regex.Escape(oldNamespace)}(\s|{{)";
-            text = Regex.Replace(text, pattern, $"namespace {newNamespace}$1");
-        }
-
-
         private void EditBlazorWebViewServiceCollectionExtensions()
         {
             ReplaceUsings();
             ReplaceNamespace("Microsoft.Extensions.DependencyInjection", "PeakSWC.RemoteBlazorWebView");
             ReplaceAddMethods();
+            UpdateDeveloperToolsMethod();
         }
 
         private void EditBlazorWebViewBase()
@@ -113,12 +107,29 @@ namespace EditWebView
             MakeRequiredStartupPropertiesSetProtected();
         }
 
+        private void EditRootComponent()
+        {
+            ReplaceOrInsertWebView2Alias();
+        }
+
+        private void EditStaticContentHotReloadManager()
+        {
+            CorrectMetadataUpdateHandlerAttribute();
+            InsertUsings();
+        }
+
         private void ReplaceNamespaces()
         {
-            Replace("namespace Microsoft.AspNetCore.Components.WebView.WindowsForms", "namespace PeakSWC.RemoteBlazorWebView.WindowsForms");
-            Replace("namespace Microsoft.AspNetCore.Components.WebView.Wpf", "namespace PeakSWC.RemoteBlazorWebView.Wpf");
-            Replace("namespace Microsoft.AspNetCore.Components.WebView.WebView2", "namespace PeakSWC.RemoteBlazorWebView");
-            Replace("namespace Microsoft.AspNetCore.Components.WebView", "namespace PeakSWC.RemoteBlazorWebView");
+            ReplaceNamespace("Microsoft.AspNetCore.Components.WebView.WindowsForms", "PeakSWC.RemoteBlazorWebView.WindowsForms");
+            ReplaceNamespace("Microsoft.AspNetCore.Components.WebView.Wpf", "PeakSWC.RemoteBlazorWebView.Wpf");
+            ReplaceNamespace("Microsoft.AspNetCore.Components.WebView.WebView2", "PeakSWC.RemoteBlazorWebView");
+            ReplaceNamespace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+        }
+
+        public void ReplaceNamespace(string oldNamespace, string newNamespace)
+        {
+            string pattern = $@"namespace\s+{Regex.Escape(oldNamespace)}(\s|{{)";
+            text = Regex.Replace(text, pattern, $"namespace {newNamespace}$1");
         }
 
         private void InsertUsings()
@@ -147,6 +158,12 @@ namespace EditWebView
             }
         }
 
+        private void InsertWebViewUsings()
+        {
+            InsertUsing("Microsoft.AspNetCore.Components.WebView");
+            InsertUsing("Microsoft.AspNetCore.Components");
+        }
+
         private void AddNavigateToStringMethod()
         {
             string method = @"
@@ -173,14 +190,17 @@ namespace EditWebView
             Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
         }
 
+        private void UpdateDeveloperToolsMethod()
+        {
+            string pattern = @"(public\s+static\s+)?IServiceCollection\s+AddBlazorWebViewDeveloperTools\s*\(this\s+IServiceCollection\s+services\)";
+            string replacement = "public static IServiceCollection AddRemoteBlazorWebViewDeveloperTools(this IServiceCollection services)";
+
+            text = Regex.Replace(text, pattern, replacement);
+        }
+
         private void MakeClassPublic()
         {
             Replace("internal class", "public class");
-        }
-
-        private void InsertWebViewUsing()
-        {
-            ReplaceFirst("#elif WEBVIEW2_MAUI", "using Microsoft.AspNetCore.Components.WebView;\nusing Microsoft.AspNetCore.Components;\n#elif WEBVIEW2_MAUI");
         }
 
         private void ReplaceUrlLoadingStrategy()
@@ -239,6 +259,28 @@ namespace EditWebView
             Replace("private bool RequiredStartupPropertiesSet =>", "protected bool RequiredStartupPropertiesSet =>");
         }
 
+        private void ReplaceOrInsertWebView2Alias()
+        {
+            string webView2Alias = "using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;";
+
+            if (text.Contains("using Microsoft.AspNetCore.Components.WebView.WebView2;"))
+            {
+                text = text.Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", webView2Alias);
+            }
+            else if (!text.Contains(webView2Alias))
+            {
+                InsertUsing(webView2Alias);
+            }
+        }
+
+        private void CorrectMetadataUpdateHandlerAttribute()
+        {
+            string pattern = @"\[assembly:\s*MetadataUpdateHandler\(typeof\((Microsoft\.AspNetCore\.Components\.WebView|PeakSWC\.RemoteBlazorWebView)\.StaticContentHotReloadManager\)\)\]";
+            string replacement = "[assembly: MetadataUpdateHandler(typeof(PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager))]";
+
+            text = Regex.Replace(text, pattern, replacement);
+        }
+
         public void WriteAllText(string outputPath)
         {
             File.WriteAllText(outputPath, text);
@@ -265,7 +307,16 @@ namespace EditWebView
         {
             if (!text.Contains($"using {nameSpace};"))
             {
-                text = Regex.Replace(text, @"(using System;)", $"$1\nusing {nameSpace};");
+                int insertPosition = text.IndexOf("using System;");
+                if (insertPosition != -1)
+                {
+                    text = text.Insert(insertPosition, $"using {nameSpace};\n");
+                }
+                else
+                {
+                    // If "using System;" is not found, insert at the beginning of the file
+                    text = $"using {nameSpace};\n" + text;
+                }
             }
         }
     }
