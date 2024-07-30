@@ -133,15 +133,36 @@ class Program
 
     static void UpdateLocalFiles()
     {
-        var repoPath = Path.Combine(Directory.GetCurrentDirectory(), RelativePath);
-        var updated = Utility.GetOutOfDateFiles(repoPath);
+        string currentDir = Directory.GetCurrentDirectory();
+        string repoRoot = FindRepositoryRoot(currentDir);
+
+        if (string.IsNullOrEmpty(repoRoot))
+        {
+            Console.WriteLine("Could not find the root of the Git repository.");
+            return;
+        }
+
+        var updated = Utility.GetOutOfDateFiles(repoRoot);
 
         foreach (var file in updated)
         {
-            string fullPath = Path.Combine(repoPath, file);
+            string fullPath = Path.Combine(repoRoot, file);
             Utility.ConvertUnixToWindowsLineEndings(fullPath);
             Utility.ConvertUtf8ToWindows1252(fullPath);
             Console.WriteLine($"Updated: {file}");
         }
+    }
+
+    static string FindRepositoryRoot(string startingPath)
+    {
+        while (!string.IsNullOrEmpty(startingPath))
+        {
+            if (Directory.Exists(Path.Combine(startingPath, ".git")))
+            {
+                return startingPath;
+            }
+            startingPath = Directory.GetParent(startingPath)?.FullName;
+        }
+        return null;
     }
 }

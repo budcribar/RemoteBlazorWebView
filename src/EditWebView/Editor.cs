@@ -24,29 +24,61 @@ namespace EditWebView
 
         private void InsertUsings()
         {
+            var usingsToInsert = new List<string>();
+
             if (inputFileName == "RootComponent.cs" ||
                 inputFileName == "WpfDispatcher.cs" ||
                 inputFileName == "BlazorWebView.cs" ||
                 inputFileName == "WindowsFormsDispatcher.cs" ||
                 inputFileName == "RootComponentCollectionExtensions.cs")
             {
-                InsertUsing("Microsoft.AspNetCore.Components");
+                usingsToInsert.Add("Microsoft.AspNetCore.Components");
             }
 
             if (inputFileName == "RootComponent.cs" ||
                 inputFileName == "BlazorWebView.cs")
             {
-                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+                usingsToInsert.Add("Microsoft.AspNetCore.Components.WebView");
             }
 
             if (inputFileName == "StaticContentHotReloadManager.cs")
             {
-                InsertUsing("Microsoft.AspNetCore.Components");
-                InsertUsing("Microsoft.AspNetCore.Components.WebView");
+                usingsToInsert.Add("Microsoft.AspNetCore.Components");
+                usingsToInsert.Add("Microsoft.AspNetCore.Components.WebView");
             }
 
-            // Ensure System is the first using statement if it exists
-            EnsureSystemIsFirst();
+            if (usingsToInsert.Count > 0)
+            {
+                InsertUsingsAfterCopyright(usingsToInsert);
+            }
+        }
+
+        private void InsertUsingsAfterCopyright(List<string> usingsToInsert)
+        {
+            // Find the end of the copyright notice
+            int copyrightEnd = text.IndexOf("*/");
+            if (copyrightEnd == -1)
+            {
+                // If there's no copyright notice, find the first using statement
+                copyrightEnd = text.IndexOf("using ");
+            }
+            else
+            {
+                copyrightEnd += 2; // Move past the */
+            }
+
+            if (copyrightEnd != -1)
+            {
+                // Insert new using statements after the copyright notice or existing using statements
+                string newUsings = string.Join("\n", usingsToInsert.Select(u => $"using {u};"));
+                text = text.Insert(copyrightEnd, "\n" + newUsings + "\n");
+            }
+            else
+            {
+                // If we couldn't find a suitable insertion point, prepend the using statements
+                string newUsings = string.Join("\n", usingsToInsert.Select(u => $"using {u};"));
+                text = newUsings + "\n" + text;
+            }
         }
 
         private void InsertUsing(string nameSpace)
@@ -337,7 +369,7 @@ namespace EditWebView
 
         public void WriteAllText(string outputPath)
         {
-            File.WriteAllText(Path.Combine(outputPath, outputFileName), text);
+            File.WriteAllText(outputPath, text);
         }
 
         public void Replace(string oldValue, string newValue)

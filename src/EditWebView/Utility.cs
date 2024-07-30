@@ -39,29 +39,30 @@ namespace EditWebView
 
         public static List<string> GetOutOfDateFiles(string repoPath)
         {
+            List<string> outOfDateFiles = new List<string>();
+
             try
             {
-                using var repo = new Repository(repoPath);
-                var status = repo.RetrieveStatus();
-
-                return status.Modified
-                    .Concat(status.Staged)
-                    .Concat(status.Untracked)
-                    .Concat(status.Missing)
-                    .Select(entry => entry.FilePath)
-                    .Distinct()
-                    .ToList();
+                using (var repo = new Repository(repoPath))
+                {
+                    RepositoryStatus status = repo.RetrieveStatus();
+                    outOfDateFiles.AddRange(status.Modified.Select(entry => entry.FilePath));
+                    outOfDateFiles.AddRange(status.Staged.Select(entry => entry.FilePath));
+                    outOfDateFiles.AddRange(status.Untracked.Select(entry => entry.FilePath));
+                    outOfDateFiles.AddRange(status.Missing.Select(entry => entry.FilePath));
+                    outOfDateFiles = outOfDateFiles.Distinct().ToList();
+                }
             }
             catch (RepositoryNotFoundException)
             {
                 Console.WriteLine($"Error: Git repository not found at path: {repoPath}");
-                return new List<string>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
-                return new List<string>();
+                Console.WriteLine($"An error occurred while getting out-of-date files: {ex.Message}");
             }
+
+            return outOfDateFiles;
         }
 
         public static void UnzipFile(string zipFilePath, string extractPath)
