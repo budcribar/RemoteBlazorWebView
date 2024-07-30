@@ -8,6 +8,7 @@ namespace EditWebView
     {
         private string text;
         private readonly string fileName;
+        private readonly string originalFileName;
 
         public Editor(string file)
         {
@@ -15,12 +16,14 @@ namespace EditWebView
                 throw new FileNotFoundException($"File not found: {file}");
 
             text = File.ReadAllText(file);
+            originalFileName = Path.GetFileName(file);
             fileName = DetermineFileName(file);
         }
 
         public Editor(string content, string fileName)
         {
             text = content;
+            this.originalFileName = fileName;
             this.fileName = DetermineFileName(fileName);
         }
 
@@ -30,7 +33,7 @@ namespace EditWebView
 
             if (fileName == "BlazorWebView.cs")
             {
-                return file.Contains("WindowsForms") ? "BlazorWebViewFormBase.cs" : "BlazorWebViewBase.cs";
+                return "BlazorWebViewBase.cs";
             }
 
             return fileName;
@@ -55,7 +58,6 @@ namespace EditWebView
                 case "BlazorWebViewServiceCollectionExtensions.cs":
                     EditBlazorWebViewServiceCollectionExtensions();
                     break;
-                case "BlazorWebViewFormBase.cs":
                 case "BlazorWebViewBase.cs":
                     EditBlazorWebViewBase();
                     break;
@@ -65,6 +67,11 @@ namespace EditWebView
                 case "StaticContentHotReloadManager.cs":
                     EditStaticContentHotReloadManager();
                     break;
+            }
+
+            if (originalFileName == "BlazorWebView.cs")
+            {
+                RenameBlazorWebViewClass();
             }
         }
 
@@ -105,6 +112,7 @@ namespace EditWebView
             ReplaceCreateWebViewManager();
             MakeHostPageVirtual();
             MakeRequiredStartupPropertiesSetProtected();
+            RenameBlazorWebViewClass();
         }
 
         private void EditRootComponent()
@@ -145,7 +153,6 @@ namespace EditWebView
             }
 
             if (fileName == "RootComponent.cs" ||
-                fileName == "BlazorWebViewFormBase.cs" ||
                 fileName == "BlazorWebViewBase.cs")
             {
                 InsertUsing("Microsoft.AspNetCore.Components.WebView");
@@ -279,6 +286,15 @@ namespace EditWebView
             string replacement = "[assembly: MetadataUpdateHandler(typeof(PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager))]";
 
             text = Regex.Replace(text, pattern, replacement);
+        }
+
+        private void RenameBlazorWebViewClass()
+        {
+            // Rename the class
+            text = Regex.Replace(text, @"class\s+BlazorWebView\s*:", "class BlazorWebViewBase :");
+
+            // Update any references to BlazorWebView within the file
+            text = Regex.Replace(text, @"\bBlazorWebView\b(?!Base)", "BlazorWebViewBase");
         }
 
         public void WriteAllText(string outputPath)
