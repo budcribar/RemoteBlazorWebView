@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace EditWebView
 {
@@ -21,52 +22,6 @@ namespace EditWebView
             inputFileName = Path.GetFileName(file);
             isWindowsForms = file.Contains("WindowsForms");
             outputFileName = DetermineOutputFileName(file);
-        }
-
-        private void InsertUsings()
-        {
-            var usingsToAdd = new List<string>();
-
-            if (inputFileName == "RootComponent.cs" ||
-                inputFileName == "WpfDispatcher.cs" ||
-                inputFileName == "BlazorWebView.cs" ||
-                inputFileName == "WindowsFormsDispatcher.cs" ||
-                inputFileName == "RootComponentCollectionExtensions.cs")
-            {
-                usingsToAdd.Add("using Microsoft.AspNetCore.Components;");
-            }
-
-            if (inputFileName == "RootComponent.cs" ||
-                inputFileName == "BlazorWebView.cs")
-            {
-                usingsToAdd.Add("using Microsoft.AspNetCore.Components.WebView;");
-            }
-
-            if (inputFileName == "StaticContentHotReloadManager.cs")
-            {
-                usingsToAdd.Add("using Microsoft.AspNetCore.Components;");
-                usingsToAdd.Add("using Microsoft.AspNetCore.Components.WebView;");
-            }
-
-            if (usingsToAdd.Count > 0)
-            {
-                int lastUsingIndex = Array.FindLastIndex(lines, l => l.TrimStart().StartsWith("using "));
-                if (lastUsingIndex != -1)
-                {
-                    lines = lines.Take(lastUsingIndex + 1)
-                        .Concat(usingsToAdd.Where(u => !lines.Any(l => l.Trim() == u)))
-                        .Concat(lines.Skip(lastUsingIndex + 1))
-                        .ToArray();
-                }
-                else
-                {
-                    int insertIndex = lines.TakeWhile(l => l.StartsWith("//") || string.IsNullOrWhiteSpace(l)).Count();
-                    lines = lines.Take(insertIndex)
-                        .Concat(usingsToAdd)
-                        .Concat(lines.Skip(insertIndex))
-                        .ToArray();
-                }
-            }
         }
 
         private string DetermineOutputFileName(string file)
@@ -115,7 +70,6 @@ namespace EditWebView
         private void ApplyCommonEdits()
         {
             ReplaceNamespaces();
-            InsertUsings();
         }
 
         private void EditBlazorWebView()
@@ -130,7 +84,6 @@ namespace EditWebView
             ReplaceUsings();
             ReplaceAddMethods();
             MakeClassPublic();
-            InsertWebViewUsings();
         }
 
         private void EditUrlLoadingEventArgs()
@@ -165,20 +118,28 @@ namespace EditWebView
         private void EditStaticContentHotReloadManager()
         {
             CorrectMetadataUpdateHandlerAttribute();
-            InsertUsings();
         }
 
         private void ReplaceNamespaces()
         {
             for (int i = 0; i < lines.Length; i++)
             {
-                if (lines[i].TrimStart().StartsWith("using Microsoft.AspNetCore.Components.WebView"))
+                if (lines[i].TrimStart().StartsWith("using Microsoft.AspNetCore.Components.WebView;"))
                 {
                     lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+                }
+                else if (lines[i].Contains("Microsoft.AspNetCore.Components.WebView.WebView2"))
+                {
+                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView.WebView2", "PeakSWC.RemoteBlazorWebView.WebView2");
                 }
                 else if (lines[i].Contains("Microsoft.AspNetCore.Components.WebView"))
                 {
                     lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+                }
+                // Do not modify or remove the following using statement
+                else if (lines[i].TrimStart() == "using Microsoft.AspNetCore.Components;")
+                {
+                    // Keep this line as is
                 }
             }
         }
@@ -186,57 +147,20 @@ namespace EditWebView
         {
             for (int i = 0; i < lines.Length; i++)
             {
-                // Replace in using statements
-                if (lines[i].TrimStart().StartsWith("using " + oldNamespace))
-                {
-                    lines[i] = lines[i].Replace(oldNamespace, newNamespace);
-                }
-                // Replace in namespace declarations
-                else if (lines[i].TrimStart().StartsWith("namespace " + oldNamespace))
-                {
-                    lines[i] = lines[i].Replace(oldNamespace, newNamespace);
-                }
-                // Replace fully qualified type names, but not in using statements
-                else if (!lines[i].TrimStart().StartsWith("using"))
+                // Replace in namespace declarations and fully qualified type names, but not in using statements
+                if (!lines[i].TrimStart().StartsWith("using"))
                 {
                     lines[i] = Regex.Replace(lines[i], $@"\b{Regex.Escape(oldNamespace)}\b", newNamespace);
                 }
             }
         }
 
-
-        private string ReplaceNamespace(string line, string oldNamespace, string newNamespace)
+        private void ReplaceUsings()
         {
-            string pattern = $@"namespace\s+{Regex.Escape(oldNamespace)}(\s|{{)";
-            return Regex.Replace(line, pattern, $"namespace {newNamespace}$1");
-        }
-
-        private void InsertWebViewUsings()
-        {
-            InsertUsing("using Microsoft.AspNetCore.Components.WebView;");
-            InsertUsing("using Microsoft.AspNetCore.Components;");
-        }
-
-        private void InsertUsing(string usingStatement)
-        {
-            if (!lines.Any(l => l.Trim() == usingStatement))
+            for (int i = 0; i < lines.Length; i++)
             {
-                int lastUsingIndex = Array.FindLastIndex(lines, l => l.TrimStart().StartsWith("using "));
-                if (lastUsingIndex != -1)
-                {
-                    lines = lines.Take(lastUsingIndex + 1)
-                        .Append(usingStatement)
-                        .Concat(lines.Skip(lastUsingIndex + 1))
-                        .ToArray();
-                }
-                else
-                {
-                    int insertIndex = lines.TakeWhile(l => l.StartsWith("//") || string.IsNullOrWhiteSpace(l)).Count();
-                    lines = lines.Take(insertIndex)
-                        .Append(usingStatement)
-                        .Concat(lines.Skip(insertIndex))
-                        .ToArray();
-                }
+                lines[i] = lines[i].Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
+                lines[i] = lines[i].Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
             }
         }
 
@@ -258,15 +182,6 @@ namespace EditWebView
                     .Append(method)
                     .Concat(lines.Skip(index))
                     .ToArray();
-            }
-        }
-
-        private void ReplaceUsings()
-        {
-            for (int i = 0; i < lines.Length; i++)
-            {
-                lines[i] = lines[i].Replace("using Microsoft.AspNetCore.Components.WebView.WindowsForms;", "using PeakSWC.RemoteBlazorWebView.WindowsForms;");
-                lines[i] = lines[i].Replace("using Microsoft.AspNetCore.Components.WebView.Wpf;", "using PeakSWC.RemoteBlazorWebView.Wpf;");
             }
         }
 
@@ -393,96 +308,104 @@ namespace EditWebView
                 }
             }
         }
+
         private void MakeRequiredStartupPropertiesSetProtected()
-                    {
-                        for (int i = 0; i < lines.Length; i++)
-                        {
-                            if (lines[i].Contains("private bool RequiredStartupPropertiesSet =>"))
-                            {
-                                lines[i] = lines[i].Replace("private bool", "protected bool");
-                            }
-                        }
-                    }
-
-                private void ReplaceOrInsertWebView2Alias()
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("private bool RequiredStartupPropertiesSet =>"))
                 {
-                    string webView2Alias = "using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;";
-                    bool aliasExists = false;
-
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        if (lines[i].Contains("using Microsoft.AspNetCore.Components.WebView.WebView2;"))
-                        {
-                            lines[i] = webView2Alias;
-                            aliasExists = true;
-                            break;
-                        }
-                    }
-
-                    if (!aliasExists)
-                    {
-                        InsertUsing(webView2Alias);
-                    }
-                }
-
-                private void CorrectMetadataUpdateHandlerAttribute()
-                {
-                    string pattern = @"\[assembly:\s*MetadataUpdateHandler\(typeof\((Microsoft\.AspNetCore\.Components\.WebView|PeakSWC\.RemoteBlazorWebView)\.StaticContentHotReloadManager\)\)\]";
-                    string replacement = "[assembly: MetadataUpdateHandler(typeof(PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager))]";
-
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        lines[i] = Regex.Replace(lines[i], pattern, replacement);
-                    }
-                }
-
-                private void RenameBlazorWebViewClass()
-                {
-                    string newClassName = isWindowsForms ? "BlazorWebViewFormBase" : "BlazorWebViewBase";
-
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        lines[i] = Regex.Replace(lines[i], @"class\s+BlazorWebView\s*:", $"class {newClassName} :");
-                        lines[i] = Regex.Replace(lines[i], @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
-                    }
-                }
-
-                public void WriteAllText(string outputDir)
-                {
-                    string outputPath = Path.Combine(outputDir, outputFileName);
-                    File.WriteAllLines(outputPath, lines);
-                }
-
-                public void Replace(string oldValue, string newValue)
-                {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        lines[i] = lines[i].Replace(oldValue, newValue);
-                    }
-                }
-
-                public void ReplaceFirst(string search, string replace)
-                {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        int pos = lines[i].IndexOf(search);
-                        if (pos >= 0)
-                        {
-                            lines[i] = lines[i].Substring(0, pos) + replace + lines[i].Substring(pos + search.Length);
-                            return;
-                        }
-                    }
-                }
-
-                public void Comment(string target)
-                {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        if (lines[i].Contains(target))
-                        {
-                            lines[i] = "//" + lines[i];
-                        }
-                    }
+                    lines[i] = lines[i].Replace("private bool", "protected bool");
                 }
             }
         }
+
+        private void ReplaceOrInsertWebView2Alias()
+        {
+            string webView2Alias = "using WebView2 = PeakSWC.RemoteBlazorWebView.WebView2;";
+            bool aliasExists = false;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;"))
+                {
+                    lines[i] = webView2Alias;
+                    aliasExists = true;
+                    break;
+                }
+            }
+
+            if (!aliasExists)
+            {
+                int lastUsingIndex = Array.FindLastIndex(lines, l => l.TrimStart().StartsWith("using "));
+                if (lastUsingIndex != -1)
+                {
+                    lines = lines.Take(lastUsingIndex + 1)
+                        .Append(webView2Alias)
+                        .Concat(lines.Skip(lastUsingIndex + 1))
+                        .ToArray();
+                }
+            }
+        }
+
+        private void CorrectMetadataUpdateHandlerAttribute()
+        {
+            string pattern = @"\[assembly:\s*MetadataUpdateHandler\(typeof\((Microsoft\.AspNetCore\.Components\.WebView|PeakSWC\.RemoteBlazorWebView)\.StaticContentHotReloadManager\)\)\]";
+            string replacement = "[assembly: MetadataUpdateHandler(typeof(PeakSWC.RemoteBlazorWebView.StaticContentHotReloadManager))]";
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = Regex.Replace(lines[i], pattern, replacement);
+            }
+        }
+
+        private void RenameBlazorWebViewClass()
+        {
+            string newClassName = isWindowsForms ? "BlazorWebViewFormBase" : "BlazorWebViewBase";
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = Regex.Replace(lines[i], @"class\s+BlazorWebView\s*:", $"class {newClassName} :");
+                lines[i] = Regex.Replace(lines[i], @"\bBlazorWebView\b(?!Base|FormBase)", newClassName);
+            }
+        }
+
+        public void WriteAllText(string outputDir)
+        {
+            string outputPath = Path.Combine(outputDir, outputFileName);
+            File.WriteAllLines(outputPath, lines);
+        }
+
+        public void Replace(string oldValue, string newValue)
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i] = lines[i].Replace(oldValue, newValue);
+            }
+        }
+
+        public void ReplaceFirst(string search, string replace)
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                int pos = lines[i].IndexOf(search);
+                if (pos >= 0)
+                {
+                    lines[i] = lines[i].Substring(0, pos) + replace + lines[i].Substring(pos + search.Length);
+                    return;
+                }
+            }
+        }
+
+        public void Comment(string target)
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains(target))
+                {
+                    lines[i] = "//" + lines[i];
+                }
+            }
+        }
+    }
+}
