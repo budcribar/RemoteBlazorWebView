@@ -35,10 +35,9 @@ namespace EditWebView
 
             return fileName;
         }
-
         public void ApplyEdits()
         {
-            ApplyCommonEdits();
+            ReplaceNamespaces();
 
             switch (inputFileName)
             {
@@ -81,7 +80,6 @@ namespace EditWebView
         private void EditWebView2WebViewManager()
         {
             AddNavigateToStringMethod();
-            ReplaceUsings();
             ReplaceAddMethods();
             MakeClassPublic();
         }
@@ -94,8 +92,6 @@ namespace EditWebView
 
         private void EditBlazorWebViewServiceCollectionExtensions()
         {
-            ReplaceUsings();
-            ReplaceNamespaceInFile("Microsoft.Extensions.DependencyInjection", "PeakSWC.RemoteBlazorWebView");
             ReplaceAddMethods();
             UpdateDeveloperToolsMethod();
         }
@@ -124,25 +120,30 @@ namespace EditWebView
         {
             for (int i = 0; i < lines.Length; i++)
             {
-                if (lines[i].TrimStart().StartsWith("using Microsoft.AspNetCore.Components.WebView;"))
+                if (lines[i].TrimStart().StartsWith("using ") || lines[i].TrimStart().StartsWith("namespace "))
                 {
-                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+                    lines[i] = ReplaceNamespacesInLine(lines[i]);
                 }
-                else if (lines[i].Contains("Microsoft.AspNetCore.Components.WebView.WebView2"))
+                else if (!lines[i].TrimStart().StartsWith("#"))
                 {
-                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView.WebView2", "PeakSWC.RemoteBlazorWebView.WebView2");
-                }
-                else if (lines[i].Contains("Microsoft.AspNetCore.Components.WebView"))
-                {
-                    lines[i] = lines[i].Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
-                }
-                // Do not modify or remove the following using statement
-                else if (lines[i].TrimStart() == "using Microsoft.AspNetCore.Components;")
-                {
-                    // Keep this line as is
+                    lines[i] = ReplaceNamespacesInCode(lines[i]);
                 }
             }
         }
+        private string ReplaceNamespacesInLine(string line)
+        {
+            return line
+                .Replace("Microsoft.AspNetCore.Components.WebView.WindowsForms", "PeakSWC.RemoteBlazorWebView.WindowsForms")
+                .Replace("Microsoft.AspNetCore.Components.WebView.Wpf", "PeakSWC.RemoteBlazorWebView.Wpf")
+                .Replace("Microsoft.AspNetCore.Components.WebView.Maui", "PeakSWC.RemoteBlazorWebView.Maui")
+                .Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+        }
+
+        private string ReplaceNamespacesInCode(string line)
+        {
+            return Regex.Replace(line, @"\bMicrosoft\.AspNetCore\.Components\.WebView\b", "PeakSWC.RemoteBlazorWebView");
+        }
+
         private void ReplaceNamespaceInFile(string oldNamespace, string newNamespace)
         {
             for (int i = 0; i < lines.Length; i++)
