@@ -126,7 +126,7 @@ class Program
                 var editor = new Editor(file);
 
                 // Apply edits
-                editor.ApplyEdits();
+                editor.Edit();
 
                 // Write the edited content to the output file
                 editor.WriteAllText(outputFileDir);
