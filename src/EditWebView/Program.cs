@@ -7,6 +7,10 @@ class Program
 {
     private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
     private const string MauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
+
+    private const string AspNetCoreRepo = "dotnet/aspnetcore";
+    private const string MauiRepo = "dotnet/maui";
+    private const int TargetMajorVersion = 9;
     private const string RelativePath = "../../../../../";
     private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
 
@@ -14,7 +18,14 @@ class Program
     {
         try
         {
-            await ProcessFrameworks();
+            string latestAspNetCoreUrl = await Utility.GetLatestFrameworkVersionAsync(AspNetCoreRepo, TargetMajorVersion);
+            Console.WriteLine($"Latest ASP.NET Core Version {TargetMajorVersion} URL: {latestAspNetCoreUrl}");
+
+            string latestMauiUrl = await Utility.GetLatestFrameworkVersionAsync(MauiRepo, TargetMajorVersion);
+            Console.WriteLine($"Latest MAUI Version {TargetMajorVersion} URL: {latestMauiUrl}");
+
+            await ProcessAspNetFramework(latestAspNetCoreUrl);
+            await ProcessMauiFramework(latestMauiUrl);
             UpdateLocalFiles();
         }
         catch (Exception ex)
@@ -24,23 +35,17 @@ class Program
         }
     }
 
-    static async Task ProcessFrameworks()
-    {
-        await ProcessAspNetFramework();
-        await ProcessMauiFramework();
-    }
-
-    static async Task ProcessAspNetFramework()
+    static async Task ProcessAspNetFramework(string url)
     {
         Console.WriteLine("Processing ASP.NET Core framework...");
-        var (destinationPath, _) = await DownloadAndExtractFramework(AspNetUrl);
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
         CopyWebJSFiles(destinationPath);
     }
 
-    static async Task ProcessMauiFramework()
+    static async Task ProcessMauiFramework(string url)
     {
         Console.WriteLine("Processing MAUI framework...");
-        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(MauiUrl);
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
         string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
 
         ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");

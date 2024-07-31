@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using System.Text.Json;
 
 namespace EditWebView
 {
@@ -14,6 +15,128 @@ namespace EditWebView
         private static readonly HttpClient _httpClient = new();
         private static readonly Encoding _windows1252Encoding;
 
+        private const string AspNetCoreRepo = "dotnet/aspnetcore";
+        private const string MauiRepo = "dotnet/maui";
+
+        public static async Task<string> GetLatestFrameworkVersionAsync(string framework, int majorVersion)
+        {
+            if (framework != AspNetCoreRepo && framework != MauiRepo)
+            {
+                throw new ArgumentException($"Unsupported framework: {framework}. Use '{AspNetCoreRepo}' or '{MauiRepo}'.");
+            }
+
+            string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
+
+            List<(string Name, DateTime Timestamp)> allTags = new List<(string, DateTime)>();
+            string nextUrl = apiUrl;
+
+            while (!string.IsNullOrEmpty(nextUrl))
+            {
+                var response = await _httpClient.GetAsync(nextUrl);
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+                var tags = JsonSerializer.Deserialize<JsonElement[]>(content);
+
+                foreach (var tag in tags)
+                {
+                    string name = tag.GetProperty("name").GetString();
+                    string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString();
+                    DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
+                    allTags.Add((name, timestamp));
+                }
+
+                nextUrl = GetNextPageUrl(response);
+            }
+
+            var validTags = allTags
+                .Where(t => IsValidVersionTag(t.Name, majorVersion, framework))
+                .Where(t => !(framework == MauiRepo && t.Name.StartsWith("9.0.100-preview.1"))) // Skip 9.0.100-preview.1 for MAUI
+                .Select(t => (t.Name, t.Timestamp, VersionInfo: ParseVersion(t.Name, framework)))
+                .Where(t => t.VersionInfo.majorVersion == majorVersion)
+                .OrderByDescending(t => t.VersionInfo.version.Major)
+                .ThenByDescending(t => t.Timestamp)
+                .ThenByDescending(t => t.VersionInfo.version.Minor)
+                .ThenByDescending(t => t.VersionInfo.version.Build)
+                .ThenByDescending(t => t.VersionInfo.previewVersion)
+                .ThenByDescending(t => t.VersionInfo.version.Revision)
+                .ToList();
+
+            if (!validTags.Any())
+            {
+                throw new Exception($"No valid version {majorVersion} release found for {framework}.");
+            }
+
+            var latestVersion = validTags.First().Name;
+            return $"https://github.com/{framework}/archive/refs/tags/{latestVersion}.zip";
+        }
+
+        private static async Task<DateTime> GetCommitTimestamp(string framework, string commitSha)
+        {
+            string commitUrl = $"https://api.github.com/repos/{framework}/commits/{commitSha}";
+            var response = await _httpClient.GetAsync(commitUrl);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            var commitData = JsonSerializer.Deserialize<JsonElement>(content);
+            string dateString = commitData.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString();
+            return DateTime.Parse(dateString);
+        }
+
+        private static string GetNextPageUrl(HttpResponseMessage response)
+        {
+            var linkHeader = response.Headers.Contains("Link") ? response.Headers.GetValues("Link").FirstOrDefault() : null;
+            if (string.IsNullOrEmpty(linkHeader)) return null;
+
+            var links = linkHeader.Split(',');
+            foreach (var link in links)
+            {
+                var segments = link.Split(';');
+                if (segments.Length == 2 && segments[1].Trim().Equals("rel=\"next\"", StringComparison.OrdinalIgnoreCase))
+                {
+                    return segments[0].Trim(' ', '<', '>');
+                }
+            }
+            return null;
+        }
+
+        private static bool IsValidVersionTag(string name, int majorVersion, string framework)
+        {
+            if (framework == AspNetCoreRepo)
+            {
+                return name.StartsWith($"v{majorVersion}.");
+            }
+            else // MauiRepo
+            {
+                return name.StartsWith($"{majorVersion}.");
+            }
+        }
+
+        private static (System.Version version, int majorVersion, int previewVersion) ParseVersion(string name, string framework)
+        {
+            string pattern;
+            if (framework == AspNetCoreRepo)
+            {
+                pattern = @"v(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
+            }
+            else // MauiRepo
+            {
+                pattern = @"(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
+            }
+
+            var match = Regex.Match(name, pattern);
+            if (match.Success)
+            {
+                int major = int.Parse(match.Groups[1].Value);
+                int minor = int.Parse(match.Groups[2].Value);
+                int patch = int.Parse(match.Groups[3].Value);
+                int previewVersion = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 0;
+                int buildNumber = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
+
+                return (new System.Version(major, minor, patch, buildNumber), major, previewVersion);
+            }
+
+            return (new System.Version(0, 0, 0), 0, 0);
+        }
         static Utility()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
