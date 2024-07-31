@@ -11,18 +11,25 @@ namespace EditWebView
 {
     public static class Utility
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+        private static readonly Encoding _windows1252Encoding;
+
         static Utility()
         {
-            // Register the code pages encoding provider
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            _windows1252Encoding = Encoding.GetEncoding(1252);
         }
-        private static readonly HttpClient httpClient = new HttpClient();
 
         public static async Task DownloadZipFileAsync(string url, string destinationPath)
         {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("URL cannot be null or empty.", nameof(url));
+            if (string.IsNullOrWhiteSpace(destinationPath))
+                throw new ArgumentException("Destination path cannot be null or empty.", nameof(destinationPath));
+
             try
             {
-                using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
 
                 using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -39,6 +46,9 @@ namespace EditWebView
 
         public static List<string> GetOutOfDateFiles(string repoPath)
         {
+            if (string.IsNullOrWhiteSpace(repoPath))
+                throw new ArgumentException("Repository path cannot be null or empty.", nameof(repoPath));
+
             try
             {
                 using var repo = new Repository(repoPath);
@@ -67,9 +77,7 @@ namespace EditWebView
         public static void UnzipFile(string zipFilePath, string extractPath)
         {
             if (!File.Exists(zipFilePath))
-            {
                 throw new FileNotFoundException("The specified zip file does not exist.", zipFilePath);
-            }
 
             Directory.CreateDirectory(extractPath);
 
@@ -79,14 +87,10 @@ namespace EditWebView
                 var destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
 
                 if (!destinationPath.StartsWith(Path.GetFullPath(extractPath), StringComparison.OrdinalIgnoreCase))
-                {
                     throw new IOException("Attempted to extract file outside of destination directory.");
-                }
 
                 if (string.IsNullOrEmpty(entry.Name))
-                {
                     Directory.CreateDirectory(destinationPath);
-                }
                 else
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
@@ -97,71 +101,32 @@ namespace EditWebView
             Console.WriteLine($"Successfully extracted zip file to {extractPath}");
         }
 
-        public static string GetAspNetCoreFilename(string version)
-        {
-            if (string.IsNullOrWhiteSpace(version))
-            {
-                throw new ArgumentException("Version cannot be null or empty.", nameof(version));
-            }
-
-            if (!Regex.IsMatch(version, @"^\d+\.\d+\.\d+(-[\w.]+)?$"))
-            {
-                throw new ArgumentException("Invalid version format. Expected format: x.y.z or x.y.z-preview.a.b", nameof(version));
-            }
-
-            return $"aspnetcore-{version}.zip";
-        }
         public static string GetFilenameFromUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
-            {
                 throw new ArgumentException("URL cannot be null or empty.", nameof(url));
-            }
 
-            // Extract version from URL using regex
             var match = Regex.Match(url, @"/(?:v)?([\d.-]+(?:-[\w.]+)?)\.zip$");
             if (!match.Success)
-            {
                 throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
-            }
 
             string version = match.Groups[1].Value;
 
-            // Determine if it's ASP.NET Core or MAUI
             if (url.Contains("dotnet/aspnetcore"))
-            {
                 return $"aspnetcore-{version}.zip";
-            }
             else if (url.Contains("dotnet/maui"))
-            {
                 return $"maui-{version}.zip";
-            }
             else
-            {
                 throw new ArgumentException("Unsupported repository URL.", nameof(url));
-            }
-        }
-
-        public static string ExtractVersionFromPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new ArgumentException("Path cannot be null or empty.", nameof(path));
-            }
-
-            string lastPart = Path.GetFileName(path) ?? Path.GetFileName(Path.GetDirectoryName(path));
-
-            var match = Regex.Match(lastPart, @"^(\d+\.\d+\.\d+(?:-[\w.]+)?)$");
-            return match.Success ? match.Groups[1].Value : null;
         }
 
         public static void ConvertUtf8ToWindows1252(string filePath)
         {
             try
             {
-                Encoding windows1252 = Encoding.GetEncoding(1252);
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
-                File.WriteAllText(filePath, content, windows1252);
+                File.WriteAllText(filePath, content, _windows1252Encoding);
+                //Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
             }
             catch (Exception ex)
             {
@@ -193,6 +158,7 @@ namespace EditWebView
                 {
                     content = content.Replace("\n", "\r\n");
                     File.WriteAllText(filePath, content, Encoding.UTF8);
+                    //Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
                 }
             }
             catch (Exception ex)
@@ -204,9 +170,7 @@ namespace EditWebView
         public static void DeleteDirectoryAndContents(string path, bool recursive = true)
         {
             if (string.IsNullOrWhiteSpace(path))
-            {
                 throw new ArgumentException("Path cannot be null or empty.", nameof(path));
-            }
 
             if (!Directory.Exists(path))
             {
