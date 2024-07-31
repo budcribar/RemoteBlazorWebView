@@ -1,8 +1,10 @@
 using System.Text.RegularExpressions;
-
-internal static partial class UtilityHelpers
+namespace EditWebView
 {
+    public static partial class UtilityHelpers
+    {
 
-    [GeneratedRegex(@"/(?:v)?([\d.-]+(?:-[\w.]+)?)\.zip$")]
-    public static partial Regex MyRegex();
+        [GeneratedRegex(@"/(?:v)?([\d.-]+(?:-[\w.]+)?)\.zip$")]
+        public static partial Regex MyRegex();
+    }
 }

@@ -9,7 +9,7 @@ using LibGit2Sharp;
 
 namespace EditWebView
 {
-    public static class Utility
+    public static partial class Utility
     {
         private static readonly HttpClient _httpClient = new();
         private static readonly Encoding _windows1252Encoding;
@@ -106,7 +106,7 @@ namespace EditWebView
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("URL cannot be null or empty.", nameof(url));
 
-            var match = Regex.Match(url, @"/(?:v)?([\d.-]+(?:-[\w.]+)?)\.zip$");
+            var match = UtilityHelpers.MyRegex().Match(url);
             if (!match.Success)
                 throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
 
