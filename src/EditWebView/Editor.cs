@@ -8,6 +8,7 @@ namespace EditWebView
 {
     public class Editor
     {
+
         private string[] lines;
         private readonly string inputFileName;
         private readonly string outputFileName;
@@ -35,8 +36,10 @@ namespace EditWebView
 
             return fileName;
         }
+
         public void ApplyEdits()
         {
+            PreserveOriginalStructure();
             ReplaceNamespaces();
 
             switch (inputFileName)
@@ -64,6 +67,66 @@ namespace EditWebView
                     EditStaticContentHotReloadManager();
                     break;
             }
+        }
+
+        private void PreserveOriginalStructure()
+        {
+            // Ensure copyright notice remains at the top
+            int copyrightEndIndex = Array.FindIndex(lines, l => !l.StartsWith("//") && !string.IsNullOrWhiteSpace(l));
+            var copyrightLines = lines.Take(copyrightEndIndex).ToList();
+            var remainingLines = lines.Skip(copyrightEndIndex).ToList();
+
+            // Preserve order of using statements
+            var usingStatements = remainingLines.TakeWhile(l => l.TrimStart().StartsWith("using")).ToList();
+            remainingLines = remainingLines.Skip(usingStatements.Count).ToList();
+
+            lines = copyrightLines.Concat(usingStatements).Concat(remainingLines).ToArray();
+        }
+
+        private void ReplaceNamespaces()
+        {
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart().StartsWith("using ") || lines[i].TrimStart().StartsWith("namespace "))
+                {
+                    lines[i] = ReplaceNamespacesInLine(lines[i]);
+                }
+                else if (!lines[i].TrimStart().StartsWith("#"))
+                {
+                    lines[i] = ReplaceNamespacesInCode(lines[i]);
+                }
+            }
+        }
+
+        private string ReplaceNamespacesInLine(string line)
+        {
+            if (line.Contains("Microsoft.AspNetCore.Components.WebView.WebView2"))
+            {
+                return line.Replace("Microsoft.AspNetCore.Components.WebView.WebView2", "PeakSWC.RemoteBlazorWebView.WebView2");
+            }
+            else if (line.Contains("Microsoft.AspNetCore.Components.WebView"))
+            {
+                return line.Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
+            }
+            return line;
+        }
+
+        private string ReplaceNamespacesInCode(string line)
+        {
+            return Regex.Replace(line, @"\bMicrosoft\.AspNetCore\.Components\.WebView\b", "PeakSWC.RemoteBlazorWebView");
+        }
+
+        private void EditRootComponent()
+        {
+            // Do not replace or insert WebView2 alias for RootComponent.cs
+        }
+
+        // ... [Other methods remain the same]
+
+        public void WriteAllText(string outputDir)
+        {
+            string outputPath = Path.Combine(outputDir, outputFileName);
+            File.WriteAllLines(outputPath, lines);
         }
 
         private void ApplyCommonEdits()
@@ -106,43 +169,17 @@ namespace EditWebView
             MakeRequiredStartupPropertiesSetProtected();
         }
 
-        private void EditRootComponent()
-        {
-            ReplaceOrInsertWebView2Alias();
-        }
+
 
         private void EditStaticContentHotReloadManager()
         {
             CorrectMetadataUpdateHandlerAttribute();
         }
 
-        private void ReplaceNamespaces()
-        {
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].TrimStart().StartsWith("using ") || lines[i].TrimStart().StartsWith("namespace "))
-                {
-                    lines[i] = ReplaceNamespacesInLine(lines[i]);
-                }
-                else if (!lines[i].TrimStart().StartsWith("#"))
-                {
-                    lines[i] = ReplaceNamespacesInCode(lines[i]);
-                }
-            }
-        }
-        private string ReplaceNamespacesInLine(string line)
-        {
-            return line
-                .Replace("Microsoft.AspNetCore.Components.WebView.WindowsForms", "PeakSWC.RemoteBlazorWebView.WindowsForms")
-                .Replace("Microsoft.AspNetCore.Components.WebView.Wpf", "PeakSWC.RemoteBlazorWebView.Wpf")
-                .Replace("Microsoft.AspNetCore.Components.WebView.Maui", "PeakSWC.RemoteBlazorWebView.Maui")
-                .Replace("Microsoft.AspNetCore.Components.WebView", "PeakSWC.RemoteBlazorWebView");
-        }
 
-        private string ReplaceNamespacesInCode(string line)
-        {
-            return Regex.Replace(line, @"\bMicrosoft\.AspNetCore\.Components\.WebView\b", "PeakSWC.RemoteBlazorWebView");
-        }
+
+
+
 
         private void ReplaceNamespaceInFile(string oldNamespace, string newNamespace)
         {
@@ -371,11 +408,7 @@ namespace EditWebView
             }
         }
 
-        public void WriteAllText(string outputDir)
-        {
-            string outputPath = Path.Combine(outputDir, outputFileName);
-            File.WriteAllLines(outputPath, lines);
-        }
+
 
         public void Replace(string oldValue, string newValue)
         {
