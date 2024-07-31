@@ -10,39 +10,38 @@ class Program
     private const string RelativePath = "../../../../../";
     private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
 
-
     static async Task Main()
     {
-        await ProcessAspNetFramework(AspNetUrl);
-        await ProcessMauiFramework(MauiUrl);
-
-        UpdateLocalFiles();
+        try
+        {
+            await ProcessFrameworks();
+            UpdateLocalFiles();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
-    static async Task ProcessAspNetFramework(string url)
+    static async Task ProcessFrameworks()
     {
-        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
+        await ProcessAspNetFramework();
+        await ProcessMauiFramework();
+    }
+
+    static async Task ProcessAspNetFramework()
+    {
+        Console.WriteLine("Processing ASP.NET Core framework...");
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(AspNetUrl);
         CopyWebJSFiles(destinationPath);
     }
 
-    static async Task ProcessMauiFramework(string url)
+    static async Task ProcessMauiFramework()
     {
-        string zipFile = Utility.GetFilenameFromUrl(url);
-        string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
-        string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-
-        if (!File.Exists(destinationPath))
-        {
-            await Utility.DownloadZipFileAsync(url, destinationPath);
-        }
-
-        string extractedFolder = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
-        if (!Directory.Exists(extractedFolder))
-        {
-            Utility.UnzipFile(destinationPath, destinationFolder);
-        }
-
-        string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(zipFile));
+        Console.WriteLine("Processing MAUI framework...");
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(MauiUrl);
+        string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
 
         ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
         ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
@@ -57,12 +56,18 @@ class Program
 
         if (!File.Exists(destinationPath))
         {
+            Console.WriteLine($"Downloading {zipFile}...");
             await Utility.DownloadZipFileAsync(url, destinationPath);
+        }
+        else
+        {
+            Console.WriteLine($"{zipFile} already exists. Skipping download.");
         }
 
         string extractedFolder = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
         if (!Directory.Exists(extractedFolder))
         {
+            Console.WriteLine($"Extracting {zipFile}...");
             Utility.UnzipFile(destinationPath, destinationFolder);
         }
         else
@@ -76,12 +81,11 @@ class Program
     static void CopyWebJSFiles(string destinationPath)
     {
         var webJSTarget = Path.Combine(RelativePath, @"RemoteWebView.Blazor.JS/Web.JS");
+        var webJSource = Path.Combine(Path.GetDirectoryName(destinationPath), Path.GetFileNameWithoutExtension(destinationPath), @"src/components/Web.JS");
+
+        Console.WriteLine($"Copying Web.JS files from {webJSource} to {webJSTarget}");
         Utility.DeleteDirectoryAndContents(webJSTarget);
-
-        var webJSource = Path.Combine(destinationPath.Replace(".zip", ""), @"src/components/Web.JS");
         Utility.CopyDirectory(webJSource, webJSTarget);
-
-        Console.WriteLine($"Copied Web.JS files from {webJSource} to {webJSTarget}");
     }
 
     static void ProcessFiles(string inputDir, string outputDir)
@@ -122,13 +126,8 @@ class Program
                     Directory.CreateDirectory(outputFileDir);
                 }
 
-                // Create an Editor instance with the file path
                 var editor = new Editor(file);
-
-                // Apply edits
                 editor.Edit();
-
-                // Write the edited content to the output file
                 editor.WriteAllText(outputFileDir);
 
                 processedCount++;
@@ -145,6 +144,7 @@ class Program
 
     static void UpdateLocalFiles()
     {
+        Console.WriteLine("Updating local files...");
         var updated = Utility.GetOutOfDateFiles(RepoPath);
 
         foreach (var file in updated)
@@ -152,6 +152,9 @@ class Program
             string fullPath = Path.Combine(RepoPath, file);
             Utility.ConvertUnixToWindowsLineEndings(fullPath);
             Utility.ConvertUtf8ToWindows1252(fullPath);
+            Console.WriteLine($"Updated: {file}");
         }
+
+        Console.WriteLine($"Local file update complete. Files updated: {updated.Count}");
     }
 }

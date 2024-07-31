@@ -162,7 +162,6 @@ namespace EditWebView
                 Encoding windows1252 = Encoding.GetEncoding(1252);
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 File.WriteAllText(filePath, content, windows1252);
-                Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
             }
             catch (Exception ex)
             {
@@ -194,7 +193,6 @@ namespace EditWebView
                 {
                     content = content.Replace("\n", "\r\n");
                     File.WriteAllText(filePath, content, Encoding.UTF8);
-                    Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
                 }
             }
             catch (Exception ex)
