@@ -33,7 +33,7 @@ class Program
     static async Task ProcessAspNetFramework()
     {
         Console.WriteLine("Processing ASP.NET Core framework...");
-        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(AspNetUrl);
+        var (destinationPath, _) = await DownloadAndExtractFramework(AspNetUrl);
         CopyWebJSFiles(destinationPath);
     }
 
@@ -81,7 +81,7 @@ class Program
     static void CopyWebJSFiles(string destinationPath)
     {
         var webJSTarget = Path.Combine(RelativePath, @"RemoteWebView.Blazor.JS/Web.JS");
-        var webJSource = Path.Combine(Path.GetDirectoryName(destinationPath), Path.GetFileNameWithoutExtension(destinationPath), @"src/components/Web.JS");
+        var webJSource = Path.Combine(Path.GetDirectoryName(destinationPath) ?? "", Path.GetFileNameWithoutExtension(destinationPath), @"src/components/Web.JS");
 
         Console.WriteLine($"Copying Web.JS files from {webJSource} to {webJSTarget}");
         Utility.DeleteDirectoryAndContents(webJSTarget);

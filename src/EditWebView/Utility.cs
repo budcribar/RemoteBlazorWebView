@@ -11,7 +11,7 @@ namespace EditWebView
 {
     public static class Utility
     {
-        private static readonly HttpClient _httpClient = new HttpClient();
+        private static readonly HttpClient _httpClient = new();
         private static readonly Encoding _windows1252Encoding;
 
         static Utility()
@@ -65,12 +65,12 @@ namespace EditWebView
             catch (RepositoryNotFoundException)
             {
                 Console.WriteLine($"Warning: Git repository not found at path: {repoPath}");
-                return new List<string>();
+                return [];
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"An error occurred while accessing the git repository: {ex.Message}");
-                return new List<string>();
+                return [];
             }
         }
 
@@ -93,7 +93,7 @@ namespace EditWebView
                     Directory.CreateDirectory(destinationPath);
                 else
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath) ?? "");
                     entry.ExtractToFile(destinationPath, true);
                 }
             }
@@ -154,7 +154,7 @@ namespace EditWebView
             try
             {
                 string content = File.ReadAllText(filePath);
-                if (!content.Contains("\r\n") && content.Contains("\n"))
+                if (!content.Contains("\r\n") && content.Contains('\n'))
                 {
                     content = content.Replace("\n", "\r\n");
                     File.WriteAllText(filePath, content, Encoding.UTF8);

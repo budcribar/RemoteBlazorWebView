@@ -21,7 +21,7 @@ namespace EditWebView
             _fileName = DetermineFileName(file);
         }
 
-        private string DetermineFileName(string file)
+        private static string DetermineFileName(string file)
         {
             var fileName = Path.GetFileName(file);
 
@@ -125,7 +125,7 @@ namespace EditWebView
             Replace("private bool RequiredStartupPropertiesSet =>", "protected bool RequiredStartupPropertiesSet =>");
         }
 
-        private string CreateWebViewManagerMethod()
+        private static string CreateWebViewManagerMethod()
         {
             return @"public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
 		{
