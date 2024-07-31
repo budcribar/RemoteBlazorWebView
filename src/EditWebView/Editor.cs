@@ -107,31 +107,36 @@ namespace EditWebView
         private void EditBlazorWebViewBase()
         {
             Comment("#pragma warning disable CA1816");
-            Comment("#pragma warning restore");
+            Comment("#pragma warning restore CA1816");
+
             Replace("Dock = DockStyle.Fill,", "Dock = DockStyle.Fill, AllowExternalDrop = false");
             Replace("_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);",
                 "_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);\n\t\t\t\t_webview.AllowExternalDrop = false;");
+
             Replace("public WebView2Control WebView => _webview;",
                 "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
             Replace("public WebView2Control WebView => _webview!;",
                 "public WebView2Control WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
-            Replace("new WebView2WebViewManager", "CreateWebViewManager");
-            Replace("private void StartWebViewCoreIfPossible()", CreateWebViewManagerMethod());
-            Replace("BlazorWebView", Path.GetFileNameWithoutExtension(_fileName));
-            Replace("BlazorWebViewBaseInit", "BlazorWebViewInit");
-            Replace("BlazorWebViewFormBaseInit", "BlazorWebViewInit");
-            Replace("public string HostPage", "public virtual string? HostPage");
-            Replace("public string? HostPage", "public virtual string? HostPage");
-            Replace("private bool RequiredStartupPropertiesSet =>", "protected bool RequiredStartupPropertiesSet =>");
-        }
 
-        private static string CreateWebViewManagerMethod()
-        {
-            return @"public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
+            Replace("new WebView2WebViewManager", "CreateWebViewManager");
+            Replace("private void StartWebViewCoreIfPossible()",
+                @"public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
 		{
 			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized,logger);
 		}
-		protected void StartWebViewCoreIfPossible()";
+		protected void StartWebViewCoreIfPossible()");
+
+            Replace("BlazorWebView", Path.GetFileNameWithoutExtension(_fileName));
+
+            Replace("BlazorWebViewBaseInit", "BlazorWebViewInit");
+            Replace("BlazorWebViewFormBaseInit", "BlazorWebViewInit");
+
+            InsertUsing("Microsoft.AspNetCore.Components.Web");
+            InsertUsing("Microsoft.AspNetCore.Components.WebView");
+
+            Replace("public string HostPage", "public virtual string? HostPage");
+            Replace("public string? HostPage", "public virtual string? HostPage");
+            Replace("private bool RequiredStartupPropertiesSet =>", "protected bool RequiredStartupPropertiesSet =>");
         }
 
         private void ReplaceNamespaces()
