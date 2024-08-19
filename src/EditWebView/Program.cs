@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 class Program
 {
-    private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.6.24328.4.zip";
-    private const string MauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.6.24327.7.zip";
+    private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
+    private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
 
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";

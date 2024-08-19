@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace EditWebView
 {
@@ -27,6 +28,7 @@ namespace EditWebView
 
             string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "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");
 
             List<(string Name, DateTime Timestamp)> allTags = new List<(string, DateTime)>();
             string nextUrl = apiUrl;
