@@ -68,6 +68,11 @@ module.exports = (env, args) => ({
         errors: true,
         performance: true,
         optimizationBailout: true
+    },
+    performance: {
+        maxAssetSize: 420000, // Size in bytes
+        maxEntrypointSize: 420000, // Size in bytes
+        hints: 'warning'
     }
  
 });
