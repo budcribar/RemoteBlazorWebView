@@ -1,10 +1,10 @@
 import { receiveMessage } from './IPC';
-import { grpc } from "@improbable-eng/grpc-web";
-import { BrowserIPC } from "./generated/webview_pb_service";
+import { GrpcWebClientBase, StatusCode } from "grpc-web";
+import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
 import { showErrorNotification } from '../web.js/src/BootErrors';
-import { sendAttachPage} from '../web.js/src/Platform/WebView/WebViewIpcSender';
+import { sendAttachPage } from '../web.js/src/Platform/WebView/WebViewIpcSender';
 
 interface RemoteBlazor {
     sequenceNum: number;
@@ -25,40 +25,37 @@ if (!window.RemoteBlazor) {
 
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
-window.RemoteBlazor.isPrimary = true; 
+window.RemoteBlazor.isPrimary = true;
 const locationOrigin = window.location.origin;
 
+const client = new BrowserIPCClient(window.RemoteBlazor.grpcHost || locationOrigin);
+
 export function sendMessage(message: string) {
-    var req = new SendSequenceMessageRequest();
-    var id = window.location.pathname.split('/')[1];
+    const req = new SendSequenceMessageRequest();
+    let id = window.location.pathname.split('/')[1];
     if (id == 'mirror') {
         id = window.location.pathname.split('/')[2];
-       
     }
     req.setId(id);
     req.setClientid(window.RemoteBlazor.clientId);
     req.setMessage(message);
     req.setSequence(window.RemoteBlazor.sequenceNum++);
-    req.setUrl(navigationManagerFunctions.getLocationHref())
+    req.setUrl(navigationManagerFunctions.getLocationHref());
     req.setIsprimary(window.RemoteBlazor.isPrimary);
 
-    grpc.invoke(BrowserIPC.SendMessage, {
-        request: req,
-        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
-        onMessage: (message: SendMessageResponse) => {
-            if (!message.getSuccess()) {
-                var error = `Client ${id} is unresponsive`
-                console.log(error);
-                showErrorNotification();
-            }
-        },
-        onEnd: (code, msg, trailers) => {
-            if (code == grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message + " window.RemoteBlazor.clientId:" + clientId);
-            } else {
-                console.log("grpc error", code, msg, trailers);
-                showErrorNotification();
-            }
+    client.sendMessage(req, {}, (err: RpcError | null, response: SendMessageResponse) => {
+        if (err) {
+            console.log("grpc error", err.code, err.message);
+            showErrorNotification();
+            return;
+        }
+
+        if (!response.getSuccess()) {
+            const error = `Client ${id} is unresponsive`;
+            console.log(error);
+            showErrorNotification();
+        } else {
+            //console.log("sent:" + req.getSequence() + ":" + message + " window.RemoteBlazor.clientId:" + window.RemoteBlazor.clientId);
         }
     });
 }
@@ -67,10 +64,10 @@ function makePageReadOnly() {
     // Create the overlay element
     var overlay = document.createElement('div');
     overlay.style.position = 'fixed';
-    overlay.style.top = '0px'; 
-    overlay.style.left = '0px'; 
-    overlay.style.width = '100%'; 
-    overlay.style.height = '100%'; 
+    overlay.style.top = '0px';
+    overlay.style.left = '0px';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
     overlay.style.zIndex = '10000';
     overlay.style.background = 'transparent';
     overlay.style.cursor = 'not-allowed';
@@ -84,7 +81,7 @@ function makePageReadOnly() {
     window.addEventListener('keydown', preventInteraction, true);
     window.addEventListener('keyup', preventInteraction, true);
 
-    function preventInteraction(event) {
+    function preventInteraction(event: Event) {
         event.preventDefault();
         event.stopPropagation();
     }
@@ -96,42 +93,43 @@ function makePageReadOnly() {
 export function initializeRemoteWebView() {
     (window.external as any).sendMessage = sendMessage;
 
-  
     const pathParts = window.location.pathname.split('/');
     let id = pathParts[1];
     if (id === 'mirror') {
         id = pathParts[2];
         window.RemoteBlazor.isPrimary = false;
-        makePageReadOnly();    
+        makePageReadOnly();
     }
 
-    window.RemoteBlazor.clientId = (window.crypto as any).randomUUID();
+    window.RemoteBlazor.clientId = crypto.randomUUID();
 
     sendMessage("connected:");
     sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
 
-    var message = new ReceiveMessageRequest();
+    const message = new ReceiveMessageRequest();
     message.setId(id);
     message.setClientid(window.RemoteBlazor.clientId);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
 
-    grpc.invoke(BrowserIPC.ReceiveMessage,
-        {
-            request: message,
-            host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
-            onMessage: (message: StringRequest) => {
-                console.info("BrowserIPC.ReceiveMessage: " + message.getRequest());
-                receiveMessage(message.getRequest());
-                if (!window.RemoteBlazor.isPrimary)
-                    makePageReadOnly();
-            },
-            onEnd: (code: grpc.Code, msg: string | undefined, trailers: grpc.Metadata) => {
-                if (code == grpc.Code.OK) {
-                    console.log("BrowserIPC.ReceiveMessage:onEnd:ok")
-                } else {
-                    console.error("grpc error", code, msg, trailers);
-                }
-            }
-        } );
+    const stream = client.receiveMessage(message, {});
 
+    stream.on('data', (response: StringRequest) => {
+        console.info("BrowserIPC.ReceiveMessage: " + response.getRequest());
+        receiveMessage(response.getRequest());
+        if (!window.RemoteBlazor.isPrimary)
+            makePageReadOnly();
+    });
+
+    stream.on('error', (err: RpcError) => {
+        console.error("grpc error", err.code, err.message);
+    });
+
+    stream.on('end', () => {
+        console.log("BrowserIPC.ReceiveMessage: stream ended");
+    });
+}
+
+interface RpcError {
+    code: StatusCode;
+    message: string;
 }

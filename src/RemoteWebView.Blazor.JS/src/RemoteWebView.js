@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeRemoteWebView = exports.sendMessage = void 0;
+exports.sendMessage = sendMessage;
+exports.initializeRemoteWebView = initializeRemoteWebView;
 var IPC_1 = require("./IPC");
-var grpc_web_1 = require("@improbable-eng/grpc-web");
-var webview_pb_service_1 = require("./generated/webview_pb_service");
+var WebviewServiceClientPb_1 = require("./generated/WebviewServiceClientPb");
 var webview_pb_1 = require("./generated/webview_pb");
 var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
 var BootErrors_1 = require("../web.js/src/BootErrors");
@@ -15,6 +15,7 @@ window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true;
 var locationOrigin = window.location.origin;
+var client = new WebviewServiceClientPb_1.BrowserIPCClient(window.RemoteBlazor.grpcHost || locationOrigin);
 function sendMessage(message) {
     var req = new webview_pb_1.SendSequenceMessageRequest();
     var id = window.location.pathname.split('/')[1];
@@ -27,28 +28,22 @@ function sendMessage(message) {
     req.setSequence(window.RemoteBlazor.sequenceNum++);
     req.setUrl(NavigationManager_1.internalFunctions.getLocationHref());
     req.setIsprimary(window.RemoteBlazor.isPrimary);
-    grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.SendMessage, {
-        request: req,
-        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
-        onMessage: function (message) {
-            if (!message.getSuccess()) {
-                var error = "Client ".concat(id, " is unresponsive");
-                console.log(error);
-                (0, BootErrors_1.showErrorNotification)();
-            }
-        },
-        onEnd: function (code, msg, trailers) {
-            if (code == grpc_web_1.grpc.Code.OK) {
-                //console.log("sent:" + req.getSequence() + ":" + message + " window.RemoteBlazor.clientId:" + clientId);
-            }
-            else {
-                console.log("grpc error", code, msg, trailers);
-                (0, BootErrors_1.showErrorNotification)();
-            }
+    client.sendMessage(req, {}, function (err, response) {
+        if (err) {
+            console.log("grpc error", err.code, err.message);
+            (0, BootErrors_1.showErrorNotification)();
+            return;
+        }
+        if (!response.getSuccess()) {
+            var error = "Client ".concat(id, " is unresponsive");
+            console.log(error);
+            (0, BootErrors_1.showErrorNotification)();
+        }
+        else {
+            //console.log("sent:" + req.getSequence() + ":" + message + " window.RemoteBlazor.clientId:" + window.RemoteBlazor.clientId);
         }
     });
 }
-exports.sendMessage = sendMessage;
 function makePageReadOnly() {
     // Create the overlay element
     var overlay = document.createElement('div');
@@ -83,31 +78,25 @@ function initializeRemoteWebView() {
         window.RemoteBlazor.isPrimary = false;
         makePageReadOnly();
     }
-    window.RemoteBlazor.clientId = window.crypto.randomUUID();
+    window.RemoteBlazor.clientId = crypto.randomUUID();
     sendMessage("connected:");
     (0, WebViewIpcSender_1.sendAttachPage)(NavigationManager_1.internalFunctions.getBaseURI(), NavigationManager_1.internalFunctions.getLocationHref());
     var message = new webview_pb_1.ReceiveMessageRequest();
     message.setId(id);
     message.setClientid(window.RemoteBlazor.clientId);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
-    grpc_web_1.grpc.invoke(webview_pb_service_1.BrowserIPC.ReceiveMessage, {
-        request: message,
-        host: window.RemoteBlazor && window.RemoteBlazor.grpcHost ? window.RemoteBlazor.grpcHost : locationOrigin,
-        onMessage: function (message) {
-            console.info("BrowserIPC.ReceiveMessage: " + message.getRequest());
-            (0, IPC_1.receiveMessage)(message.getRequest());
-            if (!window.RemoteBlazor.isPrimary)
-                makePageReadOnly();
-        },
-        onEnd: function (code, msg, trailers) {
-            if (code == grpc_web_1.grpc.Code.OK) {
-                console.log("BrowserIPC.ReceiveMessage:onEnd:ok");
-            }
-            else {
-                console.error("grpc error", code, msg, trailers);
-            }
-        }
+    var stream = client.receiveMessage(message, {});
+    stream.on('data', function (response) {
+        console.info("BrowserIPC.ReceiveMessage: " + response.getRequest());
+        (0, IPC_1.receiveMessage)(response.getRequest());
+        if (!window.RemoteBlazor.isPrimary)
+            makePageReadOnly();
+    });
+    stream.on('error', function (err) {
+        console.error("grpc error", err.code, err.message);
+    });
+    stream.on('end', function () {
+        console.log("BrowserIPC.ReceiveMessage: stream ended");
     });
 }
-exports.initializeRemoteWebView = initializeRemoteWebView;
 //# sourceMappingURL=RemoteWebView.js.map
