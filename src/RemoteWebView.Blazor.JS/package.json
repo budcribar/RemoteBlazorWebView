@@ -6,25 +6,27 @@
   "main": "index.js",
   "scripts": {
     "build:debug": "webpack --mode development",
-    "build:production": "npm run protoc && webpack --mode production",
+    "build:production": "npm run protoc && webpack --mode production --stats-error-details",
     "build:noprotoc": "webpack --mode production",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --js_out=\"import_style=commonjs,binary:src/generated\" --ts_out=\"service=grpc-web:src/generated\" -I..\\protos -I.\\protoc\\include webview.proto"
+    "protoc": "protoc --plugin=protoc-gen-ts=\".\\node_modules\\.bin\\protoc-gen-ts.cmd\" --plugin=protoc-gen-grpc-web=\".\\protoc\\bin\\protoc-gen-grpc-web.exe\" --js_out=\"import_style=commonjs,binary:src/generated\" --grpc-web_out=\"import_style=typescript,mode=grpcwebtext:src/generated\" --ts_out=\"src/generated/ts\" -I..\\protos -I.\\protoc\\include webview.proto"
   },
   "devDependencies": {
-    "@improbable-eng/grpc-web": "0.15.0",
     "@rollup/plugin-typescript": "11.1.6",
     "@types/base64-arraybuffer": "^0.1.0",
+    "@types/google-protobuf": "3.15.12",
     "base64-arraybuffer": "^0.1.5",
     "eslint": "^8.42.0",
-    "google-protobuf": "3.21.2",
-    "grpc-web": "1.4.2",
+    "google-protobuf": "3.21.4",
+    "grpc-web": "1.5.0",
     "inspectpack": "^4.7.1",
+    "source-map-loader": "^5.0.0",
     "ts-loader": "^9.2.5",
     "ts-protoc-gen": "0.15.0",
     "tsconfig-paths-webpack-plugin": "^3.5.1",
     "typescript": "^4.4.2",
     "webpack": "^5.92.1",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
