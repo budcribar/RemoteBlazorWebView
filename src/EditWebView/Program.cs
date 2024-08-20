@@ -1,12 +1,9 @@
 using EditWebView;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 class Program
 {
-    private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
-    private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
+    //private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
+   // private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
 
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";
@@ -38,7 +35,7 @@ class Program
     static async Task ProcessAspNetFramework(string url)
     {
         Console.WriteLine("Processing ASP.NET Core framework...");
-        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
+        var (destinationPath, _) = await DownloadAndExtractFramework(url);
         CopyWebJSFiles(destinationPath);
     }
 

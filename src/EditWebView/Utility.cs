@@ -1,10 +1,6 @@
-using System;
-using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using LibGit2Sharp;
 using System.Text.Json;
 using System.Net.Http.Headers;
@@ -28,9 +24,18 @@ namespace EditWebView
 
             string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "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");
 
-            List<(string Name, DateTime Timestamp)> allTags = new List<(string, DateTime)>();
+            string githubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? string.Empty;
+
+            if (string.IsNullOrEmpty(githubToken))
+            {
+                Console.Error.WriteLine("Error: GITHUB_PAT environment variable is not set.");
+                Environment.Exit(1);
+            }
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", githubToken);
+
+            List<(string Name, DateTime Timestamp)> allTags = [];
             string nextUrl = apiUrl;
 
             while (!string.IsNullOrEmpty(nextUrl))
@@ -39,13 +44,16 @@ namespace EditWebView
                 response.EnsureSuccessStatusCode();
                 var content = await response.Content.ReadAsStringAsync();
                 var tags = JsonSerializer.Deserialize<JsonElement[]>(content);
-
-                foreach (var tag in tags)
+                if (tags != null)
                 {
-                    string name = tag.GetProperty("name").GetString();
-                    string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString();
-                    DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
-                    allTags.Add((name, timestamp));
+
+                    foreach (var tag in tags)
+                    {
+                        string name = tag.GetProperty("name").GetString() ?? string.Empty;
+                        string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString() ?? string.Empty;
+                        DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
+                        allTags.Add((name, timestamp));
+                    }
                 }
 
                 nextUrl = GetNextPageUrl(response);
@@ -64,7 +72,7 @@ namespace EditWebView
                 .ThenByDescending(t => t.VersionInfo.version.Revision)
                 .ToList();
 
-            if (!validTags.Any())
+            if (validTags.Count == 0)
             {
                 throw new Exception($"No valid version {majorVersion} release found for {framework}.");
             }
@@ -80,14 +88,14 @@ namespace EditWebView
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
             var commitData = JsonSerializer.Deserialize<JsonElement>(content);
-            string dateString = commitData.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString();
+            string dateString = commitData.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString() ?? string.Empty;
             return DateTime.Parse(dateString);
         }
 
         private static string GetNextPageUrl(HttpResponseMessage response)
         {
             var linkHeader = response.Headers.Contains("Link") ? response.Headers.GetValues("Link").FirstOrDefault() : null;
-            if (string.IsNullOrEmpty(linkHeader)) return null;
+            if (string.IsNullOrEmpty(linkHeader)) return string.Empty;
 
             var links = linkHeader.Split(',');
             foreach (var link in links)
@@ -98,7 +106,7 @@ namespace EditWebView
                     return segments[0].Trim(' ', '<', '>');
                 }
             }
-            return null;
+            return string.Empty;
         }
 
         private static bool IsValidVersionTag(string name, int majorVersion, string framework)

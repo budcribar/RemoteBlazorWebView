@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using System.Text.RegularExpressions;
-
 namespace EditWebView
 {
     public class Editor
