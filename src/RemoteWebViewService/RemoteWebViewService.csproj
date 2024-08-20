@@ -46,7 +46,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on maui 8.0.70 </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 8.0.80 </PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
@@ -72,6 +72,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.8" NoWarn="NU1605" />

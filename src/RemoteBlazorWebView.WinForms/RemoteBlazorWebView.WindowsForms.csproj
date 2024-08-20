@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on maui 8.0.70 </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 8.0.80 </PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -49,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
 	<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.80" />
