@@ -1,79 +1,162 @@
-// See https://aka.ms/new-console-template for more information
 using EditWebView;
 
-string aspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v8.0.7.zip";
-string mauiUrl = "https://github.com/dotnet/maui/archive/refs/tags/8.0.70.zip";
-
-string url = aspNetUrl;
-
-string zipFile = Utility.GetAspNetCoreFilenameFromUrl(url);
-
-string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
-string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-
-if (!File.Exists(destinationPath))
-    await Utility.DownloadZipFileAsync(url, destinationPath);
-
-if(!Path.Exists(Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath))))
-    Utility.UnzipFile(destinationPath, destinationFolder);
-
-var webJSTarget = Path.Combine(@"../../../../../", @"RemoteWebView.Blazor.JS/Web.JS");
-
-// delete the WebJS directory
-Utility.DeleteDirectoryAndContents(webJSTarget);
-
-
-var webJSource = Path.Combine(Path.Combine(destinationPath.Replace(".zip",""), @"src/components/Web.JS"));
-// copy the WebJS directory
-Utility.CopyDirectory(webJSource, webJSTarget);
-
-url = mauiUrl;
-zipFile = Path.GetFileName(url);
-destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
-destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-if (!File.Exists(destinationPath))
-    await Utility.DownloadZipFileAsync(url, destinationPath);
-
-if (!Path.Exists(Path.Combine(destinationFolder, Utility.ExtractVersionFromPath(destinationPath))))
-    Utility.UnzipFile(destinationPath, destinationFolder);
-
-string maui = "maui-" + Utility.ExtractVersionFromPath(destinationPath);
-string inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\WindowsForms");
-string outputDir = "../../../../../RemoteBlazorWebView.WinForms";
-
-ProcessFiles(inputDir, outputDir);
-
-inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\Wpf");
-outputDir = "../../../../../RemoteBlazorWebView.Wpf";
-
-ProcessFiles(inputDir, outputDir);
-
-inputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", maui, @"src\BlazorWebView\src\SharedSource");
-outputDir = "../../../../../SharedSource";
-
-ProcessFiles(inputDir, outputDir);
-
-var updated = Utility.GetOutOfDateFiles(Path.Combine(Directory.GetCurrentDirectory(), "../../../../../../"));
-
-foreach (var file in updated)
+class Program
 {
-    Utility.ConvertUnixToWindowsLineEndings(Path.Combine("../../../../../../", file));
-    Utility.ConvertUtf8ToWindows1252(Path.Combine("../../../../../../", file));
-}
-   
+    //private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
+   // private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
 
-static void ProcessFiles(string inputDir, string outputDir)
-{
-    if (!Directory.Exists(outputDir))
-        throw new Exception("Can't locate output directory");
+    private const string AspNetCoreRepo = "dotnet/aspnetcore";
+    private const string MauiRepo = "dotnet/maui";
+    private const int TargetMajorVersion = 8;
+    private const string RelativePath = "../../../../../";
+    private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
 
-    foreach (var f in Directory.EnumerateFiles(inputDir))
+    static async Task Main()
     {
-        if (f.EndsWith(".csproj")) continue;
-        //if (f.Contains("UrlLoadingEvent")) continue;
+        try
+        {
+            string latestAspNetCoreUrl = await Utility.GetLatestFrameworkVersionAsync(AspNetCoreRepo, TargetMajorVersion);
+            Console.WriteLine($"Latest ASP.NET Core Version {TargetMajorVersion} URL: {latestAspNetCoreUrl}");
 
-        Editor editor = new(f);
-        editor.Edit();
-        editor.WriteAllText(outputDir);
+            string latestMauiUrl = await Utility.GetLatestFrameworkVersionAsync(MauiRepo, TargetMajorVersion);
+            Console.WriteLine($"Latest MAUI Version {TargetMajorVersion} URL: {latestMauiUrl}");
+
+            await ProcessAspNetFramework(latestAspNetCoreUrl);
+            await ProcessMauiFramework(latestMauiUrl);
+            UpdateLocalFiles();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    static async Task ProcessAspNetFramework(string url)
+    {
+        Console.WriteLine("Processing ASP.NET Core framework...");
+        var (destinationPath, _) = await DownloadAndExtractFramework(url);
+        CopyWebJSFiles(destinationPath);
+    }
+
+    static async Task ProcessMauiFramework(string url)
+    {
+        Console.WriteLine("Processing MAUI framework...");
+        var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
+        string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
+
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
+        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "SharedSource");
+    }
+
+    static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
+    {
+        string zipFile = Utility.GetFilenameFromUrl(url);
+        string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
+        string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+        if (!File.Exists(destinationPath))
+        {
+            Console.WriteLine($"Downloading {zipFile}...");
+            await Utility.DownloadZipFileAsync(url, destinationPath);
+        }
+        else
+        {
+            Console.WriteLine($"{zipFile} already exists. Skipping download.");
+        }
+
+        string extractedFolder = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
+        if (!Directory.Exists(extractedFolder))
+        {
+            Console.WriteLine($"Extracting {zipFile}...");
+            Utility.UnzipFile(destinationPath, destinationFolder);
+        }
+        else
+        {
+            Console.WriteLine($"Extracted folder already exists: {extractedFolder}");
+        }
+
+        return (destinationPath, destinationFolder);
+    }
+
+    static void CopyWebJSFiles(string destinationPath)
+    {
+        var webJSTarget = Path.Combine(RelativePath, @"RemoteWebView.Blazor.JS/Web.JS");
+        var webJSource = Path.Combine(Path.GetDirectoryName(destinationPath) ?? "", Path.GetFileNameWithoutExtension(destinationPath), @"src/components/Web.JS");
+
+        Console.WriteLine($"Copying Web.JS files from {webJSource} to {webJSTarget}");
+        Utility.DeleteDirectoryAndContents(webJSTarget);
+        Utility.CopyDirectory(webJSource, webJSTarget);
+    }
+
+    static void ProcessFiles(string inputDir, string outputDir)
+    {
+        if (!Directory.Exists(inputDir))
+        {
+            throw new DirectoryNotFoundException($"Input directory not found: {inputDir}");
+        }
+
+        outputDir = Path.GetFullPath(Path.Combine(RepoPath, "src", outputDir));
+
+        if (!Directory.Exists(outputDir))
+        {
+            Directory.CreateDirectory(outputDir);
+            Console.WriteLine($"Created output directory: {outputDir}");
+        }
+
+        var files = Directory.EnumerateFiles(inputDir, "*.*", SearchOption.AllDirectories);
+        int processedCount = 0;
+        int skippedCount = 0;
+
+        foreach (var file in files)
+        {
+            string relativePath = Path.GetRelativePath(inputDir, file);
+            string outputPath = Path.Combine(outputDir, relativePath);
+            string outputFileDir = Path.GetDirectoryName(outputPath) ?? "";
+
+            if (Path.GetExtension(file).Equals(".csproj", StringComparison.OrdinalIgnoreCase))
+            {
+                skippedCount++;
+                continue;
+            }
+
+            try
+            {
+                if (!Directory.Exists(outputFileDir))
+                {
+                    Directory.CreateDirectory(outputFileDir);
+                }
+
+                var editor = new Editor(file);
+                editor.Edit();
+                editor.WriteAllText(outputFileDir);
+
+                processedCount++;
+                Console.WriteLine($"Processed: {relativePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing file {relativePath}: {ex.Message}");
+            }
+        }
+
+        Console.WriteLine($"Processing complete. Files processed: {processedCount}, Files skipped: {skippedCount}");
+    }
+
+    static void UpdateLocalFiles()
+    {
+        Console.WriteLine("Updating local files...");
+        var updated = Utility.GetOutOfDateFiles(RepoPath);
+
+        foreach (var file in updated)
+        {
+            string fullPath = Path.Combine(RepoPath, file);
+            Utility.ConvertUnixToWindowsLineEndings(fullPath);
+            Utility.ConvertUtf8ToWindows1252(fullPath);
+            Console.WriteLine($"Updated: {file}");
+        }
+
+        Console.WriteLine($"Local file update complete. Files updated: {updated.Count}");
     }
 }

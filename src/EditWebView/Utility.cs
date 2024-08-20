@@ -1,340 +1,325 @@
-using System;
-using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using LibGit2Sharp;
+using System.Text.Json;
+using System.Net.Http.Headers;
 
-public static class Utility
+namespace EditWebView
 {
-    public static async Task DownloadZipFileAsync(string url, string destinationPath)
+    public static partial class Utility
     {
-        using (var httpClient = new HttpClient())
-        {
-            try
-            {
-                // Send a GET request to the specified URL
-                using (var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    // Ensure we got a successful response
-                    response.EnsureSuccessStatusCode();
+        private static readonly HttpClient _httpClient = new();
+        private static readonly Encoding _windows1252Encoding;
 
-                    // Open a stream to the destination file
-                    using (var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+        private const string AspNetCoreRepo = "dotnet/aspnetcore";
+        private const string MauiRepo = "dotnet/maui";
+
+        public static async Task<string> GetLatestFrameworkVersionAsync(string framework, int majorVersion)
+        {
+            if (framework != AspNetCoreRepo && framework != MauiRepo)
+            {
+                throw new ArgumentException($"Unsupported framework: {framework}. Use '{AspNetCoreRepo}' or '{MauiRepo}'.");
+            }
+
+            string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
+
+            string githubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? string.Empty;
+
+            if (string.IsNullOrEmpty(githubToken))
+            {
+                Console.Error.WriteLine("Error: GITHUB_PAT environment variable is not set.");
+                Environment.Exit(1);
+            }
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", githubToken);
+
+            List<(string Name, DateTime Timestamp)> allTags = [];
+            string nextUrl = apiUrl;
+
+            while (!string.IsNullOrEmpty(nextUrl))
+            {
+                var response = await _httpClient.GetAsync(nextUrl);
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+                var tags = JsonSerializer.Deserialize<JsonElement[]>(content);
+                if (tags != null)
+                {
+
+                    foreach (var tag in tags)
                     {
-                        // Copy the content from the response to the file stream
-                        await response.Content.CopyToAsync(fileStream);
+                        string name = tag.GetProperty("name").GetString() ?? string.Empty;
+                        string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString() ?? string.Empty;
+                        DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
+                        allTags.Add((name, timestamp));
                     }
                 }
+
+                nextUrl = GetNextPageUrl(response);
+            }
+
+            var validTags = allTags
+                .Where(t => IsValidVersionTag(t.Name, majorVersion, framework))
+                .Where(t => !(framework == MauiRepo && t.Name.StartsWith("9.0.100-preview.1"))) // Skip 9.0.100-preview.1 for MAUI
+                .Select(t => (t.Name, t.Timestamp, VersionInfo: ParseVersion(t.Name, framework)))
+                .Where(t => t.VersionInfo.majorVersion == majorVersion)
+                .OrderByDescending(t => t.VersionInfo.version.Major)
+                .ThenByDescending(t => t.Timestamp)
+                .ThenByDescending(t => t.VersionInfo.version.Minor)
+                .ThenByDescending(t => t.VersionInfo.version.Build)
+                .ThenByDescending(t => t.VersionInfo.previewVersion)
+                .ThenByDescending(t => t.VersionInfo.version.Revision)
+                .ToList();
+
+            if (validTags.Count == 0)
+            {
+                throw new Exception($"No valid version {majorVersion} release found for {framework}.");
+            }
+
+            var latestVersion = validTags.First().Name;
+            return $"https://github.com/{framework}/archive/refs/tags/{latestVersion}.zip";
+        }
+
+        private static async Task<DateTime> GetCommitTimestamp(string framework, string commitSha)
+        {
+            string commitUrl = $"https://api.github.com/repos/{framework}/commits/{commitSha}";
+            var response = await _httpClient.GetAsync(commitUrl);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            var commitData = JsonSerializer.Deserialize<JsonElement>(content);
+            string dateString = commitData.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString() ?? string.Empty;
+            return DateTime.Parse(dateString);
+        }
+
+        private static string GetNextPageUrl(HttpResponseMessage response)
+        {
+            var linkHeader = response.Headers.Contains("Link") ? response.Headers.GetValues("Link").FirstOrDefault() : null;
+            if (string.IsNullOrEmpty(linkHeader)) return string.Empty;
+
+            var links = linkHeader.Split(',');
+            foreach (var link in links)
+            {
+                var segments = link.Split(';');
+                if (segments.Length == 2 && segments[1].Trim().Equals("rel=\"next\"", StringComparison.OrdinalIgnoreCase))
+                {
+                    return segments[0].Trim(' ', '<', '>');
+                }
+            }
+            return string.Empty;
+        }
+
+        private static bool IsValidVersionTag(string name, int majorVersion, string framework)
+        {
+            if (framework == AspNetCoreRepo)
+            {
+                return name.StartsWith($"v{majorVersion}.");
+            }
+            else // MauiRepo
+            {
+                return name.StartsWith($"{majorVersion}.");
+            }
+        }
+
+        private static (System.Version version, int majorVersion, int previewVersion) ParseVersion(string name, string framework)
+        {
+            string pattern;
+            if (framework == AspNetCoreRepo)
+            {
+                pattern = @"v(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
+            }
+            else // MauiRepo
+            {
+                pattern = @"(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
+            }
+
+            var match = Regex.Match(name, pattern);
+            if (match.Success)
+            {
+                int major = int.Parse(match.Groups[1].Value);
+                int minor = int.Parse(match.Groups[2].Value);
+                int patch = int.Parse(match.Groups[3].Value);
+                int previewVersion = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 0;
+                int buildNumber = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
+
+                return (new System.Version(major, minor, patch, buildNumber), major, previewVersion);
+            }
+
+            return (new System.Version(0, 0, 0), 0, 0);
+        }
+        static Utility()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            _windows1252Encoding = Encoding.GetEncoding(1252);
+        }
+
+        public static async Task DownloadZipFileAsync(string url, string destinationPath)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("URL cannot be null or empty.", nameof(url));
+            if (string.IsNullOrWhiteSpace(destinationPath))
+                throw new ArgumentException("Destination path cannot be null or empty.", nameof(destinationPath));
+
+            try
+            {
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await response.Content.CopyToAsync(fileStream);
+
                 Console.WriteLine($"File downloaded successfully to {destinationPath}");
             }
             catch (HttpRequestException e)
             {
                 Console.WriteLine($"Error downloading file: {e.Message}");
+                throw;
             }
         }
-    }
-    public static List<string> GetOutOfDateFiles(string repoPath)
-    {
-        List<string> outOfDateFiles = new List<string>();
 
-        try
+        public static List<string> GetOutOfDateFiles(string repoPath)
         {
-            using (var repo = new Repository(repoPath))
+            if (string.IsNullOrWhiteSpace(repoPath))
+                throw new ArgumentException("Repository path cannot be null or empty.", nameof(repoPath));
+
+            try
             {
-                // Get the status of the entire working directory
-                RepositoryStatus status = repo.RetrieveStatus();
+                using var repo = new Repository(repoPath);
+                var status = repo.RetrieveStatus();
 
-                // Add modified files
-                outOfDateFiles.AddRange(status.Modified.Select(entry => entry.FilePath));
-
-                // Add staged files
-                outOfDateFiles.AddRange(status.Staged.Select(entry => entry.FilePath));
-
-                // Add untracked files
-                outOfDateFiles.AddRange(status.Untracked.Select(entry => entry.FilePath));
-
-                // Add missing files (deleted but not staged)
-                outOfDateFiles.AddRange(status.Missing.Select(entry => entry.FilePath));
-
-                // Remove duplicates (in case a file is both modified and staged)
-                outOfDateFiles = outOfDateFiles.Distinct().ToList();
+                return status.Modified
+                    .Concat(status.Staged)
+                    .Concat(status.Untracked)
+                    .Concat(status.Missing)
+                    .Select(entry => entry.FilePath)
+                    .Distinct()
+                    .ToList();
+            }
+            catch (RepositoryNotFoundException)
+            {
+                Console.WriteLine($"Warning: Git repository not found at path: {repoPath}");
+                return [];
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while accessing the git repository: {ex.Message}");
+                return [];
             }
         }
-        catch (RepositoryNotFoundException)
-        {
-            Console.WriteLine($"Error: Git repository not found at path: {repoPath}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex.Message}");
-        }
 
-        return outOfDateFiles;
-    }
-
-    public static void UnzipFile(string zipFilePath, string extractPath)
-    {
-        try
+        public static void UnzipFile(string zipFilePath, string extractPath)
         {
-            // Ensure the zip file exists
             if (!File.Exists(zipFilePath))
-            {
                 throw new FileNotFoundException("The specified zip file does not exist.", zipFilePath);
-            }
 
-            // Ensure the extract path exists, create it if it doesn't
             Directory.CreateDirectory(extractPath);
 
-            // Extract the contents of the zip file
-            using (ZipArchive archive = ZipFile.OpenRead(zipFilePath))
+            using var archive = ZipFile.OpenRead(zipFilePath);
+            foreach (var entry in archive.Entries)
             {
-                foreach (ZipArchiveEntry entry in archive.Entries)
+                var destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
+
+                if (!destinationPath.StartsWith(Path.GetFullPath(extractPath), StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("Attempted to extract file outside of destination directory.");
+
+                if (string.IsNullOrEmpty(entry.Name))
+                    Directory.CreateDirectory(destinationPath);
+                else
                 {
-                    string destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
-
-                    // Ensure the destination path is within the extract path (security check)
-                    if (!destinationPath.StartsWith(Path.GetFullPath(extractPath), StringComparison.OrdinalIgnoreCase))
-                    {
-                        throw new IOException("Attempted to extract file outside of destination directory.");
-                    }
-
-                    // If the entry is a directory, create it
-                    if (string.IsNullOrEmpty(entry.Name))
-                    {
-                        Directory.CreateDirectory(destinationPath);
-                    }
-                    else
-                    {
-                        // Ensure the directory exists before extracting the file
-                        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
-                        entry.ExtractToFile(destinationPath, true);
-                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath) ?? "");
+                    entry.ExtractToFile(destinationPath, true);
                 }
             }
 
             Console.WriteLine($"Successfully extracted zip file to {extractPath}");
         }
-        catch (Exception ex)
+
+        public static string GetFilenameFromUrl(string url)
         {
-            Console.WriteLine($"Error extracting zip file: {ex.Message}");
-        }
-    }
-    public static string GetAspNetCoreFilename(string version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            throw new ArgumentException("Version cannot be null or empty.", nameof(version));
-        }
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("URL cannot be null or empty.", nameof(url));
 
-        // Validate version format (simple check for x.y.z format)
-        if (!Regex.IsMatch(version, @"^\d+\.\d+\.\d+$"))
-        {
-            throw new ArgumentException("Invalid version format. Expected format: x.y.z", nameof(version));
-        }
+            var match = UtilityHelpers.MyRegex().Match(url);
+            if (!match.Success)
+                throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
 
-        return $"aspnetcore-{version}.zip";
-    }
+            string version = match.Groups[1].Value;
 
-    public static string GetAspNetCoreFilenameFromUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            throw new ArgumentException("URL cannot be null or empty.", nameof(url));
-        }
-
-        // Extract version from URL using regex
-        var match = Regex.Match(url, @"/v(\d+\.\d+\.\d+)\.zip$");
-        if (!match.Success)
-        {
-            throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
-        }
-
-        string version = match.Groups[1].Value;
-        return GetAspNetCoreFilename(version);
-    }
-
-    public static string ExtractVersionFromPath(string path)
-    {
-        // Get the last part of the path (filename or last directory name)
-        string lastPart = Path.GetFileName(path);
-
-        // If the last part is empty (in case the path ends with a directory separator),
-        // get the directory name
-        if (string.IsNullOrEmpty(lastPart))
-        {
-            lastPart = Path.GetFileName(Path.GetDirectoryName(path)) ?? "";
-        }
-
-        return Path.GetFileNameWithoutExtension(lastPart) ?? "";
-        // Try to parse the last part as a version
-    }
-
-    static Utility()
-    {
-        // Register the code pages encoding provider
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
-
-    public static void ConvertUtf8ToWindows1252(string filePath)
-    {
-        try
-        {
-            // Ensure the Windows-1252 encoding is available
-            Encoding windows1252 = Encoding.GetEncoding(1252);
-
-            // Read the entire file content as UTF-8
-            string content;
-            using (StreamReader reader = new StreamReader(filePath, Encoding.UTF8))
-            {
-                content = reader.ReadToEnd();
-            }
-
-            // Write the content back to the file using Windows-1252 encoding
-            using (StreamWriter writer = new StreamWriter(filePath, false, windows1252))
-            {
-                writer.Write(content);
-            }
-
-            Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
-        }
-        catch (FileNotFoundException)
-        {
-            Console.WriteLine($"Error: The file {filePath} was not found.");
-        }
-        catch (IOException ex)
-        {
-            Console.WriteLine($"An I/O error occurred: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            Console.WriteLine($"Access denied: {ex.Message}");
-        }
-        catch (EncoderFallbackException ex)
-        {
-            Console.WriteLine($"Encoding error: {ex.Message}");
-            Console.WriteLine("Some characters in the file may not be representable in Windows-1252 encoding.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-        }
-    }
-
-    public static void CopyDirectory(string sourceDir, string targetDir)
-    {
-        // Check if source directory exists
-        if (!Directory.Exists(sourceDir))
-        {
-            throw new DirectoryNotFoundException($"Source directory not found: {sourceDir}");
-        }
-
-        // Create target directory if it doesn't exist
-        Directory.CreateDirectory(targetDir);
-
-        // Copy all directories
-        foreach (var dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            Directory.CreateDirectory(dir.Replace(sourceDir, targetDir));
-        }
-
-        // Copy all files
-        foreach (var file in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
-        {
-            var destFile = file.Replace(sourceDir, targetDir);
-            File.Copy(file, destFile, true);
-        }
-    }
-
-    public static void ConvertUnixToWindowsLineEndings(string filePath)
-    {
-        try
-        {
-            // Read the entire file content
-            string content = File.ReadAllText(filePath);
-
-            // Check if the file needs conversion
-            if (!content.Contains("\r\n") && content.Contains("\n"))
-            {
-                // Replace Unix line endings with Windows line endings
-                content = content.Replace("\n", "\r\n");
-
-                // Write the modified content back to the same file
-                File.WriteAllText(filePath, content, Encoding.UTF8);
-
-                Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
-            }
+            if (url.Contains("dotnet/aspnetcore"))
+                return $"aspnetcore-{version}.zip";
+            else if (url.Contains("dotnet/maui"))
+                return $"maui-{version}.zip";
             else
+                throw new ArgumentException("Unsupported repository URL.", nameof(url));
+        }
+
+        public static void ConvertUtf8ToWindows1252(string filePath)
+        {
+            try
             {
-                Console.WriteLine($"The file {filePath} already uses Windows line endings or contains no line breaks.");
+                string content = File.ReadAllText(filePath, Encoding.UTF8);
+                File.WriteAllText(filePath, content, _windows1252Encoding);
+                //Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error converting file encoding: {ex.Message}");
             }
         }
-        catch (FileNotFoundException)
-        {
-            Console.WriteLine($"Error: The file {filePath} was not found.");
-        }
-        catch (IOException ex)
-        {
-            Console.WriteLine($"An I/O error occurred: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            Console.WriteLine($"Access denied: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-        }
-    }
 
-    public static void DeleteDirectoryAndContents(string path, bool recursive = true)
-    {
-        if (string.IsNullOrWhiteSpace(path))
+        public static void CopyDirectory(string sourceDir, string targetDir)
         {
-            throw new ArgumentException("Path cannot be null or empty.", nameof(path));
-        }
+            Directory.CreateDirectory(targetDir);
 
-        if (!Directory.Exists(path))
-        {
-            Console.WriteLine($"Directory not found: {path}");
-            return;
-        }
-
-        try
-        {
-            // Delete all files in the directory
-            foreach (string file in Directory.GetFiles(path))
+            foreach (var dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
             {
-                File.SetAttributes(file, FileAttributes.Normal);
-                File.Delete(file);
-                Console.WriteLine($"Deleted file: {file}");
+                Directory.CreateDirectory(dir.Replace(sourceDir, targetDir));
             }
 
-            // Delete all subdirectories
-            if (recursive)
+            foreach (var file in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
             {
-                foreach (string dir in Directory.GetDirectories(path))
+                File.Copy(file, file.Replace(sourceDir, targetDir), true);
+            }
+        }
+
+        public static void ConvertUnixToWindowsLineEndings(string filePath)
+        {
+            try
+            {
+                string content = File.ReadAllText(filePath);
+                if (!content.Contains("\r\n") && content.Contains('\n'))
                 {
-                    DeleteDirectoryAndContents(dir, recursive);
+                    content = content.Replace("\n", "\r\n");
+                    File.WriteAllText(filePath, content, Encoding.UTF8);
+                    //Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error converting line endings: {ex.Message}");
+            }
+        }
 
-            // Delete the directory itself
-            Directory.Delete(path);
-            Console.WriteLine($"Deleted directory: {path}");
-        }
-        catch (UnauthorizedAccessException ex)
+        public static void DeleteDirectoryAndContents(string path, bool recursive = true)
         {
-            Console.WriteLine($"Access denied: {ex.Message}");
-        }
-        catch (IOException ex)
-        {
-            Console.WriteLine($"I/O error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+
+            if (!Directory.Exists(path))
+            {
+                Console.WriteLine($"Directory not found: {path}");
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(path, recursive);
+                Console.WriteLine($"Deleted directory: {path}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting directory: {ex.Message}");
+            }
         }
     }
-
 }
