@@ -55,9 +55,17 @@ namespace ServerStartupTimer
             Debug.Assert(ids.Responses.Count == loops);
 
             stopwatch = Stopwatch.StartNew();
+            
             for (int i = 0; i < loops; i++)
             {
-                client.Shutdown(new IdMessageRequest { Id = i.ToString() });
+                try
+                {
+                    var deadline = DateTime.UtcNow.AddSeconds(1);
+                    await client.ShutdownAsync(new IdMessageRequest { Id = i.ToString() }, null, deadline);
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"Deadline reached on {i}");
+                }
                 Console.WriteLine(i);
             }
             Console.WriteLine($"Avg Time for {loops} Shutdown request: {stopwatch.ElapsedMilliseconds / loops} ms per request");
