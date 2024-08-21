@@ -37,6 +37,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView", "src\RemoteBlazorWebView\RemoteBlazorWebView.csproj", "{85F8C06F-041E-49E9-80A8-E769D0028156}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{3F894B2C-1045-4C84-B986-393C4DD12C62}"
+	ProjectSection(SolutionItems) = preProject
+		blog.txt = blog.txt
+		src\Benchmarks\ghz\create.json = src\Benchmarks\ghz\create.json
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Startup", "src\Benchmarks\Startup\Startup.csproj", "{AB9C1C62-4B4F-4721-B868-1C269E1B5893}"
 EndProject
