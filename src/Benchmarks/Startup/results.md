@@ -61,9 +61,17 @@ Server running in Debug mode
 No events in viewer
 
 
-20 x spawn 20 CreateWebView processes
+Reverted back to dotnet8 and server is running flawless !!
+
+20 x spawn 100 CreateWebView processes
 Finished all 20 loops
 Server running in Debug mode
 No events in viewer
 
 
+20 x spawn 1000 CreateWebView processes
+Timing out so moved to 5 seconds
+Removed rate limiter
+Task.WaitAll(tasks, 10000);
+Task.WaitAll(tasks, 20000);
+Timing out so moved to 7

@@ -35,7 +35,7 @@ namespace ServerStartupTimer
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = @"..\..\..\..\..\StressClient\publish\StressClient.exe",
-                    Arguments = "10 1024 10240",
+                    Arguments = $"{numBuffers} {minSize} {maxSize}",
                     RedirectStandardOutput = true
                 };
                 var process = Process.Start(processStartInfo);
@@ -320,7 +320,7 @@ namespace ServerStartupTimer
                     Console.WriteLine($"TestCreateWebView loop{i}");
                     //await TestCreateWebView(200);
 
-                    TestCreateWebView(10,1024,10240);
+                    TestCreateWebView(1000,1024,10240);
                 }
                       
                 // TestClientIPCService();

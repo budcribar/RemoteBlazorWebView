@@ -60,7 +60,7 @@ namespace StressClient
 
                 var client = new WebViewIPC.WebViewIPCClient(channel);
                 string id = Guid.NewGuid().ToString();
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));  // shutdown waiting 20 seconds for tasks to cancel
                 var response = client.CreateWebView(new CreateWebViewRequest { Id = id });
                 await foreach (var message in response.ResponseStream.ReadAllAsync(cts.Token))
                 {
@@ -71,7 +71,7 @@ namespace StressClient
                             await Task.Delay(1000 * Random.Shared.Next(1));
                         }
                         client.Shutdown(new IdMessageRequest { Id = id });
-                        break;
+                        return;
                     }
                     LogEvent($"Creation message for {id}: {message.Response}", EventLogEntryType.Error);
                     break;
@@ -81,7 +81,11 @@ namespace StressClient
             {
                 LogEvent(ex.ToString(), EventLogEntryType.Error);
             }
-            LogEvent($"Create took {sw.Elapsed}", EventLogEntryType.Information);
+
+            if (sw.ElapsedMilliseconds > 10500)
+                LogEvent($"Create took {sw.Elapsed}", EventLogEntryType.Error);
+            //else
+            //    LogEvent($"Create took {sw.Elapsed}", EventLogEntryType.Information);
         }
 
         private static void SetupEventLog()
