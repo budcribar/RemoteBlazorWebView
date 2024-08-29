@@ -16,6 +16,25 @@ namespace PeakSWC.RemoteWebView
         public long Length { get; set; } = -1;
         public Pipe Pipe { get; set; } = new Pipe();
         public void Reset() { ResetEvent = new ManualResetEventSlim(); Length = -1; Pipe = new Pipe(); }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ResetEvent.Dispose();
+            }
+        }
+
+        ~FileEntry()
+        {
+            Dispose(false);
+        }
     }
 
     public class ServiceState : IDisposable
@@ -54,9 +73,31 @@ namespace PeakSWC.RemoteWebView
         {
             CancellationTokenSource.Cancel();
         }
+
         public void Dispose()
         {
-            CancellationTokenSource.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                CancellationTokenSource.Dispose();
+                FileReaderTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                PingTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                IPC.Dispose();
+                foreach (var entry in FileDictionary)
+                {
+                    entry.Value?.Dispose();
+                }
+            }
+        }
+
+        ~ServiceState()
+        {
+            Dispose(false);
         }
 
         public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)

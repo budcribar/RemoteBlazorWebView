@@ -1,5 +1,7 @@
 ﻿using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Services;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
@@ -10,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class IPC
+    public class IPC : IDisposable
     {
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
@@ -24,8 +26,6 @@ namespace PeakSWC.RemoteWebView
          
             lock (messageHistory)
             {
-                
-
                 var messages = new BlockingCollection<StringRequest>();
                 foreach (var message in messageHistory)
                 {
@@ -35,13 +35,13 @@ namespace PeakSWC.RemoteWebView
                 observers.TryAdd(brn, messages);
             }
 
-            // TODO Keep track of tasks
-            Task.Run(() => ProcessMessages(brn,linkedToken.Token));  
+            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn,linkedToken.Token));  
         }
 
         public Task ClientTask { get; }
         public Task BrowserTask { get; }
 
+        private Task ProcessMessagesTask { get; set; }
        
         private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
@@ -63,30 +63,45 @@ namespace PeakSWC.RemoteWebView
             this.logger = logger;
             ClientTask = Task.Factory.StartNew(async () =>
             {
-                await foreach (var m in responseChannel.Reader.ReadAllAsync(token))
+                try
                 {
-                    // Serialize the write
-                    await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
-                    logger.LogInformation($"Browser -> WebView {m.Response}");
+                    await foreach (var m in responseChannel.Reader.ReadAllAsync(token))
+                    {
+                        // Serialize the write
+                        await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
+                        logger.LogInformation($"Browser -> WebView {m.Response}");
+                    }
                 }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogError($"Client Task has shutdown {ex.Message}");
+                }
+               
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
             BrowserTask = Task.Factory.StartNew(async () =>
             {
-                await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
+                try
                 {
-                    lock (messageHistory)
+                    await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
                     {
-                        if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
-                            messageHistory.Add(m);
-                        foreach (var observer in observers.Keys)
+                        lock (messageHistory)
                         {
-                            observers[observer].Add(m);
+                            if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
+                                messageHistory.Add(m);
+                            foreach (var observer in observers.Keys)
+                            {
+                                observers[observer].Add(m);
+                            }
                         }
-                    }
 
-                   
+
+                    }
                 }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogError($"Browser Task has shutdown {ex.Message}");
+                }      
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
         }
@@ -120,6 +135,27 @@ namespace PeakSWC.RemoteWebView
         public Task SizeChanged(Size size)
         {
             return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }) ?? Task.CompletedTask);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ClientTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                BrowserTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                ProcessMessagesTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+            }
+        }
+
+        ~IPC()
+        {
+            Dispose(false);
         }
     }
 }

@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 #if AUTHORIZATION
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -71,6 +72,20 @@ namespace PeakSWC.RemoteWebView
             public void ConfigureServices(IServiceCollection services)
         {
             services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
+#if RATELIMIT
+            services.AddRateLimiter(options =>
+            {
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+                    RateLimitPartition.GetConcurrencyLimiter(
+                        partitionKey: httpContext.Request.Path.ToString(),
+                        factory: _ => new ConcurrencyLimiterOptions
+                        {
+                            PermitLimit = 10,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                            QueueLimit = 100
+                        }));
+            });
+#endif
 #if AUTHORIZATION
             services.AddTransient((sp) => CreateApiHelper());
             services.AddTransient<IUserService,UserService>();
@@ -93,7 +108,7 @@ namespace PeakSWC.RemoteWebView
             services.AddAuthorization();
 #else
             services.AddTransient<IUserService, MockUserService>();
-#endif 
+#endif
             services.AddSingleton(ServiceDictionary);
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();
@@ -133,7 +148,9 @@ namespace PeakSWC.RemoteWebView
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 //app.UseHsts();
             }
-
+#if RATE_LIMIT
+            app.UseRateLimiter();
+#endif
             app.UseHttpsRedirection();
 
             app.UseResponseCompression();
