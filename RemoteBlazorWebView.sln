@@ -11,6 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView.Wpf", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D05DB932-B305-40C7-968A-19F814FD7F2A}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		azure-pipelines.yml = azure-pipelines.yml
 		Directory.Build.props = Directory.Build.props
 		README.md = README.md
@@ -43,6 +44,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", 
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Startup", "src\Benchmarks\Startup\Startup.csproj", "{AB9C1C62-4B4F-4721-B868-1C269E1B5893}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StressClient", "src\Benchmarks\StressClient\StressClient.csproj", "{F588E81D-D30B-445F-B815-BCF290AEDF90}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -435,6 +438,48 @@ Global
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893}.Release|linux-x64.Build.0 = Release|x64
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893}.Release|x64.ActiveCfg = Release|x64
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893}.Release|x64.Build.0 = Release|x64
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Authorization|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.AzureNoAuth|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Debug|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Developer|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Embedded|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|Any CPU.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|linux-x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|linux-x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.NoAuthorization|x64.Build.0 = Debug|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|linux-x64.ActiveCfg = Release|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|linux-x64.Build.0 = Release|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|x64.ActiveCfg = Release|Any CPU
+		{F588E81D-D30B-445F-B815-BCF290AEDF90}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -450,6 +495,7 @@ Global
 		{85F8C06F-041E-49E9-80A8-E769D0028156} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{3F894B2C-1045-4C84-B986-393C4DD12C62} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
+		{F588E81D-D30B-445F-B815-BCF290AEDF90} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}
