@@ -259,7 +259,8 @@ namespace ServerStartupTimer
                 }
             }
 
-            //KillExistingProcesses("RemoteWebViewService");
+            KillExistingProcesses("RemoteWebViewService");
+            KillExistingProcesses("StressClient");
 
             var processStartInfo = new ProcessStartInfo
             {
@@ -270,7 +271,7 @@ namespace ServerStartupTimer
 
             Console.WriteLine($"Server File Size {GetFileSize(processStartInfo.FileName)}");
 
-            //using (var process = Process.Start(processStartInfo))
+            using (var process = Process.Start(processStartInfo))
             {
                 var stopwatch = Stopwatch.StartNew();
                 string serverHost = "localhost";
@@ -315,11 +316,11 @@ namespace ServerStartupTimer
                 //    Console.WriteLine($"Time for 500 requests: {stopwatch.ElapsedMilliseconds} ms");
                 //}
 
-                for (int i = 0;i < 20;i++)
+                for (int i = 0;i < 1;i++)
                 {
                     Console.WriteLine($"TestCreateWebView loop{i}");
                     //await TestCreateWebView(200);
-
+                    KillExistingProcesses("StressClient");
                     TestCreateWebView(1000,1024,10240);
                 }
                       

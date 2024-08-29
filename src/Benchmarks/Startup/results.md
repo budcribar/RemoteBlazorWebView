@@ -75,3 +75,24 @@ Removed rate limiter
 Task.WaitAll(tasks, 10000);
 Task.WaitAll(tasks, 20000);
 Timing out so moved to 7
+
+
+System.RuntimeType[]	200 B	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<PeakSWC.RemoteWebView.WebMessageResponse>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<PeakSWC.RemoteWebView.StringRequest>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<PeakSWC.RemoteWebView.BrowserResponseNode, System.Collections.Concurrent.BlockingCollection<PeakSWC.RemoteWebView.StringRequest>>[]	289.06 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<System.String, PeakSWC.RemoteWebView.FileEntry>[]	289.06 KB	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<System.String>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<System.UInt32, PeakSWC.RemoteWebView.SendSequenceMessageRequest>[]	289.06 KB	1000
+
+
+System.RuntimeType[]	200 B	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<PeakSWC.RemoteWebView.WebMessageResponse>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<PeakSWC.RemoteWebView.StringRequest>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<PeakSWC.RemoteWebView.BrowserResponseNode, System.Collections.Concurrent.BlockingCollection<PeakSWC.RemoteWebView.StringRequest>>[]	289.06 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<System.String, PeakSWC.RemoteWebView.FileEntry>[]	289.06 KB	1000
+System.Collections.Concurrent.ConcurrentQueueSegment+Slot<System.String>[]	15.63 KB	1000
+System.Collections.Concurrent.ConcurrentDictionary+VolatileNode<System.UInt32, PeakSWC.RemoteWebView.SendSequenceMessageRequest>[]	289.06 KB	1000
+
+
+
