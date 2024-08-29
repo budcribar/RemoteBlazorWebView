@@ -25,7 +25,7 @@ namespace ServerStartupTimer
             return fileInfo.Length;
         }
 
-        public static async Task TestCreateWebView(int numBuffers, int minSize, int maxSize)
+        public static void TestCreateWebView(int numBuffers, int minSize, int maxSize)
         {
             List<Process> processList = new List<Process>();
 
@@ -38,13 +38,15 @@ namespace ServerStartupTimer
                     Arguments = "10 1024 10240",
                     RedirectStandardOutput = true
                 };
-                processList.Add(Process.Start(processStartInfo));
-                //Task.Delay(500).Wait();
+                var process = Process.Start(processStartInfo);
+                if (process != null)
+                    processList.Add(process);
+                Task.Delay(100).Wait();
             }
             int count = 0;
             foreach (var process in processList)
             {
-                if (!process?.WaitForExit(2000) ?? true)
+                if (!process?.WaitForExit(30000) ?? true)
                 {
                     Console.WriteLine($"Process {count++} timed out");
                 }
@@ -318,7 +320,7 @@ namespace ServerStartupTimer
                     Console.WriteLine($"TestCreateWebView loop{i}");
                     //await TestCreateWebView(200);
 
-                    await TestCreateWebView(20,1024,10240);
+                    TestCreateWebView(10,1024,10240);
                 }
                       
                 // TestClientIPCService();
