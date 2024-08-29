@@ -12,32 +12,24 @@ namespace PeakSWC.RemoteWebView.Services
     {
         public void Shutdown(string id, Exception? exception = null)
         {
-            if (exception != null)
-                logger.LogError($"Shutting down {id} Exception:{exception.Message}");
-            else
-                logger.LogWarning("Shutting down..." + id);
-
+           
             if (serviceDictionary.Remove(id, out var client))
             {
-                client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });
+                if (exception != null)
+                    logger.LogError($"Shutting down {id} Exception:{exception.Message}");
+                //else
+                //    logger.LogWarning("Shutting down..." + id);
+
+                client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });     
                 client.InUse = false;
                 client.Cancel();
 
-                Task[] tasks = new List<Task?> { client.FileReaderTask, client.PingTask, client.IPC?.BrowserTask, client.IPC?.ClientTask }.Where(x => x != null).Cast<Task>().ToArray();
+                client.Dispose();
 
-                try
-                {
-                    Task.WaitAll(tasks);
-                    foreach (var t in tasks)
-                        t.Dispose();
-                }
-                finally
-                {
-                    client.Dispose();
-                }
+                serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
 
             }
-            serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
+            
         }
     }
 }

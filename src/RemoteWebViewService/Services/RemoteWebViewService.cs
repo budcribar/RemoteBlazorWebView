@@ -22,10 +22,10 @@ namespace PeakSWC.RemoteWebView
         }
 
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
-        {
+        {         
             logger.LogInformation($"CreateWebView Id:{request.Id}");
 
-            ServiceState state = new(logger,request.EnableMirrors)
+            ServiceState state= new(logger, request.EnableMirrors)
             {
                 HtmlHostPath = request.HtmlHostPath,
                 Markup = request.Markup,
@@ -39,29 +39,35 @@ namespace PeakSWC.RemoteWebView
             };
 
             if (serviceDictionary.TryAdd(request.Id, state))
-            { 
+            {
                 serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Start:{request.Id}"));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" });
 
-                using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
-                try
-                {
-                    while (!linkedToken.IsCancellationRequested)
-                    {
-                        await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    shutdownService.Shutdown(request.Id, ex);
-                }
+
             }
             else
             {
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" });
+                return;
             }
+            
+
+            using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
+            try
+            {
+                while (!linkedToken.IsCancellationRequested)
+                {
+                    await Task.Delay(30).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"CreateWebView Id:{request.Id} failed {ex.Message}");
+                shutdownService.Shutdown(request.Id, ex);
+            }
+         
         }
 
         public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
