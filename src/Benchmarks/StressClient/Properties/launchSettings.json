@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "StressClient": {
+      "commandName": "Project",
+      "commandLineArgs": "10 1024 10240"
+    }
+  }
+}

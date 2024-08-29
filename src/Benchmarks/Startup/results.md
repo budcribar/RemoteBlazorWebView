@@ -37,3 +37,33 @@
 |      | 24ms     |    24ms  | 24ms     | 100 GetServerStatusAsync
 |      | 20ms     |    20ms  | 20ms     | 125 GetServerStatusAsync
 |      | 34ms     |    34ms  | 34ms     | 125 CreateWebViewRequest
+
+
+
+### dotnet 9 Release Mode (Server is running via Visual Studio in release)
+|500 CreateWebViewRequest| 42 | 54 | 54 | 54 | 56
+|500 Shutdown request | 61 | 46 | 40 | 43 | 57
+
+
+### dotnet 9 Release Mode (Server is running via Visual Studio in debug)
+|500 CreateWebViewRequest| 47 | 52 | 47 | Timed out after 100 
+|500 Shutdown request | 137 | 151 | 121
+
+
+20 x spawn 10 CreateWebView processes
+Hung after loop 11
+Server running in Release mode
+
+
+20 x spawn 10 CreateWebView processes
+Finished all 20 loops
+Server running in Debug mode
+No events in viewer
+
+
+20 x spawn 20 CreateWebView processes
+Finished all 20 loops
+Server running in Debug mode
+No events in viewer
+
+
