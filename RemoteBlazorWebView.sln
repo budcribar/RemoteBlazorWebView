@@ -38,11 +38,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteBlazorWebView", "src\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{3F894B2C-1045-4C84-B986-393C4DD12C62}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileRead", "..\..\..\source.ntfs\repos\RemoteBlazorWebView\src\Benchmarks\FileRead.csproj", "{F3C5B1B4-B9C7-4255-9596-87CAE9E43E3E}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Startup", "src\Benchmarks\Startup\Startup.csproj", "{AB9C1C62-4B4F-4721-B868-1C269E1B5893}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteWebView.Blazor.JS", "src\RemoteWebView.Blazor.JS\RemoteWebView.Blazor.JS.csproj", "{2E988A33-6F01-44E5-A7EC-C4DCD375DDA1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StressClient", "src\Benchmarks\StressClient\StressClient.csproj", "{DBC76671-280D-45EF-8634-5C662E529E83}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -435,6 +435,48 @@ Global
 		{2E988A33-6F01-44E5-A7EC-C4DCD375DDA1}.Release|linux-x64.Build.0 = Release|Any CPU
 		{2E988A33-6F01-44E5-A7EC-C4DCD375DDA1}.Release|x64.ActiveCfg = Release|Any CPU
 		{2E988A33-6F01-44E5-A7EC-C4DCD375DDA1}.Release|x64.Build.0 = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Authorization|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.AzureNoAuth|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Debug|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Developer|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Embedded|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|Any CPU.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|linux-x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|linux-x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.NoAuthorization|x64.Build.0 = Debug|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|linux-x64.ActiveCfg = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|linux-x64.Build.0 = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|x64.ActiveCfg = Release|Any CPU
+		{DBC76671-280D-45EF-8634-5C662E529E83}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -448,8 +490,8 @@ Global
 		{F801F503-72C6-4C52-A9B0-1C28947334DC} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{85F8C06F-041E-49E9-80A8-E769D0028156} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{3F894B2C-1045-4C84-B986-393C4DD12C62} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
-		{F3C5B1B4-B9C7-4255-9596-87CAE9E43E3E} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
+		{DBC76671-280D-45EF-8634-5C662E529E83} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}
