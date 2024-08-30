@@ -50,9 +50,9 @@
 
   <ItemGroup>
 	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
-	<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+	<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2739.15" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.80" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.82" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
    
   </ItemGroup>

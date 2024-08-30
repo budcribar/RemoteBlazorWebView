@@ -15,6 +15,23 @@ Write-Host -ForegroundColor GREEN ("Build:",$Build)
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
+# Get the current Node.js version
+$currentVersion = node -v
+
+# Check if the current version is already 16.13.0
+if ($currentVersion -eq "v16.13.0") {
+    Write-Output "Already using Node.js version 16.13.0"
+} else {
+    # Run the NVM use command
+    try {
+        nvm use 16.13.0
+        Write-Output "Successfully switched to Node.js version 16.13.0"
+    } catch {
+        Write-Error "Failed to switch Node.js version: $_"
+        exit 1
+    }
+}
+
 # Get the path of the script's directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
