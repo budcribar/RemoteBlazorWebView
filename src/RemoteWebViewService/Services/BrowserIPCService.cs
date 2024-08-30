@@ -27,7 +27,7 @@ namespace PeakSWC.RemoteWebView
             try
             {
                 while (!linkedToken.Token.IsCancellationRequested)
-                    await Task.Delay(1000, linkedToken.Token).ConfigureAwait(false);
+                    await Task.Delay(30).ConfigureAwait(false);
 
             }
             catch (Exception ex)
@@ -36,6 +36,12 @@ namespace PeakSWC.RemoteWebView
                 {
                     shutdownService.Shutdown(request.Id, ex);
                 }
+                return;
+            }
+
+            if (request.IsPrimary)
+            {
+                shutdownService.Shutdown(request.Id);
             }
 
             return;
