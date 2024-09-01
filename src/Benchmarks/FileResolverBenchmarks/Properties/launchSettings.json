@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "FileResolverBenchmarks": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:52877;http://localhost:52878"
+    }
+  }
+}
