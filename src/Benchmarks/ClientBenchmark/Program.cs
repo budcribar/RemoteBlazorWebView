@@ -196,6 +196,11 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 757.7 ms | 14.05 ms | 14.43 ms | 1000 files of len 10240
         // | ReadFilesClientBenchmark | 736.5 ms | 12.93 ms | 12.09 ms | 1000 files of len 10240
         // | ReadFilesClientBenchmark | 1.213 s | 0.0240 s | 0.0329 s | 1000 files of len 102400
+        // | ReadFilesClientBenchmark | 1.136 s | 0.0221 s | 0.0324 s | 1000 files of len 102400 with optimized file reads dotnet 8
+        // | ReadFilesClientBenchmark | 1.100 s | 0.0154 s | 0.0128 s | 1000 files of len 102400 with optimized file reads dotnet 9
+        // | ReadFilesClientBenchmark | 1.068 s | 0.0206 s | 0.0238 s | 1000 files of len 102400 with optimized file reads dotnet 9
+        // | ReadFilesClientBenchmark | 1.139 s | 0.0201 s | 0.0178 s | 1000 files of len 102400 with optimized file reads dotnet 8
+
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {
@@ -232,43 +237,53 @@ namespace ClientBenchmark
                 var files = _client.FileReader();
                 try
                 {
+                    // Initiate the file read request
                     await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Init = new() });
 
+                    // Process each incoming message concurrently
                     await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
                     {
+                        var path = message.Path[(message.Path.IndexOf('/') + 1)..];
+
                         try
                         {
-                            var path = message.Path[(message.Path.IndexOf('/') + 1)..];
+                            var fileInfo = fileProvider.GetFileInfo(path);
+                            var fileLength = fileInfo.Length;
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength } });
 
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileProvider.GetFileInfo(path).Length } });
-
-                            using var stream = fileProvider.GetFileInfo(path).CreateReadStream() ?? null;
-                            if (stream == null)
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                            else
+                            if (fileLength == 0)
                             {
-                                var buffer = new Byte[8 * 1024];
-                                int bytesRead = 0;
-
-                                while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
-                                {
-                                    ByteString bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
-                                }
                                 await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                continue;
                             }
 
+                            // Read file and send data
+                            using var stream = fileInfo.CreateReadStream();
+                            if (stream == null)
+                            {
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
+                                continue;
+                            }
+
+                            var buffer = new byte[32 * 1024];  // Increased buffer size to 32KB
+                            int bytesRead;
+                            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            {
+                                var bs = ByteString.CopyFrom(buffer, 0, bytesRead);
+                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
+                            }
+
+                            // Indicate end of file read
+                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                         }
                         catch (FileNotFoundException)
                         {
-                            Console.WriteLine("FileNotFoundException");
-                            // TODO Warning to user?
+                            Console.WriteLine($"File not found: {path}");
                             await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine(ex.ToString());
-                            //FireDisconnected(ex);
                             await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
                         }
                     }
@@ -277,8 +292,8 @@ namespace ClientBenchmark
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
-                    //FireDisconnected(ex);
                 }
+
             }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
