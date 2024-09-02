@@ -1,0 +1,50 @@
+ClientBenchmarks.CreateClientBenchmark: DefaultJob
+Runtime = .NET 8.0.8 (8.0.824.36612), X64 RyuJIT AVX2; GC = Concurrent Workstation
+Mean = 19.798 ms, StdErr = 1.473 ms (7.44%), N = 100, StdDev = 14.735 ms
+Min = 0.363 ms, Q1 = 0.451 ms, Median = 32.087 ms, Q3 = 32.290 ms, Max = 32.615 ms
+IQR = 31.839 ms, LowerFence = -47.308 ms, UpperFence = 80.049 ms
+ConfidenceInterval = [14.801 ms; 24.795 ms] (CI 99.9%), Margin = 4.997 ms (25.24% of Mean)
+Skewness = -0.43, Kurtosis = 1.26, MValue = 3.19
+-------------------- Histogram --------------------
+[-0.503 ms ;  7.831 ms) | @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[ 7.831 ms ; 14.505 ms) | @@
+[14.505 ms ; 24.447 ms) | @@@@@
+[24.447 ms ; 32.780 ms) | @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+---------------------------------------------------
+
+ClientBenchmarks.CreateAndReadClientBenchmark: DefaultJob
+Runtime = .NET 8.0.8 (8.0.824.36612), X64 RyuJIT AVX2; GC = Concurrent Workstation
+Mean = 846.975 us, StdErr = 2.062 us (0.24%), N = 13, StdDev = 7.436 us
+Min = 834.617 us, Q1 = 842.163 us, Median = 843.979 us, Q3 = 853.402 us, Max = 858.243 us
+IQR = 11.239 us, LowerFence = 825.304 us, UpperFence = 870.260 us
+ConfidenceInterval = [838.070 us; 855.881 us] (CI 99.9%), Margin = 8.905 us (1.05% of Mean)
+Skewness = 0.11, Kurtosis = 1.68, MValue = 2
+-------------------- Histogram --------------------
+[830.466 us ; 862.394 us) | @@@@@@@@@@@@@
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4112/23H2/2023Update/SunValley3)
+12th Gen Intel Core i7-12700F, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 8.0.400
+  [Host]     : .NET 8.0.8 (8.0.824.36612), X64 RyuJIT AVX2 [AttachedDebugger]
+  DefaultJob : .NET 8.0.8 (8.0.824.36612), X64 RyuJIT AVX2
+
+
+| Method                       | Mean        | Error       | StdDev       | Median      |
+|----------------------------- |------------:|------------:|-------------:|------------:|
+| CreateClientBenchmark        | 19,797.9 us | 4,997.34 us | 14,734.78 us | 32,086.6 us |
+| CreateAndReadClientBenchmark |    847.0 us |     8.91 us |      7.44 us |    844.0 us |
+
+// * Warnings *
+MultimodalDistribution
+  ClientBenchmarks.CreateClientBenchmark: Default -> It seems that the distribution can have several modes (mValue = 3.19)
+Environment
+  Summary -> Benchmark was executed with attached debugger
+MinIterationTime
+  ClientBenchmarks.CreateClientBenchmark: Default -> The minimum observed iteration time is 23.203ms which is very small. It's recommended to increase it to at least 100ms using more operations.
+
+// * Hints *
+Outliers
+  ClientBenchmarks.CreateAndReadClientBenchmark: Default -> 2 outliers were removed (876.21 us, 883.15 us)
