@@ -9,21 +9,28 @@ using PeakSWC.RemoteWebView;
 using System;
 using System.Diagnostics;
 using System.Text;
+using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Jobs;
 
 namespace ClientBenchmark
 {
+    [Config(typeof(Config))]
     public class ClientBenchmarks
     {
+
+        // what happens when you have multiple reads of the same file?
         private string _testGuid;
         private string _testFilePath;
         private string _rootDirectory;
-        private string _testFileName = "wwwroot/css/site.css";
+        private string _testFileName = "wwwroot/css/site";
         private WebViewIPC.WebViewIPCClient _client;
         private BrowserIPC.BrowserIPCClient _browser;
         private string randomString;
         private HttpClient httpClient;
         private string URL = "https://localhost:5001";
         private bool _prodServer = true;
+        private int fileSize = 102400;
+        private int maxFiles = 800;
 
         private static readonly char[] chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".ToCharArray();
@@ -115,8 +122,10 @@ namespace ClientBenchmark
             // Create the directory if it doesn't exist
             Directory.CreateDirectory(Path.GetDirectoryName(_testFilePath)!);
 
-            randomString = GenerateRandomString(102400);
-            File.WriteAllText(_testFilePath, randomString);         
+            randomString = GenerateRandomString(fileSize);
+
+            for (int i=1; i<=maxFiles; i++)
+                File.WriteAllText($"{_testFilePath}{i}.css", randomString);         
 
             var channel = GrpcChannel.ForAddress(URL, new GrpcChannelOptions
             {
@@ -190,6 +199,24 @@ namespace ClientBenchmark
             }
             Console.WriteLine("Read " + count.ToString() + " messages");
         }
+        string etagHashString = "abcdef123456";
+        //[Benchmark]
+        public void String1()
+        {
+           
+
+            // String concatenation
+            string etag1 = '"' + etagHashString + '"';
+
+        }
+        //[Benchmark]
+        public void String12()
+        {
+        
+
+            // String interpolation
+            string etag2 = $"\"{etagHashString}\"";
+        }
 
 
         // | ReadFilesClientBenchmark | 677.8 ms | 13.48 ms | 13.85 ms | 1000 files of len 
@@ -201,101 +228,94 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 1.068 s | 0.0206 s | 0.0238 s | 1000 files of len 102400 with optimized file reads dotnet 9
         // | ReadFilesClientBenchmark | 1.139 s | 0.0201 s | 0.0178 s | 1000 files of len 102400 with optimized file reads dotnet 8
 
+
+        // | ReadFilesClientBenchmark | 99.45 ms | 2.535 ms | 7.314 ms | 100 files of len 102400 in parallel dotnet 8
+        // | ReadFilesClientBenchmark | 134.3 ms | 2.67 ms | 6.09 ms | 100 files of len 102400 in series dotnet 8
+
+        // | Method                   | Mean    | Error    | StdDev   | Gen0      | Gen1      | Gen2      | Allocated |
+        // | ReadFilesClientBenchmark | 1.178 s | 0.0646 s | 0.0427 s | 6000.0000 | 5000.0000 | 5000.0000 |  33.96 MB | 100 files of len 102400 in series dotnet 8
+        // | ReadFilesClientBenchmark | 1.197 s | 0.0601 s | 0.0397 s | 6000.0000 | 5000.0000 | 5000.0000 |  34.16 MB |
+        // | ReadFilesClientBenchmark | 1.269 s | 0.0919 s | 0.0608 s | 6000.0000 | 5000.0000 | 5000.0000 |  34.17 MB |
+        // | ReadFilesClientBenchmark | 567.5 ms | 70.18 ms | 46.42 ms | 6000.0000 | 5000.0000 | 5000.0000 |  34.15 MB |
+        // | ReadFilesClientBenchmark | 309.8 ms | 21.67 ms | 11.33 ms | 6500.0000 | 5500.0000 | 5500.0000 |  34.15 MB | Set log level to Warning
+        // | ReadFilesClientBenchmark | 551.1 ms | 134.3 ms | 88.85 ms | 5000.0000 | 4500.0000 | 4000.0000 |  34.17 MB | 100 files in parallel, log level warning
+        // | ReadFilesClientBenchmark | 389.3 ms | 52.40 ms | 27.40 ms | 4500.0000 | 4000.0000 | 3500.0000 |  34.17 MB | 100 files in parallel, cancel createwebview
+        // | ReadFilesClientBenchmark | 1.260 m | 1.417 m | 0.8434 m | 884.07 KB |
+        // | ReadFilesClientBenchmark | 743.0 ms | 121.0 ms | 72.00 ms | 4000.0000 | 3000.0000 | 3000.0000 |  34.15 MB | 100 files in parallel and parallel read
+        // | ReadFilesClientBenchmark | 552.0 ms | 120.6 ms | 71.76 ms | 5000.0000 | 4500.0000 | 4000.0000 |   34.2 MB | 100 files in parallel and CreateBounded<FileReadRequest>(1);
+        // | ReadFilesClientBenchmark | 477.1 ms | 62.07 ms | 183.0 ms | 423.1 ms | 6000.0000 | 5000.0000 | 5000.0000 |   34.1 MB | 100 files in series server in debug
+        // | ReadFilesClientBenchmark | 489.9 ms | 29.91 ms | 82.38 ms | 1000.0000 |     34 MB | 100 files in parallel server in debug 
+        // | ReadFilesClientBenchmark | 490.4 ms | 25.77 ms | 72.27 ms | 470.3 ms | 1000.0000 |  34.11 MB |100 files in parallel and CreateBounded<FileReadRequest>(1); server in debug
+        // | ReadFilesClientBenchmark | 514.6 ms | 37.61 ms | 107.3 ms | 483.8 ms | 1000.0000 |  34.25 MB |100 files in parallel and CreateBounded<FileReadRequest>(100); server in debug
+        // | ReadFilesClientBenchmark | 450.9 ms | 15.68 ms | 42.65 ms | 1000.0000 |   34.1 MB |100 files in parallel and CreateBounded<FileReadRequest>(Environment.ProcessorCount); server in debug
+        // | ReadFilesClientBenchmark | 310.4 ms | 15.19 ms | 42.59 ms | 1000.0000 | 500.0000 |   34.1 MB |100 files in parallel and CreateBounded<FileReadRequest>(Environment.ProcessorCount); server in release
+        // | ReadFilesClientBenchmark | 337.7 ms | 21.76 ms | 59.20 ms | 319.3 ms | 1000.0000 |     34 MB |100 files in parallel and serial FileReader server in release
+        // | ReadFilesClientBenchmark | 53.14 ms | 1.036 ms | 2.836 ms | 4600.0000 | 3800.0000 | 3400.0000 |  34.06 MB | 100 files in parallel and serial FileReader production server 
+        // | ReadFilesClientBenchmark | 36.36 ms | 1.157 ms | 3.337 ms | 3000.0000 | 2600.0000 | 1800.0000 |   34.2 MB | 100 files in parallel and parallel FileReader production server
+
+        // Crashing with 1000 files
+        // | ReadFilesClientBenchmark | 67.98 ms | 2.285 ms | 6.592 ms | 5666.6667 | 5000.0000 | 3000.0000 |  68.21 MB |200 files in parallel and parallel FileReader production server
+        // | ReadFilesClientBenchmark | 137.7 ms | 5.68 ms | 16.65 ms | 132.4 ms | 8000.0000 | 7000.0000 | 3000.0000 | 136.06 MB |400 files in parallel and parallel FileReader production server
+        // | ReadFilesClientBenchmark | 205.4 ms | 6.71 ms | 19.58 ms | 12000.0000 | 10000.0000 | 5000.0000 | 204.11 MB |600 files in parallel and parallel FileReader production server
+
+        // and CreateBounded<FileReadRequest>(1);
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {
             int count = 0;
-            int max = 1000;
+        
             string id = Guid.NewGuid().ToString();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
-            var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" });
-            var bytes = 0;
-            foreach (var message in response.ResponseStream.ReadAllAsync(cts.Token).ToBlockingEnumerable())
+            var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
+            int bytes = 0;
+        
+            try
             {
-                if (message.Response == "created:")
+                foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
                 {
-                    AttachFileReader(cts, id, new PhysicalFileProvider(_rootDirectory+"/wwwroot"));
-                    string url = $"{URL}/{id}/{_testFileName}";
-                    for (int i = 1; i <= max; i++) { 
-                        var data = httpClient.GetStringAsync(url).Result;
-                        bytes += data.Length;
-                        //Console.WriteLine(data);
-                        count++;
+                    if (message.Response == "created:")
+                    {
+                        FileReader.AttachFileReader2(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"));
+                       
+
+                        List<Task> tasks = new List<Task>();
+                        for (int i = 1; i <= maxFiles; i++)
+                        {
+                            string url = $"{URL}/{id}/{_testFileName}{i}.css";
+                            tasks.Add(Task.Run(async () =>
+
+                            //Task.Run(async () =>
+                            {
+                                var data = await httpClient.GetStringAsync(url);
+
+                                lock (id)
+                                {
+                                    bytes += data.Length;
+                                    //Console.WriteLine(data);
+                                    count++;
+                                }
+                            }));//.Wait();
+                        }
+
+                        Task.WaitAll(tasks.ToArray());
+                        cts.Cancel();
+
                     }
 
-                    _client.Shutdown(new IdMessageRequest { Id = id });
                 }
-                
             }
+            catch
+            {
+            }
+            finally
+            {
+                //_client.Shutdown(new IdMessageRequest { Id = id });
+            }
+            Debug.Assert(count == maxFiles);
+            Debug.Assert(bytes == maxFiles * 102400);
             Console.WriteLine($"Read {count} files total bytes {bytes}");
         }
 
-        private void AttachFileReader(CancellationTokenSource cts, string id, IFileProvider fileProvider)
-        {
-            _ = Task.Factory.StartNew(async () =>
-            {
-                var files = _client.FileReader();
-                try
-                {
-                    // Initiate the file read request
-                    await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Init = new() });
-
-                    // Process each incoming message concurrently
-                    await foreach (var message in files.ResponseStream.ReadAllAsync(cts.Token))
-                    {
-                        var path = message.Path[(message.Path.IndexOf('/') + 1)..];
-
-                        try
-                        {
-                            var fileInfo = fileProvider.GetFileInfo(path);
-                            var fileLength = fileInfo.Length;
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength } });
-
-                            if (fileLength == 0)
-                            {
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                continue;
-                            }
-
-                            // Read file and send data
-                            using var stream = fileInfo.CreateReadStream();
-                            if (stream == null)
-                            {
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                                continue;
-                            }
-
-                            var buffer = new byte[32 * 1024];  // Increased buffer size to 32KB
-                            int bytesRead;
-                            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                            {
-                                var bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = bs } });
-                            }
-
-                            // Indicate end of file read
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                        }
-                        catch (FileNotFoundException)
-                        {
-                            Console.WriteLine($"File not found: {path}");
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.ToString());
-                            await files.RequestStream.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = ByteString.Empty } });
-                        }
-                    }
-                    Console.WriteLine("Done reading files");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-
-            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-        }
 
         [GlobalCleanup]
         public void Cleanup()
@@ -304,9 +324,24 @@ namespace ClientBenchmark
             {
                 // Clean up any temporary files created
                 File.Delete(_testFilePath);
-                Directory.Delete(_testFilePath);
+                Directory.Delete(_testFilePath.Replace("site",""));
+
             }
             catch { }
+        }
+
+        private class Config : ManualConfig
+        {
+            public Config()
+            {
+                //AddJob(Job.Default
+                //    .WithIterationCount(10) // Adjust as needed
+                //    .WithWarmupCount(5) // Adjust as needed
+                //);
+                AddJob(Job.Default);
+                  
+                AddDiagnoser(MemoryDiagnoser.Default);
+            }
         }
 
 #if DEBUG
