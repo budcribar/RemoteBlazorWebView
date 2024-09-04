@@ -29,7 +29,7 @@ namespace ClientBenchmark
         private HttpClient httpClient;
         private string URL = "https://localhost:5001";
         private bool _prodServer = true;
-        private int fileSize = 102400;
+        private int fileSize = 10240;
         private int maxFiles = 800;
 
         private static readonly char[] chars =
@@ -257,8 +257,19 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 67.98 ms | 2.285 ms | 6.592 ms | 5666.6667 | 5000.0000 | 3000.0000 |  68.21 MB |200 files in parallel and parallel FileReader production server
         // | ReadFilesClientBenchmark | 137.7 ms | 5.68 ms | 16.65 ms | 132.4 ms | 8000.0000 | 7000.0000 | 3000.0000 | 136.06 MB |400 files in parallel and parallel FileReader production server
         // | ReadFilesClientBenchmark | 205.4 ms | 6.71 ms | 19.58 ms | 12000.0000 | 10000.0000 | 5000.0000 | 204.11 MB |600 files in parallel and parallel FileReader production server
+        // 800 files fails
+        // | ReadFilesClientBenchmark | 227.5 ms | 5.61 ms | 16.27 ms | 15000.0000 | 13000.0000 | 6000.0000 | 238.13 MB |700 files in parallel and parallel FileReader production server
+        //   ReadFilesClientBenchmark | 261.7 ms | 10.20 ms | 29.60 ms | 15000.0000 | 13000.0000 | 6000.0000 | 255.08 MB | 750 files in parallel and parallel FileReader production server
+        // 775 fails
+        // 775 fails with files of size 10240 
+        // 775 fails with files of size 10240 and serial FileReader
+        // 775 fails with files of size 10240 and parallel FileReader and rate limited server
+        //| ReadFilesClientBenchmark | 1.686 s | 0.0336 s | 0.0709 s | 4000.0000 | 1000.0000 |  51.35 MB  | 700 files of size 10240 and parallel FileReader and rate limited server permit limit 10
+        //700 files of size 10240 and parallel FileReader and rate limited server permit limit 100 fails
+        //| ReadFilesClientBenchmark | 1.480 s | 0.0388 s | 0.1138 s | 4000.0000 | 1000.0000 |  49.22 MB | 700 files of size 10240 and parallel FileReader and no rate limit
 
-        // and CreateBounded<FileReadRequest>(1);
+        //| ReadFilesClientBenchmark | 67.40 ms | 1.916 ms | 5.373 ms | 65.73 ms | 4000.0000 | 1000.0000 |  49.22 MB |700 files in parallel and parallel FileReader production server *** Removed writeln exception
+
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {
@@ -275,7 +286,7 @@ namespace ClientBenchmark
                 {
                     if (message.Response == "created:")
                     {
-                        FileReader.AttachFileReader2(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"));
+                        FileReader.AttachFileReader(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"));
                        
 
                         List<Task> tasks = new List<Task>();
@@ -312,7 +323,7 @@ namespace ClientBenchmark
                 //_client.Shutdown(new IdMessageRequest { Id = id });
             }
             Debug.Assert(count == maxFiles);
-            Debug.Assert(bytes == maxFiles * 102400);
+            Debug.Assert(bytes == maxFiles * fileSize);
             Console.WriteLine($"Read {count} files total bytes {bytes}");
         }
 

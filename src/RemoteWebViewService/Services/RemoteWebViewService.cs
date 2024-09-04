@@ -49,6 +49,7 @@ namespace PeakSWC.RemoteWebView
             }
             else
             {
+                logger.LogError($"CreateWebView Id:{request.Id} failed to add client");
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" });
                 return;
             }

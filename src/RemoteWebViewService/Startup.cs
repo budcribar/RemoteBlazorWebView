@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.Pages;
@@ -71,18 +72,37 @@ namespace PeakSWC.RemoteWebView
 
             public void ConfigureServices(IServiceCollection services)
         {
+#if !DEBUG
+            services.AddLogging(lb =>
+            {
+
+                lb.ClearProviders();
+                // Configure EventLog provider
+                lb.AddEventLog(eventLogSettings =>
+                {
+                    //eventLogSettings.SourceName = "RemoteWebViewService"; 
+                    eventLogSettings.LogName = "Application"; 
+                    eventLogSettings.Filter = (category, level) =>
+                    {
+                        //return level >= LogLevel.Information;
+                        return level >= LogLevel.Warning;
+                    };
+                });
+
+            });
+#endif 
             services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
 #if RATELIMIT
             services.AddRateLimiter(options =>
             {
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                     RateLimitPartition.GetConcurrencyLimiter(
-                        partitionKey: httpContext.Request.Path.ToString(),
+                        partitionKey: "global_file_limiter",
                         factory: _ => new ConcurrencyLimiterOptions
                         {
-                            PermitLimit = 10,
+                            PermitLimit = 100,
                             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                            QueueLimit = 100
+                            QueueLimit = 10000
                         }));
             });
 #endif

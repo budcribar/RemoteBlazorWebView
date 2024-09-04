@@ -54,7 +54,7 @@ namespace PeakSwc.StaticFiles
             stopWatch.Start();
 
             if (_logger.IsEnabled(LogLevel.Information))
-                _logger.LogInformation($"Attempting to read {appFile}");
+                _logger.LogDebug($"Attempting to read {appFile}");
 
             if (!_rootDictionary.TryGetValue(id, out ServiceState? serviceState))
             {
@@ -77,7 +77,17 @@ namespace PeakSwc.StaticFiles
                 {
                     serviceState.FileCollection.Writer.WriteAsync(appFile);
 
-                    if (!fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60)))
+                    bool timedOut = false;
+                    try
+                    {
+                        timedOut = !fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60), serviceState.Token);
+                    }
+                    catch (Exception)
+                    {
+                        timedOut = true;
+                    }
+
+                    if (timedOut)
                     {
                         _logger.LogError($"Timeout processing {appFile} id {id}");
                         return null;
@@ -116,8 +126,8 @@ namespace PeakSwc.StaticFiles
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation($"Successfully read {length} bytes from {appFile} id {id}");
-                _logger.LogInformation($"Last file read in {fileReadTime} id {id}");
+                _logger.LogDebug($"Successfully read {length} bytes from {appFile} id {id}");
+                _logger.LogDebug($"Last file read in {fileReadTime} id {id}");
             }
                 
             lock (serviceState)
