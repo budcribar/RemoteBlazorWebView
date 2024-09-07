@@ -11,10 +11,11 @@ using System.Diagnostics;
 using System.Text;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;
+using System.Net;
 
 namespace ClientBenchmark
 {
-    [Config(typeof(Config))]
+   
     public class ClientBenchmarks
     {
 
@@ -28,9 +29,9 @@ namespace ClientBenchmark
         private string randomString;
         private HttpClient httpClient;
         private string URL = "https://localhost:5001";
-        private bool _prodServer = true;
-        private int fileSize = 10240;
-        private int maxFiles = 800;
+        private bool _prodServer = false;
+        private int fileSize = 102400;
+        private int maxFiles = 100;
 
         private static readonly char[] chars =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".ToCharArray();
@@ -105,14 +106,24 @@ namespace ClientBenchmark
                 PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
                 KeepAlivePingDelay = TimeSpan.FromSeconds(90),
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
+                MaxConnectionsPerServer = 1000,
                 EnableMultipleHttp2Connections = true
             };
 
+            ServicePointManager.DefaultConnectionLimit = 1000;
 
             httpClient = new HttpClient(handler);
 
             if (_prodServer)
-                Process.Start(processStartInfo);
+            {
+                var p = Process.Start(processStartInfo);
+                if (p == null)
+                {
+                    Console.WriteLine("Could not start server");
+                    throw new Exception("Could not start server");
+                }
+            }
+               
 
             PollHttpRequest(httpClient, URL).Wait();
 
@@ -269,17 +280,24 @@ namespace ClientBenchmark
         //| ReadFilesClientBenchmark | 1.480 s | 0.0388 s | 0.1138 s | 4000.0000 | 1000.0000 |  49.22 MB | 700 files of size 10240 and parallel FileReader and no rate limit
 
         //| ReadFilesClientBenchmark | 67.40 ms | 1.916 ms | 5.373 ms | 65.73 ms | 4000.0000 | 1000.0000 |  49.22 MB |700 files in parallel and parallel FileReader production server *** Removed writeln exception
-
+        // | ReadFilesClientBenchmark | 65.74 ms | 1.392 ms | 3.811 ms | 64.57 ms | 4000.0000 | 1000.0000 |   49.2 MB |700 files in parallel and parallel FileReader production server *** Removed writeln exception
+        // | ReadFilesClientBenchmark | 249.1 ms | 9.00 ms | 26.25 ms | 15000.0000 | 13000.0000 | 6000.0000 | 238.02 MB |700 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
+        // | ReadFilesClientBenchmark | 7.521 s | 0.5679 s | 1.638 s | 17000.0000 | 14000.0000 | 7000.0000 | 272.04 MB |800 files with rate monitor = 100
+        // | ReadFilesClientBenchmark | 1.834 s | 0.0379 s | 0.1074 s | 800 files no rate limiter running Release mode
+        // | ReadFilesClientBenchmark | 2.559 s | 0.0786 s | 0.2319 s | 1000 files no rate limiter running Release mode
+        // | ReadFilesClientBenchmark | 4.567 s | 0.0898 s | 0.1550 s | 2000 files no rate limiter running Release mode
+        // | ReadFilesClientBenchmark | 683.0 ms | 16.42 ms | 48.41 ms | 2000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
+        // | ReadFilesClientBenchmark | 220.6 ms | 5.75 ms | 16.87 ms ||700 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception and optimizations i.e. async
+        // | ReadFilesClientBenchmark | 1.814 s | 0.0360 s | 0.0911 s | 1.852 s |  5000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
+        // | ReadFilesClientBenchmark | 3.614 s | 0.0703 s | 0.1155 s | 10000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
         [Benchmark]
         public void ReadFilesClientBenchmark()
-        {
-            int count = 0;
-        
+        {     
             string id = Guid.NewGuid().ToString();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
-            int bytes = 0;
-        
+         
+            var wrapper = new HttpClientWrapper(httpClient);
             try
             {
                 foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
@@ -297,34 +315,29 @@ namespace ClientBenchmark
 
                             //Task.Run(async () =>
                             {
-                                var data = await httpClient.GetStringAsync(url);
-
-                                lock (id)
-                                {
-                                    bytes += data.Length;
-                                    //Console.WriteLine(data);
-                                    count++;
-                                }
+                                var data = await wrapper.GetWithRetryAsync(url);
+                              
                             }));//.Wait();
                         }
 
                         Task.WaitAll(tasks.ToArray());
                         cts.Cancel();
-
                     }
 
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                if (ex.InnerException is not OperationCanceledException)
+                   Console.WriteLine(ex.ToString());
             }
             finally
             {
                 //_client.Shutdown(new IdMessageRequest { Id = id });
             }
-            Debug.Assert(count == maxFiles);
-            Debug.Assert(bytes == maxFiles * fileSize);
-            Console.WriteLine($"Read {count} files total bytes {bytes}");
+            Debug.Assert(wrapper.count == maxFiles);
+            Debug.Assert(wrapper.bytes == maxFiles * fileSize);
+            //Console.WriteLine($"Read {wrapper.count} files total bytes {wrapper.bytes}");
         }
 
 
@@ -340,8 +353,8 @@ namespace ClientBenchmark
             }
             catch { }
         }
-
-        private class Config : ManualConfig
+        [Config(typeof(Config))]
+        public class Config : ManualConfig
         {
             public Config()
             {
@@ -353,6 +366,62 @@ namespace ClientBenchmark
                   
                 AddDiagnoser(MemoryDiagnoser.Default);
             }
+        }
+
+        public class HttpClientWrapper
+        {
+            private const int MaxRetries = 1;
+            private const int RetryDelayMilliseconds = 1000;
+            private object lockObject = new object();
+            private readonly HttpClient httpClient;
+
+            public HttpClientWrapper(HttpClient httpClient)
+            {
+                this.httpClient = httpClient;
+            }
+
+            public async Task<string> GetWithRetryAsync(string url)
+            {
+                int attempts = 0;
+                while (attempts < MaxRetries)
+                {
+                    try
+                    {
+                        var response = await httpClient.GetAsync(url);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var data = await response.Content.ReadAsStringAsync();
+                            lock (lockObject)
+                            {
+                                bytes += data.Length;
+                                //Console.WriteLine(data);
+                                count++;
+                            }
+                            return data;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Attempt {attempts + 1} failed. Status code: {response.StatusCode}");
+                        }
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        Console.WriteLine($"Attempt {attempts + 1} failed. Error: {ex.Message}");
+                    }
+
+                    attempts++;
+                    if (attempts < MaxRetries)
+                    {
+                        await Task.Delay(RetryDelayMilliseconds);
+                    }
+                }
+
+                throw new Exception($"Failed to get successful response after {MaxRetries} attempts");
+            }
+
+            // Assuming these are class-level variables
+            public int bytes;
+            public int count;
         }
 
 #if DEBUG
