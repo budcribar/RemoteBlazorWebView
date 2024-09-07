@@ -69,6 +69,7 @@
         <p><span class=""label"">Email:</span> <a href=""mailto:{contact.Email}"">{contact.Email}</a></p>
         <p><span class=""label"">Source:</span> <a href=""{contact.Url}"" target=""_blank"">{contact.Url}</a></p>
         <p><span class=""label"">Version:</span> {version}</p>
+        <p><span class=""label"">Framework:</span> {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}</p>
     </div>
 </div>
 
