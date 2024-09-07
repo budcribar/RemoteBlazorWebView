@@ -13,24 +13,27 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
+
+//using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
+using PeakSwc.StaticFiles;
 
 namespace PeakSWC.RemoteWebView;
 
-internal struct StaticFileContext
+internal class StaticFileContext
 {
     private readonly HttpContext _context;
     private readonly StaticFileOptions _options;
     private readonly HttpRequest _request;
     private readonly HttpResponse _response;
     private readonly ILogger _logger;
-    private readonly IFileProvider _fileProvider;
+    public IFileProvider _fileProvider;
     private readonly string _method;
     private readonly string? _contentType;
 
-    private IFileInfo _fileInfo;
+    public Microsoft.Extensions.FileProviders.IFileInfo FileInfo { get => fileInfo; set { fileInfo = value; }
+            }
     private EntityTagHeaderValue? _etag;
     private RequestHeaders? _requestHeaders;
     private ResponseHeaders? _responseHeaders;
@@ -47,6 +50,8 @@ internal struct StaticFileContext
 
     private RequestType _requestType;
 
+    private Microsoft.Extensions.FileProviders.IFileInfo fileInfo = default!;
+
     public StaticFileContext(HttpContext context, StaticFileOptions options, ILogger logger, IFileProvider fileProvider, string? contentType, PathString subPath)
     {
         if (subPath.Value == null)
@@ -62,7 +67,7 @@ internal struct StaticFileContext
         _fileProvider = fileProvider;
         _method = _request.Method;
         _contentType = contentType;
-        _fileInfo = default!;
+        FileInfo = default!;
         _etag = null;
         _requestHeaders = null;
         _responseHeaders = null;
@@ -126,23 +131,23 @@ internal struct StaticFileContext
         }
     }
 
-    public string PhysicalPath => _fileInfo.PhysicalPath ?? string.Empty;
+    public string PhysicalPath => FileInfo.PhysicalPath ?? string.Empty;
 
-    public bool LookupFileInfo()
+    public async Task<bool> LookupFileInfo()
     {
-        _fileInfo = _fileProvider.GetFileInfo(SubPath);
-        if (_fileInfo.Exists)
+        FileInfo = await _fileProvider.GetFileInfo(SubPath);
+        if (FileInfo.Exists)
         {
-            _length = _fileInfo.Length;
+            _length = FileInfo.Length;
 
-            DateTimeOffset last = _fileInfo.LastModified;
+            DateTimeOffset last = FileInfo.LastModified;
             // Truncate to the second.
             _lastModified = new DateTimeOffset(last.Year, last.Month, last.Day, last.Hour, last.Minute, last.Second, last.Offset).ToUniversalTime();
 
             long etagHash = _lastModified.ToFileTime() ^ _length;
             _etag = new EntityTagHeaderValue('\"' + Convert.ToString(etagHash, 16) + '\"');
         }
-        return _fileInfo.Exists;
+        return FileInfo.Exists;
     }
 
     public void ComprehendRequestHeaders()
@@ -278,12 +283,16 @@ internal struct StaticFileContext
             // this header is only returned here for 200
             // it already set to the returned range for 206
             // it is not returned for 304, 412, and 416
+
+            if (_length < 0)
+                throw new FileNotFoundException();
+
             _response.ContentLength = _length;
         }
 
         if (_options.OnPrepareResponse != StaticFileOptions._defaultOnPrepareResponse)
         {
-            _options.OnPrepareResponse(new StaticFileResponseContext(_context, _fileInfo));
+            _options.OnPrepareResponse(new StaticFileResponseContext(_context, FileInfo));
         }
     }
 
@@ -363,7 +372,7 @@ internal struct StaticFileContext
         ApplyResponseHeaders(StatusCodes.Status200OK);
         try
         {
-            await _context.Response.SendFileAsync(_fileInfo, 0, _length, _context.RequestAborted);
+            await _context.Response.SendFileAsync(FileInfo, 0, _length, _context.RequestAborted);
         }
         catch (OperationCanceledException ex)
         {
@@ -394,9 +403,9 @@ internal struct StaticFileContext
 
         try
         {
-            var logPath = !string.IsNullOrEmpty(_fileInfo.PhysicalPath) ? _fileInfo.PhysicalPath : SubPath;
+            var logPath = !string.IsNullOrEmpty(FileInfo.PhysicalPath) ? FileInfo.PhysicalPath : SubPath;
             _logger.SendingFileRange(_response.Headers.ContentRange, logPath);
-            await _context.Response.SendFileAsync(_fileInfo, start, length, _context.RequestAborted);
+            await _context.Response.SendFileAsync(FileInfo, start, length, _context.RequestAborted);
         }
         catch (OperationCanceledException ex)
         {

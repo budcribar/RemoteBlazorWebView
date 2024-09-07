@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,9 +19,11 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+using IFileProvider = PeakSwc.StaticFiles.IFileProvider;
 #if AUTHORIZATION
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +34,42 @@ using Microsoft.Identity.Web.UI;
 
 namespace PeakSWC.RemoteWebView
 {
+    public class RateLimitStats
+    {
+        private long _totalCount;
+        private long _successCount;
+        private long _rejectedCount;
+
+        public void IncrementTotalCount() => Interlocked.Increment(ref _totalCount);
+        public void IncrementSuccessCount() => Interlocked.Increment(ref _successCount);
+        public void IncrementRejectedCount() => Interlocked.Increment(ref _rejectedCount);
+
+        public (long Total, long Success, long Rejected) GetStats() =>
+            (_totalCount, _successCount, _rejectedCount);
+    }
+
+    public class RateLimitMonitoringService : BackgroundService
+    {
+        private readonly ILogger<RateLimitMonitoringService> _logger;
+        private readonly RateLimitStats _stats;
+
+        public RateLimitMonitoringService(ILogger<RateLimitMonitoringService> logger, RateLimitStats stats)
+        {
+            _logger = logger;
+            _stats = stats;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                var (total, success, rejected) = _stats.GetStats();
+                //_logger.LogInformation("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
+                _logger.LogWarning("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            }
+        }
+    }
     public class GrpcBaseUriResponse
     {
         [JsonPropertyName("grpcBaseUri")]
@@ -41,8 +80,21 @@ namespace PeakSWC.RemoteWebView
         [JsonPropertyName("connected")]
         public bool Connected { get; set; }
     }
+   
     public class Startup
     {
+        private async Task<bool> IsStaticFileRequest(HttpContext context, IFileProvider fileProvider)
+        {
+            var filePath = context.Request.Path.Value?.TrimStart('/');
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return false;
+            }
+
+            var fileInfo = await fileProvider.GetFileInfo(filePath);
+            return fileInfo.Exists && !fileInfo.IsDirectory;
+        }
+
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; } = new();
         private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
 
@@ -85,7 +137,7 @@ namespace PeakSWC.RemoteWebView
                     eventLogSettings.Filter = (category, level) =>
                     {
                         //return level >= LogLevel.Information;
-                        return level >= LogLevel.Warning;
+                        return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
                     };
                 });
 
@@ -93,17 +145,39 @@ namespace PeakSWC.RemoteWebView
 #endif 
             services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
 #if RATELIMIT
+            services.AddSingleton<RateLimitStats>();
+            services.AddHostedService<RateLimitMonitoringService>();
             services.AddRateLimiter(options =>
             {
-                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-                    RateLimitPartition.GetConcurrencyLimiter(
-                        partitionKey: "global_file_limiter",
-                        factory: _ => new ConcurrencyLimiterOptions
-                        {
-                            PermitLimit = 100,
-                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                            QueueLimit = 10000
-                        }));
+                options.AddPolicy("StaticFilesRateLimit", context =>
+                {
+                    if (IsStaticFileRequest(context, context.RequestServices.GetRequiredService<RemoteFileResolver>()))
+                    {
+                        return RateLimitPartition.GetConcurrencyLimiter(
+                            partitionKey: "static_file_limiter",
+                            factory: _ => new ConcurrencyLimiterOptions
+                            {
+                                PermitLimit = 100,
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                                QueueLimit = 1000
+                            });
+                    }
+                    return RateLimitPartition.GetNoLimiter("no_limit");
+                });
+
+                options.OnRejected = async (context, token) =>
+                {
+                    context.HttpContext.Response.StatusCode = 429;
+                    await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", token);
+
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Startup>>();
+                    logger.LogWarning("Rate limit exceeded for static file: {RequestPath}", context.HttpContext.Request.Path);
+
+                    var stats = context.HttpContext.RequestServices.GetRequiredService<RateLimitStats>();
+                    stats.IncrementRejectedCount();
+                };
+
+                options.RejectionStatusCode = 429;
             });
 #endif
 #if AUTHORIZATION
@@ -168,7 +242,29 @@ namespace PeakSWC.RemoteWebView
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 //app.UseHsts();
             }
-#if RATE_LIMIT
+#if RATELIMIT
+           
+
+            app.Use(async (context, next) =>
+            {
+                var fileProvider = context.RequestServices.GetRequiredService<RemoteFileResolver>();
+                var isStaticFile = IsStaticFileRequest(context, fileProvider);
+
+                if (isStaticFile)
+                {
+                    var stats = context.RequestServices.GetRequiredService<RateLimitStats>();
+                    stats.IncrementTotalCount();
+                }
+
+                await next();
+
+                if (isStaticFile && context.Response.StatusCode != 429)
+                {
+                    var stats = context.RequestServices.GetRequiredService<RateLimitStats>();
+                    stats.IncrementSuccessCount();
+                }
+            });
+
             app.UseRateLimiter();
 #endif
             app.UseHttpsRedirection();
@@ -186,7 +282,7 @@ namespace PeakSWC.RemoteWebView
 #endif
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
-            app.UseStaticFiles(new StaticFileOptions { FileProvider = app.ApplicationServices?.GetRequiredService<RemoteFileResolver>() });
+            app.UseStaticFiles(new PeakSWC.RemoteWebView.StaticFileOptions { FileProvider = app.ApplicationServices?.GetRequiredService<RemoteFileResolver>() });
 
             app.UseEndpoints(endpoints =>
             {
@@ -256,7 +352,7 @@ namespace PeakSWC.RemoteWebView
 
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = await rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
                         using Stream stream = fi.CreateReadStream();
                         context.Response.StatusCode = 200;
@@ -404,7 +500,7 @@ namespace PeakSWC.RemoteWebView
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = await rfr.GetFileInfo($"/{guid}/{home}");
                         context.Response.ContentLength = fi.Length;
                         using Stream stream = fi.CreateReadStream();
                         context.Response.StatusCode = 200;

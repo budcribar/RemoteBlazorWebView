@@ -12,10 +12,11 @@ namespace PeakSWC.RemoteWebView
 {
     public class FileEntry
     {
-        public ManualResetEventSlim ResetEvent { get; set; } = new ManualResetEventSlim();
+        public SemaphoreSlim DuplicateFileSemaphore = new SemaphoreSlim(0, 1);
+        public SemaphoreSlim ResetEvent { get; set; } = new SemaphoreSlim(0,1);
         public long Length { get; set; } = -1;
         public Pipe Pipe { get; set; } = new Pipe();
-        public void Reset() { ResetEvent = new ManualResetEventSlim(); Length = -1; Pipe = new Pipe(); }
+        public void Reset() { DuplicateFileSemaphore.Release(); Length = -1; Pipe = new Pipe(); }
 
         public void Dispose()
         {

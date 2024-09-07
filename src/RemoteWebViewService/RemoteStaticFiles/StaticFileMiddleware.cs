@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.FileProviders;
+//using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PeakSwc.StaticFiles;
 using System;
 using System.Threading.Tasks;
 
@@ -57,7 +58,7 @@ public class StaticFileMiddleware
         _next = next;
         _options = options.Value;
         _contentTypeProvider = _options.ContentTypeProvider ?? new FileExtensionContentTypeProvider();
-        _fileProvider = _options.FileProvider ?? Helpers.ResolveFileProvider(hostingEnv);
+        _fileProvider = _options.FileProvider!;// ?? Helpers.ResolveFileProvider(hostingEnv);
         _matchUrl = _options.RequestPath;
         _logger = loggerFactory.CreateLogger<StaticFileMiddleware>();
     }
@@ -120,20 +121,20 @@ public class StaticFileMiddleware
         return false;
     }
 
-    private Task TryServeStaticFile(HttpContext context, string? contentType, PathString subPath)
-    {
+    private  async Task TryServeStaticFile(HttpContext context, string? contentType, PathString subPath)
+    {    
         var fileContext = new StaticFileContext(context, _options, _logger, _fileProvider, contentType, subPath);
-
-        if (!fileContext.LookupFileInfo())
+      
+        if (!await fileContext.LookupFileInfo())
         {
             _logger.FileNotFound(fileContext.SubPath);
         }
         else
         {
             // If we get here, we can try to serve the file
-            return fileContext.ServeStaticFile(context, _next);
+            await fileContext.ServeStaticFile(context, _next);
         }
 
-        return _next(context);
+        await _next(context);
     }
 }

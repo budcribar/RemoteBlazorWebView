@@ -2,8 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.AspNetCore.StaticFiles.Infrastructure;
+using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
 
 namespace PeakSWC.RemoteWebView;
@@ -34,7 +33,7 @@ public class StaticFileOptions : SharedOptionsBase
     /// <summary>
     /// Used to map files to content-types.
     /// </summary>
-    public IContentTypeProvider ContentTypeProvider { get; set; } = default!;
+    public Microsoft.AspNetCore.StaticFiles.IContentTypeProvider ContentTypeProvider { get; set; } = default!;
 
     /// <summary>
     /// The default content type for a request if the ContentTypeProvider cannot determine one.

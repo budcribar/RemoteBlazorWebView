@@ -233,8 +233,25 @@ namespace ClientBenchmark
             string id = Guid.NewGuid().ToString();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
-         
-            var wrapper = new HttpClientWrapper();
+
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(90),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
+                MaxConnectionsPerServer = 1000,
+                EnableMultipleHttp2Connections = true
+            };
+
+            ServicePointManager.DefaultConnectionLimit = 1000;
+
+            httpClient = new HttpClient(handler);
+
+            //var handler = new HttpClientHandler();
+            //handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12; // Support TLS 1.2 for HTTP/2 fallback
+
+            //httpClient = new HttpClient(handler);
+            var wrapper = new HttpClientWrapper(httpClient);
             try
             {
                 foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
