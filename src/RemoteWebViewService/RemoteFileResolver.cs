@@ -8,20 +8,29 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PeakSwc.StaticFiles
 {
-    internal partial class FileInfo : IFileInfo
+    public partial class FileInfo : IFileInfo
     {
-        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary;
-        private string path;
-        private readonly string guid;
+        private readonly ConcurrentDictionary<string, ServiceState> _rootDictionary = default!;
+        private string path = string.Empty;
+        private readonly string guid = string.Empty;
         private Stream? stream = null;
         private long length = -1;
-        private readonly ILogger<RemoteFileResolver> _logger;
+        private readonly ILogger<RemoteFileResolver> _logger = default!;
+        private readonly Task<Stream> getStreamTask = default!;
 
-        private Stream GetStream()
+        private FileInfo() { }
+
+        private async Task<Stream> GetStreamAsync()
         {
+            if (stream != null)
+            {
+                throw new InvalidOperationException("Stream not null");
+            }
             if (stream == null)
             {
                 if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(guid)) return new MemoryStream();
@@ -42,13 +51,15 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path[1..];
 
-                stream =  ProcessFile(guid, path);
+                stream = await ProcessFile(serviceState, guid, path);
+
+                if(stream == null) stream = new MemoryStream();
             }
 
-            return stream ?? new MemoryStream();
+            return stream;
         }
 
-        private Stream? ProcessFile(string id, string appFile)
+        private async Task<Stream> ProcessFile(ServiceState serviceState, string id, string appFile)
         {
             Stopwatch stopWatch = new ();
             stopWatch.Start();
@@ -56,11 +67,6 @@ namespace PeakSwc.StaticFiles
             if (_logger.IsEnabled(LogLevel.Information))
                 _logger.LogDebug($"Attempting to read {appFile}");
 
-            if (!_rootDictionary.TryGetValue(id, out ServiceState? serviceState))
-            {
-                _logger.LogError($"Cannot process {appFile} id {id} not found...");
-                return null;
-            }
             Stream stream;
 
             if (Path.GetFileName(appFile) == "blazor.modules.json")
@@ -69,57 +75,70 @@ namespace PeakSwc.StaticFiles
                 length = stream.Length;
             }
             else
-            {             
-                serviceState.FileDictionary.TryAdd(appFile, new FileEntry());
-
-                FileEntry fileEntry = serviceState.FileDictionary[appFile];
-                lock(fileEntry)
+            {
+                if(serviceState.FileDictionary.TryGetValue(appFile, out FileEntry? fileEntry))
                 {
-                    serviceState.FileCollection.Writer.WriteAsync(appFile);
-
-                    bool timedOut = false;
-                    try
+                    if (fileEntry == null || !await fileEntry.DuplicateFileSemaphore.WaitAsync(TimeSpan.FromSeconds(60)))
                     {
-                        timedOut = !fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60), serviceState.Token);
+                        _logger.LogError($"Timeout processing duplicate file {appFile} id {id}");
+                        return new MemoryStream();
                     }
-                    catch (Exception)
-                    {
-                        timedOut = true;
+                } else
+                {
+                    fileEntry = new();
+                    if (!serviceState.FileDictionary.TryAdd(appFile, fileEntry))
+                    {                       
+                        _logger.LogError($"Unable to insert {appFile} id {id} to dictionary");
+                        return new MemoryStream();
+                       
                     }
+                }
+               
+                await serviceState.FileCollection.Writer.WriteAsync(appFile);
+                   
+                  
+                if (!await fileEntry.ResetEvent.WaitAsync(TimeSpan.FromSeconds(60)))
+                //    bool timedOut = false;
+                //try
+                //{
+                //    timedOut = !fileEntry.ResetEvent.Wait(TimeSpan.FromSeconds(60), serviceState.Token);
+                //}
+                //catch (Exception)
+                //{
+                //    timedOut = true;
+                //}
 
-                    if (timedOut)
-                    {
-                        _logger.LogError($"Timeout processing {appFile} id {id}");
-                        return null;
-                    }
-
-                    length = fileEntry.Length;
-                    if (length <= 0)
-                    {
-                        _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
-                        return null;
-                    }
-
-                    stream = fileEntry.Pipe.Reader.AsStream();
-
-                    if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
-                    {
-                        // Edit the href in index.html
-                        using StreamReader sr = new(stream);
-                        var contents = sr.ReadToEnd();
-                        var initialLength = contents.Length;
-                        contents = HrefRegEx().Replace(contents, $"<base href=\"/{id}/\"");
-                        if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
-                        stream.Dispose();
-                        stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
-                        length = stream.Length;
-                    }
-                    
-                    fileEntry.Reset();
+                //if (timedOut)
+                {
+                    _logger.LogError($"Timeout processing {appFile} id {id}");
+                    return new MemoryStream();
                 }
 
+                length = fileEntry.Length;
+                if (length <= 0)
+                {
+                    _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
+                    return new MemoryStream();
+                }
 
-                
+                stream = fileEntry.Pipe.Reader.AsStream();
+
+                if (Path.GetFileName(appFile) == Path.GetFileName(serviceState.HtmlHostPath))
+                {
+                    // Edit the href in index.html
+                    using StreamReader sr = new(stream);
+                    var contents = sr.ReadToEnd();
+                    var initialLength = contents.Length;
+                    contents = HrefRegEx().Replace(contents, $"<base href=\"/{id}/\"");
+                    if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
+                    stream.Dispose();
+                    stream = new MemoryStream(Encoding.ASCII.GetBytes(contents));
+                    length = stream.Length;
+                }
+                   
+                // TODO only if acquired
+                fileEntry.Reset();
+  
             }
 
             TimeSpan fileReadTime = stopWatch.Elapsed;
@@ -142,7 +161,16 @@ namespace PeakSwc.StaticFiles
             return stream;
         }
 
-        public FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
+        public static async Task<IFileInfo> CreateFileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
+        {
+            var fi = new FileInfo(rootDictionary,path,logger);
+            var g = fi.guid;
+
+            await fi.getStreamTask;
+
+            return fi;
+        }
+        private FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
         {
             _logger = logger;
 
@@ -159,13 +187,12 @@ namespace PeakSwc.StaticFiles
             }
 
             _rootDictionary = rootDictionary;
+            getStreamTask = GetStreamAsync();
         }
 
-        public bool Exists =>  
-            GetStream() != null;
+        public bool Exists => stream != null;
 
-        public long Length => 
-            GetStream() == null ? -1 : length;
+        public long Length => stream == null ? -1 : length;
 
         public string? PhysicalPath => null;
 
@@ -177,13 +204,17 @@ namespace PeakSwc.StaticFiles
 
         public Stream CreateReadStream()
         {
-            return GetStream();
+            return stream ?? new MemoryStream();
         }
 
         [GeneratedRegex("<base.*href.*=.*(\"|').*/.*(\"|')", RegexOptions.Multiline)]
         private static partial Regex HrefRegEx();
     }
 
+    public interface IFileProvider
+    {
+        Task<IFileInfo> GetFileInfo(string subpath);
+    }
     public class RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger) : IFileProvider
     {
         public IDirectoryContents GetDirectoryContents(string subpath)
@@ -192,9 +223,10 @@ namespace PeakSwc.StaticFiles
             return new NotFoundDirectoryContents();
         }
 
-        public IFileInfo GetFileInfo(string subpath)
+        public Task<IFileInfo> GetFileInfo(string subpath)
         {
-            return new FileInfo(rootDictionary, subpath, logger);
+            return FileInfo.CreateFileInfo(rootDictionary, subpath, logger);
+           
         }
 
         public IChangeToken Watch(string _)

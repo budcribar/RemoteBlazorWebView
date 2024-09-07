@@ -104,18 +104,18 @@ namespace PeakSWC.RemoteWebView
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
+                            var fileEntry = serviceState.FileDictionary[message.Data.Path];
                             if (message.Data.Data.Length > 0)
-                            {
-                                var fileEntry = serviceState.FileDictionary[message.Data.Path];
+                            {        
                                 // TODO is there a limit on the Pipe write?
                                 fileEntry.Pipe.Writer.Write(message.Data.Data.Span);
+                                //_ = fileEntry.Pipe.Writer.FlushAsync();
                             }
                             else
                             {
-                                // Trigger the stream read
-                                var fileEntry = serviceState.FileDictionary[message.Data.Path];
+                                // Trigger the stream read                              
                                 fileEntry.Pipe.Writer.Complete();
-                                fileEntry.ResetEvent.Set();
+                                fileEntry.ResetEvent.Release();
                             }
                         }
                     }

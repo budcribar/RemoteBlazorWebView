@@ -13,26 +13,78 @@ namespace ClientBenchmark
         private object lockObject = new object();
         private readonly HttpClient httpClient;
 
-        public HttpClientWrapper()
+        public HttpClientWrapper(HttpClient httpClient)
         {
-            // Configure HttpClient to use HTTP/3 with HTTP/2 fallback
-            var handler = new HttpClientHandler();
-            handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12; // Support TLS 1.2 for HTTP/2 fallback
-
-            httpClient = new HttpClient(handler);
+            this.httpClient = httpClient;
         }
 
         public async Task<string> GetWithRetryAsync(string url)
         {
             int attempts = 0;
-            Version httpVersion = new Version(3, 0); // Start with HTTP/3
+            while (attempts < MaxRetries)
+            {
+                try
+                {
+                    var response = await httpClient.GetAsync(url);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var data = await response.Content.ReadAsStringAsync();
+                        lock (lockObject)
+                        {
+                            bytes += data.Length;
+                            //Console.WriteLine(data);
+                            count++;
+                        }
+                        return data;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Attempt {attempts + 1} failed. Status code: {response.StatusCode}");
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine($"Attempt {attempts + 1} failed. Error: {ex.Message}");
+                }
+
+                attempts++;
+                if (attempts < MaxRetries)
+                {
+                    await Task.Delay(RetryDelayMilliseconds);
+                }
+            }
+
+            throw new Exception($"Failed to get successful response after {MaxRetries} attempts");
+        }
+
+        // Assuming these are class-level variables
+        public int bytes;
+        public int count;
+    }
+    public class HttpClientWrapper2
+    {
+        private const int MaxRetries = 1;
+        private const int RetryDelayMilliseconds = 1000;
+        private object lockObject = new object();
+        private readonly HttpClient httpClient;
+
+        public HttpClientWrapper2(HttpClient httpClient)
+        {
+
+            this.httpClient = httpClient;
+        }
+
+        public async Task<string> GetWithRetryAsync(string url)
+        {
+            int attempts = 0;
+            Version httpVersion = new Version(2, 0); // Start with HTTP/3
 
             while (attempts < MaxRetries)
             {
                 try
                 {
                     var request = new HttpRequestMessage(HttpMethod.Get, url);
-                    request.Version = httpVersion;
+                    //request.Version = httpVersion;
 
                     var response = await httpClient.SendAsync(request);
 
