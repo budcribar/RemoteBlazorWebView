@@ -29,67 +29,18 @@ namespace ClientBenchmark
         private string randomString;
         private HttpClient httpClient;
         private string URL = "https://localhost:5001";
-        private bool _prodServer = false;
+        private bool _prodServer = true;
         private int fileSize = 102400;
-        private int maxFiles = 100;
+        private int maxFiles = 200;
 
-        private static readonly char[] chars =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".ToCharArray();
-
-        public static string GenerateRandomString(int length)
-        {
-            StringBuilder result = new StringBuilder(length);
-            Random random = new Random();
-
-            for (int i = 0; i < length; i++)
-            {
-                result.Append(chars[random.Next(chars.Length)]);
-            }
-
-            return result.ToString();
-        }
-        private void KillExistingProcesses(string processName)
-        {
-            try
-            {
-                foreach (var process in Process.GetProcessesByName(processName))
-                {
-                    Console.WriteLine($"Killing process: {process.ProcessName} (ID: {process.Id})");
-                    process.Kill();
-                    process.WaitForExit(); // Optionally wait for the process to exit
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error killing process: {ex.Message}");
-            }
-        }
-
-        private async Task PollHttpRequest(HttpClient httpClient, string url)
-        {
-            bool serverStarted = false;
-            while (!serverStarted)
-            {
-                try
-                {
-                    var response = await httpClient.GetAsync(url);
-                    serverStarted = response.IsSuccessStatusCode;
-                }
-                catch
-                {
-                    // Server is not ready yet, wait a bit before retrying
-                    await Task.Delay(10);
-                }
-            }
-        }
-
+        
 
         [GlobalSetup]
         public void Setup()
 
         {
             if (_prodServer)
-                KillExistingProcesses("RemoteWebViewService");
+                Utilities.KillExistingProcesses("RemoteWebViewService");
 
             var processStartInfo = new ProcessStartInfo
             {
@@ -125,7 +76,7 @@ namespace ClientBenchmark
             }
                
 
-            PollHttpRequest(httpClient, URL).Wait();
+            Utilities.PollHttpRequest(httpClient, URL).Wait();
 
             _rootDirectory = Directory.CreateTempSubdirectory().FullName;
             _testFilePath = Path.Combine(_rootDirectory, _testFileName); // Example path 
@@ -133,7 +84,7 @@ namespace ClientBenchmark
             // Create the directory if it doesn't exist
             Directory.CreateDirectory(Path.GetDirectoryName(_testFilePath)!);
 
-            randomString = GenerateRandomString(fileSize);
+            randomString = Utilities.GenerateRandomString(fileSize);
 
             for (int i=1; i<=maxFiles; i++)
                 File.WriteAllText($"{_testFilePath}{i}.css", randomString);         
@@ -211,23 +162,6 @@ namespace ClientBenchmark
             Console.WriteLine("Read " + count.ToString() + " messages");
         }
         string etagHashString = "abcdef123456";
-        //[Benchmark]
-        public void String1()
-        {
-           
-
-            // String concatenation
-            string etag1 = '"' + etagHashString + '"';
-
-        }
-        //[Benchmark]
-        public void String12()
-        {
-        
-
-            // String interpolation
-            string etag2 = $"\"{etagHashString}\"";
-        }
 
 
         // | ReadFilesClientBenchmark | 677.8 ms | 13.48 ms | 13.85 ms | 1000 files of len 
@@ -265,7 +199,7 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 36.36 ms | 1.157 ms | 3.337 ms | 3000.0000 | 2600.0000 | 1800.0000 |   34.2 MB | 100 files in parallel and parallel FileReader production server
 
         // Crashing with 1000 files
-        // | ReadFilesClientBenchmark | 67.98 ms | 2.285 ms | 6.592 ms | 5666.6667 | 5000.0000 | 3000.0000 |  68.21 MB |200 files in parallel and parallel FileReader production server
+        // | ReadFilesClientBenchmark | 67.98 ms | 2.285 ms | 6.592 ms | 5666.6667 | 5000.0000 | 3000.0000 |  68.21 MB |200 files in parallel and parallel FileReader production server 
         // | ReadFilesClientBenchmark | 137.7 ms | 5.68 ms | 16.65 ms | 132.4 ms | 8000.0000 | 7000.0000 | 3000.0000 | 136.06 MB |400 files in parallel and parallel FileReader production server
         // | ReadFilesClientBenchmark | 205.4 ms | 6.71 ms | 19.58 ms | 12000.0000 | 10000.0000 | 5000.0000 | 204.11 MB |600 files in parallel and parallel FileReader production server
         // 800 files fails
@@ -290,6 +224,9 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 220.6 ms | 5.75 ms | 16.87 ms ||700 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception and optimizations i.e. async
         // | ReadFilesClientBenchmark | 1.814 s | 0.0360 s | 0.0911 s | 1.852 s |  5000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
         // | ReadFilesClientBenchmark | 3.614 s | 0.0703 s | 0.1155 s | 10000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
+
+        // | ReadFilesClientBenchmark | 2.116 s | 0.0124 s | 0.0116 s | 200 files in parallel and parallel FileReader production server (try http3)
+
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     
@@ -297,7 +234,7 @@ namespace ClientBenchmark
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
          
-            var wrapper = new HttpClientWrapper(httpClient);
+            var wrapper = new HttpClientWrapper();
             try
             {
                 foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
@@ -366,62 +303,6 @@ namespace ClientBenchmark
                   
                 AddDiagnoser(MemoryDiagnoser.Default);
             }
-        }
-
-        public class HttpClientWrapper
-        {
-            private const int MaxRetries = 1;
-            private const int RetryDelayMilliseconds = 1000;
-            private object lockObject = new object();
-            private readonly HttpClient httpClient;
-
-            public HttpClientWrapper(HttpClient httpClient)
-            {
-                this.httpClient = httpClient;
-            }
-
-            public async Task<string> GetWithRetryAsync(string url)
-            {
-                int attempts = 0;
-                while (attempts < MaxRetries)
-                {
-                    try
-                    {
-                        var response = await httpClient.GetAsync(url);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var data = await response.Content.ReadAsStringAsync();
-                            lock (lockObject)
-                            {
-                                bytes += data.Length;
-                                //Console.WriteLine(data);
-                                count++;
-                            }
-                            return data;
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Attempt {attempts + 1} failed. Status code: {response.StatusCode}");
-                        }
-                    }
-                    catch (HttpRequestException ex)
-                    {
-                        Console.WriteLine($"Attempt {attempts + 1} failed. Error: {ex.Message}");
-                    }
-
-                    attempts++;
-                    if (attempts < MaxRetries)
-                    {
-                        await Task.Delay(RetryDelayMilliseconds);
-                    }
-                }
-
-                throw new Exception($"Failed to get successful response after {MaxRetries} attempts");
-            }
-
-            // Assuming these are class-level variables
-            public int bytes;
-            public int count;
         }
 
 #if DEBUG
