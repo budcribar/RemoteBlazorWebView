@@ -1,22 +1,21 @@
 ﻿using Google.Protobuf;
 using Microsoft.Extensions.FileProviders;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using PeakSWC.RemoteWebView;
 using Grpc.Core;
+using System.Threading;
+using System.IO;
+using Microsoft.Extensions.Logging;
 
-namespace ClientBenchmark
+namespace PeakSWC.RemoteWebView
 {
     public static class FileReader
     {
-        public static void AttachFileReader(AsyncDuplexStreamingCall<FileReadRequest,FileReadResponse> fileReader, CancellationTokenSource cts, string id, IFileProvider fileProvider)
+        public static void AttachFileReader(AsyncDuplexStreamingCall<FileReadRequest,FileReadResponse> fileReader, CancellationTokenSource cts, string id, IFileProvider fileProvider,Action<Exception> onException, ILogger? logger = null)
         {
             var channel = Channel.CreateBounded<FileReadRequest>(Environment.ProcessorCount);
-            //var channel = Channel.CreateBounded<FileReadRequest>(1);
+          
             // Start a task to consume from the channel and write to the stream
             _ = Task.Factory.StartNew(async () =>
             {
@@ -34,7 +33,7 @@ namespace ClientBenchmark
                     await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Init = new() });
 
                     // Local function to write empty data
-                    async Task WriteEmptyDataAsync(string path)
+                    async Task WriteEofDataAsync(string path)
                     {
                         await channel.Writer.WriteAsync(new FileReadRequest
                         {
@@ -58,7 +57,7 @@ namespace ClientBenchmark
 
                                 if (fileLength == 0)
                                 {
-                                    await WriteEmptyDataAsync(message.Path); // Use local function
+                                    await WriteEofDataAsync(message.Path); 
                                     return;
                                 }
 
@@ -66,7 +65,7 @@ namespace ClientBenchmark
                                 using var stream = fileInfo.CreateReadStream();
                                 if (stream == null)
                                 {
-                                    await WriteEmptyDataAsync(message.Path); // Use local function
+                                    await WriteEofDataAsync(message.Path); 
                                     return;
                                 }
 
@@ -79,23 +78,28 @@ namespace ClientBenchmark
                                 }
 
                                 // Indicate end of file read
-                                await WriteEmptyDataAsync(message.Path); // Use local function
+                                await WriteEofDataAsync(message.Path); 
                             }
                             catch (FileNotFoundException)
                             {
-                                Console.WriteLine($"File not found: {path}");
-                                await WriteEmptyDataAsync(message.Path); // Use local function
+                                logger?.LogWarning($"File not found {path}");
+                                await WriteEofDataAsync(message.Path); 
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine(ex.ToString());
-                                await WriteEmptyDataAsync(message.Path); // Use local function
+                                logger?.LogError(ex, "File reader threw exception");                             
+                                await WriteEofDataAsync(message.Path);
+                                onException?.Invoke(ex);
                             }
                         });
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    channel.Writer.Complete(); // Ensure completion in case of error
+                    onException?.Invoke(ex);                   
+                }
+                finally
+                {
+                    channel.Writer.Complete();
                 }
             }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }

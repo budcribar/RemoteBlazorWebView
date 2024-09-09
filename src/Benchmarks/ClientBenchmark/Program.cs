@@ -282,7 +282,7 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 36.01 ms | 0.645 ms | 0.662 ms |
         // | ReadFilesClientBenchmark | 3.172 s | 0.1604 s | 0.4445 s | 100 files 102400 bytes http2 "https://remotewebviewserver.azurewebsites.net/";
         // | ReadFilesClientBenchmark | 33.84 ms | 0.834 ms | 2.434 ms |  100 files 102400 bytes http2 prod server !!! net 9
-
+        // | ReadFilesClientBenchmark | 33.76 ms | 0.670 ms | 1.934 ms | 100 files 102400 bytes http2 prod server !!! net 9
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     
@@ -297,7 +297,7 @@ namespace ClientBenchmark
                 {
                     if (message.Response == "created:")
                     {
-                        FileReader.AttachFileReader(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"));
+                        FileReader.AttachFileReader(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => Console.Write($"File reader threw {x.Message}"));
                        
 
                         List<Task> tasks = new List<Task>();
