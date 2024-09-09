@@ -24,10 +24,10 @@ namespace ClientBenchmark
     {
         private string URL = "https://127.0.0.1:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private bool _prodServer = false;
+        private bool _prodServer = true;
         private int fileSize = 102400;
-        private int maxFiles = 10000;
-
+        private int maxFiles = 100;
+        private bool useHttp3 = false;
         // what happens when you have multiple reads of the same file?
         private string _testGuid;
         private string _testFilePath;
@@ -38,9 +38,6 @@ namespace ClientBenchmark
         private string randomString;
         private HttpClient httpClient;
       
-
-        
-
         [GlobalSetup]
         public void Setup()
 
@@ -84,9 +81,12 @@ namespace ClientBenchmark
             ServicePointManager.DefaultConnectionLimit = 1000;
 
             httpClient = new HttpClient(handler);
-            httpClient.DefaultRequestVersion = HttpVersion.Version30;
-            httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;//RequestVersionExact;//.;.;/ 9o.RequestVersionOrLower;
-
+            if (useHttp3)
+            {
+                httpClient.DefaultRequestVersion = HttpVersion.Version30;
+                httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;//RequestVersionExact;//.;.;/ 9o.RequestVersionOrLower;
+            }
+           
             try
             {
            
@@ -281,6 +281,8 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 36.44 ms | 0.714 ms | 0.904 ms | 100 files 102400 bytes http2 prod server
         // | ReadFilesClientBenchmark | 36.01 ms | 0.645 ms | 0.662 ms |
         // | ReadFilesClientBenchmark | 3.172 s | 0.1604 s | 0.4445 s | 100 files 102400 bytes http2 "https://remotewebviewserver.azurewebsites.net/";
+        // | ReadFilesClientBenchmark | 33.84 ms | 0.834 ms | 2.434 ms |  100 files 102400 bytes http2 prod server !!! net 9
+
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     

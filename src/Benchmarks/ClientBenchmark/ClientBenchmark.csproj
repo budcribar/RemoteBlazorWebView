@@ -10,7 +10,7 @@
   </PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0-preview.7.24405.7" />
 		<PackageReference Include="Google.Protobuf" Version="3.28.0" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.65.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.65.0" />
