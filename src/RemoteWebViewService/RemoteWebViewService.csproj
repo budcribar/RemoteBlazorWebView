@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-	  <DefineConstants>RATELIMITx</DefineConstants>
+	<!--<DefineConstants>RATELIMIT</DefineConstants>-->
 	<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
