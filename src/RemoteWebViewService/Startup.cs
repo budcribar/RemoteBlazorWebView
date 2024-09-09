@@ -142,7 +142,7 @@ namespace PeakSWC.RemoteWebView
                 });
 
             });
-#endif 
+#endif
             services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
 #if RATELIMIT
             services.AddSingleton<RateLimitStats>();

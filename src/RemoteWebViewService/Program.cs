@@ -19,8 +19,16 @@ namespace PeakSWC.RemoteWebView
             {
                 // Note: If appsettings.json does not exist in Azure the following configuration will fail with a certificate error
                 if (!File.Exists("appsettings.json"))
-                   webBuilder.ConfigureKestrel(options => { options.Limits.Http2.MaxStreamsPerConnection = 1600;
-                       options.Listen(IPAddress.Loopback, 5001, listenOptions => { listenOptions.UseHttps(); listenOptions.Protocols = HttpProtocols.Http1AndHttp2; }); });
+                   webBuilder.ConfigureKestrel(options => 
+                   { 
+                       options.Limits.Http2.MaxStreamsPerConnection = 1000;
+
+                       options.Listen(IPAddress.Loopback, 5001, listenOptions => 
+                       { 
+                           listenOptions.UseHttps(); 
+                           listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;                         
+                       });
+                   });
                 
                 webBuilder.UseStartup<Startup>();
             });     
