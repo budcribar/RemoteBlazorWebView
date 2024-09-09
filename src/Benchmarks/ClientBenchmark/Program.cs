@@ -12,12 +12,21 @@ using System.Text;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;
 using System.Net;
+using System.Net.Security;
+using System.Net.Quic;
+using System.Runtime.Versioning;
+using System.Net.Sockets;
+
 
 namespace ClientBenchmark
 {
-   
     public class ClientBenchmarks
     {
+        private string URL = "https://127.0.0.1:5001";
+        //private string URL = "https://remotewebviewserver.azurewebsites.net/";
+        private bool _prodServer = false;
+        private int fileSize = 102400;
+        private int maxFiles = 10000;
 
         // what happens when you have multiple reads of the same file?
         private string _testGuid;
@@ -28,10 +37,7 @@ namespace ClientBenchmark
         private BrowserIPC.BrowserIPCClient _browser;
         private string randomString;
         private HttpClient httpClient;
-        private string URL = "https://localhost:5001";
-        private bool _prodServer = true;
-        private int fileSize = 102400;
-        private int maxFiles = 200;
+      
 
         
 
@@ -51,20 +57,6 @@ namespace ClientBenchmark
 #endif
                 RedirectStandardOutput = true
             };
-
-            var handler = new SocketsHttpHandler
-            {
-                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-                KeepAlivePingDelay = TimeSpan.FromSeconds(90),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
-                MaxConnectionsPerServer = 1000,
-                EnableMultipleHttp2Connections = true
-            };
-
-            ServicePointManager.DefaultConnectionLimit = 1000;
-
-            httpClient = new HttpClient(handler);
-
             if (_prodServer)
             {
                 var p = Process.Start(processStartInfo);
@@ -74,7 +66,60 @@ namespace ClientBenchmark
                     throw new Exception("Could not start server");
                 }
             }
+            AppContext.SetSwitch("System.Net.SocketsHttpHandler.Http3Support", true);
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(90),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
+                MaxConnectionsPerServer = 1000,
+                EnableMultipleHttp2Connections = true,
+                SslOptions = new SslClientAuthenticationOptions
+                {
+                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
+                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true
+                },
+            };
+
+            ServicePointManager.DefaultConnectionLimit = 1000;
+
+            httpClient = new HttpClient(handler);
+            httpClient.DefaultRequestVersion = HttpVersion.Version30;
+            httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;//RequestVersionExact;//.;.;/ 9o.RequestVersionOrLower;
+
+            try
+            {
+           
                
+                var response = httpClient.GetAsync(URL).Result;
+                Console.WriteLine($"Response status: {response.StatusCode}");
+                Console.WriteLine($"Protocol used: {response.Version}");
+
+                // Print all headers
+                foreach (var header in response.Headers)
+                {
+                    Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
+                }
+
+                // Check for Alt-Svc header
+                if (response.Headers.TryGetValues("Alt-Svc", out var altSvcValues))
+                {
+                    Console.WriteLine($"Alt-Svc: {string.Join(", ", altSvcValues)}");
+                    if (altSvcValues.Any(v => v.StartsWith("h3=")))
+                    {
+                        Console.WriteLine("HTTP/3 is supported by the server!");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error: {e.Message}");
+                if (e.InnerException != null)
+                    Console.WriteLine($"Inner exception: {e.InnerException.Message}");
+            }
+
+            // Utilities.TryVariousPorts();
+
 
             Utilities.PollHttpRequest(httpClient, URL).Wait();
 
@@ -226,7 +271,16 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 3.614 s | 0.0703 s | 0.1155 s | 10000 files 102400 in parallel and parallel FileReader production server *** Removed writeln exception
 
         // | ReadFilesClientBenchmark | 2.116 s | 0.0124 s | 0.0116 s | 200 files in parallel and parallel FileReader production server (try http3)
-
+        // | | ReadFilesClientBenchmark | 68.58 ms | 2.289 ms | 6.750 ms |200 files in parallel and parallel FileReader production server 
+        // | ReadFilesClientBenchmark | 69.23 ms | 1.383 ms | 2.028 ms |200 files in parallel and parallel FileReader production server 
+        // | ReadFilesClientBenchmark | 454.2 ms | 25.40 ms | 74.88 ms | 100 files 102400 bytes http3 release server
+        // | ReadFilesClientBenchmark | 438.1 ms | 13.75 ms | 39.01 ms | 100 files 102400 bytes http2 release server
+        // | ReadFilesClientBenchmark | 438.1 ms | 13.75 ms | 39.01 ms | 100 files 102400 bytes http2 prod server
+        // | ReadFilesClientBenchmark | 35.08 ms | 0.661 ms | 0.552 ms | 100 files 102400 bytes http2 prod server
+        // | ReadFilesClientBenchmark | 36.36 ms | 0.526 ms | 0.771 ms | 100 files 102400 bytes http2 prod server
+        // | ReadFilesClientBenchmark | 36.44 ms | 0.714 ms | 0.904 ms | 100 files 102400 bytes http2 prod server
+        // | ReadFilesClientBenchmark | 36.01 ms | 0.645 ms | 0.662 ms |
+        // | ReadFilesClientBenchmark | 3.172 s | 0.1604 s | 0.4445 s | 100 files 102400 bytes http2 "https://remotewebviewserver.azurewebsites.net/";
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     
@@ -234,23 +288,6 @@ namespace ClientBenchmark
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
 
-            var handler = new SocketsHttpHandler
-            {
-                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-                KeepAlivePingDelay = TimeSpan.FromSeconds(90),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
-                MaxConnectionsPerServer = 1000,
-                EnableMultipleHttp2Connections = true
-            };
-
-            ServicePointManager.DefaultConnectionLimit = 1000;
-
-            httpClient = new HttpClient(handler);
-
-            //var handler = new HttpClientHandler();
-            //handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12; // Support TLS 1.2 for HTTP/2 fallback
-
-            //httpClient = new HttpClient(handler);
             var wrapper = new HttpClientWrapper(httpClient);
             try
             {
@@ -312,21 +349,22 @@ namespace ClientBenchmark
         {
             public Config()
             {
-                //AddJob(Job.Default
-                //    .WithIterationCount(10) // Adjust as needed
-                //    .WithWarmupCount(5) // Adjust as needed
-                //);
-                AddJob(Job.Default);
-                  
+                AddJob(Job.Default);     
                 AddDiagnoser(MemoryDiagnoser.Default);
             }
         }
 
 #if DEBUG
-        static void Main(string[] args) => BenchmarkSwitcher.FromAssembly(typeof(ClientBenchmarks).Assembly).Run(args, new DebugInProcessConfig());
+        public static  void Main(string[] args) { 
+        //public static async Task Main(string[] args) { 
+            BenchmarkSwitcher.FromAssembly(typeof(ClientBenchmarks).Assembly).Run(args, new DebugInProcessConfig());
+        }
 #else
+        // public static async Task Main(string[] args)
+       
         public static void Main(string[] args)
         {
+         
             var summary = BenchmarkRunner.Run<ClientBenchmarks>();
             Console.WriteLine(summary);
             Console.ReadLine();
