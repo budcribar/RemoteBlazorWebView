@@ -26,7 +26,8 @@ namespace PeakSWC.RemoteWebView
                        options.Listen(IPAddress.Loopback, 5001, listenOptions => 
                        { 
                            listenOptions.UseHttps(); 
-                           listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;                         
+                           //listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3; // http3 needs a real certificate
+                           listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                        });
                    });
                 

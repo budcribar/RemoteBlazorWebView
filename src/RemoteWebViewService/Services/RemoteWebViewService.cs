@@ -92,7 +92,7 @@ namespace PeakSWC.RemoteWebView
                                 while (!serviceState.Token.IsCancellationRequested)
                                 {
                                     var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token);
-                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path });
+                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance=fileEntry.Instance });
                                 }
                             }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                         }

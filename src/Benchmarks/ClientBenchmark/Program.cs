@@ -22,11 +22,12 @@ namespace ClientBenchmark
 {
     public class ClientBenchmarks
     {
-        private string URL = "https://127.0.0.1:5001";
+        //private string URL = "https://127.0.0.1:5001";
+        private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
         private bool _prodServer = false;
         private int fileSize = 102400;
-        private int maxFiles = 2;
+        private int maxFiles = 100;
         private bool useHttp3 = false;
         // what happens when you have multiple reads of the same file?
         private string _testGuid;
@@ -71,14 +72,14 @@ namespace ClientBenchmark
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
                 MaxConnectionsPerServer = 1000,
                 EnableMultipleHttp2Connections = true,
-                SslOptions = new SslClientAuthenticationOptions
-                {
-                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
-                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true
-                },
+                //SslOptions = new SslClientAuthenticationOptions
+                //{
+                //    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
+                //    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true
+                //},
             };
 
-            ServicePointManager.DefaultConnectionLimit = 1000;
+            //ServicePointManager.DefaultConnectionLimit = 1000;
 
             httpClient = new HttpClient(handler);
             if (useHttp3)
@@ -283,6 +284,7 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 3.172 s | 0.1604 s | 0.4445 s | 100 files 102400 bytes http2 "https://remotewebviewserver.azurewebsites.net/";
         // | ReadFilesClientBenchmark | 33.84 ms | 0.834 ms | 2.434 ms |  100 files 102400 bytes http2 prod server !!! net 9
         // | ReadFilesClientBenchmark | 33.76 ms | 0.670 ms | 1.934 ms | 100 files 102400 bytes http2 prod server !!! net 9
+        // | ReadFilesClientBenchmark | 405.9 ms | 22.92 ms | 64.64 ms | 100 files 102400 bytes http2 prod server !!! net 9 branch using net 8 server
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     

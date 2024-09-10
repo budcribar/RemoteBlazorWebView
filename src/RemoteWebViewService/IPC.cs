@@ -41,7 +41,7 @@ namespace PeakSWC.RemoteWebView
         public Task ClientTask { get; }
         public Task BrowserTask { get; }
 
-        private Task ProcessMessagesTask { get; set; }
+        private Task? ProcessMessagesTask { get; set; }
        
         private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
