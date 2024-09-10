@@ -3,40 +3,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
-using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class FileEntry
-    {
-        public SemaphoreSlim DuplicateFileSemaphore = new SemaphoreSlim(0, 1);
-        public SemaphoreSlim ResetEvent { get; set; } = new SemaphoreSlim(0,1);
-        public long Length { get; set; } = -1;
-        public Pipe Pipe { get; set; } = new Pipe();
-        public void Reset() { DuplicateFileSemaphore.Release(); Length = -1; Pipe = new Pipe(); }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                ResetEvent.Dispose();
-            }
-        }
-
-        ~FileEntry()
-        {
-            Dispose(false);
-        }
-    }
 
     public class ServiceState : IDisposable
     {
@@ -64,8 +36,8 @@ namespace PeakSWC.RemoteWebView
         public int TotalFilesRead { get; set; } = 0;
         public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
-        public ConcurrentDictionary<string, FileEntry> FileDictionary { get; set; } = new();
-        public Channel<string> FileCollection { get; set; } = Channel.CreateUnbounded<string>();
+        public ConcurrentDictionary<string, ConcurrentList<FileEntry>> FileDictionary { get; set; } = new();
+        public Channel<FileEntry> FileCollection { get; set; } = Channel.CreateUnbounded<FileEntry>();
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
 

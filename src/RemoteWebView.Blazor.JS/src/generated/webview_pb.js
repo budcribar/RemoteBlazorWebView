@@ -1886,7 +1886,8 @@ proto.webview.FileReadDataRequest.prototype.toObject = function(opt_includeInsta
 proto.webview.FileReadDataRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     path: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    data: msg.getData_asB64()
+    data: msg.getData_asB64(),
+    instance: jspb.Message.getFieldWithDefault(msg, 4, 0)
   };
 
   if (includeInstance) {
@@ -1931,6 +1932,10 @@ proto.webview.FileReadDataRequest.deserializeBinaryFromReader = function(msg, re
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setData(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setInstance(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1971,6 +1976,13 @@ proto.webview.FileReadDataRequest.serializeBinaryToWriter = function(message, wr
   if (f.length > 0) {
     writer.writeBytes(
       3,
+      f
+    );
+  }
+  f = message.getInstance();
+  if (f !== 0) {
+    writer.writeInt32(
+      4,
       f
     );
   }
@@ -2037,6 +2049,24 @@ proto.webview.FileReadDataRequest.prototype.setData = function(value) {
 };
 
 
+/**
+ * optional int32 instance = 4;
+ * @return {number}
+ */
+proto.webview.FileReadDataRequest.prototype.getInstance = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.webview.FileReadDataRequest} returns this
+ */
+proto.webview.FileReadDataRequest.prototype.setInstance = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
+};
+
+
 
 
 
@@ -2070,7 +2100,8 @@ proto.webview.FileReadLengthRequest.prototype.toObject = function(opt_includeIns
 proto.webview.FileReadLengthRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     path: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    length: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    length: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    instance: jspb.Message.getFieldWithDefault(msg, 4, 0)
   };
 
   if (includeInstance) {
@@ -2115,6 +2146,10 @@ proto.webview.FileReadLengthRequest.deserializeBinaryFromReader = function(msg, 
       var value = /** @type {number} */ (reader.readInt64());
       msg.setLength(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setInstance(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2158,6 +2193,13 @@ proto.webview.FileReadLengthRequest.serializeBinaryToWriter = function(message, 
       f
     );
   }
+  f = message.getInstance();
+  if (f !== 0) {
+    writer.writeInt32(
+      4,
+      f
+    );
+  }
 };
 
 
@@ -2194,6 +2236,24 @@ proto.webview.FileReadLengthRequest.prototype.getLength = function() {
  */
 proto.webview.FileReadLengthRequest.prototype.setLength = function(value) {
   return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional int32 instance = 4;
+ * @return {number}
+ */
+proto.webview.FileReadLengthRequest.prototype.getInstance = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.webview.FileReadLengthRequest} returns this
+ */
+proto.webview.FileReadLengthRequest.prototype.setInstance = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
 };
 
 
@@ -2540,7 +2600,8 @@ proto.webview.FileReadResponse.prototype.toObject = function(opt_includeInstance
 proto.webview.FileReadResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    path: jspb.Message.getFieldWithDefault(msg, 2, "")
+    path: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    instance: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -2585,6 +2646,10 @@ proto.webview.FileReadResponse.deserializeBinaryFromReader = function(msg, reade
       var value = /** @type {string} */ (reader.readString());
       msg.setPath(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readInt32());
+      msg.setInstance(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2628,6 +2693,13 @@ proto.webview.FileReadResponse.serializeBinaryToWriter = function(message, write
       f
     );
   }
+  f = message.getInstance();
+  if (f !== 0) {
+    writer.writeInt32(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -2664,6 +2736,24 @@ proto.webview.FileReadResponse.prototype.getPath = function() {
  */
 proto.webview.FileReadResponse.prototype.setPath = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional int32 instance = 3;
+ * @return {number}
+ */
+proto.webview.FileReadResponse.prototype.getInstance = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.webview.FileReadResponse} returns this
+ */
+proto.webview.FileReadResponse.prototype.setInstance = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
 };
 
 

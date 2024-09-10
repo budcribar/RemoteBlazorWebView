@@ -91,20 +91,20 @@ namespace PeakSWC.RemoteWebView
                             {
                                 while (!serviceState.Token.IsCancellationRequested)
                                 {
-                                    var path = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token);
-                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = path });
+                                    var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token);
+                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path });
                                 }
                             }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                         }
                         else if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Length)
                         {
-                            var fileEntry = serviceState.FileDictionary[message.Length.Path];
+                            var fileEntry = serviceState.FileDictionary[message.Length.Path][message.Length.Instance];
                             fileEntry.Length = message.Length.Length;
-                            //fileEntry.ResetEvent.Set();
+                            //fileEntry.Semaphore.Release();
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
-                            var fileEntry = serviceState.FileDictionary[message.Data.Path];
+                            var fileEntry = serviceState.FileDictionary[message.Data.Path][message.Data.Instance]; 
                             if (message.Data.Data.Length > 0)
                             {        
                                 // TODO is there a limit on the Pipe write?
@@ -115,7 +115,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 // Trigger the stream read                              
                                 fileEntry.Pipe.Writer.Complete();
-                                fileEntry.ResetEvent.Release();
+                                fileEntry.Semaphore.Release();
                             }
                         }
                     }

@@ -49,11 +49,13 @@ message FileReadInitRequest {
 message FileReadDataRequest {
     string path = 2;
     bytes data = 3;
+    int32 instance = 4;
 }
 
 message FileReadLengthRequest {
     string path = 2;
     int64 length = 3;
+    int32 instance = 4;
 }
 
 message FileReadRequest {
@@ -68,6 +70,7 @@ message FileReadRequest {
 message FileReadResponse {
     string id = 1;
     string path = 2;   
+    int32 instance = 3;
 }
 
 message StringRequest {

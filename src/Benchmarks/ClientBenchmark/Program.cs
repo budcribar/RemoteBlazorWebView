@@ -24,9 +24,9 @@ namespace ClientBenchmark
     {
         private string URL = "https://127.0.0.1:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private bool _prodServer = true;
+        private bool _prodServer = false;
         private int fileSize = 102400;
-        private int maxFiles = 100;
+        private int maxFiles = 2;
         private bool useHttp3 = false;
         // what happens when you have multiple reads of the same file?
         private string _testGuid;
@@ -297,7 +297,7 @@ namespace ClientBenchmark
                 {
                     if (message.Response == "created:")
                     {
-                        FileReader.AttachFileReader(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => Console.Write($"File reader threw {x.Message}"));
+                        FileReader.AttachFileReader(_client.FileReader(), cts, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { });//Console.Write($"File reader threw {x.Message}"));
                        
 
                         List<Task> tasks = new List<Task>();
