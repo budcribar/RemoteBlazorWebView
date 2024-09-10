@@ -25,10 +25,13 @@ namespace ClientBenchmark
         //private string URL = "https://127.0.0.1:5001";
         private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private bool _prodServer = false;
+        private bool _prodServer = true;
         private int fileSize = 102400;
-        private int maxFiles = 100;
+        private int maxFiles = 700;
         private bool useHttp3 = false;
+
+
+
         // what happens when you have multiple reads of the same file?
         private string _testGuid;
         private string _testFilePath;
@@ -285,6 +288,42 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 33.84 ms | 0.834 ms | 2.434 ms |  100 files 102400 bytes http2 prod server !!! net 9
         // | ReadFilesClientBenchmark | 33.76 ms | 0.670 ms | 1.934 ms | 100 files 102400 bytes http2 prod server !!! net 9
         // | ReadFilesClientBenchmark | 405.9 ms | 22.92 ms | 64.64 ms | 100 files 102400 bytes http2 prod server !!! net 9 branch using net 8 server
+        // | ReadFilesClientBenchmark | 36.48 ms | 1.895 ms | 5.588 ms | 35.01 ms | 100 files 102400 bytes http2 prod server !!! net 9
+        // | ReadFilesClientBenchmark | 34.21 ms | 1.063 ms | 3.066 ms | 100 files 102400 bytes http2 prod server !!! net 9
+        // | ReadFilesClientBenchmark | 32.08 ms | 0.653 ms | 1.777 ms | 31.55 ms |100 files 102400 bytes http2 prod server !!! net 9 Third run a charm got faster each time
+        // | ReadFilesClientBenchmark | 101.4 ms | 5.94 ms | 16.95 ms | 100 files 102400 bytes http2 release server
+        // | ReadFilesClientBenchmark | 35.60 ms | 1.269 ms | 3.662 ms | 100 files 102400 bytes http2 prod server !!! net 9 return after len read
+        // | ReadFilesClientBenchmark | 34.82 ms | 1.110 ms | 3.237 ms | 100 files 102400 bytes http2 prod server !!! net 9 return after len read 4th run
+
+        // | ReadFilesClientBenchmark | 33.30 ms | 1.024 ms | 2.920 ms | 32.38 ms |
+        // | ReadFilesClientBenchmark | 33.85 ms | 1.021 ms | 2.913 ms |
+        // | ReadFilesClientBenchmark | 32.46 ms | 0.648 ms | 1.476 ms |
+
+        // | ReadFilesClientBenchmark | 33.68 ms | 0.670 ms | 1.935 ms |
+        // | ReadFilesClientBenchmark | 33.94 ms | 0.675 ms | 1.525 ms | leave server running
+        // | ReadFilesClientBenchmark | 35.01 ms | 1.024 ms | 2.954 ms | 34.10 ms |
+        // | ReadFilesClientBenchmark | 34.06 ms | 0.730 ms | 2.140 ms |
+        // Fails on 1000; pass on 100,200,400, timeout on 800
+
+        //  dotnet8
+        // | ReadFilesClientBenchmark | 231.2 ms | 5.94 ms | 17.03 ms | 700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        //| ReadFilesClientBenchmark | 220.2 ms | 5.24 ms | 15.29 ms |700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        // | ReadFilesClientBenchmark | 246.3 ms | 8.01 ms | 23.25 ms | 700 files 102400 in parallel and parallel FileReader late semaphore release production server
+        // | ReadFilesClientBenchmark | 237.6 ms | 7.09 ms | 20.69 ms | 700 files 102400 in parallel and parallel FileReader late semaphore release production server
+        // | ReadFilesClientBenchmark | 224.4 ms | 5.39 ms | 15.02 ms | 700 files 102400 in parallel and parallel FileReader late semaphore release production server
+        // | ReadFilesClientBenchmark | 222.6 ms | 5.07 ms | 14.79 ms |700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        // | ReadFilesClientBenchmark | 223.1 ms | 4.95 ms | 14.45 ms |700 files 102400 in parallel and parallel FileReader early semaphore release production server
+
+        // dotnet 9
+        // | ReadFilesClientBenchmark | 218.3 ms | 4.36 ms | 11.94 ms | 700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        // | ReadFilesClientBenchmark | 201.4 ms | 3.76 ms | 10.36 ms | 700 files 102400 in parallel and parallel FileReader early semaphore release production server
+
+        // dotnet 9 rc1
+        // | ReadFilesClientBenchmark | 216.2 ms | 6.12 ms | 17.94 ms |700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        // | ReadFilesClientBenchmark | 228.0 ms | 5.40 ms | 15.57 ms |
+        // | ReadFilesClientBenchmark | 229.7 ms | 6.49 ms | 18.63 ms |
+
+
         [Benchmark]
         public void ReadFilesClientBenchmark()
         {     

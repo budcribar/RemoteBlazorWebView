@@ -100,7 +100,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             var fileEntry = serviceState.FileDictionary[message.Length.Path][message.Length.Instance];
                             fileEntry.Length = message.Length.Length;
-                            //fileEntry.Semaphore.Release();
+                            fileEntry.Semaphore.Release();
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
@@ -109,13 +109,12 @@ namespace PeakSWC.RemoteWebView
                             {        
                                 // TODO is there a limit on the Pipe write?
                                 fileEntry.Pipe.Writer.Write(message.Data.Data.Span);
-                                //_ = fileEntry.Pipe.Writer.FlushAsync();
+                               // _ = fileEntry.Pipe.Writer.FlushAsync();
                             }
                             else
                             {
                                 // Trigger the stream read                              
                                 fileEntry.Pipe.Writer.Complete();
-                                fileEntry.Semaphore.Release();
                             }
                         }
                     }

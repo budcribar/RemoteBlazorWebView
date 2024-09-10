@@ -21,7 +21,7 @@ namespace PeakSWC.RemoteWebView
                 if (!File.Exists("appsettings.json"))
                    webBuilder.ConfigureKestrel(options => 
                    { 
-                       options.Limits.Http2.MaxStreamsPerConnection = 1000;
+                       options.Limits.Http2.MaxStreamsPerConnection = 2000;
 
                        options.Listen(IPAddress.Loopback, 5001, listenOptions => 
                        { 
