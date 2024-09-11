@@ -81,7 +81,7 @@
 	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.*" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.*" NoWarn="NU1605" />-->
 	  
-    <PackageReference Include="Microsoft.Graph.Beta" Version="5.56.0-preview" />
+    <PackageReference Include="Microsoft.Graph.Beta" Version="5.79.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />

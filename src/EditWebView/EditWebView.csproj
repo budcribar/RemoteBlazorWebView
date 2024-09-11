@@ -11,7 +11,7 @@
 	<ItemGroup>
 	  <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
 	
-	  <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0-preview.7.24405.7" />
+	  <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0-rc.1.24431.7" />
 	</ItemGroup>
 
 </Project>
