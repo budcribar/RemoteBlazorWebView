@@ -26,7 +26,7 @@
     <LangVersion>9</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on maui 9.0.0-preview.7 </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 9.0.0-rc.1 </PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
 	<Platforms>x64</Platforms>
