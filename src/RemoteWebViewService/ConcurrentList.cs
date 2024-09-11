@@ -90,7 +90,23 @@ public class ConcurrentList<T> : IDisposable
         {
             if (disposing)
             {
-                _lock.Dispose();
+                _lock.EnterWriteLock();
+                try
+                {
+                    if (typeof(IDisposable).IsAssignableFrom(typeof(T)))
+                    {
+                        foreach (var item in _list)
+                        {
+                            (item as IDisposable)?.Dispose();
+                        }
+                    }
+                    _list.Clear();
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
+                    _lock.Dispose();
+                }
             }
             _disposed = true;
         }

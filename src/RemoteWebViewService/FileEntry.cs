@@ -1,9 +1,10 @@
-﻿using System.IO.Pipelines;
+﻿using System;
+using System.IO.Pipelines;
 using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class FileEntry
+    public class FileEntry : IDisposable
     {
         public string Path { get; set; } = string.Empty;
         public long Length { get; set; } = -1;
@@ -11,6 +12,25 @@ namespace PeakSWC.RemoteWebView
         public int Instance {  get; set; } = 0;
 
         public SemaphoreSlim Semaphore = new SemaphoreSlim(0, 1);
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Semaphore.Dispose();
+            }
+        }
+
+        ~FileEntry()
+        {
+            Dispose(false);
+        }
     }
    
 }
