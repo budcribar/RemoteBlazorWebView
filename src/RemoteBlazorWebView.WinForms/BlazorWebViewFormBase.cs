@@ -76,6 +76,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		/// This property must be set to a valid value for the Razor components to start.
 		/// </summary>
 		[Category("Behavior")]
+		[DefaultValue(null)]
 		[Description(@"Path to the host page within the application's static files. Example: wwwroot\index.html.")]
 		public virtual string? HostPage
 		{
@@ -91,6 +92,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 		/// Path for initial Blazor navigation when the Blazor component is finished loading.
 		/// </summary>
 		[Category("Behavior")]
+		[DefaultValue("/")]
 		[Description(@"Path for initial Blazor navigation when the Blazor component is finished loading.")]
 		public string StartPath { get; set; } = "/";
 

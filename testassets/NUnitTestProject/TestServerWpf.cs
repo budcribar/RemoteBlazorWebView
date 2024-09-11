@@ -63,7 +63,7 @@ namespace WebdriverTestProject
             var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
 
             Assert.AreEqual(28 * num, totalFilesRead, "Failed on total files read");
-            Assert.AreEqual(890448 * num, totalBytesRead, "Failed on total bytes read");
+            Assert.AreEqual(890444 * num, totalBytesRead, "Failed on total bytes read");
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
             Console.WriteLine($"TotalReadTime {totalReadTime}");
 

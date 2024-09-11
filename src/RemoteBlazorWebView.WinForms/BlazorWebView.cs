@@ -34,6 +34,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         [TypeConverter(typeof(UriTypeConverter))]
         [Category("Behavior")]
         [Description(@"Uri of the RemoteWebView GRPC service.")]
+        [DefaultValue(null)]
         public Uri? GrpcBaseUri
         {
             get => _grpcBaseUri;
@@ -69,6 +70,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         }
 
         private Guid id = Guid.Empty;
+
+        [Category("Behavior")]
+        [Description(@"Id of the connection to the server")]
+        [DefaultValue(null)]
         public Guid Id
         {
             get
@@ -204,7 +209,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 Invalidate();
             }
         }
-       
+
+        [Category("Behavior")]
+        [DefaultValue(null)]
+        [Description(@"Path to the host page within the application's static files. Example: wwwroot\index.html.")]
         public override string? HostPage
         {
             get => base.HostPage;

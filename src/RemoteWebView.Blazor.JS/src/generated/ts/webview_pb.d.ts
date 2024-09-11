@@ -196,6 +196,9 @@ export class FileReadDataRequest extends jspb.Message {
   getData_asB64(): string;
   setData(value: Uint8Array | string): void;
 
+  getInstance(): number;
+  setInstance(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): FileReadDataRequest.AsObject;
   static toObject(includeInstance: boolean, msg: FileReadDataRequest): FileReadDataRequest.AsObject;
@@ -210,6 +213,7 @@ export namespace FileReadDataRequest {
   export type AsObject = {
     path: string,
     data: Uint8Array | string,
+    instance: number,
   }
 }
 
@@ -219,6 +223,9 @@ export class FileReadLengthRequest extends jspb.Message {
 
   getLength(): number;
   setLength(value: number): void;
+
+  getInstance(): number;
+  setInstance(value: number): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): FileReadLengthRequest.AsObject;
@@ -234,6 +241,7 @@ export namespace FileReadLengthRequest {
   export type AsObject = {
     path: string,
     length: number,
+    instance: number,
   }
 }
 
@@ -290,6 +298,9 @@ export class FileReadResponse extends jspb.Message {
   getPath(): string;
   setPath(value: string): void;
 
+  getInstance(): number;
+  setInstance(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): FileReadResponse.AsObject;
   static toObject(includeInstance: boolean, msg: FileReadResponse): FileReadResponse.AsObject;
@@ -304,6 +315,7 @@ export namespace FileReadResponse {
   export type AsObject = {
     id: string,
     path: string,
+    instance: number,
   }
 }
 
