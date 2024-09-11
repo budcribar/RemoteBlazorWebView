@@ -51,3 +51,6 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/Benchmarks/StressClient/publish
 /src/Benchmarks/FileResolverBenchmarks/BenchmarkDotNet.Artifacts/results
 /src/Benchmarks/FileResolverBenchmarks/BenchmarkDotNet.Artifacts
+/testassets/NUnitTestProject/TestResults
+/src/RemoteWebView.Blazor.JS/src/generated/webview_pb.js
+/src/RemoteWebView.Blazor.JS/src/generated/webview_pb_service.js
