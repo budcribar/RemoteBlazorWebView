@@ -331,7 +331,7 @@ namespace WebdriverTestProject
             });
         }
 
-        [Ignore]
+       
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task TestServerUriPropertyLate()

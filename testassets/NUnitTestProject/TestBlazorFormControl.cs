@@ -412,8 +412,7 @@ namespace WebdriverTestProject
                     webView.WebView.CoreWebView2.Navigate($"{e.Url}mirror/{e.Id}");
                     var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
                     BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
-                    //Task.Delay(60000).Wait();
-                    //threadInitialized.Set();
+                    threadInitialized.Set();
                 };
                 webView.ReadyToConnect += (sender, e) =>
                 {
@@ -422,20 +421,20 @@ namespace WebdriverTestProject
 
                 };
 
-                // 800 1k files are marginal
-                // 80 10k fails
-                // 5, 100k fails
+                // 800 x 1k bytes passes
+                // 100 x 100k bytes passes
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 Console.WriteLine("Generating JS files");
-                Utilities.GenJavascript(50,100_000);
+                Utilities.GenJavascript(800, 1000);
+                //Utilities.GenJavascript(100,100_000);
                 Console.WriteLine($"Done Generating JS files in {sw.Elapsed}");
                 webView.HostPage = @"wwwroot\index.html";
 
             });
-            //Assert.IsTrue(threadInitialized.WaitOne(100_000));
-            Task.Delay(TimeSpan.FromSeconds(20)).Wait();
-
+            Assert.IsTrue(threadInitialized.WaitOne(30000));
+            // Javascript is still running need a sync mechanism
+            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
         }
 
 
