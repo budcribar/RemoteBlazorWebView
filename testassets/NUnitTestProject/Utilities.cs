@@ -15,8 +15,6 @@ namespace WebdriverTestProject
         #region Server
         public static Process StartCsharpServer()
         {
-            // C:\Users\budcr\source\repos\RemoteBlazorWebView\testassets\NUnitTestProject\bin\x64\Debug\net9-windows7.0 cd
-            // C:\Users\budcr\source\repos\RemoteBlazorWebView\testassets\NUnitTestProject\bin\x64\Debug\net9-windows7.0\
             Stopwatch sw = new();
             sw.Start();
 
@@ -164,7 +162,12 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWinFormsApp() => Count("RemoteBlazorWebViewTutorial.WinFormsApp");
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
-        private static string RelativeRoot => AppDomain.CurrentDomain.FriendlyName == "testhost" ? @"..\..\..\..\..\..\..\" : @"..\..\..\..\..\..\";
+        
+        // Visual Studio
+        private static string RelativeRoot => @"..\..\..\..\..\..\..\";
+        
+        // powershell
+        //private static string RelativeRoot => @"..\..\..\..\..\..\";
 
         #region WebView
         public static string BlazorWebViewDebugPath()
