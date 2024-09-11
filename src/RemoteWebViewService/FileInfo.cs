@@ -129,7 +129,7 @@ namespace PeakSwc.StaticFiles
                 {
                     // Edit the href in index.html
                     using StreamReader sr = new(stream);
-                    var contents = sr.ReadToEnd();
+                    var contents = await sr.ReadToEndAsync();
                     var initialLength = contents.Length;
                     contents = HrefRegEx().Replace(contents, $"<base href=\"/{id}/\"");
                     if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
