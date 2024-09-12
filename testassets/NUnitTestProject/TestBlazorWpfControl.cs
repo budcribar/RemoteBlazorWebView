@@ -180,7 +180,7 @@ namespace WebdriverTestProject
         }
     }
 
-    //[TestClass]
+    [TestClass]
     public class TestBlazorWpfControl
     {
       
