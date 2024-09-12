@@ -45,17 +45,17 @@ namespace PeakSWC.RemoteWebView
        
         private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
-            await serverStreamWriter.WriteAsync(message);
+            await serverStreamWriter.WriteAsync(message).ConfigureAwait(false);
             if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
             {
                 if (isMirror)
-                    await Task.Delay(1000);
+                    await Task.Delay(1000).ConfigureAwait(false);
             }
         }
 
         public async ValueTask SendMessage(string message)
         {
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message });
+            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }).ConfigureAwait(false);
         }
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
@@ -65,10 +65,11 @@ namespace PeakSWC.RemoteWebView
             {
                 try
                 {
-                    await foreach (var m in responseChannel.Reader.ReadAllAsync(token))
+                    await foreach (var m in responseChannel.Reader.ReadAllAsync(token).ConfigureAwait(false))
                     {
                         // Serialize the write
-                        await (ClientResponseStream?.WriteAsync(m) ?? Task.CompletedTask);
+                        if (ClientResponseStream != null)
+                            await ClientResponseStream.WriteAsync(m).ConfigureAwait(false);
                         logger.LogInformation($"Browser -> WebView {m.Response}");
                     }
                 }
@@ -83,7 +84,7 @@ namespace PeakSWC.RemoteWebView
             {
                 try
                 {
-                    await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token))
+                    await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token).ConfigureAwait(false))
                     {
                         lock (messageHistory)
                         {
@@ -115,7 +116,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet"))
                     {
-                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary);
+                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary).ConfigureAwait(false);
                         logger.LogInformation($"WebView -> Browser {request.Id} {request.Request}");
                     }
                        

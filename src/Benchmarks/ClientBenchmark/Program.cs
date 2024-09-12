@@ -323,6 +323,13 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 228.0 ms | 5.40 ms | 15.57 ms |
         // | ReadFilesClientBenchmark | 229.7 ms | 6.49 ms | 18.63 ms |
 
+        // added ConfigureAwait(false)
+        //| ReadFilesClientBenchmark | 223.3 ms | 6.18 ms | 17.92 ms || ReadFilesClientBenchmark | 223.3 ms | 6.18 ms | 17.92 ms | 700 files 102400 in parallel and parallel FileReader early semaphore release production server
+        //| ReadFilesClientBenchmark | 227.7 ms | 5.99 ms | 17.39 ms |
+        //| ReadFilesClientBenchmark | 221.2 ms | 6.12 ms | 17.85 ms |
+        // 1000 files failed
+
+
 
         [Benchmark]
         public void ReadFilesClientBenchmark()

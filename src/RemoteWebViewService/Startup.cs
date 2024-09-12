@@ -66,7 +66,7 @@ namespace PeakSWC.RemoteWebView
                 var (total, success, rejected) = _stats.GetStats();
                 //_logger.LogInformation("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
                 _logger.LogWarning("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);
             }
         }
     }
@@ -91,7 +91,7 @@ namespace PeakSWC.RemoteWebView
                 return false;
             }
 
-            var fileInfo = await fileProvider.GetFileInfo(filePath);
+            var fileInfo = await fileProvider.GetFileInfo(filePath).ConfigureAwait(false);
             return fileInfo.Exists && !fileInfo.IsDirectory;
         }
 
@@ -116,13 +116,13 @@ namespace PeakSWC.RemoteWebView
                .Build();
 
             string[] scopes = new string[] { "https://graph.microsoft.com/.default" };
-            AuthenticationResult result = await confidentialClientApplication.AcquireTokenForClient(scopes).ExecuteAsync();
+            AuthenticationResult result = await confidentialClientApplication.AcquireTokenForClient(scopes).ExecuteAsync().ConfigureAwait(false);
             var httpClient = new HttpClient();
             return new ProtectedApiCallHelper(httpClient,result.AccessToken);
         }
 #endif
 
-            public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
 #if !DEBUG
             services.AddLogging(lb =>
@@ -168,7 +168,7 @@ namespace PeakSWC.RemoteWebView
                 options.OnRejected = async (context, token) =>
                 {
                     context.HttpContext.Response.StatusCode = 429;
-                    await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", token);
+                    await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", token).ConfigureAwait(false);
 
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Startup>>();
                     logger.LogWarning("Rate limit exceeded for static file: {RequestPath}", context.HttpContext.Request.Path);
@@ -256,7 +256,7 @@ namespace PeakSWC.RemoteWebView
                     stats.IncrementTotalCount();
                 }
 
-                await next();
+                await next().ConfigureAwait(false);
 
                 if (isStaticFile && context.Response.StatusCode != 429)
                 {
@@ -327,7 +327,7 @@ namespace PeakSWC.RemoteWebView
                     return;
                 }
 
-                await stream.CopyToAsync(context.Response.Body);
+                await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
             };
         }
 
@@ -345,25 +345,25 @@ namespace PeakSWC.RemoteWebView
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
                         if (serviceState.IPC.ClientResponseStream != null)
-                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
                         // Update Status
                         foreach (var channel in serviceStateChannel.Values)
-                            await channel.Writer.WriteAsync($"Connect:{guid}");
+                            await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
 
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = await rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = await rfr.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
                         context.Response.ContentLength = fi.Length;
                         using Stream stream = fi.CreateReadStream();
                         context.Response.StatusCode = 200;
                         context.Response.ContentType = "text/html";
-                        await stream.CopyToAsync(context.Response.Body);
+                        await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
                     else
                     {
                         context.Response.StatusCode = 400;
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync("Mirroring is not enabled");
+                        await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                     }
                 }
                 else
@@ -385,7 +385,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         context.Response.StatusCode = 400;
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid));
+                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
                     }
                     else
                     {
@@ -394,10 +394,10 @@ namespace PeakSWC.RemoteWebView
                         serviceState.User = context.User.GetDisplayName() ?? "";
                        
                         if (serviceState.IPC.ClientResponseStream != null)
-                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" });
+                            await serviceState.IPC.ClientResponseStream.WriteAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
                         // Update Status
                         foreach (var channel in serviceStateChannel.Values)
-                            await channel.Writer.WriteAsync($"Connect:{guid}");
+                            await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
                        
                         context.Response.Redirect($"/{guid}");
                     }
@@ -406,7 +406,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     context.Response.StatusCode = 400;
                     context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, false));
+                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, false)).ConfigureAwait(false);
                 }
             };
         }
@@ -421,7 +421,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (ServiceDictionary.ContainsKey(guid))
                     {
-                        await context.Response.WriteAsync($"Wait completed");
+                        await context.Response.WriteAsync($"Wait completed").ConfigureAwait(false);
                         return;
                     }
 
@@ -430,7 +430,7 @@ namespace PeakSWC.RemoteWebView
 
                 context.Response.StatusCode = 400;
                 context.Response.ContentType = "text/html";
-                await context.Response.WriteAsync(RestartFailedPage.Fragment(guid));
+                await context.Response.WriteAsync(RestartFailedPage.Fragment(guid)).ConfigureAwait(false);
             };
         }
 
@@ -446,7 +446,7 @@ namespace PeakSWC.RemoteWebView
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse));
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse)).ConfigureAwait(false);
             };
         }
 
@@ -462,7 +462,7 @@ namespace PeakSWC.RemoteWebView
                 };
 
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.GrpcBaseUriResponse));
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.GrpcBaseUriResponse)).ConfigureAwait(false);
             };
         }
 
@@ -483,7 +483,7 @@ namespace PeakSWC.RemoteWebView
                 context.Response.ContentType = "text/html";
 
                 // Write the version string to the response
-                await context.Response.WriteAsync(html);
+                await context.Response.WriteAsync(html).ConfigureAwait(false);
             };
         }
 
@@ -500,16 +500,16 @@ namespace PeakSWC.RemoteWebView
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = await rfr.GetFileInfo($"/{guid}/{home}");
+                        var fi = await rfr.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
                         context.Response.ContentLength = fi.Length;
                         using Stream stream = fi.CreateReadStream();
                         context.Response.StatusCode = 200;
                         context.Response.ContentType = "text/html";
-                        await stream.CopyToAsync(context.Response.Body);
+                        await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
                     else
                     {
-                        await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" });
+                        await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
 
                         // Wait until client shuts down 
                         for (int i = 0; i < 3000; i++)
@@ -517,7 +517,7 @@ namespace PeakSWC.RemoteWebView
                             if (!ServiceDictionary.ContainsKey(guid))
                             {
                                 context.Response.ContentType = "text/html";
-                                await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? ""));
+                                await context.Response.WriteAsync(RestartPage.Html(guid, serviceState?.ProcessName ?? "", serviceState?.HostName ?? "")).ConfigureAwait(false);
                                 return;
                             }
 
@@ -527,7 +527,7 @@ namespace PeakSWC.RemoteWebView
                         context.Response.StatusCode = 400;
                         context.Response.ContentType = "text/html";
 
-                        await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName));
+                        await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName)).ConfigureAwait(false);
 
                         // Shutdown since client did not respond to restart request
                         context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
@@ -538,7 +538,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     context.Response.StatusCode = 400;                  
                     context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(RestartFailedPage.Html(guid,true));
+                    await context.Response.WriteAsync(RestartFailedPage.Html(guid,true)).ConfigureAwait(false);
                 }
             };
         }

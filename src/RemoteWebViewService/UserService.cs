@@ -50,13 +50,14 @@ namespace PeakSWC.RemoteWebView
         public async Task<IReadOnlyList<string>> GetUserGroups(string oid)
         {
             List<string> groups = new();
-            var groupText = await (await _graphApi).CallWebApiAndProcessResultAsync($"https://graph.microsoft.com/v1.0/groups");
+            var callHelper = await _graphApi.ConfigureAwait(false);
+            var groupText = await callHelper.CallWebApiAndProcessResultAsync($"https://graph.microsoft.com/v1.0/groups").ConfigureAwait(false);
             if (groupText == null) { return groups; }
             var groupDict = GetGroups(groupText);
 
             foreach (var groupId in groupDict.Keys)
             {
-                var members = await (await _graphApi).CallWebApiAndProcessResultAsync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members");
+                var members = await callHelper.CallWebApiAndProcessResultAsync($"https://graph.microsoft.com/v1.0/groups/" + groupId + $"/members").ConfigureAwait(false);
                 if (members != null)
                     groups.AddRange(GetMembersForGroup(groupId, oid, groupDict, members));
             }

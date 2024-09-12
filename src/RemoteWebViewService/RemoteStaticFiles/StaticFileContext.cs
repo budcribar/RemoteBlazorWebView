@@ -135,7 +135,7 @@ internal class StaticFileContext
 
     public async Task<bool> LookupFileInfo()
     {
-        FileInfo = await _fileProvider.GetFileInfo(SubPath);
+        FileInfo = await _fileProvider.GetFileInfo(SubPath).ConfigureAwait(false);
         if (FileInfo.Exists)
         {
             _length = FileInfo.Length;
@@ -329,7 +329,7 @@ internal class StaticFileContext
             case PreconditionState.ShouldProcess:
                 if (IsHeadMethod)
                 {
-                    await SendStatusAsync(StatusCodes.Status200OK);
+                    await SendStatusAsync(StatusCodes.Status200OK).ConfigureAwait(false);
                     return;
                 }
 
@@ -337,11 +337,11 @@ internal class StaticFileContext
                 {
                     if (IsRangeRequest)
                     {
-                        await SendRangeAsync();
+                        await SendRangeAsync().ConfigureAwait(false);
                         return;
                     }
 
-                    await SendAsync();
+                    await SendAsync().ConfigureAwait(false);
                     _logger.FileServed(SubPath, PhysicalPath);
                     return;
                 }
@@ -349,15 +349,15 @@ internal class StaticFileContext
                 {
                     context.Response.Clear();
                 }
-                await next(context);
+                await next(context).ConfigureAwait(false);
                 return;
             case PreconditionState.NotModified:
                 _logger.FileNotModified(SubPath);
-                await SendStatusAsync(StatusCodes.Status304NotModified);
+                await SendStatusAsync(StatusCodes.Status304NotModified).ConfigureAwait(false);
                 return;
             case PreconditionState.PreconditionFailed:
                 _logger.PreconditionFailed(SubPath);
-                await SendStatusAsync(StatusCodes.Status412PreconditionFailed);
+                await SendStatusAsync(StatusCodes.Status412PreconditionFailed).ConfigureAwait(false);
                 return;
             default:
                 var exception = new NotImplementedException(GetPreconditionState().ToString());
@@ -372,7 +372,7 @@ internal class StaticFileContext
         ApplyResponseHeaders(StatusCodes.Status200OK);
         try
         {
-            await _context.Response.SendFileAsync(FileInfo, 0, _length, _context.RequestAborted);
+            await _context.Response.SendFileAsync(FileInfo, 0, _length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {
@@ -405,7 +405,7 @@ internal class StaticFileContext
         {
             var logPath = !string.IsNullOrEmpty(FileInfo.PhysicalPath) ? FileInfo.PhysicalPath : SubPath;
             _logger.SendingFileRange(_response.Headers.ContentRange, logPath);
-            await _context.Response.SendFileAsync(FileInfo, start, length, _context.RequestAborted);
+            await _context.Response.SendFileAsync(FileInfo, start, length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {

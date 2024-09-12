@@ -19,9 +19,9 @@ namespace PeakSWC.RemoteWebView
             // Start a task to consume from the channel and write to the stream
             _ = Task.Factory.StartNew(async () =>
             {
-                await foreach (var request in channel.Reader.ReadAllAsync(cts.Token))
+                await foreach (var request in channel.Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
                 {
-                    await fileReader.RequestStream.WriteAsync(request);
+                    await fileReader.RequestStream.WriteAsync(request).ConfigureAwait(false);
                 }
             }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     // Initiate the file read request
-                    await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Init = new() });
+                    await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Init = new() }).ConfigureAwait(false);
 
                     // Local function to write empty data
                     async Task WriteEofDataAsync(string path, int instance)
@@ -39,7 +39,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             Id = id,
                             Data = new FileReadDataRequest { Path = path, Data = ByteString.Empty, Instance=instance  }
-                        });
+                        }).ConfigureAwait(false);
                     }
 
                     // Process each incoming message concurrently using Parallel.ForEach
@@ -53,11 +53,11 @@ namespace PeakSWC.RemoteWebView
                             {
                                 var fileInfo = fileProvider.GetFileInfo(path);
                                 var fileLength = fileInfo.Length;
-                                await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength,Instance = message.Instance } });
+                                await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength,Instance = message.Instance } }).ConfigureAwait(false);
 
                                 if (fileLength == 0)
                                 {
-                                    await WriteEofDataAsync(message.Path,message.Instance); 
+                                    await WriteEofDataAsync(message.Path,message.Instance).ConfigureAwait(false); 
                                     return;
                                 }
 
@@ -65,33 +65,33 @@ namespace PeakSWC.RemoteWebView
                                 using var stream = fileInfo.CreateReadStream();
                                 if (stream == null)
                                 {
-                                    await WriteEofDataAsync(message.Path,message.Instance); 
+                                    await WriteEofDataAsync(message.Path,message.Instance).ConfigureAwait(false); 
                                     return;
                                 }
 
                                 var buffer = new byte[32 * 1024];
                                 int bytesRead;
-                                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
+                                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
                                 {
                                     var bs = ByteString.CopyFrom(buffer, 0, bytesRead);
-                                    await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = bs, Instance=message.Instance } });
+                                    await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Data = new FileReadDataRequest { Path = message.Path, Data = bs, Instance=message.Instance } }).ConfigureAwait(false);
                                 }
 
                                 // Indicate end of file read
-                                await WriteEofDataAsync(message.Path, message.Instance); 
+                                await WriteEofDataAsync(message.Path, message.Instance).ConfigureAwait(false); 
                             }
                             catch (FileNotFoundException)
                             {
                                 logger?.LogWarning($"File not found {path}");
-                                await WriteEofDataAsync(message.Path, message.Instance); 
+                                await WriteEofDataAsync(message.Path, message.Instance).ConfigureAwait(false); 
                             }
                             catch (Exception ex)
                             {
                                 logger?.LogError(ex, "File reader threw exception");                             
-                                await WriteEofDataAsync(message.Path, message.Instance);
+                                await WriteEofDataAsync(message.Path, message.Instance).ConfigureAwait(false);
                                 onException?.Invoke(ex);
                             }
-                        });
+                        }).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

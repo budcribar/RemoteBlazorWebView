@@ -27,14 +27,14 @@ namespace PeakSWC.RemoteWebView
            
             try
             {
-                var groups = await userService.GetUserGroups(request.Oid);
+                var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
                 
-                await WriteResponse(responseStream, groups);
+                await WriteResponse(responseStream, groups).ConfigureAwait(false);
 
-                await foreach (var state in serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken))
+                await foreach (var state in serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
                     logger.LogInformation($"Client IPC: {state}");
-                    await WriteResponse(responseStream, groups);
+                    await WriteResponse(responseStream, groups).ConfigureAwait(false);
                 }
             }
             finally 
@@ -45,7 +45,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
         {
-            var groups = await userService.GetUserGroups(request.Oid);
+            var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
             var response = new UserResponse();
             response.Groups.AddRange(groups);
             return response;

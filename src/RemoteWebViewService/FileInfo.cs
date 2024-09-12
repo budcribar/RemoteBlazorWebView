@@ -49,7 +49,7 @@ namespace PeakSwc.StaticFiles
                 if (path.StartsWith('/'))
                     path = path[1..];
 
-                stream = await ProcessFile(serviceState, guid, path);
+                stream = await ProcessFile(serviceState, guid, path).ConfigureAwait(false);
 
                 if(stream == null) stream = new MemoryStream();
             }
@@ -98,7 +98,7 @@ namespace PeakSwc.StaticFiles
                     }
                 }
                
-                await serviceState.FileCollection.Writer.WriteAsync(fileEntry);
+                await serviceState.FileCollection.Writer.WriteAsync(fileEntry).ConfigureAwait(false);
 
                 bool timedOut = false;
                 try
@@ -129,7 +129,7 @@ namespace PeakSwc.StaticFiles
                 {
                     // Edit the href in index.html
                     using StreamReader sr = new(stream);
-                    var contents = await sr.ReadToEndAsync();
+                    var contents = await sr.ReadToEndAsync().ConfigureAwait(false);
                     var initialLength = contents.Length;
                     contents = HrefRegEx().Replace(contents, $"<base href=\"/{id}/\"");
                     if (contents.Length == initialLength) _logger.LogError("Unable to find base.href in the home page");
@@ -164,7 +164,7 @@ namespace PeakSwc.StaticFiles
             var fi = new FileInfo(rootDictionary,path,logger);
             var g = fi.guid;
 
-            await fi.getStreamTask;
+            await fi.getStreamTask.ConfigureAwait(false);
 
             return fi;
         }

@@ -164,10 +164,10 @@ namespace WebdriverTestProject
         #endregion
         
         // Visual Studio
-        private static string RelativeRoot => @"..\..\..\..\..\..\..\";
+        //private static string RelativeRoot => @"..\..\..\..\..\..\..\";
         
         // powershell
-        //private static string RelativeRoot => @"..\..\..\..\..\..\";
+        private static string RelativeRoot => @"..\..\..\..\..\..\";
 
         #region WebView
         public static string BlazorWebViewDebugPath()

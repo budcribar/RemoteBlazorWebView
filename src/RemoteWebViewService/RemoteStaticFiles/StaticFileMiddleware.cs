@@ -125,16 +125,16 @@ public class StaticFileMiddleware
     {    
         var fileContext = new StaticFileContext(context, _options, _logger, _fileProvider, contentType, subPath);
       
-        if (!await fileContext.LookupFileInfo())
+        if (!await fileContext.LookupFileInfo().ConfigureAwait(false))
         {
             _logger.FileNotFound(fileContext.SubPath);
         }
         else
         {
             // If we get here, we can try to serve the file
-            await fileContext.ServeStaticFile(context, _next);
+            await fileContext.ServeStaticFile(context, _next).ConfigureAwait(false);
         }
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 }
