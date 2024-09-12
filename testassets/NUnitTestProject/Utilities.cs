@@ -6,13 +6,50 @@ using System.Text;
 using System.Threading;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-
+using System.Management;
 
 namespace WebdriverTestProject
 {
     public class Utilities
     {
         #region Server
+        
+        static string GetParentProcessName()
+        {
+            try
+            {
+                Process currentProcess = Process.GetCurrentProcess();
+                int parentProcessId = GetParentProcessId(currentProcess.Id);
+
+                if (parentProcessId != 0)
+                {
+                    Process parentProcess = Process.GetProcessById(parentProcessId);
+                    return parentProcess.ProcessName;
+                }
+                else
+                {
+                    return "Unable to retrieve parent process.";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"An error occurred: {ex.Message}";
+            }
+        }
+
+        static int GetParentProcessId(int processId)
+        {
+            using (var query = new ManagementObjectSearcher(
+                $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {processId}"))
+            {
+                foreach (ManagementObject mo in query.Get())
+                {
+                    return Convert.ToInt32(mo["ParentProcessId"]);
+                }
+            }
+            return 0;
+        }
+
         public static Process StartCsharpServer()
         {
             Stopwatch sw = new();
@@ -163,11 +200,19 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
         
-        // Visual Studio
-        //private static string RelativeRoot => @"..\..\..\..\..\..\..\";
         
-        // powershell
-        private static string RelativeRoot => @"..\..\..\..\..\..\";
+        
+        private static string RelativeRoot
+        {
+            get
+            {
+                var ppn = GetParentProcessName();
+                if (ppn == "vstest.console")
+                    return @"..\..\..\..\..\..\..\"; // visual studio
+                else
+                    return @"..\..\..\..\..\..\"; // // powershell
+            }
+        }
 
         #region WebView
         public static string BlazorWebViewDebugPath()
