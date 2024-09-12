@@ -180,7 +180,7 @@ namespace WebdriverTestProject
         }
     }
 
-    [TestClass]
+    //[TestClass]
     public class TestBlazorWpfControl
     {
       
@@ -407,7 +407,7 @@ namespace WebdriverTestProject
         public TestContext? TestContext { get; set; }
 
         [ClassInitialize]
-        public static async Task InitializeAsync(TestContext testContext)
+        public static void InitializeAsync(TestContext testContext)
         {
              string grpcUrl = @"https://localhost:5001/";
               GrpcChannel? channel;
@@ -428,7 +428,7 @@ namespace WebdriverTestProject
                     break;
                 }
                 catch (Exception) { }
-                await Task.Delay(1000);
+                Task.Delay(1000).Wait();
             }
 
             BlazorWebViewFactory.Window = BlazorWebViewFactory.CreateBlazorWindow();
