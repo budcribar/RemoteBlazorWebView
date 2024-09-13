@@ -1,47 +1,66 @@
-# Set variables
+# Run this on the server machine as administrator
 $IP = "192.168.1.35"
-$Port = 5002
 $DnsName = "localhost"
-$CertName = "MySelfSignedCert"
+$CertName = "MySelfSignedCertWithExplicitIP"
 $CertPath = "Cert:\LocalMachine\My"
-$PfxPassword = ConvertTo-SecureString -String "YourStrongPassword" -Force -AsPlainText
-$PfxPath = "C:\Certificates\MySelfSignedCert.pfx"
-$CerPath = "C:\Certificates\MySelfSignedCert.cer"
+$PfxPassword = "YourStrongPassword"
+$SecurePassword = ConvertTo-SecureString -String $PfxPassword -Force -AsPlainText
+$PfxPath = "C:\Certificates\MySelfSignedCertWithExplicitIP.pfx"
+$CerPath = "C:\Certificates\MySelfSignedCertWithExplicitIP.cer"
 
 # Ensure the certificate directory exists
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $PfxPath) | Out-Null
 
-# Create self-signed certificate
-$Cert = New-SelfSignedCertificate `
-    -Subject "CN=$DnsName" `
-    -DnsName $DnsName, $IP `
-    -KeyAlgorithm RSA `
-    -KeyLength 2048 `
-    -NotAfter (Get-Date).AddYears(1) `
-    -CertStoreLocation $CertPath `
-    -FriendlyName $CertName `
-    -HashAlgorithm SHA256 `
-    -KeyUsage DigitalSignature, KeyEncipherment, DataEncipherment `
-    -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1")
+# Create a temporary file for OpenSSL configuration
+$OpenSSLConfigPath = "C:\Temp\openssl.cnf"
+@"
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_req
+prompt = no
+[req_distinguished_name]
+CN = $DnsName
+[v3_req]
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $DnsName
+IP.1 = $IP
+"@ | Out-File -FilePath $OpenSSLConfigPath -Encoding ascii
 
-# Export certificate to PFX file
-$CertThumbprint = $Cert.Thumbprint
-Export-PfxCertificate -Cert "$CertPath\$CertThumbprint" -FilePath $PfxPath -Password $PfxPassword
+# Generate certificate using OpenSSL
+$Env:OPENSSL_CONF = $OpenSSLConfigPath
+openssl req -x509 -newkey rsa:2048 -keyout temp.key -out temp.crt -days 365 -nodes -subj "/CN=$DnsName"
+openssl pkcs12 -export -out $PfxPath -inkey temp.key -in temp.crt -password pass:$PfxPassword
 
-# Display certificate details
-Write-Host "Self-signed certificate created for IP $IP and port $Port"
-Write-Host "Certificate Thumbprint: $CertThumbprint"
-Write-Host "PFX File Path: $PfxPath"
-Write-Host "Please keep the PFX password safe: YourStrongPassword"
+# Import the certificate to the certificate store
+try {
+    Import-PfxCertificate -FilePath $PfxPath -CertStoreLocation $CertPath -Password $SecurePassword -Exportable
+    Write-Host "Certificate imported successfully"
+} catch {
+    Write-Host "Error importing certificate: $_"
+    Write-Host "You may need to manually import the PFX file using the Certificates MMC snap-in"
+}
 
-# Export as CER file (for importing to trusted root on other machines)
-Export-Certificate -Cert "$CertPath\$CertThumbprint" -FilePath $CerPath
+# Export as CER file
+$Cert = Get-ChildItem -Path $CertPath | Where-Object { $_.Subject -eq "CN=$DnsName" } | Select-Object -First 1
+if ($Cert) {
+    Export-Certificate -Cert $Cert -FilePath $CerPath
+    Write-Host "Certificate exported to $CerPath"
+} else {
+    Write-Host "Certificate not found in store. You may need to manually export the CER file."
+}
 
-Write-Host "CER File Path: $CerPath"
+# Clean up temporary files
+Remove-Item temp.key, temp.crt, $OpenSSLConfigPath
 
-#Self-signed certificate created for IP 192.168.1.35 and port 5002
-#Certificate Thumbprint: 745B832B3ECC90306BB0E6B8922A2BAE7FEA3304
-#PFX File Path: C:\Certificates\MySelfSignedCert.pfx
-#Please keep the PFX password safe: YourStrongPassword
--a----         9/13/2024   4:19 AM            800 MySelfSignedCert.cer
-#CER File Path: C:\Certificates\MySelfSignedCert.cer
+Write-Host "Certificate created with explicit IP in SAN"
+Write-Host "PFX File: $PfxPath"
+Write-Host "CER File: $CerPath"
+Write-Host "Please ensure you have the PFX and CER files for further use"
+
+#Certificate exported to C:\Certificates\MySelfSignedCertWithExplicitIP.cer
+#Certificate created with explicit IP in SAN
+#PFX File: C:\Certificates\MySelfSignedCertWithExplicitIP.pfx
+#CER File: C:\Certificates\MySelfSignedCertWithExplicitIP.cer
