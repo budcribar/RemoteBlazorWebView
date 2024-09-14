@@ -27,14 +27,13 @@ namespace WebdriverTestProject
         private static AutoResetEvent threadInitialized = new AutoResetEvent(false);
         private static readonly AutoResetEvent threadShutdown = new AutoResetEvent(false);
         public static Window? Window { get; set; } = null;
-
+        private static Grid? gridContainer = null;
 
         public static async Task<BlazorWebView?> CreateBlazorComponent (RootComponent rootComponent)
         {
             BlazorWebView? control = null;
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddRemoteWpfBlazorWebView();
-            //serviceCollection.AddRemoteBlazorWebViewDeveloperTools();
+            serviceCollection.AddRemoteWpfBlazorWebView();         
             serviceCollection.AddLogging(loggingBuilder =>
             {
                 loggingBuilder.SetMinimumLevel(LogLevel.Debug).AddFile("Logs.txt", retainedFileCountLimit: 1);
@@ -49,52 +48,19 @@ namespace WebdriverTestProject
                 control.RootComponents.Add(rootComponent);
 
 
-
-                if (Window != null)
+                if (gridContainer != null)
                 {
+                    // Add the new control to the grid
+                    gridContainer.RowDefinitions.Add(new RowDefinition());
 
-                   
-                    var bwv = Window.Content as BlazorWebView;
+                    int rowIndex = gridContainer.RowDefinitions.Count - 1;
+                    Grid.SetRow(control, rowIndex);
 
-                    if (bwv != null)
-                    {
-
-                        var tcs = new TaskCompletionSource<bool>();
-
-                        EventHandler<CoreWebView2NavigationCompletedEventArgs>? handler = null;
-                        handler = (sender, args) =>
-                        {
-                          
-                            bwv.WebView.NavigationCompleted -= handler;
-                            tcs.SetResult(args.IsSuccess);
-                        };
-
-                      
-
-                        //bwv.WebView.CoreWebView2.NavigationCompleted += handler;
-                        //bwv.NavigateToString("about:blank");
-
-
-
-                        //await Task.Delay(1000); 
-
-                        // Await the TaskCompletionSource's task
-                        //bool navigationSucceeded = await tcs.Task;
-                        bool navigationSucceeded = true;
-                        if (navigationSucceeded)
-                        {
-                             await bwv.DisposeAsync();
-                        }
-                        await Task.Delay(2000);
-                    }
-
-                    Window.Content = control;
+                    gridContainer.Children.Add(control);
                 }
-                   
 
-                //Task.Delay(1000).Wait();
                 control.ApplyTemplate();
-                
+
                 threadInitialized.Set();
             });
             threadInitialized.WaitOne();
@@ -123,8 +89,10 @@ namespace WebdriverTestProject
                 {
                     Visibility = Visibility.Visible, // Keep the window hidden
                     Width = 800,
-                    Height = 800
+                    Height = 800,
+                    Content = new Grid()
                 };
+                
                 app.DispatcherUnhandledException += (sender, e) =>
                 {
 
@@ -180,10 +148,10 @@ namespace WebdriverTestProject
         }
     }
 
-    //[TestClass]
+    [TestClass]
     public class TestBlazorWpfControl
     {
-      
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task TestSetMirrorPropertyLate()
@@ -211,7 +179,7 @@ namespace WebdriverTestProject
             });
         }
 
-  
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task TestGrouplLate()
@@ -234,9 +202,9 @@ namespace WebdriverTestProject
                 webView.HostPage = @"wwwroot\index.html";
                 webView.Group = "group";
             });
-            }
+        }
 
-          
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task TestMarkupslLate()
@@ -264,20 +232,20 @@ namespace WebdriverTestProject
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public async Task TestSetPingIntervalLate ()
+        public async Task TestSetPingIntervalLate()
         {
             var rootComponent = new RootComponent()
             {
                 Selector = "#app",
                 ComponentType = typeof(Home),
                 Parameters = new Dictionary<string, object?>()
-               
+
             };
             var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
             Assert.IsNotNull(webView);
 
             await Application.Current.Dispatcher.InvokeAsync(() => {
-              
+
                 webView.Id = Guid.NewGuid();
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 webView.HostPage = @"wwwroot\index.html";
@@ -327,11 +295,11 @@ namespace WebdriverTestProject
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 webView.HostPage = @"wwwroot\index.html";
                 webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
-              
+
             });
         }
 
-       
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task TestServerUriPropertyLate()
@@ -347,7 +315,7 @@ namespace WebdriverTestProject
             Assert.IsNotNull(webView);
 
             await Application.Current.Dispatcher.InvokeAsync(() => {
-                webView.Id = Guid.NewGuid();             
+                webView.Id = Guid.NewGuid();
                 webView.HostPage = @"wwwroot\index.html";
                 webView.ServerUri = new System.Uri("https://localhost:5001");
             });
@@ -371,7 +339,7 @@ namespace WebdriverTestProject
                 webView.ServerUri = new System.Uri("https://localhost:5001");
                 //webView.GrpcBaseUri = new System.Uri("https://localhost:5002");
                 webView.EnableMirrors = true;
-                webView.HostPage = @"wwwroot\index.html";         
+                webView.HostPage = @"wwwroot\index.html";
 
             });
         }
@@ -409,8 +377,8 @@ namespace WebdriverTestProject
         [ClassInitialize]
         public static void InitializeAsync(TestContext testContext)
         {
-             string grpcUrl = @"https://localhost:5001/";
-              GrpcChannel? channel;
+            string grpcUrl = @"https://localhost:5001/";
+            GrpcChannel? channel;
             string? envVarValue = Environment.GetEnvironmentVariable(variable: "Rust");
             if (envVarValue != null)
                 grpcUrl = @"https://localhost:5002/";
@@ -432,7 +400,7 @@ namespace WebdriverTestProject
             }
 
             BlazorWebViewFactory.Window = BlazorWebViewFactory.CreateBlazorWindow();
-            
+
             string directoryPath = @"."; // Specify the directory path
             string searchPattern = "Logs-*.txt"; // Pattern to match the file names
 
@@ -454,7 +422,6 @@ namespace WebdriverTestProject
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-
 
         [ClassCleanup]
         public static void Cleanup()
