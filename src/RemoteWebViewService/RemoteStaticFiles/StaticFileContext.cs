@@ -31,9 +31,8 @@ internal class StaticFileContext
     public IFileProvider _fileProvider;
     private readonly string _method;
     private readonly string? _contentType;
-
-    public Microsoft.Extensions.FileProviders.IFileInfo FileInfo { get => fileInfo; set { fileInfo = value; }
-            }
+    private Microsoft.Extensions.FileProviders.IFileInfo _fileInfo = default!;
+          
     private EntityTagHeaderValue? _etag;
     private RequestHeaders? _requestHeaders;
     private ResponseHeaders? _responseHeaders;
@@ -50,7 +49,7 @@ internal class StaticFileContext
 
     private RequestType _requestType;
 
-    private Microsoft.Extensions.FileProviders.IFileInfo fileInfo = default!;
+   
 
     public StaticFileContext(HttpContext context, StaticFileOptions options, ILogger logger, IFileProvider fileProvider, string? contentType, PathString subPath)
     {
@@ -67,7 +66,7 @@ internal class StaticFileContext
         _fileProvider = fileProvider;
         _method = _request.Method;
         _contentType = contentType;
-        FileInfo = default!;
+        _fileInfo = default!;
         _etag = null;
         _requestHeaders = null;
         _responseHeaders = null;
@@ -131,23 +130,23 @@ internal class StaticFileContext
         }
     }
 
-    public string PhysicalPath => FileInfo.PhysicalPath ?? string.Empty;
+    public string PhysicalPath => _fileInfo.PhysicalPath ?? string.Empty;
 
     public async Task<bool> LookupFileInfo()
     {
-        FileInfo = await _fileProvider.GetFileInfo(SubPath).ConfigureAwait(false);
-        if (FileInfo.Exists)
+        _fileInfo = await _fileProvider.GetFileInfo(SubPath).ConfigureAwait(false);
+        if (_fileInfo.Exists)
         {
-            _length = FileInfo.Length;
+            _length = _fileInfo.Length;
 
-            DateTimeOffset last = FileInfo.LastModified;
+            DateTimeOffset last = _fileInfo.LastModified;
             // Truncate to the second.
             _lastModified = new DateTimeOffset(last.Year, last.Month, last.Day, last.Hour, last.Minute, last.Second, last.Offset).ToUniversalTime();
 
             long etagHash = _lastModified.ToFileTime() ^ _length;
             _etag = new EntityTagHeaderValue('\"' + Convert.ToString(etagHash, 16) + '\"');
         }
-        return FileInfo.Exists;
+        return _fileInfo.Exists;
     }
 
     public void ComprehendRequestHeaders()
@@ -292,7 +291,7 @@ internal class StaticFileContext
 
         if (_options.OnPrepareResponse != StaticFileOptions._defaultOnPrepareResponse)
         {
-            _options.OnPrepareResponse(new StaticFileResponseContext(_context, FileInfo));
+            _options.OnPrepareResponse(new StaticFileResponseContext(_context, _fileInfo));
         }
     }
 
@@ -372,7 +371,7 @@ internal class StaticFileContext
         ApplyResponseHeaders(StatusCodes.Status200OK);
         try
         {
-            await _context.Response.SendFileAsync(FileInfo, 0, _length, _context.RequestAborted).ConfigureAwait(false);
+            await _context.Response.SendFileAsync(_fileInfo, 0, _length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {
@@ -403,9 +402,9 @@ internal class StaticFileContext
 
         try
         {
-            var logPath = !string.IsNullOrEmpty(FileInfo.PhysicalPath) ? FileInfo.PhysicalPath : SubPath;
+            var logPath = !string.IsNullOrEmpty(_fileInfo.PhysicalPath) ? _fileInfo.PhysicalPath : SubPath;
             _logger.SendingFileRange(_response.Headers.ContentRange, logPath);
-            await _context.Response.SendFileAsync(FileInfo, start, length, _context.RequestAborted).ConfigureAwait(false);
+            await _context.Response.SendFileAsync(_fileInfo, start, length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {
