@@ -22,10 +22,11 @@ namespace ClientBenchmark
 {
     public class ClientBenchmarks
     {
+        private string URL = "https://192.168.1.35:5002";
         //private string URL = "https://127.0.0.1:5001";
-        private string URL = "https://localhost:5001";
+        //private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private bool _prodServer = true;
+        private bool _prodServer = false;
         private int fileSize = 102400;
         private int maxFiles = 700;
         private bool useHttp3 = false;
@@ -75,11 +76,11 @@ namespace ClientBenchmark
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(60),
                 MaxConnectionsPerServer = 1000,
                 EnableMultipleHttp2Connections = true,
-                //SslOptions = new SslClientAuthenticationOptions
-                //{
-                //    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
-                //    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true
-                //},
+                SslOptions = new SslClientAuthenticationOptions
+                {
+                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12,
+                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true
+                },
             };
 
             //ServicePointManager.DefaultConnectionLimit = 1000;
@@ -330,6 +331,11 @@ namespace ClientBenchmark
         // 1000 files failed
         //| ReadFilesClientBenchmark | 223.5 ms | 5.99 ms | 17.28 ms |
         // 1000 files failed
+
+        // <ServerGarbageCollection>true</ServerGarbageCollection>
+        //| ReadFilesClientBenchmark | 223.5 ms | 6.10 ms | 17.61 ms |
+        //| ReadFilesClientBenchmark | 224.1 ms | 5.13 ms | 14.97 ms |
+        //| ReadFilesClientBenchmark | 224.5 ms | 5.72 ms | 16.33 ms |
 
         [Benchmark]
         public void ReadFilesClientBenchmark()
