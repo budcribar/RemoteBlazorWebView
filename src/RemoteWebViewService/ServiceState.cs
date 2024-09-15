@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteWebView
     public class ServiceState : IDisposable
     {
         public IRequestCookieCollection? Cookies { get; set; }
-        private CancellationTokenSource CancellationTokenSource { get; }
+        private CancellationTokenSource? CancellationTokenSource { get; set; }
         public ILogger<RemoteWebViewService> Logger;
         public CancellationToken Token { get; }
         public string HtmlHostPath { get; init; } = string.Empty;
@@ -44,7 +44,7 @@ namespace PeakSWC.RemoteWebView
         public DateTime StartTime { get; } = DateTime.Now;
         public void Cancel()
         {
-            CancellationTokenSource.Cancel();
+            CancellationTokenSource?.Cancel();
         }
 
         public void Dispose()
@@ -57,7 +57,8 @@ namespace PeakSWC.RemoteWebView
         {
             if (disposing)
             {
-                CancellationTokenSource.Dispose();
+                CancellationTokenSource?.Dispose();
+                CancellationTokenSource = null;
                 FileReaderTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
                 PingTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
                 IPC.Dispose();
