@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
 	<!--<DefineConstants>RATELIMIT</DefineConstants>-->
+	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
