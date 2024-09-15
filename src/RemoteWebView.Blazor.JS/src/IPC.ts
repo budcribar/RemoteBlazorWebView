@@ -58,7 +58,9 @@ export function receiveMessage(message: string) {
 
         'Refresh': navigationManagerFunctions.refresh,
 
-        'SetHasLocationChangingListeners': navigationManagerFunctions.setHasLocationChangingListeners,
+        'SetHasLocationChangingListeners': (hasListeners: boolean) => {
+            navigationManagerFunctions.setHasLocationChangingListeners(WebRendererId.WebView, hasListeners);
+        },
 
         'EndLocationChanging': navigationManagerFunctions.endLocationChanging,
     };

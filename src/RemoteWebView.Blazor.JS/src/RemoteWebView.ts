@@ -1,5 +1,5 @@
 import { receiveMessage } from './IPC';
-import { GrpcWebClientBase, StatusCode } from "grpc-web";
+import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest } from "./generated/webview_pb";
 import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
