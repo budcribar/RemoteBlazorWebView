@@ -11,10 +11,13 @@ $CerPath = "C:\Certificates\DevCertificate_$IP.cer"
 # Ensure the certificate directory exists
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $PfxPath) | Out-Null
 
-# Generate certificate
+# Create the SAN entries
+$san = @("IPAddress=$IP", "DNS=$DnsName")
+$sanText = [string]::Join("&", $san)
+
+# Generate certificate with IP address in SAN as IPAddress and localhost as DNS
 $cert = New-SelfSignedCertificate `
-  -Subject "CN=$DnsName" `
-  -DnsName $DnsName, $IP `
+  -Subject "CN=$IP" `
   -CertStoreLocation $CertPath `
   -FriendlyName $CertName `
   -NotAfter (Get-Date).AddYears(10) `
@@ -23,7 +26,8 @@ $cert = New-SelfSignedCertificate `
   -KeyAlgorithm RSA `
   -KeyLength 2048 `
   -HashAlgorithm SHA256 `
-  -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider"
+  -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+  -TextExtension @("2.5.29.17={text}$sanText")
 
 # Export PFX
 Export-PfxCertificate -Cert $cert -FilePath $PfxPath -Password $SecurePassword
@@ -31,7 +35,7 @@ Export-PfxCertificate -Cert $cert -FilePath $PfxPath -Password $SecurePassword
 # Export CER
 Export-Certificate -Cert $cert -FilePath $CerPath -Type CERT
 
-Write-Host "Certificate created with IP ($IP) and localhost in SAN"
+Write-Host "Certificate created with IP ($IP) as primary subject and localhost in SAN"
 Write-Host "PFX File: $PfxPath"
 Write-Host "CER File: $CerPath"
 Write-Host "Please ensure you have the PFX and CER files for further use"
@@ -48,6 +52,5 @@ if ($sanExtension) {
 } else {
     Write-Host "No Subject Alternative Name extension found."
 }
-
 #PFX File: C:\Certificates\DevCertificate_192.168.1.35.pfx
 #CER File: C:\Certificates\DevCertificate_192.168.1.35.cer
