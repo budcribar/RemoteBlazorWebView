@@ -56,3 +56,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/src/generated/ts/webview_pb.d.ts
 /src/RemoteWebView.Blazor.JS/src/generated/WebviewServiceClientPb.ts
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb.js
+/src/RemoteWebView.Blazor.JS/Web.JS/src
+/src/RemoteWebView.Blazor.JS/Web.JS/test
