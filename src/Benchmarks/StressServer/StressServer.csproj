@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9-windows7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PublishAot>false</PublishAot>
+		<PublishSingleFile>true</PublishSingleFile>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>true</SelfContained>
+		<!--<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>-->
+		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
+		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<Platforms>x64</Platforms>
+		<PlatformTargets>x64</PlatformTargets>
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe" Link="RemoteBlazorWebViewTutorial.WpfApp.exe" />
+	</ItemGroup>
+
+	<!--<ItemGroup>
+	  <None Include="bin\x64\Debug\net9-windows7.0\win-x64\selenium-manager\windows\selenium-manager.exe" Link="selenium-manager\windows\selenium-manager.exe">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>-->
+
+	<ItemGroup>
+		<PackageReference Include="Selenium.WebDriver" Version="4.24.0" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0-rc.1.24431.7" />
+		<PackageReference Include="Google.Protobuf" Version="3.28.0" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.66.0-pre1" />
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.65.0" />
+		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
+		<Protobuf Include="..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
+	</ItemGroup>
+
+</Project>

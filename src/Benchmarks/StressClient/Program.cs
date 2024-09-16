@@ -11,7 +11,7 @@ namespace StressClient
     internal class Program
     {
         private static EventLog? eventLog;
-
+      
         static async Task Main(string[] args)
         {
             SetupEventLog();

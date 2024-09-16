@@ -8,7 +8,9 @@
 	  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
-
+    <Platforms>x64</Platforms>
+	  <NoWarn>$(NoWarn);CA1416</NoWarn>
+	  
   </PropertyGroup>
 
 	<ItemGroup>
