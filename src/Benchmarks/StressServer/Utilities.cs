@@ -8,7 +8,10 @@ using System.Threading.Tasks;
 using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
-namespace ClientBenchmark
+using System.Reflection;
+
+
+namespace StressServer
 {
     
 
@@ -128,6 +131,95 @@ namespace ClientBenchmark
             }
         }
 
+
+
+
+        /// <summary>
+        /// Extracts all embedded resources from the 'resources' directory and copies them to the execution directory.
+        /// </summary>
+        public static void ExtractResourcesToExecutionDirectory()
+        {
+            try
+            {
+                // Get the executing assembly
+                Assembly assembly = Assembly.GetExecutingAssembly();
+
+                // Get the base directory where the executable is running
+                string executionDirectory = AppContext.BaseDirectory;
+
+                // Get all embedded resource names
+                string[] resourceNames = assembly.GetManifestResourceNames();
+
+                // Define the prefix to identify resources in the 'resources' directory
+                // Replace 'YourDefaultNamespace' with your project's default namespace
+                string resourcePrefix = "StressServer.resources.";
+
+                foreach (string resourceName in resourceNames)
+                {
+                    // Check if the resource is within the 'resources' directory
+                    if (resourceName.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Determine the relative path by removing the prefix
+                        string relativePath = resourceName.Substring(resourcePrefix.Length);
+
+                        // Handle file names with multiple dots
+                        // For example, 'subfolder.config.json' should map to 'subfolder\config.json'
+                        // Split the relative path into segments based on dots
+                        string[] segments = relativePath.Split('.');
+                        if (segments.Length < 2)
+                        {
+                            // Not enough segments to form a valid path, skip this resource
+                            Console.WriteLine($"Invalid resource format: {resourceName}");
+                            continue;
+                        }
+
+                        // Reconstruct the file path
+                        // Assume the last segment is the file extension
+                        string fileExtension = segments[^1];
+                        string fileName = segments[^2] + "." + segments[^1];
+                        string[] directorySegments = new string[segments.Length - 2];
+                        Array.Copy(segments, 0, directorySegments, 0, segments.Length - 2);
+                        string directoryPath = Path.Combine(directorySegments);
+
+                        // Combine to form the full relative path
+                        string combinedRelativePath = Path.Combine(directoryPath, fileName);
+
+                        // Determine the destination path in the execution directory
+                        string destinationPath = Path.Combine(executionDirectory, combinedRelativePath).Replace("_", "-");
+
+                        // Ensure the destination directory exists
+                        string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                        if (!Directory.Exists(destinationDirectory))
+                        {
+                            Directory.CreateDirectory(destinationDirectory);
+                            Console.WriteLine($"Created directory: {destinationDirectory}");
+                        }
+
+                        // Extract and write the resource to the destination path
+                        using (Stream resourceStream = assembly.GetManifestResourceStream(resourceName))
+                        {
+                            if (resourceStream == null)
+                            {
+                                Console.WriteLine($"Failed to load resource: {resourceName}");
+                                continue;
+                            }
+
+                            using (FileStream fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+                            {
+                                resourceStream.CopyTo(fileStream);
+                                Console.WriteLine($"Extracted resource: {resourceName} to {destinationPath}");
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine("All embedded resources have been extracted successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while extracting resources: {ex.Message}");
+            }
+        }
         public static void TryVariousPorts()
         {
             AppContext.SetSwitch("System.Net.SocketsHttpHandler.Http3Support", true);

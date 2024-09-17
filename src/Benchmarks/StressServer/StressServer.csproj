@@ -24,7 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Include="..\..\..\..\..\..\..\..\Certificates\DevCertificate_192.168.1.35.cer" Link="DevCertificate_192.168.1.35.cer">
+	  <None Include="..\..\..\..\..\..\..\..\Certificates\DevCertificate_192.168.1.35.cer" Link="DevCertificate.cer">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
@@ -43,6 +43,17 @@
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.65.0" />
 		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
 		<Protobuf Include="..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="publish\**\*" Exclude="publish\StressServer.exe; publish\Microsoft.Web.WebView2.Core.xml; publish\PeakSWC.RemoteWebView.pdb">
+			<Link>resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</EmbeddedResource>
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <Folder Include="Resources\" />
 	</ItemGroup>
 
 </Project>

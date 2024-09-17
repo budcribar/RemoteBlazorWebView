@@ -56,7 +56,7 @@ namespace StressServer
 
             Process process = new Process { StartInfo = startInfo };         
             process.Start();
-            process.PriorityClass = ProcessPriorityClass.High;
+            process.PriorityClass = ProcessPriorityClass.RealTime;
 
             // wait until it's main window is showing
             while (process.MainWindowHandle == IntPtr.Zero)

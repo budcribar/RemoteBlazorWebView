@@ -1,5 +1,4 @@
-﻿using ClientBenchmark;
-using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -57,12 +56,16 @@ namespace StressServer
         public static async Task Main(string[] args)
         {
             
-            Console.WriteLine("Start");
+            Console.WriteLine("Extracting Resources...");
+
+            Utilities.ExtractResourcesToExecutionDirectory();
+
+            Console.WriteLine("Extracting Resources Completed");
 
             try
             {
                 Process currentProcess = Process.GetCurrentProcess();
-                currentProcess.PriorityClass = ProcessPriorityClass.High;
+                currentProcess.PriorityClass = ProcessPriorityClass.RealTime;
                 Console.WriteLine("Process priority set to High.");
             }
             catch (Exception ex)
@@ -88,8 +91,9 @@ namespace StressServer
             });
 
             Logging.SetupEventLog();
+            Logging.ClearEventLog();
 
-            CertificateInstaller.AddCertificateToLocalMachine("DevCertificate_192.168.1.35.cer");
+            CertificateInstaller.AddCertificateToLocalMachine("DevCertificate.cer");
 
             if (await PollHttpRequest(httpClient, url))
             {
@@ -99,13 +103,14 @@ namespace StressServer
             {
                 Logging.LogEvent("Server not running", EventLogEntryType.Error);
                 Console.WriteLine("Server not running");
+                Console.ReadKey();
                 return;
             }
           
             Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WpfApp").ToList().ForEach(x => x.Kill());
 
             int numClients = 10;
-            int numLoops = 10;
+            int numLoops = 100;
 
             if (args.Count() == 2)
             {
@@ -129,7 +134,7 @@ namespace StressServer
             }
            
             //ExecutableManager.CleanUp(path);
-
+            Console.ReadKey();
         }
 
         private static int ExecuteLoop(int totalPasses, string url, GrpcChannel channel, int numClients, string path)
@@ -153,6 +158,8 @@ namespace StressServer
             {
                 // Startup failed
                 Logging.LogEvent("Startup Failed", EventLogEntryType.Error);
+                Console.WriteLine("Startup Failed");
+                Console.ReadKey();
                 return -1;
             }
 

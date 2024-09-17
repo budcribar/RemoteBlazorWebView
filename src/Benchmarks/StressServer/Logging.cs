@@ -30,5 +30,18 @@ namespace StressServer
         {
             eventLog?.WriteEntry(message, entryType);
         }
+
+        public static void ClearEventLog()
+        {
+            string logName = "Application";
+
+            using (EventLog eventLog = new EventLog(logName))
+            {
+                // Clear the log
+                eventLog.Clear();
+                Console.WriteLine($"The '{logName}' event log has been cleared successfully.");
+            }
+        }
+       
     }
 }
