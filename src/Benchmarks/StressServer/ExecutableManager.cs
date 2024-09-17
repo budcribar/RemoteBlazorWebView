@@ -38,7 +38,7 @@ namespace StressServer
         /// </summary>
         /// <param name="exePath">The full path to the executable.</param>
         /// <param name="arguments">Optional arguments to pass to the executable.</param>
-        public static Process RunExecutable(string exePath, string arguments = "")
+        public static Process RunExecutable(string exePath, params string[] arguments)
         {
             if (!File.Exists(exePath))
                 throw new FileNotFoundException("Executable not found.", exePath);
@@ -46,15 +46,17 @@ namespace StressServer
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = arguments,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = false,
                 RedirectStandardError = false
             };
+            foreach (string argument in arguments)
+                startInfo.ArgumentList.Add(argument);
 
             Process process = new Process { StartInfo = startInfo };         
             process.Start();
+            process.PriorityClass = ProcessPriorityClass.High;
 
             // wait until it's main window is showing
             while (process.MainWindowHandle == IntPtr.Zero)

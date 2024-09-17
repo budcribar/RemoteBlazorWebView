@@ -23,6 +23,12 @@
 		<EmbeddedResource Include="..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe" Link="RemoteBlazorWebViewTutorial.WpfApp.exe" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Include="..\..\..\..\..\..\..\..\Certificates\DevCertificate_192.168.1.35.cer" Link="DevCertificate_192.168.1.35.cer">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 	<!--<ItemGroup>
 	  <None Include="bin\x64\Debug\net9-windows7.0\win-x64\selenium-manager\windows\selenium-manager.exe" Link="selenium-manager\windows\selenium-manager.exe">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>

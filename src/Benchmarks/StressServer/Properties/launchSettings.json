@@ -2,7 +2,7 @@
   "profiles": {
     "StressServer": {
       "commandName": "Project",
-      "commandLineArgs": "2 2"
+      "commandLineArgs": "10 2"
     }
   }
 }

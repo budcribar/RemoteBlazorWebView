@@ -1,7 +1,9 @@
-﻿using Google.Protobuf.WellKnownTypes;
+﻿using ClientBenchmark;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.DevTools.V126.DOM;
 using OpenQA.Selenium.Edge;
 using PeakSWC.RemoteWebView;
 using System;
@@ -16,7 +18,7 @@ namespace StressServer
     internal class Program
     {
         protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 200;
-        protected static List<string> WaitForClientToConnect(int num, GrpcChannel channel)
+        protected static List<string> WaitForClientToConnect(int num, List<string> gids, GrpcChannel channel)
         {
             List<string> ids = new List<string>();
             var client = new WebViewIPC.WebViewIPCClient(channel);
@@ -33,8 +35,8 @@ namespace StressServer
                     return new();
                 }
               
-            } while (ids.Count != num);
-            return ids;
+            } while (!gids.All(x => ids.Contains(x)));
+            return gids;
         }
         static async Task<bool> PollHttpRequest(HttpClient httpClient, string url)
         {
@@ -50,11 +52,23 @@ namespace StressServer
             }
         }
         protected static List<ChromeDriver> _driver = new();
+        
+        static List<string> gids = new();
         public static async Task Main(string[] args)
         {
+            
             Console.WriteLine("Start");
 
-
+            try
+            {
+                Process currentProcess = Process.GetCurrentProcess();
+                currentProcess.PriorityClass = ProcessPriorityClass.High;
+                Console.WriteLine("Process priority set to High.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to set priority: {ex.Message}");
+            }
 
             int totalPasses = 0;
             string url = "https://192.168.1.35:5002";
@@ -74,6 +88,8 @@ namespace StressServer
             });
 
             Logging.SetupEventLog();
+
+            CertificateInstaller.AddCertificateToLocalMachine("DevCertificate_192.168.1.35.cer");
 
             if (await PollHttpRequest(httpClient, url))
             {
@@ -97,8 +113,10 @@ namespace StressServer
                 int.TryParse(args[1], out numLoops);
             }
 
+           
+
             Console.WriteLine($"numClients = {numClients} numLoops = {numLoops}");
-         
+
             var path = ExecutableManager.ExtractExecutable();
 
             if (Path.Exists(path))
@@ -116,28 +134,35 @@ namespace StressServer
 
         private static int ExecuteLoop(int totalPasses, string url, GrpcChannel channel, int numClients, string path)
         {
+            gids.Clear();
+
             List<Process> clients = new List<Process>();
 
             for (int i = 0; i < numClients; i++)
             {
-                clients.Add(ExecutableManager.RunExecutable(path, $"-u={url}"));
+                var id = Guid.NewGuid().ToString();
+                gids.Add(id);
 
-                _driver.Add(new(new ChromeOptions { BrowserVersion = "128.0" }));
+                clients.Add(ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}" ));
+
+                _driver.Add(new(new ChromeOptions { BrowserVersion = "128.0", AcceptInsecureCertificates=true, PageLoadTimeout=TimeSpan.FromMinutes(2) }));
             }
 
-            var ids = WaitForClientToConnect(numClients, channel);
+            var ids = WaitForClientToConnect(numClients, gids, channel);
             if (clients.Count != ids.Count)
             {
                 // Startup failed
+                Logging.LogEvent("Startup Failed", EventLogEntryType.Error);
+                return -1;
             }
 
             // open browser to home page
-            for (int i = 0; i < numClients; i++) _driver[i].Url = url + $"/app/{ids[i]}";
+            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i => { _driver[i].Url = url + $"/app/{ids[i]}"; });
 
             Thread.Sleep(3000);
 
 
-            for (int i = 0; i < numClients; i++)
+            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
             {
                 for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                 {
@@ -148,37 +173,58 @@ namespace StressServer
                         Thread.Sleep(100);
                         break;
                     }
-                    catch (Exception) { }
+                    catch (Exception) {
+                       
+                    }
                     Thread.Sleep(100);
                 }
-            }
+            });
 
             List<IWebElement> button = new();
             List<IWebElement> para = new();
 
             for (int i = 0; i < numClients; i++)
             {
-                button.Add(_driver[i].FindElement(By.ClassName("btn")));
-                para.Add(_driver[i].FindElement(By.XPath("//p")));
+                for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                {
+                    try
+                    {
+                        IWebElement buttonElement = _driver[i].FindElement(By.ClassName("btn"));
+                        IWebElement paraElement = _driver[i].FindElement(By.XPath("//p"));
+
+                        button.Add(buttonElement);
+                        para.Add(paraElement);
+                        break;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    Thread.Sleep(100);
+                }
             }
 
             int numClicks = 10;
             for (int i = 0; i < numClicks; i++)
             {
-                for (int j = 0; j < numClients; j++)
+                Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, j =>
                 {
                     button[j].Click();
-                    Thread.Sleep(30);
-                }
+                    Thread.Sleep(numClients * 75);
+                });
 
             }
+            Thread.Sleep(numClients * 100);
             int passCount = 0;
-            for (int i = 0; i < numClients; i++)
+            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
             {
                 var res = para[i].Text;
                 if (res.Contains($"{numClicks}")) passCount++;
-
-            }
+                else
+                {
+                    Logging.LogEvent($"{numClicks} not found in {res}", EventLogEntryType.Error);
+                }
+            });
 
             if (passCount == numClients)
             {

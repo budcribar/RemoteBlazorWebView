@@ -5,9 +5,76 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-
+using System;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
 namespace ClientBenchmark
 {
+    
+
+    public class CertificateInstaller
+    {
+        public static X509Certificate2 LoadCerCertificate(string cerFilePath)
+        {
+            return X509CertificateLoader.LoadCertificateFromFile(cerFilePath);
+        }
+        public static void AddCertificateToLocalMachine(string cerFilePath)
+        {
+            try
+            {
+                // Load the certificate
+                X509Certificate2 certificate = LoadCerCertificate(cerFilePath);
+
+                // Open the Local Machine's Trusted Root store
+                using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+                {
+                    store.Open(OpenFlags.ReadWrite);
+
+                    // Check if the certificate already exists
+                    bool exists = false;
+                    foreach (var cert in store.Certificates)
+                    {
+                        if (cert.Thumbprint.Equals(certificate.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists)
+                    {
+                        store.Add(certificate);
+                        Console.WriteLine("Certificate added to Local Machine's Trusted Root store.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Certificate already exists in Local Machine's Trusted Root store.");
+                    }
+
+                    store.Close();
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine("Error: Access denied. Please run the application with the necessary permissions.");
+            }
+            catch (CryptographicException ex)
+            {
+                Console.WriteLine($"Cryptographic error: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"IO error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+            }
+        }
+
+
+    }
+
     public static class Utilities
     {
         private static readonly char[] chars =

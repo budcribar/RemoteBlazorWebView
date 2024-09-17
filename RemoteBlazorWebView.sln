@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StressClient", "src\Benchma
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientBenchmark", "src\Benchmarks\ClientBenchmark\ClientBenchmark.csproj", "{D30949AE-FC8E-4638-BB0C-02C9E33B036A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StressServer", "src\Benchmarks\StressServer\StressServer.csproj", "{224F5BEE-3090-4F28-86FE-08E64D8E1D42}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Authorization|Any CPU = Authorization|Any CPU
@@ -454,8 +456,7 @@ Global
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|linux-x64.Build.0 = Debug|Any CPU
-		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|x64.Build.0 = Debug|Any CPU
+		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Debug|x64.ActiveCfg = Debug|x64
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Developer|Any CPU.ActiveCfg = Debug|Any CPU
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Developer|Any CPU.Build.0 = Debug|Any CPU
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE}.Developer|linux-x64.ActiveCfg = Debug|Any CPU
@@ -496,8 +497,7 @@ Global
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|linux-x64.Build.0 = Debug|Any CPU
-		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|x64.Build.0 = Debug|Any CPU
+		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Debug|x64.ActiveCfg = Debug|x64
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Developer|Any CPU.ActiveCfg = Debug|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Developer|Any CPU.Build.0 = Debug|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Developer|linux-x64.ActiveCfg = Debug|Any CPU
@@ -522,6 +522,48 @@ Global
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Release|linux-x64.Build.0 = Release|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Release|x64.ActiveCfg = Release|Any CPU
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A}.Release|x64.Build.0 = Release|Any CPU
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Authorization|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.AzureNoAuth|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Debug|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Developer|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Embedded|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|Any CPU.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|Any CPU.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|linux-x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|x64.ActiveCfg = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.NoAuthorization|x64.Build.0 = Debug|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|Any CPU.ActiveCfg = Release|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|Any CPU.Build.0 = Release|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|linux-x64.ActiveCfg = Release|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|linux-x64.Build.0 = Release|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|x64.ActiveCfg = Release|x64
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -539,6 +581,7 @@ Global
 		{AB9C1C62-4B4F-4721-B868-1C269E1B5893} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 		{CD820479-17B6-4A55-AA99-4A9C62E0F4BE} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 		{D30949AE-FC8E-4638-BB0C-02C9E33B036A} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
+		{224F5BEE-3090-4F28-86FE-08E64D8E1D42} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}

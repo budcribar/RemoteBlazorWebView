@@ -40,7 +40,7 @@ namespace WebdriverTestProject
             });
 
             threadInitialized = new AutoResetEvent(false);
-            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            await Application.Current.Dispatcher.InvokeAsync( () =>
             {
 
                 control = new BlazorWebView();
