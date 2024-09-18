@@ -29,12 +29,6 @@
 	  </None>
 	</ItemGroup>
 
-	<!--<ItemGroup>
-	  <None Include="bin\x64\Debug\net9-windows7.0\win-x64\selenium-manager\windows\selenium-manager.exe" Link="selenium-manager\windows\selenium-manager.exe">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>-->
-
 	<ItemGroup>
 		<PackageReference Include="Selenium.WebDriver" Version="4.24.0" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0-rc.1.24431.7" />

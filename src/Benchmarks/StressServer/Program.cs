@@ -149,8 +149,8 @@ namespace StressServer
                 gids.Add(id);
 
                 clients.Add(ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}" ));
-
-                _driver.Add(new(new ChromeOptions { BrowserVersion = "128.0", AcceptInsecureCertificates=true, PageLoadTimeout=TimeSpan.FromMinutes(2) }));
+                var cd = new ChromeDriver(new ChromeOptions { BrowserVersion = "128.0", AcceptInsecureCertificates = true, PageLoadTimeout = TimeSpan.FromMinutes(2) });
+                _driver.Add(cd);
             }
 
             var ids = WaitForClientToConnect(numClients, gids, channel);
