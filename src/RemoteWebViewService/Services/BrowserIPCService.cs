@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +17,7 @@ namespace PeakSWC.RemoteWebView
         {
             if (!serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
-                shutdownService.Shutdown(request.Id);
+                await shutdownService.Shutdown(request.Id);
                 return;
             }
 
@@ -34,14 +33,14 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.IsPrimary)
                 {
-                    shutdownService.Shutdown(request.Id, ex);
+                    await shutdownService.Shutdown(request.Id, ex);
                 }
                 return;
             }
 
             if (request.IsPrimary)
             {
-                shutdownService.Shutdown(request.Id);
+                await shutdownService.Shutdown(request.Id);
             }
 
             return;
@@ -65,7 +64,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                await state.Semaphore.WaitAsync();
+                await state.Semaphore.WaitAsync(serviceState.Token);
 
                 if (request.Sequence == state.SequenceNum)
                 {
@@ -84,16 +83,20 @@ namespace PeakSWC.RemoteWebView
                 }
                 else
                 {
-                    state.MessageDictionary.TryAdd(request.Sequence, request);
+                    bool added = state.MessageDictionary.TryAdd(request.Sequence, request);
+                    if (!added)
+                    {
+                        logger.LogError("Failed to add message to dictionary for Sequence: {Sequence}, Id: {Id}", request.Sequence, request.Id);
+                    }
                 }
 
-                while (state.MessageDictionary.ContainsKey(state.SequenceNum))
+                while (state.MessageDictionary.TryRemove(state.SequenceNum, out var queuedRequest))
                 {
                     await serviceState.IPC.ReceiveMessage(new WebMessageResponse
                     {
-                        Response = state.MessageDictionary[state.SequenceNum].Message,
-                        Url = state.MessageDictionary[state.SequenceNum].Url,
-                        Cookies = state.MessageDictionary[state.SequenceNum].Cookies
+                        Response = queuedRequest.Message,
+                        Url = queuedRequest.Url,
+                        Cookies = queuedRequest.Cookies
                     }).ConfigureAwait(false);
                     state.SequenceNum++;
                 }

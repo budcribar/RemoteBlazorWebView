@@ -10,24 +10,27 @@ namespace PeakSWC.RemoteWebView.Services
 {
     public class ShutdownService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary)
     {
-        public void Shutdown(string id, Exception? exception = null)
+        public async Task Shutdown(string id, Exception? exception = null)
         {
            
             if (serviceDictionary.Remove(id, out var client))
             {
                 if (exception != null)
                     logger.LogError($"Shutting down {id} Exception:{exception.Message}");
-                //else
-                //    logger.LogWarning("Shutting down..." + id);
 
-                client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" });     
+                await (client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask);     
                 client.InUse = false;
-                client.Cancel();
+               
+                await client.DisposeAsync();
 
-                client.Dispose();
-
-                serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Shutdown:{id}"));
-
+                // Notify other service state channels
+                foreach (var channel in serviceStateChannel.Values)
+                {
+                    if (!channel.Writer.TryWrite($"Shutdown:{id}"))
+                    {
+                        logger.LogError($"Failed to write shutdown notification to channel for {id}.");
+                    }
+                }
             }
             
         }

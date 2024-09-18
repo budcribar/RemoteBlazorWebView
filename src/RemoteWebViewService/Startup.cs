@@ -136,8 +136,8 @@ namespace PeakSWC.RemoteWebView
                     eventLogSettings.LogName = "Application"; 
                     eventLogSettings.Filter = (category, level) =>
                     {
-                        //return level >= LogLevel.Information;
-                        return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
+                        return level >= Microsoft.Extensions.Logging.LogLevel.Information;
+                        //return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
                     };
                 });
 
@@ -530,7 +530,7 @@ namespace PeakSWC.RemoteWebView
                         await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName)).ConfigureAwait(false);
 
                         // Shutdown since client did not respond to restart request
-                        context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
+                        await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid);
                     }
                    
                 }

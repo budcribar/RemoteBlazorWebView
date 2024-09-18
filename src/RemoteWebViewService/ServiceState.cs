@@ -1,8 +1,8 @@
-﻿
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -42,6 +42,10 @@ namespace PeakSWC.RemoteWebView
         public BrowserIPCState BrowserIPC { get; init; } = new();
 
         public DateTime StartTime { get; } = DateTime.Now;
+
+        private bool _disposed = false;
+        private readonly object _disposeLock = new object();
+
         public void Cancel()
         {
             CancellationTokenSource?.Cancel();
@@ -53,25 +57,85 @@ namespace PeakSWC.RemoteWebView
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        public async ValueTask DisposeAsync()
         {
-            if (disposing)
-            {
-                CancellationTokenSource?.Dispose();
-                CancellationTokenSource = null;
-                FileReaderTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
-                PingTask?.ContinueWith(t => t.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
-                IPC.Dispose();
-                foreach (var entry in FileDictionary)
-                {
-                    entry.Value?.Dispose();
-                }
-            }
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
 
-        ~ServiceState()
+        protected virtual async ValueTask DisposeAsyncCore()
         {
-            Dispose(false);
+            if (_disposed)
+                return;
+
+            if (CancellationTokenSource != null)
+            {
+                // Signal cancellation
+                CancellationTokenSource.Cancel();
+
+
+                // Await all relevant tasks
+                var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
+
+                foreach (var task in tasks)
+                {
+                    if (task != null)
+                    {
+                        try
+                        {
+                            await task.ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Expected during cancellation; no action needed
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "An error occurred while awaiting a task during async disposal.");
+                        }
+                    }
+                }
+
+                // Dispose of the CTS after task completion
+                CancellationTokenSource.Dispose();
+                CancellationTokenSource = null;
+            }
+
+            _disposed = true;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            lock (_disposeLock)
+            {
+                if (_disposed)
+                    return;
+
+                if (disposing)
+                {
+                    foreach (var entry in FileDictionary)
+                    {
+                        try
+                        {
+                            entry.Value?.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Error disposing FileDictionary entry with key: {Key}.", entry.Key);
+                        }
+                    }
+
+                    FileDictionary.Clear();
+                }
+
+                // Free unmanaged resources here, if any...
+
+                _disposed = true;
+            }
         }
 
         public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)

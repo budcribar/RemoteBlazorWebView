@@ -71,6 +71,8 @@ namespace PeakSWC.RemoteWebView
                         responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.IPC.ClientTask.Status });
                     if (ss.FileReaderTask != null)
                         responses.Add(new TaskResponse { Name = "FileReader", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
+                    if (ss.IPC.ProcessMessagesTask != null)
+                        responses.Add(new TaskResponse { Name = "ProcessMessages", Status = (TaskStatus)(int)ss.IPC.ProcessMessagesTask.Status });
                 }
                 return responses;
             }

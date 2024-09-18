@@ -40,7 +40,7 @@ namespace PeakSWC.RemoteWebView
 
             if (serviceDictionary.TryAdd(request.Id, state))
             {
-                serviceStateChannel.Values.ToList().ForEach(x => x.Writer.TryWrite($"Start:{request.Id}"));
+                serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}"));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }).ConfigureAwait(false);
@@ -66,7 +66,7 @@ namespace PeakSWC.RemoteWebView
             catch (Exception ex)
             {
                 logger.LogError($"CreateWebView Id:{request.Id} failed {ex.Message}");
-                shutdownService.Shutdown(request.Id, ex);
+                await shutdownService.Shutdown(request.Id, ex);
             }
          
         }
@@ -87,14 +87,14 @@ namespace PeakSWC.RemoteWebView
 
                         if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
                         {
-                            serviceState.FileReaderTask = Task.Factory.StartNew(async () =>
+                            serviceState.FileReaderTask = Task.Run(async () =>
                             {
                                 while (!serviceState.Token.IsCancellationRequested)
                                 {
                                     var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance=fileEntry.Instance }).ConfigureAwait(false);
+                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance=fileEntry.Instance },serviceState.Token).ConfigureAwait(false);
                                 }
-                            }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                            }, serviceState.Token);
                         }
                         else if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Length)
                         {
@@ -124,21 +124,21 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                shutdownService.Shutdown(id,ex);
+                await shutdownService.Shutdown(id,ex);
             }
         }
 
-        public override Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
+        public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            shutdownService.Shutdown(request.Id);
-            return Task.FromResult(new Empty());
+            await shutdownService.Shutdown(request.Id);
+            return new Empty();
         }
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
             if (serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
+                await serviceState.IPC.SendMessage(request.Message, serviceState.Token).ConfigureAwait(false);
 
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
@@ -160,13 +160,13 @@ namespace PeakSWC.RemoteWebView
                     if (!serviceDictionary.TryGetValue(id, out ServiceState? serviceState))
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                        shutdownService.Shutdown(id);
+                        await shutdownService.Shutdown(id);
                         break;
                     }
 
                     if (message.Initialize)
                     {
-                        serviceState.PingTask = Task.Factory.StartNew(async () =>
+                        serviceState.PingTask = Task.Run(async () =>
                         {
                             while (!serviceState.Token.IsCancellationRequested)
                             {
@@ -176,12 +176,12 @@ namespace PeakSWC.RemoteWebView
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                                    shutdownService.Shutdown(id);
+                                    await shutdownService.Shutdown(id);
                                     break;
                                 }
 
                             }
-                        }, serviceState.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                        }, serviceState.Token);
                     }
                     else
                     {
@@ -194,7 +194,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                shutdownService.Shutdown(id, ex);
+                await shutdownService.Shutdown(id, ex);
             }
         }
     }
