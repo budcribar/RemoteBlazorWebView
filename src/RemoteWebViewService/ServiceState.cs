@@ -41,7 +41,7 @@ namespace PeakSWC.RemoteWebView
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
 
-        public DateTime StartTime { get; } = DateTime.Now;
+        public DateTime StartTime { get; } = DateTime.UtcNow;
 
         private bool _disposed = false;
         private readonly object _disposeLock = new object();

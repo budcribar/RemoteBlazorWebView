@@ -2,12 +2,14 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging;
 #if AUTHORIZATION
 using Newtonsoft.Json;
+using System.Linq;
 #endif
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+
 
 namespace PeakSWC.RemoteWebView
 {
@@ -17,7 +19,7 @@ namespace PeakSWC.RemoteWebView
         {
             if (!serviceDictionary.TryGetValue(request.Id, out ServiceState? serviceState))
             {
-                await shutdownService.Shutdown(request.Id);
+                await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
                 return;
             }
 
@@ -33,14 +35,14 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.IsPrimary)
                 {
-                    await shutdownService.Shutdown(request.Id, ex);
+                    await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                 }
                 return;
             }
 
             if (request.IsPrimary)
             {
-                await shutdownService.Shutdown(request.Id);
+                await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
             }
 
             return;

@@ -196,7 +196,7 @@ namespace PeakSwc.StaticFiles
 
         public string Name => Path.GetFileName(path);
 
-        public DateTimeOffset LastModified => DateTime.Now;
+        public DateTimeOffset LastModified => DateTime.UtcNow;
 
         public bool IsDirectory => false;
 

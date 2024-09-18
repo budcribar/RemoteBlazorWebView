@@ -40,12 +40,11 @@ namespace PeakSWC.RemoteWebView
 
             if (serviceDictionary.TryAdd(request.Id, state))
             {
-                serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}"));
+                // No need to wait for writes to complete
+                serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}").ConfigureAwait(false));
                 state.IPC.ClientResponseStream = responseStream;
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }).ConfigureAwait(false);
-
-
             }
             else
             {
@@ -58,15 +57,16 @@ namespace PeakSWC.RemoteWebView
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try
             {
-                while (!linkedToken.IsCancellationRequested)
-                {
-                    await Task.Delay(30).ConfigureAwait(false);
-                }
+                await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when cancellation is requested; no action needed.
             }
             catch (Exception ex)
             {
                 logger.LogError($"CreateWebView Id:{request.Id} failed {ex.Message}");
-                await shutdownService.Shutdown(request.Id, ex);
+                await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
             }
          
         }
@@ -85,22 +85,43 @@ namespace PeakSWC.RemoteWebView
                         if (serviceState.Token.IsCancellationRequested)
                             break;
 
-                        if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init)
+                        if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init && serviceState.FileReaderTask == null)
                         {
                             serviceState.FileReaderTask = Task.Run(async () =>
                             {
-                                while (!serviceState.Token.IsCancellationRequested)
+                                try
                                 {
-                                    var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-                                    await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance=fileEntry.Instance },serviceState.Token).ConfigureAwait(false);
+                                    while (!serviceState.Token.IsCancellationRequested)
+                                    {
+                                        var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
+                                        await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance = fileEntry.Instance }, serviceState.Token).ConfigureAwait(false);
+                                    }
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    // Handle cancellation if necessary
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.LogError($"FileReaderTask for Id:{id} failed: {ex.Message}");
+                                    await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
                                 }
                             }, serviceState.Token);
                         }
+
                         else if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Length)
                         {
-                            var fileEntry = serviceState.FileDictionary[message.Length.Path][message.Length.Instance];
-                            fileEntry.Length = message.Length.Length;
-                            fileEntry.Semaphore.Release();
+                            if (serviceState.FileDictionary.TryGetValue(message.Length.Path, out var concurrentList) && concurrentList.Count > message.Length.Instance && message.Length.Instance >= 0)
+                            {
+                                var fileEntry = concurrentList[message.Length.Instance];
+                                fileEntry.Length = message.Length.Length;
+                                fileEntry.Semaphore.Release();
+                            }
+                            else
+                            {
+                                logger.LogError($"FileEntry not found for Path: {message.Length.Path}, Instance: {message.Length.Instance}");
+                                await shutdownService.Shutdown(id).ConfigureAwait(false);
+                            }
                         }
                         else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
                         {
@@ -108,8 +129,8 @@ namespace PeakSWC.RemoteWebView
                             if (message.Data.Data.Length > 0)
                             {        
                                 // TODO is there a limit on the Pipe write?
-                                fileEntry.Pipe.Writer.Write(message.Data.Data.Span);
-                               // _ = fileEntry.Pipe.Writer.FlushAsync();
+                                await fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory, serviceState.Token).ConfigureAwait(false);
+                                // _ = fileEntry.Pipe.Writer.FlushAsync();
                             }
                             else
                             {
@@ -122,15 +143,20 @@ namespace PeakSWC.RemoteWebView
                     else break;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // No need to shutdown as we are in the process of shutting down
+            }
             catch (Exception ex)
             {
-                await shutdownService.Shutdown(id,ex);
+                logger.LogError($"FileReaderTask for Id:{id} failed: {ex.Message}");
+                await shutdownService.Shutdown(id,ex).ConfigureAwait(false);
             }
         }
 
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
-            await shutdownService.Shutdown(request.Id);
+            await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
             return new Empty();
         }
 
@@ -151,8 +177,8 @@ namespace PeakSWC.RemoteWebView
             var id = string.Empty;
             try
             {
-                DateTime responseReceived = DateTime.Now;
-                DateTime responseSent = DateTime.Now;
+                DateTime responseReceived = DateTime.UtcNow;
+                DateTime responseSent = DateTime.UtcNow;
 
                 await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
@@ -160,23 +186,23 @@ namespace PeakSWC.RemoteWebView
                     if (!serviceDictionary.TryGetValue(id, out ServiceState? serviceState))
                     {
                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                        await shutdownService.Shutdown(id);
+                        await shutdownService.Shutdown(id).ConfigureAwait(false);
                         break;
                     }
 
-                    if (message.Initialize)
+                    if (message.Initialize && serviceState.PingTask == null)
                     {
                         serviceState.PingTask = Task.Run(async () =>
                         {
                             while (!serviceState.Token.IsCancellationRequested)
                             {
-                                responseSent = DateTime.Now;
+                                responseSent = DateTime.UtcNow;
                                 await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }).ConfigureAwait(false);
                                 await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), serviceState.Token).ConfigureAwait(false);
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                                    await shutdownService.Shutdown(id);
+                                    await shutdownService.Shutdown(id).ConfigureAwait(false);
                                     break;
                                 }
 
@@ -185,16 +211,20 @@ namespace PeakSWC.RemoteWebView
                     }
                     else
                     {
-                        responseReceived = DateTime.Now;
+                        responseReceived = DateTime.UtcNow;
                         var delta = responseReceived.Subtract(responseSent);
                         if (delta > serviceState.MaxClientPing)
                             serviceState.MaxClientPing = delta;
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // No need to shutdown as we are in the process of shutting down
+            }
             catch (Exception ex)
             {
-                await shutdownService.Shutdown(id, ex);
+                await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
             }
         }
     }

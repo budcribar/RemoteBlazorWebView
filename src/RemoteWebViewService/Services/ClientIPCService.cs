@@ -51,12 +51,10 @@ namespace PeakSWC.RemoteWebView
             return response;
         }
 
+
+
         public override Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
-        {
-            List<ConnectionResponse> GetConnectionResponses() 
-            {
-                return serviceDictionary.Values.Select(x => new ConnectionResponse { HostName=x.HostName, Id=x.Id, InUse=x.InUse, UserName=x.User, TotalFilesRead=x.TotalFilesRead, TotalReadTime=x.TotalFileReadTime.TotalSeconds, TotalBytesRead=x.TotalBytesRead, MaxFileReadTime=x.MaxFileReadTime.TotalSeconds, TimeConnected=DateTime.Now.Subtract(x.StartTime).TotalSeconds }).ToList();
-            }
+        { 
             List<TaskResponse> GetTaskResponses(string id)
             {
                 var responses = new List<TaskResponse>();
@@ -78,35 +76,61 @@ namespace PeakSWC.RemoteWebView
             }
 
             var p = Process.GetCurrentProcess();
-            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet=p.PeakWorkingSet64, Threads=p.Threads.Count, WorkingSet=p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds, UpTime = DateTime.Now.Subtract(p.StartTime).TotalSeconds };
+            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet = p.PeakWorkingSet64, Threads = p.Threads.Count, WorkingSet = p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds, UpTime = (DateTime.UtcNow - p.StartTime.ToUniversalTime()).TotalSeconds };
 
-            var responses = GetConnectionResponses();
+            var responses = GetConnectionResponses(serviceDictionary);
             response.ConnectionResponses.AddRange(responses);
             responses.ForEach(x => x.TaskResponses.AddRange(GetTaskResponses(x.Id)));
-         
+
             return Task.FromResult(response);
+        }
+
+        private static List<ConnectionResponse> GetConnectionResponses(ConcurrentDictionary<string, ServiceState> serviceDictionary)
+        {
+            var snapshot = serviceDictionary.Values.ToList();
+           
+            return snapshot.Select(x => new ConnectionResponse
+            {
+                HostName = x.HostName,
+                Id = x.Id,
+                InUse = x.InUse,
+                UserName = x.User,
+                TotalFilesRead = x.TotalFilesRead,
+                TotalReadTime = x.TotalFileReadTime.TotalSeconds,
+                TotalBytesRead = x.TotalBytesRead,
+                MaxFileReadTime = x.MaxFileReadTime.TotalSeconds,
+                TimeConnected = (DateTime.UtcNow - x.StartTime).TotalSeconds
+            }).ToList();
+           
         }
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
         {
             List<EventResponse> GetEventResponses()
             {
-                using EventLog eventLog = new();
-                eventLog.Log = "Application";
-               
-                var elapsedTime = DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime);
-                var entries = eventLog.Entries.Cast<EventLogEntry>().Where(x => x.TimeGenerated > DateTime.Now.Subtract(elapsedTime) && x.Source == "RemoteWebViewService").OrderByDescending(x => x.TimeGenerated);
+                using var eventLog = new EventLog("Application");
 
-                List<EventResponse> results = [];
-                foreach (var entry in entries) {
-                    var er = new EventResponse { Timestamp = Timestamp.FromDateTime(entry.TimeGenerated.ToUniversalTime()) };
+                var processStartTime = Process.GetCurrentProcess().StartTime.ToUniversalTime();
+                var cutoffTime = DateTime.UtcNow.Subtract(processStartTime);
+                var entries = eventLog.Entries.Cast<EventLogEntry>()
+                    .Where(x => x.TimeGenerated.ToUniversalTime() > processStartTime && x.Source == "RemoteWebViewService")
+                    .OrderByDescending(x => x.TimeGenerated);
+
+                var results = new List<EventResponse>();
+                foreach (var entry in entries)
+                {
+                    var er = new EventResponse
+                    {
+                        Timestamp = Timestamp.FromDateTime(entry.TimeGenerated.ToUniversalTime())
+                    };
                     er.Messages.AddRange(entry.Message.Split(Environment.NewLine));
                     results.Add(er);
                 }
 
                 return results;
             }
-        
+
+
             var response = new LoggedEventResponse();
             response.EventResponses.AddRange(GetEventResponses());
 
