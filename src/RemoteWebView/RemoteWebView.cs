@@ -131,6 +131,8 @@ namespace PeakSWC.RemoteWebView
            
         }
 
+        private GrpcChannel? channel;
+        
         protected WebViewIPC.WebViewIPCClient? Client()
         {
             if (BlazorWebView.ServerUri == null) return null;
@@ -139,7 +141,7 @@ namespace PeakSWC.RemoteWebView
 
             if (client == null)
             {
-                var channel = GrpcChannel.ForAddress(BlazorWebView.GrpcBaseUri,
+                channel = GrpcChannel.ForAddress(BlazorWebView.GrpcBaseUri,
                     new GrpcChannelOptions
                     {
                         HttpHandler = new SocketsHttpHandler
@@ -152,7 +154,7 @@ namespace PeakSWC.RemoteWebView
                     });
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
-
+              
                 Logger.LogInformation(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors);
                 var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
                 var completed = new ManualResetEventSlim();
@@ -207,7 +209,7 @@ namespace PeakSWC.RemoteWebView
                 bool connected = false;
                 try
                 {
-                    await foreach (var message in events.ResponseStream.ReadAllAsync().ConfigureAwait(false))
+                    await foreach (var message in events.ResponseStream.ReadAllAsync(cts.Token).ConfigureAwait(false))
                     {
                         var command = message.Response[..message.Response.IndexOf(':')];
 
@@ -298,6 +300,7 @@ namespace PeakSWC.RemoteWebView
                         catch (Exception ex)
                         {
                             exception = ex;
+                            await (channel?.ShutdownAsync() ?? Task.CompletedTask);
                             completed.Set();
                         }
                     }
@@ -305,6 +308,7 @@ namespace PeakSWC.RemoteWebView
                 catch (Exception ex)
                 {
                     exception = ex;
+                    await (channel?.ShutdownAsync() ?? Task.CompletedTask);
                     completed.Set();
                 }
             }, cts.Token);
