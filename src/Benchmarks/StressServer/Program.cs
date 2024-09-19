@@ -74,6 +74,8 @@ namespace StressServer
             }
 
             int totalPasses = 0;
+            int totalFailures = 0;
+
             string url = "https://192.168.1.35:5002";
             using var handler = new SocketsHttpHandler
             {
@@ -130,14 +132,18 @@ namespace StressServer
             }
 
             for (int i = 0; i < numLoops; i++) {
-                totalPasses = ExecuteLoop(totalPasses, url, channel, numClients, path);
+                var results = ExecuteLoop(totalPasses, totalFailures, url, channel, numClients, path);
+                totalPasses = results.Item1;
+                totalFailures = results.Item2;
+
+                Logging.LogEvent($"Counter Passes: {totalPasses} Fails: {totalFailures}", EventLogEntryType.SuccessAudit);
             }
            
             //ExecutableManager.CleanUp(path);
             Console.ReadKey();
         }
 
-        private static int ExecuteLoop(int totalPasses, string url, GrpcChannel channel, int numClients, string path)
+        private static (int,int) ExecuteLoop(int totalPasses, int totalFailures, string url, GrpcChannel channel, int numClients, string path)
         {
             gids.Clear();
 
@@ -160,7 +166,7 @@ namespace StressServer
                 Logging.LogEvent("Startup Failed", EventLogEntryType.Error);
                 Console.WriteLine("Startup Failed");
                 Console.ReadKey();
-                return -1;
+                return (0,0);
             }
 
             // open browser to home page
@@ -229,23 +235,22 @@ namespace StressServer
                 if (res.Contains($"{numClicks}")) passCount++;
                 else
                 {
-                    Logging.LogEvent($"{numClicks} not found in {res}", EventLogEntryType.Error);
+                    Logging.LogEvent($"{numClicks} expected but found {res}", EventLogEntryType.Error);
                 }
             });
 
             if (passCount == numClients)
             {
                 totalPasses += numClients;
-                Logging.LogEvent($"Counter successful {totalPasses}", EventLogEntryType.SuccessAudit);
             }
             else
             {
-                Logging.LogEvent("Counter clicks not as expected", EventLogEntryType.Error);
+                totalFailures += numClients;
             }
 
             _driver.ForEach(x => x.Quit());
             _driver.Clear();
-            return totalPasses;
+            return (totalPasses, totalFailures);
         }
     }
 }

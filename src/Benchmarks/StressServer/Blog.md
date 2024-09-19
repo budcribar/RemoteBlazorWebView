@@ -108,3 +108,16 @@ System.InvalidOperationException: Can't write the message because the request is
    at Grpc.AspNetCore.Server.Internal.CallHandlers.ServerStreamingServerCallHandler`3.<HandleCallAsyncCore>d__2.MoveNext() + 0x487
 --- End of stack trace from previous location ---
    at Grpc.AspNetCore.Server.Internal.CallHandlers.ServerCallHandlerBase`3.<<HandleCallAsync>g__AwaitHandleCall|8_0>d.MoveNext() + 0x14d
+
+
+   9/18/24 Made a lot of changes to the server and also some to the client for performance
+   let's see what happens
+
+   Before:
+   AMD Ryzen AI 9 - 930 loops
+   One or more errors occurred. (The HTTP request to the remote WebDriver server for URL http://localhost:64149/session/c8d2120829b22be84c55e4f3ae6e0c49/url timed out after 60 seconds.)
+
+   Snapdragon
+   No records found
+
+
