@@ -103,7 +103,6 @@ namespace PeakSWC.RemoteWebView
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.LogError($"FileReaderTask for Id:{id} failed: {ex.Message}");
                                     await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
                                 }
                             }, serviceState.Token);
@@ -149,7 +148,6 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                logger.LogError($"FileReaderTask for Id:{id} failed: {ex.Message}");
                 await shutdownService.Shutdown(id,ex).ConfigureAwait(false);
             }
         }
