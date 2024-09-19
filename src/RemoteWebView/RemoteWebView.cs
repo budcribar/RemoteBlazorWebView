@@ -279,7 +279,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 ReadOnlySpan<char> payloadSpan = responseSpan[(separatorIndex + 1)..];
                                 string payloadString = payloadSpan.ToString(); // Convert span to string here
-                                connected = await HandleConnectedAsync(blazorWebView, payloadString, cts.Token).ConfigureAwait(false);
+                                connected = await HandleConnectedAsync(blazorWebView, payloadString, message.Cookies, cts.Token).ConfigureAwait(false);
                             }
                             else
                             {
@@ -329,13 +329,13 @@ namespace PeakSWC.RemoteWebView
         /// <param name="payload">The payload containing connection details.</param>
         /// <param name="cancellationToken">Token to observe for cancellation.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task<bool> HandleConnectedAsync(IBlazorWebView blazorWebView, string payload, CancellationToken cancellationToken)
+        private async Task<bool> HandleConnectedAsync(IBlazorWebView blazorWebView, string payload, string cookies, CancellationToken cancellationToken)
         {
             var connected = true;
             try
             {
-                // Deserialize cookies from the payload
-                IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(payload);
+                // Deserialize cookies from the cookies
+                IDictionary<string, string>? cookiesDictionary = JsonConvert.DeserializeObject<IDictionary<string, string>>(cookies);
                 if (cookiesDictionary != null)
                 {
                     // Assuming Dispatcher is a UI thread dispatcher
