@@ -126,4 +126,5 @@ System.InvalidOperationException: Can't write the message because the request is
    Application: StressServer.exe CoreCLR Version: 9.0.24.43107 .NET Version: 9.0.0-rc.1.24431.7 Description: The process was terminated due to an unhandled exception. Exception Info: System.AggregateException: One or more errors occurred. (Index was out of range. Must be non-negative and less than the size of the collection. (Parameter 'index')) (Index was out of range.
 
    Omen Result
-   Elapsed Time: 00:44:34.1976816 Seconds per pass: 26.741983918000003
+   SS7: Elapsed Time: 00:44:34.1976816 Seconds per pass: 26.741983918000003
+   SS8: Elapsed Time: 00:24:47.0722065 Seconds per pass: 14.870732215999999

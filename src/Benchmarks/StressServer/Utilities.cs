@@ -28,6 +28,14 @@ namespace StressServer
                 // Load the certificate
                 X509Certificate2 certificate = LoadCerCertificate(cerFilePath);
 
+                // Check if the certificate has expired
+                DateTime now = DateTime.Now;
+                if (now < certificate.NotBefore || now > certificate.NotAfter)
+                {
+                    Console.WriteLine("Error: Certificate is either not yet valid or has expired.");
+                    return;
+                }
+
                 // Open the Local Machine's Trusted Root store
                 using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
                 {
@@ -76,6 +84,7 @@ namespace StressServer
         }
 
 
+
     }
 
     public static class Utilities
@@ -95,7 +104,39 @@ namespace StressServer
 
             return result.ToString();
         }
-       
+        public static void SetWebView2UserDataFolder()
+        {
+            // Retrieve the LOCALAPPDATA path
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            // Define the shared user data folder path
+            string webView2UserDataFolder = Path.Combine(localAppData, "Microsoft", "EdgeWebView", "User Data");
+
+            // Ensure the directory exists; create it if it doesn't
+            if (!Directory.Exists(webView2UserDataFolder))
+            {
+                try
+                {
+                    Directory.CreateDirectory(webView2UserDataFolder);
+                    Console.WriteLine($"Created WebView2 user data folder at: {webView2UserDataFolder}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to create WebView2 user data folder: {ex.Message}");
+                    throw; // Re-throw the exception to halt execution
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Using existing WebView2 user data folder at: {webView2UserDataFolder}");
+            }
+
+            // Set the environment variable for the current process
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webView2UserDataFolder, EnvironmentVariableTarget.User);
+
+            Console.WriteLine("Set WEBVIEW2_USER_DATA_FOLDER environment variable successfully.");
+        }
+
 
         public static async Task KillProcessesAsync(string processName)
         {

@@ -5,6 +5,9 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using PeakSWC.RemoteWebView;
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace StressServer
 {
@@ -63,9 +66,12 @@ namespace StressServer
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             Console.WriteLine("Extracting Resources...");
-           
+
             Utilities.ExtractResourcesToExecutionDirectory();
             Console.WriteLine("Extracting Resources Completed");
+
+            //Utilities.SetWebView2UserDataFolder();
+
             try
             {
                 Process currentProcess = Process.GetCurrentProcess();
@@ -95,6 +101,7 @@ namespace StressServer
             {
                 HttpClient = httpClient
             });
+
             // Safely kill existing client processes
             await Utilities.KillProcessesAsync("RemoteBlazorWebViewTutorial.WpfApp");
             Logging.SetupEventLog();
@@ -112,8 +119,6 @@ namespace StressServer
                 Console.WriteLine("Server not running");
                 return;
             }
-
-           
 
             int numClients = 10;
             int numLoops = 100;
@@ -134,6 +139,8 @@ namespace StressServer
 
             Console.WriteLine($"numClients = {numClients} numLoops = {numLoops}");
 
+
+            // 
             await Task.Delay(1000);
             var path = ExecutableManager.ExtractExecutable();
 
@@ -158,7 +165,7 @@ namespace StressServer
 
             // ExecutableManager.CleanUp(path); // Uncomment if cleanup is necessary
 
-            Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
+           Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
         }
 
         private static async Task<(int, int)> ExecuteLoop(string url, GrpcChannel channel, int numClients, string path)
@@ -171,58 +178,75 @@ namespace StressServer
 
             try
             {
-                // Initialize SemaphoreSlim to limit concurrent initializations
-                int maxConcurrentInitializations = Environment.ProcessorCount;
-                //using var semaphore = new SemaphoreSlim(maxConcurrentInitializations);
-                using var semaphore = new SemaphoreSlim(1);
-                // Initialize clients and drivers concurrently
-                List<Task> initializationTasks = new List<Task>();
-                for (int i = 0; i < numClients; i++)
+                // Use thread-safe collections
+                ConcurrentBag<Process> clientBag = new ConcurrentBag<Process>();
+                ConcurrentBag<ChromeDriver> driverBag = new ConcurrentBag<ChromeDriver>();
+                ConcurrentBag<string> gidBag = new ConcurrentBag<string>();
+
+                // Initialize clients and drivers concurrently using Parallel.ForEachAsync
+                var clientIds = Enumerable.Range(0, numClients).Select(_ => Guid.NewGuid().ToString()).ToList();
+
+                await Parallel.ForEachAsync(clientIds, new ParallelOptions
                 {
-                    await semaphore.WaitAsync();
-                    initializationTasks.Add(Task.Run(() =>
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (id, cancellationToken) =>
+                {
+                    try
                     {
-                        try
+                        Process clientProcess;
+                        lock (clientBag)
                         {
-                            var id = Guid.NewGuid().ToString();
-                            lock (gids) { gids.Add(id); }
+                            // Start client process
+                            clientProcess = ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}");
+                        }
+                        if (clientProcess == null)
+                        {
+                            Logging.LogEvent($"Failed to start client process for ID {id}.", EventLogEntryType.Error);
+                            Interlocked.Increment(ref failCount);
+                            return;
+                        }
+                        clientBag.Add(clientProcess);
 
-                            var clientProcess = ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}");
-                            if (clientProcess == null)
+                        // Initialize ChromeDriver
+                        var chromeOptions = new ChromeOptions
+                        {
+                            BrowserVersion = "128.0",
+                            AcceptInsecureCertificates = true,
+                            PageLoadTimeout = TimeSpan.FromMinutes(2)
+                        };
+                        chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
+                        chromeOptions.AddArgument("--disable-gpu");
+                        chromeOptions.AddArgument("--no-sandbox");
+                        chromeOptions.AddArgument("--disable-extensions");
+                        chromeOptions.AddArgument("--disable-dev-shm-usage");
+
+                        var chromeDriver = new ChromeDriver(chromeOptions);
+                        driverBag.Add(chromeDriver);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogEvent($"Failed to initialize ChromeDriver for client {id}: {ex.Message}", EventLogEntryType.Error);
+                        // Attempt to kill the client process if it was started
+                        var process = clients.FirstOrDefault(p => p.Id.ToString() == id);
+                        if (process != null && !process.HasExited)
+                        {
+                            try
                             {
-                                Logging.LogEvent($"Failed to start client process for ID {id}.", EventLogEntryType.Error);
-                                Interlocked.Increment(ref failCount);
-                                return;
+                                process.Kill();
                             }
-                            lock (clients) { clients.Add(clientProcess); }
-
-                            var chromeOptions = new ChromeOptions
+                            catch (Exception killEx)
                             {
-                                BrowserVersion = "128.0",
-                                AcceptInsecureCertificates = true,
-                                PageLoadTimeout = TimeSpan.FromMinutes(2)
-                            };
-                            //chromeOptions.AddArgument("--headless");
-                            chromeOptions.AddArgument("--disable-gpu");
-                            chromeOptions.AddArgument("--no-sandbox");
-                            chromeOptions.AddArgument("--disable-extensions");
-                            chromeOptions.AddArgument("--disable-dev-shm-usage");
+                                Logging.LogEvent($"Failed to kill client process {id}: {killEx.Message}", EventLogEntryType.Error);
+                            }
+                        }
+                        Interlocked.Increment(ref failCount);
+                    }
+                });
 
-                            var chromeDriver = new ChromeDriver(chromeOptions);
-                            lock (drivers) { drivers.Add(chromeDriver); }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logging.LogEvent($"Failed to initialize ChromeDriver: {ex.Message}", EventLogEntryType.Error);
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    }));
-                }
-
-                await Task.WhenAll(initializationTasks);
+                // Transfer from ConcurrentBag to List for further processing
+                clients = clientBag.ToList();
+                drivers = driverBag.ToList();
+                gids = clientIds.ToList();
 
                 // Wait for clients to connect
                 var ids = await WaitForClientToConnectAsync(numClients, gids, channel);
@@ -236,55 +260,54 @@ namespace StressServer
                 // Initialize WebDriverWait for each driver
                 List<WebDriverWait> waits = drivers.Select(d => new WebDriverWait(d, TimeSpan.FromSeconds(10))).ToList();
 
-                // Open browser to home page concurrently
-                List<Task> navigationTasks = new List<Task>();
-                for (int i = 0; i < drivers.Count; i++)
+                // Open browser to home page concurrently using Parallel.ForEachAsync
+                await Parallel.ForEachAsync(drivers.Select((driver, index) => new { driver, index }), new ParallelOptions
                 {
-                    int driverIndex = i;
-                    navigationTasks.Add(Task.Run(() =>
-                    {
-                        drivers[driverIndex].Url = $"{url}/app/{ids[driverIndex]}";
-                    }));
-                }
-                await Task.WhenAll(navigationTasks);
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (item, cancellationToken) =>
+                {
+                    item.driver.Url = $"{url}/app/{ids[item.index]}";
+                    await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
+                });
 
                 await Task.Delay(3000); // Consider reducing if possible
 
-                // Interact with the page: Click 'Counter' link
-                List<Task> interactionTasks = new List<Task>();
-                for (int i = 0; i < drivers.Count; i++)
+                // Interact with the page: Click 'Counter' link using Parallel.ForEachAsync
+                await Parallel.ForEachAsync(drivers.Select((driver, index) => new { driver, index }), new ParallelOptions
                 {
-                    int driverIndex = i;
-                    interactionTasks.Add(Task.Run(async () =>
-                    {
-                        for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (item, cancellationToken) =>
+                {
+                    //for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                    //{
+                        try
                         {
-                            try
-                            {
-                                var link = waits[driverIndex].Until(d => d.FindElement(By.PartialLinkText("Counter")));
-                                link?.Click();
-                                await Task.Delay(100);
-                                break;
-                            }
-                            catch (WebDriverTimeoutException)
-                            {
-                                // Element not found yet, retry
-                            }
-                            catch (Exception ex)
-                            {
-                                Logging.LogEvent($"Unexpected error while clicking 'Counter' link for client {ids[driverIndex]}: {ex.Message}", EventLogEntryType.Error);
-                            }
-                            await Task.Delay(100);
+                            var link = waits[item.index].Until(d => d.FindElement(By.PartialLinkText("Counter")));
+                            link?.Click();
+                            //await Task.Delay(100, cancellationToken);
+                            //break;
                         }
-                    }));
-                }
-                await Task.WhenAll(interactionTasks);
+                        catch (WebDriverTimeoutException)
+                        {
+                            // Element not found yet, retry
+                        }
+                        catch (Exception ex)
+                        {
+                            Logging.LogEvent($"Unexpected error while clicking 'Counter' link for client {ids[item.index]}: {ex.Message}", EventLogEntryType.Error);
+                        }
+                        //await Task.Delay(100, cancellationToken);
+                    // }
+                });
 
                 // Retrieve buttons and paragraphs
                 IWebElement[] buttons = new IWebElement[numClients];
                 IWebElement[] paras = new IWebElement[numClients];
 
-                for (int i = 0; i < numClients; i++)
+                // Retrieve elements sequentially or with controlled parallelism
+                await Parallel.ForEachAsync(Enumerable.Range(0, numClients), new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (i, cancellationToken) =>
                 {
                     for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                     {
@@ -302,7 +325,7 @@ namespace StressServer
                         {
                             Logging.LogEvent($"Unexpected error while retrieving elements for client {ids[i]}: {ex.Message}", EventLogEntryType.Error);
                         }
-                        await Task.Delay(100);
+                        await Task.Delay(100, cancellationToken);
                     }
 
                     if (buttons[i] == null || paras[i] == null)
@@ -310,7 +333,7 @@ namespace StressServer
                         Logging.LogEvent($"Failed to retrieve elements for client {ids[i]}.", EventLogEntryType.Error);
                         Interlocked.Increment(ref failCount);
                     }
-                }
+                });
 
                 // Ensure all buttons and paras were found
                 if (buttons.Any(b => b == null) || paras.Any(p => p == null))
@@ -320,49 +343,44 @@ namespace StressServer
                 }
 
                 int numClicks = 10;
-                // Click buttons asynchronously
+                // Click buttons asynchronously using Parallel.ForEachAsync
                 for (int i = 0; i < numClicks; i++)
                 {
-                    List<Task> clickTasks = new List<Task>();
-                    for (int j = 0; j < numClients; j++)
+                    await Parallel.ForEachAsync(Enumerable.Range(0, numClients), new ParallelOptions
                     {
-                        int clientIndex = j;
-                        clickTasks.Add(Task.Run(async () =>
+                        MaxDegreeOfParallelism = Environment.ProcessorCount
+                    }, async (j, cancellationToken) =>
+                    {
+                        try
                         {
-                            try
-                            {
-                                buttons[clientIndex].Click();
-                                await Task.Delay(75);
-                            }
-                            catch (Exception ex)
-                            {
-                                Logging.LogEvent($"Failed to click button for client {ids[clientIndex]}: {ex.Message}", EventLogEntryType.Error);
-                            }
-                        }));
-                    }
-                    await Task.WhenAll(clickTasks);
+                            buttons[j].Click();
+                            await Task.Delay(75, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logging.LogEvent($"Failed to click button for client {ids[j]}: {ex.Message}", EventLogEntryType.Error);
+                        }
+                    });
                 }
 
                 await Task.Delay(numClients * 100); // Consider reducing if possible
 
-                // Validate results concurrently
-                List<Task> validationTasks = new List<Task>();
-                for (int i = 0; i < numClients; i++)
+                // Validate results concurrently using Parallel.ForEachAsync
+                await Parallel.ForEachAsync(Enumerable.Range(0, numClients), new ParallelOptions
                 {
-                    int clientIndex = i;
-                    validationTasks.Add(Task.Run(() =>
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (i, cancellationToken) =>
+                {
+                    var res = paras[i].Text;
+                    if (res.Contains($"{numClicks}"))
+                        Interlocked.Increment(ref passCount);
+                    else
                     {
-                        var res = paras[clientIndex].Text;
-                        if (res.Contains($"{numClicks}"))
-                            Interlocked.Increment(ref passCount);
-                        else
-                        {
-                            Interlocked.Increment(ref failCount);
-                            Logging.LogEvent($"{numClicks} expected but found {res}", EventLogEntryType.Error);
-                        }
-                    }));
-                }
-                await Task.WhenAll(validationTasks);
+                        Interlocked.Increment(ref failCount);
+                        Logging.LogEvent($"{numClicks} expected but found {res}", EventLogEntryType.Error);
+                    }
+                    await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
+                });
 
                 return (passCount, failCount);
             }
@@ -373,8 +391,11 @@ namespace StressServer
             }
             finally
             {
-                // Cleanup ChromeDrivers concurrently
-                var driverCleanupTasks = drivers.Select(driver => Task.Run(() =>
+                // Cleanup ChromeDrivers concurrently using Parallel.ForEachAsync
+                await Parallel.ForEachAsync(drivers, new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                }, async (driver, cancellationToken) =>
                 {
                     try
                     {
@@ -384,10 +405,14 @@ namespace StressServer
                     {
                         Logging.LogEvent($"Exception on ChromeDriver.Quit(): {ex.Message}", EventLogEntryType.Error);
                     }
-                })).ToArray();
+                    await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
+                });
 
-                // Cleanup client processes concurrently
-                //var clientCleanupTasks = clients.Select(client => Task.Run(() =>
+                // Cleanup client processes concurrently using Parallel.ForEachAsync
+                //await Parallel.ForEachAsync(clients, new ParallelOptions
+                //{
+                //    MaxDegreeOfParallelism = Environment.ProcessorCount
+                //}, async (client, cancellationToken) =>
                 //{
                 //    try
                 //    {
@@ -398,10 +423,8 @@ namespace StressServer
                 //    {
                 //        Logging.LogEvent($"Unable to kill client process (ID: {client.Id}): {ex.Message}", EventLogEntryType.Error);
                 //    }
-                //})).ToArray();
-
-                await Task.WhenAll(driverCleanupTasks);
-                //await Task.WhenAll(clientCleanupTasks);
+                //    await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
+                //});
             }
         }
     }
