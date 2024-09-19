@@ -95,23 +95,47 @@ namespace StressServer
 
             return result.ToString();
         }
-        public static void KillExistingProcesses(string processName)
-        {
-            try
-            {
-                foreach (var process in Process.GetProcessesByName(processName))
-                {
-                    Console.WriteLine($"Killing process: {process.ProcessName} (ID: {process.Id})");
-                    process.Kill();
-                    process.WaitForExit(); // Optionally wait for the process to exit
-                }
-            }
-            catch (Exception ex)
-            {
+       
 
-                Console.WriteLine($"Error killing process: {ex.Message}");
+        public static async Task KillProcessesAsync(string processName)
+        {
+            var existingProcesses = Process.GetProcessesByName(processName);
+
+            if (!existingProcesses.Any())
+            {
+                Console.WriteLine($"No running processes found with name: {processName}");
+                return;
             }
+
+            Console.WriteLine($"Killing {existingProcesses.Length} instance(s) of process: {processName}");
+
+            List<Task> killTasks = existingProcesses.Select(async process =>
+            {
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill();
+                        Console.WriteLine($"Sent kill signal to process ID: {process.Id}");
+
+                        // Wait for the process to exit with a timeout (e.g., 5 seconds)
+                        await process.WaitForExitAsync();
+
+                        if (process.HasExited)
+                        {
+                            Console.WriteLine($"Process ID: {process.Id} has exited.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to kill process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
+                }
+            }).ToList();
+
+            await Task.WhenAll(killTasks);
         }
+
 
         public static async Task PollHttpRequest(HttpClient httpClient, string url)
         {
