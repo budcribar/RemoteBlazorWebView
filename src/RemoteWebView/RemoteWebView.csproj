@@ -23,7 +23,7 @@
     <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
-    <LangVersion>9</LangVersion>
+    <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Based on maui 9.0.0-rc.1 </PackageReleaseNotes>
@@ -40,6 +40,10 @@
     <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Properties\**" />
     <None Remove="Properties\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="RemoteWebView.Old.cs" />
   </ItemGroup>
 
   <ItemGroup>

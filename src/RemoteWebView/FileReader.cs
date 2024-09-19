@@ -12,18 +12,18 @@ namespace PeakSWC.RemoteWebView
 {
     public static class FileReader
     {
-        public static void AttachFileReader(AsyncDuplexStreamingCall<FileReadRequest,FileReadResponse> fileReader, CancellationTokenSource cts, string id, IFileProvider fileProvider,Action<Exception> onException, ILogger? logger = null)
+        public static void AttachFileReader(AsyncDuplexStreamingCall<FileReadRequest,FileReadResponse> fileReader, CancellationToken ct, string id, IFileProvider fileProvider,Action<Exception> onException, ILogger? logger = null)
         {
             var channel = Channel.CreateBounded<FileReadRequest>(Environment.ProcessorCount);
           
             // Start a task to consume from the channel and write to the stream
             _ = Task.Factory.StartNew(async () =>
             {
-                await foreach (var request in channel.Reader.ReadAllAsync(cts.Token).ConfigureAwait(false))
+                await foreach (var request in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
                 {
                     await fileReader.RequestStream.WriteAsync(request).ConfigureAwait(false);
                 }
-            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
             _ = Task.Factory.StartNew(async () =>
             {
@@ -43,8 +43,8 @@ namespace PeakSWC.RemoteWebView
                     }
 
                     // Process each incoming message concurrently using Parallel.ForEach
-                    await Parallel.ForEachAsync(fileReader.ResponseStream.ReadAllAsync(cts.Token),
-                        new ParallelOptions { CancellationToken = cts.Token },
+                    await Parallel.ForEachAsync(fileReader.ResponseStream.ReadAllAsync(ct),
+                        new ParallelOptions { CancellationToken = ct },
                         async (message, token) =>
                         {
                             var path = message.Path[(message.Path.IndexOf('/') + 1)..];
@@ -101,7 +101,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     channel.Writer.Complete();
                 }
-            }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
     }
 }

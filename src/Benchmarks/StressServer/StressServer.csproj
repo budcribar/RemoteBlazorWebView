@@ -45,6 +45,16 @@
 		</EmbeddedResource>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <EmbeddedResource Remove="publish\selenium-manager\linux.selenium-manager" />
+	  <EmbeddedResource Remove="publish\selenium-manager\macos.selenium-manager" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="publish\selenium-manager\linux.selenium-manager" />
+	  <None Remove="publish\selenium-manager\macos.selenium-manager" />
+	</ItemGroup>
+
 
 	<ItemGroup>
 	  <Folder Include="Resources\" />
