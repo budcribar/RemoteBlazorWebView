@@ -50,12 +50,10 @@ namespace StressServer
                 return false;
             }
         }
-        protected static List<ChromeDriver> _driver = new();
-        
-        static List<string> gids = new();
+       
         public static async Task Main(string[] args)
         {
-            
+            Stopwatch stopwatch = Stopwatch.StartNew();
             Console.WriteLine("Extracting Resources...");
 
             Utilities.ExtractResourcesToExecutionDirectory();
@@ -105,7 +103,6 @@ namespace StressServer
             {
                 Logging.LogEvent("Server not running", EventLogEntryType.Error);
                 Console.WriteLine("Server not running");
-                Console.ReadKey();
                 return;
             }
           
@@ -132,125 +129,141 @@ namespace StressServer
             }
 
             for (int i = 0; i < numLoops; i++) {
-                var results = ExecuteLoop(totalPasses, totalFailures, url, channel, numClients, path);
-                totalPasses = results.Item1;
-                totalFailures = results.Item2;
+                var results = ExecuteLoop(url, channel, numClients, path);
+                totalPasses += results.Item1;
+                totalFailures += results.Item2;
 
                 Logging.LogEvent($"Counter Passes: {totalPasses} Fails: {totalFailures}", EventLogEntryType.SuccessAudit);
             }
-           
+
             //ExecutableManager.CleanUp(path);
-            Console.ReadKey();
+
+            Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds/numLoops}",EventLogEntryType.Warning);
         }
 
-        private static (int,int) ExecuteLoop(int totalPasses, int totalFailures, string url, GrpcChannel channel, int numClients, string path)
+        private static (int,int) ExecuteLoop(string url, GrpcChannel channel, int numClients, string path)
         {
-            gids.Clear();
-
             List<Process> clients = new List<Process>();
-
-            for (int i = 0; i < numClients; i++)
+            List<ChromeDriver> _driver = new();
+            List<string> gids = new();
+            int passCount = 0;
+            int failCount = 0;
+            try
             {
-                var id = Guid.NewGuid().ToString();
-                gids.Add(id);
+                gids.Clear();
 
-                clients.Add(ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}" ));
-                var cd = new ChromeDriver(new ChromeOptions { BrowserVersion = "128.0", AcceptInsecureCertificates = true, PageLoadTimeout = TimeSpan.FromMinutes(2) });
-                _driver.Add(cd);
-            }
-
-            var ids = WaitForClientToConnect(numClients, gids, channel);
-            if (clients.Count != ids.Count)
-            {
-                // Startup failed
-                Logging.LogEvent("Startup Failed", EventLogEntryType.Error);
-                Console.WriteLine("Startup Failed");
-                Console.ReadKey();
-                return (0,0);
-            }
-
-            // open browser to home page
-            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i => { _driver[i].Url = url + $"/app/{ids[i]}"; });
-
-            Thread.Sleep(3000);
-
-
-            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
-            {
-                for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                for (int i = 0; i < numClients; i++)
                 {
-                    try
+                    var id = Guid.NewGuid().ToString();
+                    gids.Add(id);
+
+                    clients.Add(ExecutableManager.RunExecutable(path, $"-u={url}", $"-i={id}"));
+                    var cd = new ChromeDriver(new ChromeOptions { BrowserVersion = "128.0", AcceptInsecureCertificates = true, PageLoadTimeout = TimeSpan.FromMinutes(2) });
+                    _driver.Add(cd);
+                }
+                var ids = WaitForClientToConnect(numClients, gids, channel);
+                if (clients.Count != ids.Count)
+                {
+                    // Startup failed
+                    Logging.LogEvent("Startup Failed", EventLogEntryType.Error);
+                    Console.WriteLine("Startup Failed");
+                    return (0, numClients);
+                }
+                // open browser to home page
+                Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i => { _driver[i].Url = url + $"/app/{ids[i]}"; });
+
+                Thread.Sleep(3000);
+
+
+                Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
+                {
+                    for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                     {
-                        var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
-                        link?.Click();
+                        try
+                        {
+                            var link = _driver[i].FindElement(By.PartialLinkText("Counter"));
+                            link?.Click();
+                            Thread.Sleep(100);
+                            break;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
                         Thread.Sleep(100);
-                        break;
                     }
-                    catch (Exception) {
-                       
-                    }
-                    Thread.Sleep(100);
-                }
-            });
-
-            List<IWebElement> button = new();
-            List<IWebElement> para = new();
-
-            for (int i = 0; i < numClients; i++)
-            {
-                for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
-                {
-                    try
-                    {
-                        IWebElement buttonElement = _driver[i].FindElement(By.ClassName("btn"));
-                        IWebElement paraElement = _driver[i].FindElement(By.XPath("//p"));
-
-                        button.Add(buttonElement);
-                        para.Add(paraElement);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                    Thread.Sleep(100);
-                }
-            }
-
-            int numClicks = 10;
-            for (int i = 0; i < numClicks; i++)
-            {
-                Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, j =>
-                {
-                    button[j].Click();
-                    Thread.Sleep(numClients * 75);
                 });
 
-            }
-            Thread.Sleep(numClients * 100);
-            int passCount = 0;
-            Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
-            {
-                var res = para[i].Text;
-                if (res.Contains($"{numClicks}")) passCount++;
-                else
+                List<IWebElement> button = new();
+                List<IWebElement> para = new();
+
+                for (int i = 0; i < numClients; i++)
                 {
-                    Logging.LogEvent($"{numClicks} expected but found {res}", EventLogEntryType.Error);
+                    for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
+                    {
+                        try
+                        {
+                            IWebElement buttonElement = _driver[i].FindElement(By.ClassName("btn"));
+                            IWebElement paraElement = _driver[i].FindElement(By.XPath("//p"));
+
+                            button.Add(buttonElement);
+                            para.Add(paraElement);
+                            break;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        Thread.Sleep(100);
+                    }
                 }
-            });
 
-            if (passCount == numClients)
-            {
-                totalPasses += numClients;
+                int numClicks = 10;
+                for (int i = 0; i < numClicks; i++)
+                {
+                    Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, j =>
+                    {
+                        button[j].Click();
+                        Thread.Sleep(numClients * 75);
+                    });
+
+                }
+                Thread.Sleep(numClients * 100);
+               
+
+                Parallel.For(0, numClients, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
+                {
+                    var res = para[i].Text;
+                    if (res.Contains($"{numClicks}")) passCount++;
+                    else
+                    {
+                        failCount++;
+                        Logging.LogEvent($"{numClicks} expected but found {res}", EventLogEntryType.Error);
+                    }
+                });
+
+                return (passCount, failCount);
             }
-            else
+            catch (Exception e)
             {
-                totalFailures += numClients;
+                return (passCount, numClients-passCount);
+            }
+            finally
+            {
+                _driver.ForEach(x =>
+                {
+                    try { x.Quit(); }
+                    catch { Logging.LogEvent($"Exception on ChromeDriver.Quit()", EventLogEntryType.Error); }
+                });
+                _driver.Clear();
+
+                // Optionally kill client processes if needed
+                clients.ForEach(x =>
+                {
+                    try { if (!x.HasExited) x.Kill(); } catch { Logging.LogEvent($"Unable to kill client process", EventLogEntryType.Error); }
+                });
             }
 
-            _driver.ForEach(x => x.Quit());
-            _driver.Clear();
-            return (totalPasses, totalFailures);
         }
     }
 }
