@@ -182,7 +182,7 @@ namespace PeakSWC.RemoteWebView
 
                 try
                 {
-                    await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = blazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = (int)PingIntervalSeconds }).ConfigureAwait(false);
+                    await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = blazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = (int)PingIntervalSeconds },cts.Token).ConfigureAwait(false);
 
                     await foreach (var message in pings.ResponseStream.ReadAllAsync(cts.Token).ConfigureAwait(false))
                     {
