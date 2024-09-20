@@ -203,9 +203,6 @@ namespace PeakSWC.RemoteWebView
             if (message == null) return 0;
             return message.CalculateSize();
         }
-        public class ByteCounter
-        {
-            public long Bytes { get; set; } = 0;
-        }
+      
     }
 }
