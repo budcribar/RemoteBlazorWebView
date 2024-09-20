@@ -128,3 +128,13 @@ System.InvalidOperationException: Can't write the message because the request is
    Omen Result
    SS7: Elapsed Time: 00:44:34.1976816 Seconds per pass: 26.741983918000003
    SS8: Elapsed Time: 00:24:47.0722065 Seconds per pass: 14.870732215999999
+
+    Elapsed Time: 00:30:25.9628616 Seconds per pass: 18.259640564999998
+   SS9: Elapsed Time: 00:22:26.8034051 Seconds per pass: 13.468043221
+
+
+   Problem: retry can fail with duplicate ID
+   Also getting count off error
+   Maybe the network went down
+
+

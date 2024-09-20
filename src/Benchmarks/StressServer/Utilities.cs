@@ -253,7 +253,7 @@ namespace StressServer
                         string destinationPath = Path.Combine(executionDirectory, combinedRelativePath).Replace("_", "-");
 
                         // Ensure the destination directory exists
-                        string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                        string destinationDirectory = Path.GetDirectoryName(destinationPath) ?? string.Empty;
                         if (!Directory.Exists(destinationDirectory))
                         {
                             Directory.CreateDirectory(destinationDirectory);
@@ -261,7 +261,7 @@ namespace StressServer
                         }
 
                         // Extract and write the resource to the destination path
-                        using (Stream resourceStream = assembly.GetManifestResourceStream(resourceName))
+                        using (Stream? resourceStream = assembly.GetManifestResourceStream(resourceName))
                         {
                             if (resourceStream == null)
                             {

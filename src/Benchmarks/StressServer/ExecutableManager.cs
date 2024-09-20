@@ -5,6 +5,9 @@ using System.Reflection;
 
 namespace StressServer
 {
+    using Google.Protobuf.WellKnownTypes;
+    using Grpc.Net.Client;
+    using PeakSWC.RemoteWebView;
     using System;
     using System.Diagnostics;
     using System.IO;
@@ -12,150 +15,132 @@ namespace StressServer
 
     public static class ExecutableManager
     {
-        /// <summary>
-        /// Launches an executable with specified arguments. If the executable fails to initialize within 1 second,
-        /// it will attempt to relaunch it up to a maximum of 3 retries.
-        /// </summary>
-        /// <param name="exePath">The full path to the executable.</param>
+        private static async Task<bool> WaitForClientToConnectAsync(string clientId, GrpcChannel channel, int timeoutMs = 3000, int checkIntervalMs = 100)
+        {
+            var client = new WebViewIPC.WebViewIPCClient(channel);
+            int elapsedMs = 0;
+
+            while (elapsedMs < timeoutMs)
+            {
+                try
+                {
+                    var response = await client.GetIdsAsync(new Empty());
+                    var idsSet = new HashSet<string>(response.Responses);
+
+                    // Check if the client ID is present
+                    if (idsSet.Contains(clientId))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogEvent($"gRPC call failed: {ex.Message}", EventLogEntryType.Error);
+                    return false;
+                }
+
+                await Task.Delay(checkIntervalMs);
+                elapsedMs += checkIntervalMs;
+            }
+
+            // Timeout reached without registering the client ID
+            Logging.LogEvent($"Timeout waiting for client ID '{clientId}' to register.", EventLogEntryType.Error);
+            return false;
+        }
+        /// <param name="clientId">The client ID to wait for.</param>
+        /// <param name="channel">gRPC channel for communication.</param>
         /// <param name="arguments">Arguments to pass to the executable.</param>
-        /// <returns>The Process object of the launched executable.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the executable is not found at the specified path.</exception>
-        /// <exception cref="Exception">Thrown if the executable fails to start after maximum retries.</exception>
-        /// 
-        public static Process RunExecutable(string exePath, params string[] arguments)
+        /// <param name="startupDelayMs">Delay before starting the next process (default: 50ms).</param>
+        /// <param name="initializationTimeoutMs">Maximum time to wait for client ID (default: 3000ms).</param>
+        /// <returns>The started and validated Process instance.</returns>
+        /// <exception cref="FileNotFoundException">Thrown if the executable is not found.</exception>
+        /// <exception cref="Exception">Thrown if the process fails to start or register the client ID.</exception>
+        public static async Task<Process> RunExecutableAsync(string exePath, string clientId, GrpcChannel channel, params string[] arguments)
         {
             if (!File.Exists(exePath))
                 throw new FileNotFoundException("Executable not found.", exePath);
 
-            const int maxRetries = 3;                     // Maximum number of launch attempts
-            const int initializationTimeoutMs = 1000;     // Time to wait for MainWindowHandle (in milliseconds)
-            const int postInitRunDurationMs = 100;       // Time to ensure process remains running after initialization
-            const int checkIntervalMs = 100;              // Interval between checks (in milliseconds)
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            // Configure the process start information
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                try
-                {
-                    // Configure the process start information
-                    ProcessStartInfo startInfo = new ProcessStartInfo
-                    {
-                        FileName = exePath,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false
-                    };
+                FileName = exePath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false
+            };
 
-                    // Add provided arguments to the process
-                    foreach (string argument in arguments)
-                        startInfo.ArgumentList.Add(argument);
-
-                    // Initialize the process
-                    Process process = new Process { StartInfo = startInfo };
-
-                    // Start the process
-                    if (!process.Start())
-                    {
-                        throw new Exception("Failed to start the process.");
-                    }
-
-                    // Set the process priority (Caution: RealTime can affect system stability)
-                    try
-                    {
-                        process.PriorityClass = ProcessPriorityClass.High;
-                    }
-                    catch (Exception priorityEx)
-                    {
-                        Console.WriteLine($"Attempt {attempt}: Failed to set process priority. Exception: {priorityEx.Message}");
-                        // Optionally, proceed without setting priority or choose a different priority level
-                    }
-
-                    Console.WriteLine($"Attempt {attempt}: Process started with PID {process.Id}. Waiting for initialization...");
-
-                    // Record the start time for initialization
-                    DateTime initStartTime = DateTime.Now;
-
-                    // Wait until the main window handle is set or until the initialization timeout
-                    while ((DateTime.Now - initStartTime).TotalMilliseconds < initializationTimeoutMs)
-                    {
-                        process.Refresh(); // Refresh process information
-
-                        if (process.HasExited)
-                        {
-                            throw new Exception("Process exited prematurely during initialization.");
-                        }
-
-                        if (process.MainWindowHandle != IntPtr.Zero)
-                        {
-                            Console.WriteLine($"Attempt {attempt}: Main window handle detected. Verifying process stability...");
-                            break;
-                        }
-
-                        Thread.Sleep(checkIntervalMs); // Wait before the next check
-                    }
-
-                    // Check if MainWindowHandle was set within the timeout
-                    if (process.MainWindowHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Initialization timeout: MainWindowHandle was not set.");
-                    }
-
-                    // Record the time after initialization
-                    DateTime postInitStartTime = DateTime.Now;
-
-                    // Wait for the specified duration to ensure the process remains running
-                    while ((DateTime.Now - postInitStartTime).TotalMilliseconds < postInitRunDurationMs)
-                    {
-                        process.Refresh();
-
-                        if (process.HasExited)
-                        {
-                            throw new Exception("Process terminated unexpectedly shortly after initialization.");
-                        }
-
-                        Thread.Sleep(checkIntervalMs); // Wait before the next check
-                    }
-
-                    // At this point, the process has been running successfully for the required duration
-                    Console.WriteLine($"Attempt {attempt}: Process is stable and running.");
-                    return process; // Successfully launched and stable
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Attempt {attempt}: Failed to launch executable. Exception: {ex.Message}");
-
-                    // Optionally, log the exception details to a log file or monitoring system
-
-                    // If the process was started but failed to stabilize, attempt to kill it
-                    try
-                    {
-                        // Attempt to retrieve the process by name or ID if necessary
-                        // For simplicity, assuming 'process' variable is accessible here
-                        // If not, consider restructuring the code to keep track of the process
-                    }
-                    catch
-                    {
-                        // Ignore any exceptions while trying to kill the process
-                    }
-
-                    // Wait before retrying
-                    if (attempt < maxRetries)
-                    {
-                        Console.WriteLine($"Attempt {attempt}: Retrying in {checkIntervalMs}ms...");
-                        Thread.Sleep(checkIntervalMs);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Attempt {attempt}: Maximum retries reached. Launching executable failed.");
-                        throw new Exception($"Failed to launch the executable '{exePath}' after {maxRetries} attempts.");
-                    }
-                }
+            // Add provided arguments to the process
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
             }
 
-            // This point should not be reached due to the throw in the catch block after max retries
-            throw new Exception("Unexpected error in RunExecutable method.");
-        }
+            Process? process = null;
 
+            try
+            {
+                // Initialize the process
+                process = new Process { StartInfo = startInfo };
+
+                // Start the process
+                bool started = process.Start();
+                if (!started)
+                {
+                    throw new Exception("Failed to start the process.");
+                }
+
+                // Optional: Set the process priority
+                try
+                {
+                    process.PriorityClass = ProcessPriorityClass.High;
+                }
+                catch (Exception priorityEx)
+                {
+                    Logging.LogEvent($"Failed to set process priority. Exception: {priorityEx.Message}", EventLogEntryType.Warning);
+                    // Proceed without setting priority or choose a different priority level
+                }
+
+                // Wait for the client ID to be registered
+                bool isClientConnected = await WaitForClientToConnectAsync(
+                    clientId: clientId,
+                    channel: channel,
+                    timeoutMs: 3000, // 3 seconds timeout
+                    checkIntervalMs: 100 // Check every 100ms
+                );
+
+                // Verify the client ID is registered
+                if (isClientConnected)
+                {
+                    return process; // Successfully launched and validated
+                }
+                else
+                {
+                    throw new Exception($"Client ID '{clientId}' was not registered within the timeout period.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.LogEvent($"Failed to launch executable '{exePath}'. Exception: {ex.Message}", EventLogEntryType.Error);
+
+                // Attempt to kill the process if it's running
+                if (process != null && !process.HasExited)
+                {
+                    try
+                    {
+                        process.Kill();
+                        Logging.LogEvent($"Process PID {process.Id} was terminated due to failure.", EventLogEntryType.Warning);
+                    }
+                    catch (Exception killEx)
+                    {
+                        Logging.LogEvent($"Failed to kill process PID {process.Id}. Exception: {killEx.Message}", EventLogEntryType.Error);
+                        // Continue to throw the original exception
+                    }
+                }
+
+                throw; // Re-throw the exception to be handled by the caller
+            }
+        }
         private const string ResourceName = "StressServer.RemoteBlazorWebViewTutorial.WpfApp.exe";
 
         /// <summary>
