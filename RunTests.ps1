@@ -15,6 +15,16 @@ Write-Host -ForegroundColor GREEN ("Build:",$Build)
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
+# Check if the process is running
+$process = Get-Process -Name RemoteWebViewService -ErrorAction SilentlyContinue
+
+if ($process) {
+    Write-Host  -ForegroundColor YELLOW "Stopping RemoteWebViewService"
+    Stop-Process -Name RemoteWebViewService -Force
+} else {
+    Write-Host -ForegroundColor GREEN "RemoteWebViewService is not running"
+}
+
 # Get the current Node.js version
 $currentVersion = node -v
 
