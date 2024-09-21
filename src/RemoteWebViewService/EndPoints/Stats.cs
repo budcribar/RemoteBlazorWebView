@@ -12,15 +12,16 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                // Retrieve the ServerStats instance from DI
+                // Retrieve the ServerStats instance from Dependency Injection
                 var stats = context.RequestServices.GetRequiredService<ServerStats>();
 
                 // Get the current statistics
                 var data = stats.GetStats();
 
-                // Build the HTML content
+                // Initialize the HTML builder
                 var htmlBuilder = new StringBuilder();
 
+                // Start building the HTML content
                 htmlBuilder.AppendLine("<!DOCTYPE html>");
                 htmlBuilder.AppendLine("<html lang=\"en\">");
                 htmlBuilder.AppendLine("<head>");
@@ -28,18 +29,63 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 htmlBuilder.AppendLine("    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">");
                 htmlBuilder.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
                 htmlBuilder.AppendLine("    <title>gRPC Server Statistics</title>");
-                // Basic CSS for styling
+
+                // Embedded CSS Styles
                 htmlBuilder.AppendLine("    <style>");
-                htmlBuilder.AppendLine("        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }");
-                htmlBuilder.AppendLine("        h1 { color: #333; }");
-                htmlBuilder.AppendLine("        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }");
-                htmlBuilder.AppendLine("        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }");
-                htmlBuilder.AppendLine("        th { background-color: #f2f2f2; }");
-                htmlBuilder.AppendLine("        tr:nth-child(even) { background-color: #f9f9f9; }");
+                htmlBuilder.AppendLine("        body {");
+                htmlBuilder.AppendLine("            font-family: Arial, sans-serif;");
+                htmlBuilder.AppendLine("            margin: 20px;");
+                htmlBuilder.AppendLine("            background-color: #f9f9f9;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        h1 {");
+                htmlBuilder.AppendLine("            color: #333;");
+                htmlBuilder.AppendLine("            text-align: center;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        table {");
+                htmlBuilder.AppendLine("            width: 100%;");
+                htmlBuilder.AppendLine("            border-collapse: collapse;");
+                htmlBuilder.AppendLine("            margin-bottom: 20px;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        th, td {");
+                htmlBuilder.AppendLine("            border: 1px solid #ddd;");
+                htmlBuilder.AppendLine("            padding: 8px;");
+                htmlBuilder.AppendLine("            text-align: left;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        th {");
+                htmlBuilder.AppendLine("            background-color: #4CAF50;");
+                htmlBuilder.AppendLine("            color: white;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        tr:nth-child(even) {");
+                htmlBuilder.AppendLine("            background-color: #f2f2f2;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        button {");
+                htmlBuilder.AppendLine("            padding: 10px 20px;");
+                htmlBuilder.AppendLine("            background-color: #4CAF50;");
+                htmlBuilder.AppendLine("            color: white;");
+                htmlBuilder.AppendLine("            border: none;");
+                htmlBuilder.AppendLine("            cursor: pointer;");
+                htmlBuilder.AppendLine("            font-size: 16px;");
+                htmlBuilder.AppendLine("            border-radius: 4px;");
+                htmlBuilder.AppendLine("            margin-bottom: 20px;");
+                htmlBuilder.AppendLine("        }");
+                htmlBuilder.AppendLine("        button:hover {");
+                htmlBuilder.AppendLine("            background-color: #45a049;");
+                htmlBuilder.AppendLine("        }");
                 htmlBuilder.AppendLine("    </style>");
+
+                // Embedded JavaScript for Auto-Refresh
+                htmlBuilder.AppendLine("    <script>");
+                htmlBuilder.AppendLine("        // Auto-refresh the stats page every 60 seconds");
+                htmlBuilder.AppendLine("        setTimeout(function() {");
+                htmlBuilder.AppendLine("            window.location.reload();");
+                htmlBuilder.AppendLine("        }, 5000); // 60000 milliseconds = 60 seconds");
+                htmlBuilder.AppendLine("    </script>");
+
                 htmlBuilder.AppendLine("</head>");
                 htmlBuilder.AppendLine("<body>");
+
                 htmlBuilder.AppendLine("    <h1>gRPC Server Statistics</h1>");
+                htmlBuilder.AppendLine("    <button onclick=\"window.location.reload();\">Refresh Stats</button>");
 
                 // Basic Metrics Table
                 htmlBuilder.AppendLine("    <h2>Basic Metrics</h2>");
@@ -80,6 +126,14 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 {
                     htmlBuilder.AppendLine($"        <tr><td>{error.Key}</td><td>{error.Value}</td></tr>");
                 }
+                htmlBuilder.AppendLine("    </table>");
+
+                // Bandwidth Metrics Table
+                htmlBuilder.AppendLine("    <h2>Bandwidth Metrics (Bytes)</h2>");
+                htmlBuilder.AppendLine("    <table>");
+                htmlBuilder.AppendLine("        <tr><th>Metric</th><th>Value</th></tr>");
+                htmlBuilder.AppendLine($"        <tr><td>Total Bytes Sent</td><td>{data["TotalBytesSent"]}</td></tr>");
+                htmlBuilder.AppendLine($"        <tr><td>Total Bytes Received</td><td>{data["TotalBytesReceived"]}</td></tr>");
                 htmlBuilder.AppendLine("    </table>");
 
                 htmlBuilder.AppendLine("</body>");
