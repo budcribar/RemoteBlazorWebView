@@ -103,7 +103,7 @@ namespace PeakSwc.StaticFiles
                 bool timedOut = false;
                 try
                 {
-                    timedOut = !fileEntry.Semaphore.Wait(TimeSpan.FromSeconds(60), serviceState.Token);
+                    timedOut = !await fileEntry.Semaphore.WaitAsync(TimeSpan.FromSeconds(60), serviceState.Token);
                 }
                 catch (Exception)
                 {
