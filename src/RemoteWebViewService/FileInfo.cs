@@ -159,13 +159,14 @@ namespace PeakSwc.StaticFiles
             return stream;
         }
 
-        public static async Task<IFileInfo> CreateFileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
+        public static async Task<IFileInfo?> CreateFileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)
         {
             var fi = new FileInfo(rootDictionary,path,logger);
             var g = fi.guid;
 
             await fi.getStreamTask.ConfigureAwait(false);
 
+            if (fi.length < 0) return null;
             return fi;
         }
         private FileInfo(ConcurrentDictionary<string, ServiceState> rootDictionary, string path, ILogger<RemoteFileResolver> logger)

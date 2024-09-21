@@ -16,7 +16,7 @@ namespace PeakSwc.StaticFiles
             return new NotFoundDirectoryContents();
         }
 
-        public Task<IFileInfo> GetFileInfo(string subpath)
+        public Task<IFileInfo?> GetFileInfo(string subpath)
         {
             return FileInfo.CreateFileInfo(rootDictionary, subpath, logger);
            

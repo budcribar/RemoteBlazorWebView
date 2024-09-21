@@ -31,7 +31,7 @@ internal class StaticFileContext
     public IFileProvider _fileProvider;
     private readonly string _method;
     private readonly string? _contentType;
-    private Microsoft.Extensions.FileProviders.IFileInfo _fileInfo = default!;
+    private Microsoft.Extensions.FileProviders.IFileInfo? _fileInfo = default!;
           
     private EntityTagHeaderValue? _etag;
     private RequestHeaders? _requestHeaders;
@@ -130,11 +130,12 @@ internal class StaticFileContext
         }
     }
 
-    public string PhysicalPath => _fileInfo.PhysicalPath ?? string.Empty;
+    public string PhysicalPath => _fileInfo?.PhysicalPath ?? string.Empty;
 
     public async Task<bool> LookupFileInfo()
     {
         _fileInfo = await _fileProvider.GetFileInfo(SubPath).ConfigureAwait(false);
+        if (_fileInfo == null) return false;
         if (_fileInfo.Exists)
         {
             _length = _fileInfo.Length;
@@ -371,7 +372,7 @@ internal class StaticFileContext
         ApplyResponseHeaders(StatusCodes.Status200OK);
         try
         {
-            await _context.Response.SendFileAsync(_fileInfo, 0, _length, _context.RequestAborted).ConfigureAwait(false);
+            await _context.Response.SendFileAsync(_fileInfo!, 0, _length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {
@@ -402,9 +403,9 @@ internal class StaticFileContext
 
         try
         {
-            var logPath = !string.IsNullOrEmpty(_fileInfo.PhysicalPath) ? _fileInfo.PhysicalPath : SubPath;
+            var logPath = !string.IsNullOrEmpty(_fileInfo?.PhysicalPath) ? _fileInfo.PhysicalPath : SubPath;
             _logger.SendingFileRange(_response.Headers.ContentRange, logPath);
-            await _context.Response.SendFileAsync(_fileInfo, start, length, _context.RequestAborted).ConfigureAwait(false);
+            await _context.Response.SendFileAsync(_fileInfo!, start, length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {

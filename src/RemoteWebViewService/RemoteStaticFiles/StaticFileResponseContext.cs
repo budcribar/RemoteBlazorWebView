@@ -17,7 +17,7 @@ public class StaticFileResponseContext
     /// </summary>
     /// <param name="context">The request and response information.</param>
     /// <param name="file">The file to be served.</param>
-    public StaticFileResponseContext(HttpContext context, IFileInfo file)
+    public StaticFileResponseContext(HttpContext context, IFileInfo? file)
     {
         Context = context ?? throw new ArgumentNullException(nameof(context));
         File = file ?? throw new ArgumentNullException(nameof(file));
