@@ -35,24 +35,33 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
 
                         var home = serviceState.HtmlHostPath;
-                        var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = await rfr.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
-                        context.Response.ContentLength = fi.Length;
-                        using Stream stream = fi.CreateReadStream();
-                        context.Response.StatusCode = 200;
-                        context.Response.ContentType = "text/html";
-                        await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        var remoteFileResolver = context.RequestServices.GetRequiredService<RemoteFileResolver>();
+                        var fileInfo = await remoteFileResolver.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
+
+                        if (fileInfo.Length < 0)
+                        {
+                            context.Response.StatusCode = 404;
+                            await context.Response.WriteAsync("File not found").ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            context.Response.ContentLength = fileInfo.Length;
+                            using Stream stream = fileInfo.CreateReadStream();
+                            context.Response.StatusCode = 200;
+                            context.Response.ContentType = "text/html";
+                            await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        }                
                     }
                     else
                     {
                         context.Response.StatusCode = 400;
-                        context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                     }
                 }
                 else
                 {
                     context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync("Invalid or missing GUID").ConfigureAwait(false);
                 }
             };
 
