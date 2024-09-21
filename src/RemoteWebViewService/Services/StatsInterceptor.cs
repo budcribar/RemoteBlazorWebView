@@ -5,6 +5,7 @@ using System;
 using Google.Protobuf;
 using System.Threading;
 using static PeakSWC.RemoteWebView.ServerStats;
+using Microsoft.Extensions.Logging;
 
     namespace PeakSWC.RemoteWebView.Services
     {
