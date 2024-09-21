@@ -12,19 +12,15 @@ using Microsoft.Extensions.Logging;
     public class StatsInterceptor : Interceptor
     {
         private readonly ServerStats _stats;
-
-        public StatsInterceptor(ServerStats stats)
+        private readonly ILogger<RemoteWebViewService> _logger;
+        public StatsInterceptor(ServerStats stats, ILogger<RemoteWebViewService> logger)
         {
             _stats = stats;
+            _logger = logger;
         }
-
-        // Override for Unary Calls
         public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
-            TRequest request,
-            ServerCallContext context,
-            UnaryServerMethod<TRequest, TResponse> continuation)
-            where TRequest : class
-            where TResponse : class
+            TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
+            where TRequest : class where TResponse : class
         {
             _stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -33,6 +29,7 @@ using Microsoft.Extensions.Logging;
             string? errorType = null;
             long bytesReceived = 0;
             long bytesSent = 0;
+            double thresholdMs = 5000; // 5 second threshold
 
             try
             {
@@ -68,7 +65,14 @@ using Microsoft.Extensions.Logging;
             finally
             {
                 stopwatch.Stop();
-                _stats.RecordRequest(success, stopwatch.Elapsed.TotalMilliseconds, errorType);
+                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+                _stats.RecordRequest(success, elapsedTime, errorType);
+
+                if (elapsedTime > thresholdMs)
+                {
+                    _logger.LogWarning($"Request exceeded {thresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                }
+
                 _stats.RecordConnectionEnd();
             }
         }
