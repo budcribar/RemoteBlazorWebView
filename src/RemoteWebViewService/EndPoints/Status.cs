@@ -1,11 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Web;
-using PeakSWC.RemoteWebView.Pages;
 using System.Collections.Concurrent;
-using System.Reflection;
 using System.Text.Json;
-using System.Threading.Channels;
+using System;
 
 namespace PeakSWC.RemoteWebView.EndPoints
 {
@@ -15,17 +12,25 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
+                // Check if 'id' route value exists and is a valid GUID
+                if (!context.Request.RouteValues.TryGetValue("id", out var idValue) || idValue == null || !Guid.TryParse(idValue.ToString(), out var guid))
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync("Invalid or missing GUID").ConfigureAwait(false);
+                    return;
+                }
+
+                // Retrieve service state from the service dictionary
                 var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
                 var response = new StatusResponse
                 {
-                    Connected = serviceDictionary.ContainsKey(guid)
+                    Connected = serviceDictionary.ContainsKey(guid.ToString())
                 };
 
+                // Set content type to JSON and return the response
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonContext.Default.StatusResponse)).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(context.Response.Body, response).ConfigureAwait(false);
             };
         }
-
     }
 }

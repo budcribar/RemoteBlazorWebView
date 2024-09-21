@@ -23,8 +23,12 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 if (stream == null)
                 {
                     context.Response.StatusCode = 404;
+                    await context.Response.WriteAsync("Favicon not found").ConfigureAwait(false);
                     return;
                 }
+
+                context.Response.ContentLength = stream.Length;
+                context.Response.Headers["Cache-Control"] = "public,max-age=604800"; // Cache for 7 days
 
                 await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
             };

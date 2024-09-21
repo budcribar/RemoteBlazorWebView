@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Web;
+using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Pages;
-using System.Collections.Concurrent;
+using System;
 using System.Reflection;
-using System.Text.Json;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
 {
@@ -16,22 +13,39 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                // Get the version of the currently executing assembly
-                var assembly = Assembly.GetExecutingAssembly();
-                var assemblyVersion = assembly.GetName().Version?.ToString() ?? "Version not found";
+                try
+                {
+                    // Get the version of the currently executing assembly
+                    var assembly = Assembly.GetExecutingAssembly();
+                    var assemblyVersion = assembly.GetName().Version?.ToString() ?? "Version not found";
 
-                // Create the version string
-                string versionString = $"Version {assemblyVersion}";
+                    // Create the version string
+                    string versionString = $"Version {assemblyVersion}";
 
-                var contact = new ContactInfo { Company = "Peak Software Consulting, LLC", Email = "budcribar@msn.com", Name = "Bud Cribar", Url = "https://github.com/budcribar/RemoteBlazorWebView" };
-                var html = HtmlPageGenerator.GenerateContactPage(contact, versionString);
+                    var contact = new ContactInfo
+                    {
+                        Company = "Peak Software Consulting, LLC",
+                        Email = "budcribar@msn.com",
+                        Name = "Bud Cribar",
+                        Url = "https://github.com/budcribar/RemoteBlazorWebView"
+                    };
 
-                context.Response.ContentType = "text/html";
+                    var html = HtmlPageGenerator.GenerateContactPage(contact, versionString);
 
-                // Write the version string to the response
-                await context.Response.WriteAsync(html).ConfigureAwait(false);
+                    context.Response.ContentType = "text/html";
+
+                    context.Response.ContentLength = html.Length;
+
+                    await context.Response.WriteAsync(html).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    ILogger<RemoteWebViewService> logger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
+                    logger.LogError(ex, ex.Message);
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteAsync("An error occurred while generating the contact page.").ConfigureAwait(false);
+                }
             };
         }
-
     }
 }
