@@ -237,13 +237,13 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 389.3 ms | 52.40 ms | 27.40 ms | 4500.0000 | 4000.0000 | 3500.0000 |  34.17 MB | 100 files in parallel, cancel createwebview
         // | ReadFilesClientBenchmark | 1.260 m | 1.417 m | 0.8434 m | 884.07 KB |
         // | ReadFilesClientBenchmark | 743.0 ms | 121.0 ms | 72.00 ms | 4000.0000 | 3000.0000 | 3000.0000 |  34.15 MB | 100 files in parallel and parallel read
-        // | ReadFilesClientBenchmark | 552.0 ms | 120.6 ms | 71.76 ms | 5000.0000 | 4500.0000 | 4000.0000 |   34.2 MB | 100 files in parallel and CreateBounded<FileReadRequest>(1);
+        // | ReadFilesClientBenchmark | 552.0 ms | 120.6 ms | 71.76 ms | 5000.0000 | 4500.0000 | 4000.0000 |   34.2 MB | 100 files in parallel and CreateBounded<ClientFileReadResponse>(1);
         // | ReadFilesClientBenchmark | 477.1 ms | 62.07 ms | 183.0 ms | 423.1 ms | 6000.0000 | 5000.0000 | 5000.0000 |   34.1 MB | 100 files in series server in debug
         // | ReadFilesClientBenchmark | 489.9 ms | 29.91 ms | 82.38 ms | 1000.0000 |     34 MB | 100 files in parallel server in debug 
-        // | ReadFilesClientBenchmark | 490.4 ms | 25.77 ms | 72.27 ms | 470.3 ms | 1000.0000 |  34.11 MB |100 files in parallel and CreateBounded<FileReadRequest>(1); server in debug
-        // | ReadFilesClientBenchmark | 514.6 ms | 37.61 ms | 107.3 ms | 483.8 ms | 1000.0000 |  34.25 MB |100 files in parallel and CreateBounded<FileReadRequest>(100); server in debug
-        // | ReadFilesClientBenchmark | 450.9 ms | 15.68 ms | 42.65 ms | 1000.0000 |   34.1 MB |100 files in parallel and CreateBounded<FileReadRequest>(Environment.ProcessorCount); server in debug
-        // | ReadFilesClientBenchmark | 310.4 ms | 15.19 ms | 42.59 ms | 1000.0000 | 500.0000 |   34.1 MB |100 files in parallel and CreateBounded<FileReadRequest>(Environment.ProcessorCount); server in release
+        // | ReadFilesClientBenchmark | 490.4 ms | 25.77 ms | 72.27 ms | 470.3 ms | 1000.0000 |  34.11 MB |100 files in parallel and CreateBounded<ClientFileReadResponse>(1); server in debug
+        // | ReadFilesClientBenchmark | 514.6 ms | 37.61 ms | 107.3 ms | 483.8 ms | 1000.0000 |  34.25 MB |100 files in parallel and CreateBounded<ClientFileReadResponse>(100); server in debug
+        // | ReadFilesClientBenchmark | 450.9 ms | 15.68 ms | 42.65 ms | 1000.0000 |   34.1 MB |100 files in parallel and CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount); server in debug
+        // | ReadFilesClientBenchmark | 310.4 ms | 15.19 ms | 42.59 ms | 1000.0000 | 500.0000 |   34.1 MB |100 files in parallel and CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount); server in release
         // | ReadFilesClientBenchmark | 337.7 ms | 21.76 ms | 59.20 ms | 319.3 ms | 1000.0000 |     34 MB |100 files in parallel and serial FileReader server in release
         // | ReadFilesClientBenchmark | 53.14 ms | 1.036 ms | 2.836 ms | 4600.0000 | 3800.0000 | 3400.0000 |  34.06 MB | 100 files in parallel and serial FileReader production server 
         // | ReadFilesClientBenchmark | 36.36 ms | 1.157 ms | 3.337 ms | 3000.0000 | 2600.0000 | 1800.0000 |   34.2 MB | 100 files in parallel and parallel FileReader production server

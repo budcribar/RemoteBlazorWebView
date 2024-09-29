@@ -166,7 +166,7 @@ namespace PeakSWC.RemoteWebView
                     throw exception;
                 }
 
-                FileReader.AttachFileReader(client.FileReader(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
+                FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
 
                 MonitorPingTask(BlazorWebView,client);
 

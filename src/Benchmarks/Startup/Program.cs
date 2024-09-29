@@ -192,7 +192,7 @@ namespace ServerStartupTimer
 
                 //response.Dispose();
                 //var reader = client.FileReader();
-                //reader.RequestStream.WriteAsync(new FileReadRequest { })
+                //reader.RequestStream.WriteAsync(new ClientFileReadResponse { })
             }
             stopwatch.Stop();
             Console.WriteLine($"Avg Time for {loops} CreateWebViewRequest request: {stopwatch.ElapsedMilliseconds / loops} ms per request");

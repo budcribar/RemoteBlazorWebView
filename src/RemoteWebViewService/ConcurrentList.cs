@@ -1,8 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 
-public class ConcurrentList<T> : IDisposable
+public class ConcurrentList<T> : IEnumerable<T>, IDisposable
 {
     private List<T> _list = new List<T>();
     private ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
@@ -70,6 +71,21 @@ public class ConcurrentList<T> : IDisposable
         }
     }
 
+    // Add RemoveAt method
+    public void RemoveAt(int index)
+    {
+        CheckDisposed();
+        _lock.EnterWriteLock();
+        try
+        {
+            _list.RemoveAt(index);
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
     private void CheckDisposed()
     {
         if (_disposed)
@@ -93,13 +109,6 @@ public class ConcurrentList<T> : IDisposable
                 _lock.EnterWriteLock();
                 try
                 {
-                    if (typeof(IDisposable).IsAssignableFrom(typeof(T)))
-                    {
-                        foreach (var item in _list)
-                        {
-                            (item as IDisposable)?.Dispose();
-                        }
-                    }
                     _list.Clear();
                 }
                 finally
@@ -110,5 +119,26 @@ public class ConcurrentList<T> : IDisposable
             }
             _disposed = true;
         }
+    }
+
+    // Implement IEnumerable<T>.GetEnumerator (Generic)
+    public IEnumerator<T> GetEnumerator()
+    {
+        _lock.EnterReadLock();
+        try
+        {
+            // Return a copy of the list to ensure thread safety
+            return ((IEnumerable<T>)_list.ToArray()).GetEnumerator();
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+    }
+
+    // Explicit implementation of IEnumerable (Non-generic)
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();  // Call the generic GetEnumerator
     }
 }
