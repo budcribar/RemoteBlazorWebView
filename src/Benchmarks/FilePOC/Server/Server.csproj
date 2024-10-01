@@ -23,7 +23,7 @@
 		</PackageReference>
 		
 	
-		<Protobuf Include="..\..\RemoteBlazorWebView\src\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
+		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="publish\" />

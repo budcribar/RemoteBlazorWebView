@@ -23,6 +23,6 @@
 		<PackageReference Include="System.Drawing.Common" Version="8.0.8" />
 		
 	
-		<Protobuf Include="..\..\RemoteBlazorWebView\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
+		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 	</ItemGroup>
 </Project>
