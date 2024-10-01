@@ -104,11 +104,13 @@ message ClientFileReadResponse {
   oneof response {
     Init init = 4;
     FileMetadata metadata = 5;
-    FileData file_data = 6;
+    FileDataStatus file_data_status = 6;
+    FileData file_data = 7;
   }
 }
 
 message Init {
+   string htmlHostPath = 1;
 }
 
 message FileMetadata {
@@ -118,9 +120,10 @@ message FileMetadata {
 }
 message FileData {
     bytes file_chunk = 1;
-    int32 status_code = 2;
 }
-
+message FileDataStatus {
+    int32 status_code = 1;
+}
 
 
 service WebViewIPC {
