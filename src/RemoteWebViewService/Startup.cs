@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.Pages;
@@ -16,6 +18,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -98,14 +101,14 @@ namespace PeakSWC.RemoteWebView
         private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; } = new();
         private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
 
-#if AUTHORIZATION
+
         private readonly IConfiguration Configuration;
 
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
-
+#if AUTHORIZATION
         private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
             IConfidentialClientApplication confidentialClientApplication =
@@ -203,6 +206,18 @@ namespace PeakSWC.RemoteWebView
 #else
             services.AddTransient<IUserService, MockUserService>();
 #endif
+            // Bind RemoteFilesOptions from configuration
+            services.Configure<RemoteFilesOptions>(Configuration.GetSection("RemoteFilesOptions"));
+
+            // Register RemoteFilesOptions as a singleton for direct access if needed
+            services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<RemoteFilesOptions>>().Value);
+
+            // Add memory cache
+            services.AddMemoryCache();
+
+            // Register ServerFileSyncManager as a singleton
+            services.AddSingleton<ServerFileSyncManager>();
+
             services.AddSingleton(ServiceDictionary);
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();
@@ -282,7 +297,7 @@ namespace PeakSWC.RemoteWebView
 #endif
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
-            app.UseStaticFiles(new PeakSWC.RemoteWebView.StaticFileOptions { FileProvider = app.ApplicationServices?.GetRequiredService<RemoteFileResolver>() });
+            app.UseRemoteFiles();
 
             app.UseEndpoints(endpoints =>
             {
@@ -352,11 +367,18 @@ namespace PeakSWC.RemoteWebView
 
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = await rfr.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
-                        context.Response.ContentLength = fi.Length;
-                        using Stream stream = fi.CreateReadStream();
-                        context.Response.StatusCode = 200;
+                        var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                        context.Response.StatusCode = fileInfo.StatusCode;                     
                         context.Response.ContentType = "text/html";
+
+                        if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
+                        {
+                            await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
+                            return;
+                        }
+                        context.Response.ContentLength = fileInfo.Length;
+                        var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                        using Stream stream = fileStream.Stream;                       
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
                     else
@@ -500,11 +522,21 @@ namespace PeakSWC.RemoteWebView
                         serviceState.Refresh = true;
                         var home = serviceState.HtmlHostPath;
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                        var fi = await rfr.GetFileInfo($"/{guid}/{home}").ConfigureAwait(false);
-                        context.Response.ContentLength = fi.Length;
-                        using Stream stream = fi.CreateReadStream();
-                        context.Response.StatusCode = 200;
+
+                        var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), home).ConfigureAwait(false);
+                        context.Response.StatusCode = fileInfo.StatusCode;
                         context.Response.ContentType = "text/html";
+
+                        if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
+                        {
+                            await context.Response.WriteAsync($"File not found {home}").ConfigureAwait(false);
+                            return;
+                        }
+
+                        context.Response.ContentLength = fileInfo.Length;
+                        var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), home).ConfigureAwait(false);
+                        using Stream stream = fileStream.Stream;
+                      
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
                     else
