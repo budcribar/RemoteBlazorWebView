@@ -80,74 +80,51 @@ message PingMessageRequest {
 }
 
 
-// old
-
-//message FileReadInitRequest {
-//}
-//
-//message FileReadDataRequest {
-//    string path = 2;
-//    bytes data = 3;
-//    int32 instance = 4;
-//}
-//
-//message FileReadLengthRequest {
-//    string path = 2;
-//    int64 length = 3;
-//    int32 instance = 4;
-//    int64 lastModified = 5;
-//}
-//message FileReadRequest {
-//    string id = 1;
-//    oneof fileRead {
-//        FileReadInitRequest init = 2;
-//        FileReadLengthRequest length = 3;
-//        FileReadDataRequest data = 4;
-//    }
-//}
-//message FileReadResponse {
-//    string id = 1;
-//    string path = 2;   
-//    int32 instance = 3;
-//}
-// end old
 
 
 message ServerFileReadRequest {
-  string id = 1;
-  int32 instance = 2;
+  string client_id = 1;
+  string request_id = 2;
   string path = 3;
  
   RequestType request_type = 4; // Server indicates if it wants metadata or file data
 
   enum RequestType {
-    Init = 0;
-    MetaData = 1;
-    FileData = 2;
+    MetaData = 0;
+    FileData = 1;
   }
   // Add any other parameters the server needs to request a file read
 }
 
 message ClientFileReadResponse {
-  string id = 1;
-  int32 instance = 2;
+  string client_id = 1;
+  string request_id = 2;
   string path = 3;
  
   oneof response {
-    FileMetadata metadata = 4;
-    bytes file_chunk = 5;
+    Init init = 4;
+    FileMetadata metadata = 5;
+    FileDataStatus file_data_status = 6;
+    FileData file_data = 7;
   }
 }
 
-// TODO remove
-message FileList {
-  repeated string file_paths = 1;
+message Init {
+   string htmlHostPath = 1;
 }
 
 message FileMetadata {
   int64 length = 1;
   int64 lastModified = 2;
+  int32 status_code = 3;
 }
+message FileData {
+    bytes file_chunk = 1;
+}
+message FileDataStatus {
+    int32 status_code = 1;
+}
+
 
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 

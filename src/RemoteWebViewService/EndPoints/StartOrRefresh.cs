@@ -6,6 +6,7 @@ using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
@@ -20,7 +21,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 if (!context.Request.RouteValues.TryGetValue("id", out var idValue) || idValue == null || !Guid.TryParse(idValue.ToString(), out var guid))
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync("Invalid or missing GUID").ConfigureAwait(false);
+                    await context.Response.WriteAsync($"Invalid or missing GUID {idValue}").ConfigureAwait(false);
                     return;
                 }
 
@@ -41,20 +42,19 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     // Retrieve and stream the home HTML file
                     var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                    var fileInfo = await rfr.GetFileInfo($"/{guid}/{serviceState.HtmlHostPath}").ConfigureAwait(false);
+                    var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                    context.Response.StatusCode = fileInfo.StatusCode;              
+                    context.Response.ContentType = "text/html";
 
-                    if (fileInfo == null)
-                    {
-                        context.Response.StatusCode = StatusCodes.Status404NotFound;
-                        await context.Response.WriteAsync("File not found").ConfigureAwait(false);
+                    if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
+                    {                        
+                        await context.Response.WriteAsync($"File not found {serviceState.HtmlHostPath}").ConfigureAwait(false);
                         return;
                     }
 
                     context.Response.ContentLength = fileInfo.Length;
-                    context.Response.ContentType = "text/html";
-                    context.Response.StatusCode = StatusCodes.Status200OK;
-
-                    using Stream stream = fileInfo.CreateReadStream();
+                    var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                    using Stream stream = fileStream.Stream;
                     await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
                 else

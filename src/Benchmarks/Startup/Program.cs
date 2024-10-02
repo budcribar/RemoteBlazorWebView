@@ -192,7 +192,7 @@ namespace ServerStartupTimer
 
                 //response.Dispose();
                 //var reader = client.FileReader();
-                //reader.RequestStream.WriteAsync(new FileReadRequest { })
+                //reader.RequestStream.WriteAsync(new ClientFileReadResponse { })
             }
             stopwatch.Stop();
             Console.WriteLine($"Avg Time for {loops} CreateWebViewRequest request: {stopwatch.ElapsedMilliseconds / loops} ms per request");
@@ -323,13 +323,15 @@ namespace ServerStartupTimer
                     KillExistingProcesses("StressClient");
                     TestCreateWebView(1000,1024,10240);
                 }
-                      
+
                 // TestClientIPCService();
 
-                
+
                 //Console.ReadKey();
-               // process?.Kill(); // Stop the server
+                // process?.Kill(); // Stop the server
+               
             }
+            await Task.CompletedTask;
         }
 
         static async Task PollPort(string host, int port)

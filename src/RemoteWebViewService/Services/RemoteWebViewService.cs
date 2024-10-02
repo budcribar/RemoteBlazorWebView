@@ -71,22 +71,21 @@ namespace PeakSWC.RemoteWebView
          
         }
 
-        public override async Task RequestClientFileRead(IAsyncStreamReader<ServerFileReadRequest> requestStream, IServerStreamWriter<ClientFileReadResponse> responseStream, ServerCallContext context)
+        public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
             try
             {
-                await foreach (ServerFileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+                await foreach (ClientFileReadResponse message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
-                   
-                    id = message.Id;
+                    id = message.ClientId;
 
                     if (serviceDictionary.TryGetValue(id, out var serviceState))
                     {
                         if (serviceState.Token.IsCancellationRequested)
                             break;
 
-                        if (message.RequestType == ServerFileReadRequest.Types.RequestType.Init && serviceState.FileReaderTask == null)
+                        if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Init && serviceState.FileReaderTask == null)
                         {
                             serviceState.FileReaderTask = Task.Run(async () =>
                             {
@@ -95,7 +94,7 @@ namespace PeakSWC.RemoteWebView
                                     while (!serviceState.Token.IsCancellationRequested)
                                     {
                                         var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-                                        await responseStream.WriteAsync(new ClientFileReadResponse { Id = id, Path = fileEntry.Path, Instance = fileEntry.Instance }).ConfigureAwait(false);
+                                        await responseStream.WriteAsync(new ServerFileReadRequest { ClientId = id, Path = fileEntry.Path, RequestId = fileEntry.Instance.ToString() }, serviceState.Token).ConfigureAwait(false);
                                     }
                                 }
                                 catch (OperationCanceledException)
@@ -109,30 +108,29 @@ namespace PeakSWC.RemoteWebView
                             }, serviceState.Token);
                         }
 
-                        else if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Length)
+                        else if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Metadata)
                         {
-                            if (serviceState.FileDictionary.TryGetValue(message.Length.Path, out var concurrentList) && concurrentList.Count > message.Length.Instance && message.Length.Instance >= 0)
+                            if (serviceState.FileDictionary.TryGetValue(message.Path, out var concurrentList) && concurrentList.Count > int.Parse(message.RequestId) && int.Parse(message.RequestId) >= 0)
                             {
-                                var fileEntry = concurrentList[message.Length.Instance];
-                                fileEntry.Length = message.Length.Length;
-                                fileEntry.LastModified = DateTimeOffset.FromUnixTimeSeconds(message.Length.LastModified);
+                                var fileEntry = concurrentList[int.Parse(message.RequestId)];
+                                fileEntry.Length = message.Metadata.Length;
                                 fileEntry.Semaphore.Release();
 
                                 // send a FileReadData request
                             }
                             else
                             {
-                                logger.LogError($"FileEntry not found for Path: {message.Length.Path}, Instance: {message.Length.Instance}");
+                                logger.LogError($"FileEntry not found for Path: {message.Path}, Instance: {message.RequestId}");
                                 await shutdownService.Shutdown(id).ConfigureAwait(false);
                             }
                         }
-                        else if(message.FileReadCase == FileReadRequest.FileReadOneofCase.Data)
+                        else if(message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
                         {
-                            var fileEntry = serviceState.FileDictionary[message.Data.Path][message.Data.Instance]; 
-                            if (message.Data.Data.Length > 0)
+                            var fileEntry = serviceState.FileDictionary[message.Path][int.Parse(message.RequestId)]; 
+                            if (message.FileData.FileChunk.Length > 0)
                             {        
                                 // TODO is there a limit on the Pipe write?
-                                await fileEntry.Pipe.Writer.WriteAsync(message.Data.Data.Memory, serviceState.Token).ConfigureAwait(false);
+                                await fileEntry.Pipe.Writer.WriteAsync(message.FileData.FileChunk.ToByteArray(), serviceState.Token).ConfigureAwait(false);
                                 // _ = fileEntry.Pipe.Writer.FlushAsync();
                             }
                             else

@@ -60,3 +60,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/Web.JS/test
 /src/Benchmarks/StressServer/publish
 /src/Benchmarks/StressServer/publish.zip
+/src/Benchmarks/FilePOC/Client/publish
+/src/Benchmarks/FilePOC/Server/publish
