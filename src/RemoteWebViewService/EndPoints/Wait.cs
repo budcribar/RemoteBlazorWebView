@@ -17,7 +17,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 if (!context.Request.RouteValues.TryGetValue("id", out var idValue) || idValue == null || !Guid.TryParse(idValue.ToString(), out var guid))
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync("Invalid or missing GUID").ConfigureAwait(false);
+                    await context.Response.WriteAsync($"Invalid or missing GUID {idValue}").ConfigureAwait(false);
                     return;
                 }
 

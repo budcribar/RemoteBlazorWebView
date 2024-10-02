@@ -3,40 +3,35 @@ using PeakSWC.RemoteWebView;
 using Microsoft.Extensions.Logging;
 using Google.Protobuf;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Buffers;
 using System.Net;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
-using System.Linq.Expressions;
-using System.IO.Pipelines;
 using System.Threading.Channels;
-using Microsoft.AspNetCore.Identity.Data;
+using System.Threading;
+using Microsoft.Extensions.FileProviders;
 
 namespace FileSyncClient.Services
 {
     public class ClientFileSyncManager
     {
         private readonly WebViewIPC.WebViewIPCClient _client;
-        private readonly ILogger<ClientFileSyncManager> _logger;
+        private readonly ILogger _logger;
         private readonly string _clientGuid;
         private readonly string _htmlHostPath;
         private readonly AsyncDuplexStreamingCall<ClientFileReadResponse, ServerFileReadRequest> _call;
-
-        // Define the client's cache directory
-        private readonly string _clientCacheDirectory = Path.Combine(AppContext.BaseDirectory, "client_cache");
+        private readonly IFileProvider _fileProvider;
+        private readonly Action<Exception> _errorCallback;
+       
         private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount);
-        public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, ILogger<ClientFileSyncManager> logger)
+        public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, IFileProvider fileProvider, Action<Exception> onException, ILogger logger)
         {
             _client = client;
             _logger = logger;
             _clientGuid = clientId.ToString();
             _htmlHostPath = htmlHostPath;
-
-            // Ensure the client's cache directory exists
-            Directory.CreateDirectory(_clientCacheDirectory);
+            _fileProvider = fileProvider;
+            _errorCallback = onException;
 
             // Initiate the duplex streaming call
             _call = _client.RequestClientFileRead();
@@ -62,8 +57,11 @@ namespace FileSyncClient.Services
             // Start reading requests from the server
             _ = Task.Run(async () =>
             {
-                  try
+                try
                 {
+                    await SendInitResponse(_clientGuid, _htmlHostPath);
+                    _logger.LogInformation($"Sent Init response to server with clientGuid: {_clientGuid}");
+
                     await Parallel.ForEachAsync(_call.ResponseStream.ReadAllAsync(ct),
                        new ParallelOptions { CancellationToken = ct },
                        async (request, token) =>
@@ -82,60 +80,55 @@ namespace FileSyncClient.Services
                         }
                     });
                 }
-                catch (Exception) { }
+                catch (Exception ex) 
+                {
+                    _errorCallback?.Invoke(ex);
+                }
+                finally {
+                   _channel.Writer.Complete();
+                }
             });
-            await SendInitResponse(_clientGuid, _htmlHostPath);
-            _logger.LogInformation($"Sent Init response to server with clientGuid: {_clientGuid}");
 
-
-
-
-
-
+            await Task.CompletedTask;
         }
 
         private async Task HandleMetaDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var relativeFilePath = request.Path;
+            var subPath = request.Path;
 
-            _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {relativeFilePath}");
-
-            // Map the relative file path to the client's cache directory
-            string localFilePath = Path.Combine(_clientCacheDirectory, relativeFilePath);
+            _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
             // Retrieve file metadata
-            FileMetadata metadata = GetFileMetadata(localFilePath);
+            FileMetadata metadata = GetFileMetadata(subPath);
             
             // Create and send the metadata response
             var response = new ClientFileReadResponse
             {
                 ClientId = _clientGuid,
                 RequestId = requestId,
-                Path = relativeFilePath,
+                Path = subPath,
                 Metadata = metadata
             };
             await _channel.Writer.WriteAsync(response).ConfigureAwait(false);
           
-            _logger.LogInformation($"Sent metadata for file: {relativeFilePath}, requestId: {requestId}");
+            _logger.LogInformation($"Sent metadata for file: {subPath}, requestId: {requestId}");
         }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var relativeFilePath = request.Path;
-            _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {relativeFilePath}");
-
-            string localFilePath = Path.Combine(_clientCacheDirectory, relativeFilePath);
+            var subPath = request.Path;
+            _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
 
             const int chunkSize = 8192; // 8 KB
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
 
             try
             {
-                using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
+                using var fileStream = _fileProvider.GetFileInfo(subPath).CreateReadStream();
 
-                await SendStatusCode(requestId, relativeFilePath, HttpStatusCode.OK);
+                await SendStatusCode(requestId, subPath, HttpStatusCode.OK);
                 // Send FileData messages
                 while (true)
                 {
@@ -146,7 +139,7 @@ namespace FileSyncClient.Services
                     {
                         ClientId = _clientGuid,
                         RequestId = requestId,
-                        Path = relativeFilePath,
+                        Path = subPath,
                         FileData = new FileData
                         {
                             FileChunk = ByteString.CopyFrom(buffer, 0, bytesRead),
@@ -154,30 +147,30 @@ namespace FileSyncClient.Services
                     };
                     await _channel.Writer.WriteAsync(response).ConfigureAwait(false);
                    
-                    _logger.LogInformation($"Sent file chunk of size {bytesRead} bytes for file: {relativeFilePath}, requestId: {requestId}");
+                    _logger.LogInformation($"Sent file chunk of size {bytesRead} bytes for file: {subPath}, requestId: {requestId}");
                 }
 
-                await SendCompletionResponse(requestId, relativeFilePath);
+                await SendCompletionResponse(requestId, subPath);
             }
             catch (FileNotFoundException)
             {
-                _logger.LogWarning($"File '{relativeFilePath}' not found in client's cache.");
-                await SendStatusCode(requestId, relativeFilePath, HttpStatusCode.NotFound);
+                _logger.LogWarning($"File '{subPath}' not found in client's cache.");
+                await SendStatusCode(requestId, subPath, HttpStatusCode.NotFound);
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogError($"Access denied to file '{relativeFilePath}'.");
-                await SendStatusCode(requestId, relativeFilePath, HttpStatusCode.Forbidden);
+                _logger.LogError($"Access denied to file '{subPath}'.");
+                await SendStatusCode(requestId, subPath, HttpStatusCode.Forbidden);
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"IO error reading file '{relativeFilePath}'.");
-                await SendStatusCode(requestId, relativeFilePath, HttpStatusCode.InternalServerError);
+                _logger.LogError(ex, $"IO error reading file '{subPath}'.");
+                await SendStatusCode(requestId, subPath, HttpStatusCode.InternalServerError);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unexpected error reading file '{relativeFilePath}'.");
-                await SendStatusCode(requestId, relativeFilePath, HttpStatusCode.InternalServerError);
+                _logger.LogError(ex, $"Unexpected error reading file '{subPath}'.");
+                await SendStatusCode(requestId, subPath, HttpStatusCode.InternalServerError);
             }
             finally
             {
@@ -201,7 +194,6 @@ namespace FileSyncClient.Services
             _logger.LogInformation($"Completed file data transfer for file: {relativeFilePath}, requestId: {requestId}");
         }
        
-
         private async Task SendInitResponse(string clientGuid, string htmlHostPath)
         {
             var initResponse = new ClientFileReadResponse
@@ -233,7 +225,8 @@ namespace FileSyncClient.Services
         {
             try
             {
-                var fileInfo = new FileInfo(localFilePath);
+                var fileInfo = _fileProvider.GetFileInfo(localFilePath);
+
                 if (!fileInfo.Exists)
                 {
                     return new FileMetadata
@@ -246,7 +239,7 @@ namespace FileSyncClient.Services
                 return new FileMetadata
                 {
                     Length = fileInfo.Length,
-                    LastModified = new DateTimeOffset(fileInfo.LastWriteTimeUtc).ToUnixTimeSeconds(),
+                    LastModified = fileInfo.LastModified.ToUnixTimeSeconds(),
                     StatusCode = 200  // Success
                 };
             }

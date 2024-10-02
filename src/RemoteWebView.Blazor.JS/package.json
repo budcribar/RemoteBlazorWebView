@@ -30,7 +30,8 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "enhanced-resolve": "^4.5.0"
+    "enhanced-resolve": "^4.5.0",
+    "yarn": "^1.22.22"
   },
   "packageManager": "yarn@4.3.1"
 }

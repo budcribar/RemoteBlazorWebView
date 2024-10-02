@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using System;
 
 namespace PeakSWC.RemoteWebView
 {

@@ -8,6 +8,7 @@ using FileSyncClient.Services;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.FileProviders;
 
 namespace FileClientApp
 {
@@ -62,11 +63,10 @@ namespace FileClientApp
                 builder.AddConsole();
             });
             ILogger<ClientFileSyncManager> logger = loggerFactory.CreateLogger<ClientFileSyncManager>();
+            string appRootDir = AppContext.BaseDirectory;
 
-         
-
-            // Instantiate the FileClient with the provided client GUID
-            var fileClient = new ClientFileSyncManager(grpcClient, clientGuid,htmlHostPath:"index.html", logger);
+             // Instantiate the FileClient with the provided client GUID
+             var fileClient = new ClientFileSyncManager(grpcClient, clientGuid,"index.html", new PhysicalFileProvider(tempDirectory),(e)=> Console.Write(e.Message),  logger);
 
             // Define the list of files to synchronize by creating them in a temp directory
             var filesToSync = Utilities.CreateTestFiles(tempDirectory);

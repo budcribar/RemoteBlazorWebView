@@ -323,13 +323,15 @@ namespace ServerStartupTimer
                     KillExistingProcesses("StressClient");
                     TestCreateWebView(1000,1024,10240);
                 }
-                      
+
                 // TestClientIPCService();
 
-                
+
                 //Console.ReadKey();
-               // process?.Kill(); // Stop the server
+                // process?.Kill(); // Stop the server
+               
             }
+            await Task.CompletedTask;
         }
 
         static async Task PollPort(string host, int port)

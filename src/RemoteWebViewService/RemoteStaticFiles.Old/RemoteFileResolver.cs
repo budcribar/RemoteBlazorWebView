@@ -1,12 +1,14 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using IFileProvider = PeakSwc.StaticFiles.IFileProvider;
 
-namespace PeakSwc.StaticFiles
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles.Old
 {
     public class RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger) : IFileProvider
     {
@@ -19,7 +21,7 @@ namespace PeakSwc.StaticFiles
         public Task<IFileInfo?> GetFileInfo(string subpath)
         {
             return FileInfo.CreateFileInfo(rootDictionary, subpath, logger);
-           
+
         }
 
         public IChangeToken Watch(string _)

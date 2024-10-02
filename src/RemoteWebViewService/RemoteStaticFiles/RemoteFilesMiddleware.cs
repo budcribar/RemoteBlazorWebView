@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
+using System.Threading.Tasks;
+using System;
+using System.Linq;
 
 
 namespace PeakSWC.RemoteWebView
@@ -178,7 +182,7 @@ namespace PeakSWC.RemoteWebView
             {
                 _logger.LogWarning($"Client GUID '{clientGuid}' does not have the file '{subPath}'. Cannot serve.");
                 context.Response.StatusCode = clientMetadata.StatusCode;
-                await context.Response.WriteAsync("File not found.");
+                await context.Response.WriteAsync($"File not found. {subPath}");
                 return;
             }
 
@@ -234,7 +238,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                    await context.Response.WriteAsync("Error retrieving file from client.");
+                    await context.Response.WriteAsync($"Error retrieving file from client. {subPath}");
                     return;
                 }
 
@@ -242,7 +246,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogWarning($"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'. Status code: {dataRequest.StatusCode}");
                     context.Response.StatusCode = (int)dataRequest.StatusCode;
-                    await context.Response.WriteAsync("Failed to retrieve file from client.");
+                    await context.Response.WriteAsync($"Failed to retrieve file from client. {subPath}");
                     return;
                 }
 
@@ -304,7 +308,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         _logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
                         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                        await context.Response.WriteAsync("Error retrieving file from client.");
+                        await context.Response.WriteAsync($"Error retrieving file from client. {subPath}");
                         return;
                     }
 
@@ -312,7 +316,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         _logger.LogWarning($"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'. Status code: {dataRequest.StatusCode}");
                         context.Response.StatusCode = (int)dataRequest.StatusCode;
-                        await context.Response.WriteAsync("Failed to retrieve file from client.");
+                        await context.Response.WriteAsync($"Failed to retrieve file from client. {subPath}");
                         return;
                     }
 

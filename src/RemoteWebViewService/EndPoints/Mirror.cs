@@ -4,6 +4,7 @@ using Microsoft.Identity.Web;
 using PeakSwc.StaticFiles;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -52,22 +53,22 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     // Get the home HTML file from the remote file resolver
                     var remoteFileResolver = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                    var fileInfo = await remoteFileResolver.GetFileInfo($"/{guid}/{serviceState.HtmlHostPath}").ConfigureAwait(false);
-
+                   
+                    var fileInfo = await remoteFileResolver.GetFileMetaDataAsync(guid,serviceState.HtmlHostPath).ConfigureAwait(false);
+                    context.Response.StatusCode = fileInfo.StatusCode;
+                    context.Response.ContentType = "text/html";
+                  
                     // Check if the file exists
-                    if (fileInfo == null)
+                    if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
                     {
-                        context.Response.StatusCode = 404;
-                        await context.Response.WriteAsync("File not found").ConfigureAwait(false);
+                        await context.Response.WriteAsync($"File not found {serviceState.HtmlHostPath}").ConfigureAwait(false);
                         return;
                     }
 
                     // Stream the HTML file to the response
-                    context.Response.ContentType = "text/html";
                     context.Response.ContentLength = fileInfo.Length;
-                    context.Response.StatusCode = 200;
-
-                    using Stream stream = fileInfo.CreateReadStream();
+                    var fileStream = await remoteFileResolver.GetFileStreamAsync(guid, serviceState.HtmlHostPath).ConfigureAwait(false);
+                    using Stream stream = fileStream.Stream;
                     await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
                 else

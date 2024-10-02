@@ -11,6 +11,16 @@
 	<ItemGroup>
 	  <None Remove="server.proto" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\FileServiceImpl.cs" Link="FileServiceImpl.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\FileStream.cs" Link="FileStream.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\RemoteFileResolver.cs" Link="RemoteFileResolver.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\RemoteFilesMiddleware.cs" Link="RemoteFilesMiddleware.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\RemoteFilesMiddlewareExtensions.cs" Link="RemoteFilesMiddlewareExtensions.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\RemoteFilesOptions.cs" Link="RemoteFilesOptions.cs" />
+	  <Compile Include="..\..\..\RemoteWebViewService\RemoteStaticFiles\ServerFileSyncManager.cs" Link="ServerFileSyncManager.cs" />
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Grpc.AspNetCore" Version="2.65.0" />
 		<PackageReference Include="Grpc.AspNetCore.Web" Version="2.65.0" />

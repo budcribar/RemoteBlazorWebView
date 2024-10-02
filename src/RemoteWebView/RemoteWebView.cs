@@ -1,4 +1,5 @@
 ﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
+using FileSyncClient.Services;
 using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -165,8 +166,8 @@ namespace PeakSWC.RemoteWebView
                     FireDisconnected(exception);
                     throw exception;
                 }
-
-                FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
+                var fileClient = new ClientFileSyncManager(client, BlazorWebView.Id, HostHtmlPath, FileProvider, FireDisconnected, Logger);
+                //FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
 
                 MonitorPingTask(BlazorWebView,client);
 

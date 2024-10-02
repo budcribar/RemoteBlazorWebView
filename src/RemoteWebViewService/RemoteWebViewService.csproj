@@ -57,6 +57,12 @@
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="RemoteStaticFiles.Old\**" />
+    <Content Remove="RemoteStaticFiles.Old\**" />
+    <EmbeddedResource Remove="RemoteStaticFiles.Old\**" />
+    <None Remove="RemoteStaticFiles.Old\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Remove="GlobalSuppressions.cs" />
   </ItemGroup>
   <ItemGroup>
