@@ -75,7 +75,7 @@ namespace FileClientApp
             try
             {
                 // Start handling file synchronization requests from the server
-                var handleFilesTask = fileClient.HandleServerRequestsAsync(tokenSource.Token);
+                fileClient.HandleServerRequestsAsync(tokenSource.Token);
 
                 Console.WriteLine("File synchronization initiated.");
                 Console.WriteLine("Press 'q' to quit the application.");
@@ -94,8 +94,9 @@ namespace FileClientApp
                 // Initiate shutdown
                 await fileClient.CloseAsync();
 
+                // TODO
                 // Wait for handleFilesTask to complete
-                await handleFilesTask;
+                // await handleFilesTask;
             }
             catch (Grpc.Core.RpcException rpcEx)
             {

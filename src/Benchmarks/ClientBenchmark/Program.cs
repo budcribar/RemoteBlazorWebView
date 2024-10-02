@@ -351,7 +351,7 @@ namespace ClientBenchmark
                 {
                     if (message.Response == "created:")
                     {
-                        FileReader.AttachFileReader(_client.FileReader(), cts.Token, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { });//Console.Write($"File reader threw {x.Message}"));
+                        //FileReader.AttachFileReader(_client.FileReader(), cts.Token, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { });//Console.Write($"File reader threw {x.Message}"));
                        
 
                         List<Task> tasks = new List<Task>();

@@ -34,6 +34,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     return;
                 }
 
+
                 if (serviceState.EnableMirrors && serviceState.InUse)
                 {
                     serviceState.User = context.User.GetDisplayName() ?? string.Empty;
@@ -45,39 +46,36 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
                             .ConfigureAwait(false);
                     }
-
                     foreach (var channel in serviceStateChannel.Values)
                     {
                         await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
                     }
 
-                    // Get the home HTML file from the remote file resolver
-                    var remoteFileResolver = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                   
-                    var fileInfo = await remoteFileResolver.GetFileMetaDataAsync(guid,serviceState.HtmlHostPath).ConfigureAwait(false);
+                    var home = serviceState.HtmlHostPath;
+                    var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
+                    var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
                     context.Response.StatusCode = fileInfo.StatusCode;
                     context.Response.ContentType = "text/html";
-                  
-                    // Check if the file exists
+
                     if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
                     {
-                        await context.Response.WriteAsync($"File not found {serviceState.HtmlHostPath}").ConfigureAwait(false);
+                        await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                         return;
                     }
-
-                    // Stream the HTML file to the response
                     context.Response.ContentLength = fileInfo.Length;
-                    var fileStream = await remoteFileResolver.GetFileStreamAsync(guid, serviceState.HtmlHostPath).ConfigureAwait(false);
+                    var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
                     using Stream stream = fileStream.Stream;
                     await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
                 else
                 {
-                    // Mirroring is not enabled or service is not in use
                     context.Response.StatusCode = 400;
+                    context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                 }
-            };
-        }
+           
+        };
+
     }
+}
 }

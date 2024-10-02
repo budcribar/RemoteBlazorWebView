@@ -134,9 +134,12 @@ namespace PeakSWC.RemoteWebView
         }
 
         private GrpcChannel? channel;
+
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         
         protected WebViewIPC.WebViewIPCClient? Client()
         {
+            // TODO Pass cts to other requests
             if (BlazorWebView.ServerUri == null) return null;
             if (BlazorWebView.GrpcBaseUri == null) return null;
             PingIntervalSeconds = BlazorWebView.PingIntervalSeconds;
@@ -162,14 +165,12 @@ namespace PeakSWC.RemoteWebView
 
                 Exception? exception = ProcessBrowserMessages(BlazorWebView, events).Result;
 
-                if (exception != null)
+                if (exception != null) { 
                     FireDisconnected(exception);
                     throw exception;
                 }
                 var fileClient = new ClientFileSyncManager(client, BlazorWebView.Id, HostHtmlPath, FileProvider, FireDisconnected, Logger);
-                //FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
-
-                FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
+                fileClient.HandleServerRequestsAsync(cts.Token);
 
                 MonitorPingTask(BlazorWebView,client);
 
@@ -490,7 +491,7 @@ namespace PeakSWC.RemoteWebView
         public async ValueTask DisposeAsyncCore()
         {
             cts.Cancel();
-            await FileReader.ShutdownAsync();
+            // TODO Shutdown FileSyncManager
 
             if (channel != null)
             {

@@ -13,7 +13,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                // Retrieve the GUID from route values
                 string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
                 if (string.IsNullOrEmpty(guid))
                 {
@@ -43,7 +42,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
                     return;
                 }
-
                 // Set the service state
                 serviceState.Cookies = context.Request.Cookies;
                 serviceState.InUse = true;
@@ -56,7 +54,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
                         .ConfigureAwait(false);
                 }
-
                 // Notify all channels of the connection
                 foreach (var channel in serviceStateChannel.Values)
                 {
@@ -64,7 +61,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
 
                 // Redirect to the specific GUID page
-                context.Response.Redirect($"/{guid}", permanent: false); // Explicitly non-permanent redirect
+                context.Response.Redirect($"/{guid}", permanent: false);       
             };
         }
     }

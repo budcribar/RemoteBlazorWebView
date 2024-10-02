@@ -43,6 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="FileReader.cs" />
     <Compile Remove="RemoteWebView.Old.cs" />
   </ItemGroup>
 

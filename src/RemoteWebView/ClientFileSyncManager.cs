@@ -41,7 +41,7 @@ namespace FileSyncClient.Services
         /// <summary>
         /// Starts handling requests from the server.
         /// </summary>
-        public async Task HandleServerRequestsAsync(CancellationToken ct)
+        public void HandleServerRequestsAsync(CancellationToken ct)
         {
             
 
@@ -88,8 +88,6 @@ namespace FileSyncClient.Services
                    _channel.Writer.Complete();
                 }
             });
-
-            await Task.CompletedTask;
         }
 
         private async Task HandleMetaDataRequestAsync(ServerFileReadRequest request)
