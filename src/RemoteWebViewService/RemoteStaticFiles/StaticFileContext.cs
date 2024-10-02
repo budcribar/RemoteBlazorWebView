@@ -372,6 +372,7 @@ internal class StaticFileContext
         ApplyResponseHeaders(StatusCodes.Status200OK);
         try
         {
+            await _fileProvider.FileStreamExistsAsync(_subPath).ConfigureAwait(false);
             await _context.Response.SendFileAsync(_fileInfo!, 0, _length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
@@ -405,6 +406,7 @@ internal class StaticFileContext
         {
             var logPath = !string.IsNullOrEmpty(_fileInfo?.PhysicalPath) ? _fileInfo.PhysicalPath : SubPath;
             _logger.SendingFileRange(_response.Headers.ContentRange, logPath);
+            await _fileProvider.FileStreamExistsAsync(SubPath).ConfigureAwait(false);
             await _context.Response.SendFileAsync(_fileInfo!, start, length, _context.RequestAborted).ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)

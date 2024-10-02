@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Net;
+using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -11,6 +12,7 @@ namespace PeakSWC.RemoteWebView
     {
         public static void Main(string[] args)
         {
+            ThreadPool.SetMinThreads(workerThreads: 200, completionPortThreads: 200);
             Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
             CreateHostBuilder(args).Build().Run();
         }
@@ -21,8 +23,6 @@ namespace PeakSWC.RemoteWebView
                 if (!File.Exists("appsettings.json"))
                    webBuilder.ConfigureKestrel(options => 
                    { 
-                       options.Limits.Http2.MaxStreamsPerConnection = 2000;
-
                        options.Listen(IPAddress.Loopback, 5001, listenOptions =>
                        {
                            listenOptions.UseHttps();

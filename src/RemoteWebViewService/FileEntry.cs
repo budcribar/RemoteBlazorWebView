@@ -10,8 +10,11 @@ namespace PeakSWC.RemoteWebView
         public long Length { get; set; } = -1;
         public Pipe Pipe { get; set; } = new Pipe();
         public int Instance {  get; set; } = 0;
+        public DateTimeOffset LastModified { get; set; } = DateTimeOffset.MinValue;
 
         public SemaphoreSlim Semaphore = new SemaphoreSlim(0, 1);
+
+        public SemaphoreSlim FileDataSemaphore = new SemaphoreSlim(0, 1);
 
         public void Dispose()
         {
@@ -24,6 +27,7 @@ namespace PeakSWC.RemoteWebView
             if (disposing)
             {
                 Semaphore.Dispose();
+                FileDataSemaphore.Dispose();
             }
         }
 

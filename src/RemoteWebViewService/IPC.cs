@@ -38,9 +38,9 @@ namespace PeakSWC.RemoteWebView
 
         public Task? ProcessMessagesTask { get; set; }
 
-        private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror, CancellationToken cancellationToken)
+        private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
-            await serverStreamWriter.WriteAsync(message,cancellationToken).ConfigureAwait(false);
+            await serverStreamWriter.WriteAsync(message).ConfigureAwait(false);
             if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
             {
                 if (isMirror)
@@ -48,9 +48,9 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
-        public async ValueTask SendMessage(string message,CancellationToken cancellationToken)
+        public async ValueTask SendMessage(string message)
         {
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message },cancellationToken).ConfigureAwait(false);
+            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }).ConfigureAwait(false);
         }
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
@@ -108,7 +108,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet", StringComparison.Ordinal))
                     {
-                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary, cancellationToken).ConfigureAwait(false);
+                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary).ConfigureAwait(false);
                         if (logger.IsEnabled(LogLevel.Information))
                             logger.LogInformation($"WebView -> Browser {request.Id} {request.Request}");
                     }
@@ -128,6 +128,21 @@ namespace PeakSWC.RemoteWebView
         public Task SizeChanged(Size size)
         {
             return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }) ?? Task.CompletedTask);
+        }
+
+        public void Shutdown()
+        {
+            try
+            {
+                responseChannel.Writer.Complete();
+            }
+            catch { }
+            try
+            {
+                browserResponseChannel.Writer.Complete();
+            }
+            catch { }
+
         }
     }
 }

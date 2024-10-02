@@ -119,10 +119,10 @@ namespace StressServer
                 Console.WriteLine("Extraction failed. Exiting.");
                 return;
             }
-
+            var clientIds = Enumerable.Range(0, numClients).Select(_ => Guid.NewGuid().ToString()).ToList();
             for (int i = 0; i < numLoops; i++)
             {
-                var results = await ExecuteLoop(url, channel, numClients, path);
+                var results = await ExecuteLoop(url, channel, numClients, path, clientIds);
                 totalPasses += results.Item1;
                 totalFailures += results.Item2;
 
@@ -134,11 +134,10 @@ namespace StressServer
            Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
         }
 
-        private static async Task<(int, int)> ExecuteLoop(string url, GrpcChannel channel, int numClients, string path)
+        private static async Task<(int, int)> ExecuteLoop(string url, GrpcChannel channel, int numClients, string path, List<string> clientIds)
         {
             List<Process> clients = new List<Process>();
             List<ChromeDriver> drivers = new List<ChromeDriver>();
-            List<string> gids = new List<string>();
             int passCount = 0;
             int failCount = 0;
 
@@ -147,11 +146,7 @@ namespace StressServer
                 // Use thread-safe collections
              
                 ConcurrentBag<ChromeDriver> driverBag = new ConcurrentBag<ChromeDriver>();
-                ConcurrentBag<string> gidBag = new ConcurrentBag<string>();
                 Dictionary<string,Process> processDict = new Dictionary<string,Process>();
-
-                // Initialize clients and drivers concurrently using Parallel.ForEachAsync
-                var clientIds = Enumerable.Range(0, numClients).Select(_ => Guid.NewGuid().ToString()).ToList();
 
                 foreach (var clientId in clientIds)
                 {

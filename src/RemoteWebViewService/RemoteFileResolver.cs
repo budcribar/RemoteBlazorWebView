@@ -10,11 +10,16 @@ namespace PeakSwc.StaticFiles
 {
     public class RemoteFileResolver(ConcurrentDictionary<string, ServiceState> rootDictionary, ILogger<RemoteFileResolver> logger) : IFileProvider
     {
-        public IDirectoryContents GetDirectoryContents(string subpath)
+        public Task<bool> FileStreamExistsAsync(string subpath)
         {
-            logger.LogError("Directory contents not supported");
-            return new NotFoundDirectoryContents();
+            return Task.FromResult(true);
         }
+
+        //public IDirectoryContents GetDirectoryContents(string subpath)
+        //{
+        //    logger.LogError("Directory contents not supported");
+        //    return new NotFoundDirectoryContents();
+        //}
 
         public Task<IFileInfo?> GetFileInfo(string subpath)
         {
@@ -22,9 +27,9 @@ namespace PeakSwc.StaticFiles
            
         }
 
-        public IChangeToken Watch(string _)
-        {
-            return NullChangeToken.Singleton;
-        }
+        //public IChangeToken Watch(string _)
+        //{
+        //    return NullChangeToken.Singleton;
+        //}
     }
 }

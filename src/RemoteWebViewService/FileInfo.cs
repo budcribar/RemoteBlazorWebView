@@ -71,32 +71,14 @@ namespace PeakSwc.StaticFiles
             {
                 stream = new MemoryStream(Encoding.ASCII.GetBytes("[]"));
                 length = stream.Length;
+                LastModified = DateTimeOffset.UtcNow;
             }
             else
             {
                 FileEntry fileEntry = new FileEntry { Path = appFile };
-               
-                if (serviceState.FileDictionary.TryGetValue(appFile, out ConcurrentList<FileEntry>? fileEntryList))
-                {
-                    // add the duplicate file
-                    if (fileEntryList == null)
-                    {
-                        _logger.LogError($"Could not find FileEntryList {appFile} id {id}");
-                        return new MemoryStream();
-                    }
 
-                    fileEntry.Instance = fileEntryList.Add(fileEntry);
-                } else
-                {
-                    fileEntryList = new();
-                    fileEntryList.Add(fileEntry);
-
-                    if (!serviceState.FileDictionary.TryAdd(appFile, fileEntryList))
-                    {                       
-                        _logger.LogError($"Unable to insert {appFile} id {id} to dictionary");
-                        return new MemoryStream();                      
-                    }
-                }
+                ConcurrentList<FileEntry> fileEntryList = serviceState.FileDictionary.GetOrAdd(appFile, _ => new ConcurrentList<FileEntry>());
+                fileEntry.Instance = fileEntryList.Add(fileEntry);
                
                 await serviceState.FileCollection.Writer.WriteAsync(fileEntry).ConfigureAwait(false);
 
@@ -117,11 +99,13 @@ namespace PeakSwc.StaticFiles
                 }
 
                 length = fileEntry.Length;
+                
                 if (length <= 0)
                 {
                     _logger.LogError($"Cannot process {appFile} id {id} stream not found...");
                     return new MemoryStream();
                 }
+                LastModified = fileEntry.LastModified;
 
                 stream = fileEntry.Pipe.Reader.AsStream();
 
@@ -197,7 +181,7 @@ namespace PeakSwc.StaticFiles
 
         public string Name => Path.GetFileName(path);
 
-        public DateTimeOffset LastModified => DateTime.UtcNow;
+        public DateTimeOffset LastModified { get; set; }
 
         public bool IsDirectory => false;
 

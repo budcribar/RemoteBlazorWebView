@@ -69,11 +69,26 @@ namespace PeakSWC.RemoteWebView
             if (_disposed)
                 return;
 
+           
+
             if (CancellationTokenSource != null)
             {
                 // Signal cancellation
                 CancellationTokenSource.Cancel();
 
+                try
+                {
+                    BrowserIPC.Semaphore.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    FileCollection.Writer.Complete();
+                }
+                catch { }
+
+                IPC.Shutdown();
 
                 // Await all relevant tasks
                 var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
@@ -97,8 +112,11 @@ namespace PeakSWC.RemoteWebView
                     }
                 }
 
+               
+              
+
                 // Dispose of the CTS after task completion
-                CancellationTokenSource.Dispose();
+                CancellationTokenSource?.Dispose();
                 CancellationTokenSource = null;
             }
 

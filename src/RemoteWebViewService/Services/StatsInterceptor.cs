@@ -7,17 +7,22 @@ using System.Threading;
 using static PeakSWC.RemoteWebView.ServerStats;
 using Microsoft.Extensions.Logging;
 
-    namespace PeakSWC.RemoteWebView.Services
-    {
+namespace PeakSWC.RemoteWebView.Services
+{
     public class StatsInterceptor : Interceptor
     {
         private readonly ServerStats _stats;
         private readonly ILogger<RemoteWebViewService> _logger;
+
         public StatsInterceptor(ServerStats stats, ILogger<RemoteWebViewService> logger)
         {
             _stats = stats;
             _logger = logger;
         }
+
+        private const double ThresholdMs = 50000; // 50 seconds threshold for logging long requests
+
+        // Override for Unary Calls
         public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
             TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
             where TRequest : class where TResponse : class
@@ -29,11 +34,9 @@ using Microsoft.Extensions.Logging;
             string? errorType = null;
             long bytesReceived = 0;
             long bytesSent = 0;
-            double thresholdMs = 5000; // 5 second threshold
 
             try
             {
-                // Calculate bytes received (size of request)
                 if (request is IMessage message)
                 {
                     bytesReceived = _stats.CalculateMessageSize(message);
@@ -42,7 +45,6 @@ using Microsoft.Extensions.Logging;
 
                 var response = await continuation(request, context);
 
-                // Calculate bytes sent (size of response)
                 if (response is IMessage message2)
                 {
                     bytesSent = _stats.CalculateMessageSize(message2);
@@ -68,9 +70,9 @@ using Microsoft.Extensions.Logging;
                 var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
                 _stats.RecordRequest(success, elapsedTime, errorType);
 
-                if (elapsedTime > thresholdMs)
+                if (elapsedTime > ThresholdMs)
                 {
-                    _logger.LogWarning($"Request exceeded {thresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    _logger.LogWarning($"Unary request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
                 _stats.RecordConnectionEnd();
@@ -92,23 +94,19 @@ using Microsoft.Extensions.Logging;
             bool success = false;
             string? errorType = null;
             long bytesReceived = 0;
-            //long bytesSent = 0;
 
             try
             {
-                // Calculate bytes received (size of request)
                 if (request is IMessage message)
                 {
                     bytesReceived = _stats.CalculateMessageSize(message);
                 }
                 _stats.RecordBytesReceived(bytesReceived);
 
-                // Wrap the responseStream to intercept sent messages
                 var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
 
                 await continuation(request, wrappedStream, context);
 
-                // After streaming completes, record bytes sent
                 _stats.RecordBytesSent(wrappedStream.BytesSent);
 
                 success = true;
@@ -126,7 +124,14 @@ using Microsoft.Extensions.Logging;
             finally
             {
                 stopwatch.Stop();
-                _stats.RecordRequest(success, stopwatch.Elapsed.TotalMilliseconds, errorType);
+                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+                _stats.RecordRequest(success, elapsedTime, errorType);
+
+                if (elapsedTime > ThresholdMs)
+                {
+                    _logger.LogWarning($"Server streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                }
+
                 _stats.RecordConnectionEnd();
             }
         }
@@ -136,25 +141,21 @@ using Microsoft.Extensions.Logging;
             IAsyncStreamReader<TRequest> requestStream,
             ServerCallContext context,
             ClientStreamingServerMethod<TRequest, TResponse> continuation)
-            where TRequest : class
-            where TResponse : class
+            where TRequest : class where TResponse : class
         {
             _stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             bool success = false;
             string? errorType = null;
-            //long bytesReceived = 0;
             long bytesSent = 0;
 
             try
             {
-                // Wrap the requestStream to intercept received messages
                 var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
 
                 var response = await continuation(wrappedStream, context);
 
-                // Calculate bytes sent (size of response)
                 if (response is IMessage message)
                 {
                     bytesSent = _stats.CalculateMessageSize(message);
@@ -177,7 +178,14 @@ using Microsoft.Extensions.Logging;
             finally
             {
                 stopwatch.Stop();
-                _stats.RecordRequest(success, stopwatch.Elapsed.TotalMilliseconds, errorType);
+                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+                _stats.RecordRequest(success, elapsedTime, errorType);
+
+                if (elapsedTime > ThresholdMs)
+                {
+                    _logger.LogWarning($"Client streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                }
+
                 _stats.RecordConnectionEnd();
             }
         }
@@ -196,20 +204,14 @@ using Microsoft.Extensions.Logging;
 
             bool success = false;
             string? errorType = null;
-            //long bytesReceived = 0;
-            //long bytesSent = 0;
 
             try
             {
-                // Wrap the requestStream to intercept received messages
                 var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
-
-                // Wrap the responseStream to intercept sent messages
                 var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
 
                 await continuation(wrappedRequestStream, wrappedResponseStream, context);
 
-                // After streaming completes, record bytes sent
                 _stats.RecordBytesSent(wrappedResponseStream.BytesSent);
 
                 success = true;
@@ -227,7 +229,14 @@ using Microsoft.Extensions.Logging;
             finally
             {
                 stopwatch.Stop();
-                _stats.RecordRequest(success, stopwatch.Elapsed.TotalMilliseconds, errorType);
+                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
+                _stats.RecordRequest(success, elapsedTime, errorType);
+
+                if (elapsedTime > ThresholdMs)
+                {
+                    _logger.LogWarning($"Duplex streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                }
+
                 _stats.RecordConnectionEnd();
             }
         }
@@ -303,3 +312,4 @@ using Microsoft.Extensions.Logging;
         }
     }
 }
+

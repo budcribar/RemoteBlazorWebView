@@ -63,21 +63,64 @@ namespace PeakSWC.RemoteWebView
 
             _responseTimes.Add(responseTime);
 
-            // Update max response time
+            // Update max response time and log thread pool stats if a new max is detected
             double initialMax, computedMax;
+            bool isNewMax = false;
             do
             {
                 initialMax = _maxResponseTime;
                 computedMax = Math.Max(initialMax, responseTime);
+                if (computedMax > initialMax)
+                {
+                    isNewMax = true; // Detect if we have a new max value
+                }
             } while (initialMax != Interlocked.CompareExchange(ref _maxResponseTime, computedMax, initialMax));
 
-            // Update min response time
-            double initialMin, computedMin;
-            do
+            if (isNewMax)
             {
-                initialMin = _minResponseTime;
-                computedMin = Math.Min(initialMin, responseTime);
-            } while (initialMin != Interlocked.CompareExchange(ref _minResponseTime, computedMin, initialMin));
+                // Log thread pool stats when a new max is detected
+                LogThreadPoolStats();
+            }
+
+            // Update min response time if responseTime > 0
+            if (responseTime > 0)
+            {
+                double initialMin, computedMin;
+                do
+                {
+                    initialMin = _minResponseTime;
+                    computedMin = Math.Min(initialMin, responseTime);
+                } while (initialMin != Interlocked.CompareExchange(ref _minResponseTime, computedMin, initialMin));
+            }
+        }
+
+        /// <summary>
+        /// Logs thread pool stats (this method can be customized to log necessary stats).
+        /// </summary>
+        private void LogThreadPoolStats()
+        {
+            ThreadPool.GetAvailableThreads(out int workerThreadsAvailable, out int completionPortThreadsAvailable);
+            ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompletionPortThreads);
+            ThreadPool.GetMinThreads(out int minWorkerThreads, out int minCompletionPortThreads);
+
+            int workerThreadsInUse = maxWorkerThreads - workerThreadsAvailable;
+            int completionPortThreadsInUse = maxCompletionPortThreads - completionPortThreadsAvailable;
+
+            // Log the thread pool stats
+            Console.WriteLine("ThreadPool Stats:");
+            Console.WriteLine($"Worker Threads in Use: {workerThreadsInUse}/{maxWorkerThreads} (Min: {minWorkerThreads})");
+            Console.WriteLine($"Completion Port Threads in Use: {completionPortThreadsInUse}/{maxCompletionPortThreads} (Min: {minCompletionPortThreads})");
+
+            // Example condition to detect potential thread pool starvation
+            if (workerThreadsInUse >= maxWorkerThreads - 10)
+            {
+                Console.WriteLine("Warning: Approaching thread pool starvation on worker threads.");
+            }
+
+            if (completionPortThreadsInUse >= maxCompletionPortThreads - 10)
+            {
+                Console.WriteLine("Warning: Approaching thread pool starvation on I/O threads.");
+            }
         }
 
         /// <summary>
@@ -163,19 +206,19 @@ namespace PeakSWC.RemoteWebView
         public Dictionary<string, object> GetStats()
         {
             return new Dictionary<string, object>
-        {
-            { "TotalRequests", Interlocked.Read(ref _totalRequests) },
-            { "SuccessfulRequests", Interlocked.Read(ref _successfulRequests) },
-            { "FailedRequests", Interlocked.Read(ref _failedRequests) },
-            { "AverageResponseTime(ms)", GetAverageResponseTime() },
-            { "MaxResponseTime(ms)", _maxResponseTime },
-            { "MinResponseTime(ms)", _minResponseTime == double.MaxValue ? 0.0 : _minResponseTime },
-            { "ErrorTypes", new Dictionary<string, long>(_errorTypes) },
-            { "LatencyPercentiles", GetLatencyPercentiles() },
-            { "ActiveConnections", Interlocked.Read(ref _activeConnections) },
-            { "TotalBytesSent", Interlocked.Read(ref _totalBytesSent) },
-            { "TotalBytesReceived", Interlocked.Read(ref _totalBytesReceived) }
-        };
+            {
+                { "TotalRequests", Interlocked.Read(ref _totalRequests) },
+                { "SuccessfulRequests", Interlocked.Read(ref _successfulRequests) },
+                { "FailedRequests", Interlocked.Read(ref _failedRequests) },
+                { "AverageResponseTime(ms)", GetAverageResponseTime() },
+                { "MaxResponseTime(ms)", _maxResponseTime },
+                { "MinResponseTime(ms)", _minResponseTime == double.MaxValue ? 0.0 : _minResponseTime },
+                { "ErrorTypes", new Dictionary<string, long>(_errorTypes) },
+                { "LatencyPercentiles", GetLatencyPercentiles() },
+                { "ActiveConnections", Interlocked.Read(ref _activeConnections) },
+                { "TotalBytesSent", Interlocked.Read(ref _totalBytesSent) },
+                { "TotalBytesReceived", Interlocked.Read(ref _totalBytesReceived) }
+            };
         }
 
         /// <summary>
@@ -203,6 +246,5 @@ namespace PeakSWC.RemoteWebView
             if (message == null) return 0;
             return message.CalculateSize();
         }
-      
     }
 }

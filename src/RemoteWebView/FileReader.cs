@@ -12,25 +12,64 @@ namespace PeakSWC.RemoteWebView
 {
     public static class FileReader
     {
-        public static void AttachFileReader(AsyncDuplexStreamingCall<FileReadRequest,FileReadResponse> fileReader, CancellationToken ct, string id, IFileProvider fileProvider,Action<Exception> onException, ILogger? logger = null)
-        {
-            var channel = Channel.CreateBounded<FileReadRequest>(Environment.ProcessorCount);
-          
-            // Start a task to consume from the channel and write to the stream
-            _ = Task.Factory.StartNew(async () =>
+        private static AsyncDuplexStreamingCall<ServerFileReadRequest, ClientFileReadResponse>? _fileReader;
+        private static Task? _channelReaderTask;
+        private static Task? _channelWriterTask;
+        public async static Task ShutdownAsync() {
+            try
             {
-                await foreach (var request in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+                await (_fileReader?.RequestStream.CompleteAsync() ?? Task.CompletedTask);
+            }
+            catch { }
+
+            try
+            {
+                if (_channelReaderTask != null)
                 {
-                    await fileReader.RequestStream.WriteAsync(request).ConfigureAwait(false);
+                    await _channelReaderTask;
                 }
+
+            }
+            catch { }
+            try
+            {
+                if (_channelWriterTask != null)
+                {
+                    await _channelWriterTask;
+                }
+            }
+            catch { }
+            _fileReader?.Dispose();
+        }
+
+        public static void AttachFileReader(AsyncDuplexStreamingCall<ServerFileReadRequest, ClientFileReadResponse> fileReader, CancellationToken ct, string id, IFileProvider fileProvider,Action<Exception> onException, ILogger? logger = null)
+        {
+            _fileReader = fileReader;
+            var channel = Channel.CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount);
+
+            // Start a task to consume from the channel and write to the stream
+            _channelReaderTask = Task.Factory.StartNew(async () =>
+            {
+                _fileReader.RequestStream
+                try
+                {
+                    await foreach (var clientResponse in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+                    {
+                        await fileReader.RequestStream.WriteAsync(clientResponse).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    onException?.Invoke(ex);
+                }    
             }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-            _ = Task.Factory.StartNew(async () =>
+            _channelWriterTask = Task.Factory.StartNew(async () =>
             {
                 try
                 {
                     // Initiate the file read request
-                    await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Init = new() }).ConfigureAwait(false);
+                    await channel.Writer.WriteAsync(new ServerFileReadRequest { Id = id, RequestType = ServerFileReadRequest.Types.RequestType.Init }).ConfigureAwait(false);
 
                     // Local function to write empty data
                     async Task WriteEofDataAsync(string path, int instance)
@@ -53,7 +92,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 var fileInfo = fileProvider.GetFileInfo(path);
                                 var fileLength = fileInfo.Length;
-                                await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength,Instance = message.Instance } }).ConfigureAwait(false);
+                                await channel.Writer.WriteAsync(new FileReadRequest { Id = id, Length = new FileReadLengthRequest { Path = message.Path, Length = fileLength,Instance = message.Instance, LastModified=fileInfo.LastModified.ToUnixTimeSeconds() } }).ConfigureAwait(false);
 
                                 if (fileLength == 0)
                                 {

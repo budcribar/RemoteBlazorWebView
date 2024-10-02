@@ -52,7 +52,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     // Get the home HTML file from the remote file resolver
                     var remoteFileResolver = context.RequestServices.GetRequiredService<RemoteFileResolver>();
-                    var fileInfo = await remoteFileResolver.GetFileInfo($"/{guid}/{serviceState.HtmlHostPath}").ConfigureAwait(false);
+                    var subpath = $"/{guid}/{serviceState.HtmlHostPath}";
+                    var fileInfo = await remoteFileResolver.GetFileInfo(subpath).ConfigureAwait(false);
 
                     // Check if the file exists
                     if (fileInfo == null)
@@ -67,6 +68,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     context.Response.ContentLength = fileInfo.Length;
                     context.Response.StatusCode = 200;
 
+                    await remoteFileResolver.FileStreamExistsAsync(subpath);
                     using Stream stream = fileInfo.CreateReadStream();
                     await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }

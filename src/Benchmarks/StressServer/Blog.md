@@ -126,8 +126,8 @@ System.InvalidOperationException: Can't write the message because the request is
    Application: StressServer.exe CoreCLR Version: 9.0.24.43107 .NET Version: 9.0.0-rc.1.24431.7 Description: The process was terminated due to an unhandled exception. Exception Info: System.AggregateException: One or more errors occurred. (Index was out of range. Must be non-negative and less than the size of the collection. (Parameter 'index')) (Index was out of range.
 
    Omen Result
-   SS7: Elapsed Time: 00:44:34.1976816 Seconds per pass: 26.741983918000003
-   SS8: Elapsed Time: 00:24:47.0722065 Seconds per pass: 14.870732215999999
+   SS7: Elapsed Time: 00:44:34.1976816 Seconds per pass: 26.741983918000003  Omen
+   SS8: Elapsed Time: 00:24:47.0722065 Seconds per pass: 14.870732215999999  Omen
 
     Elapsed Time: 00:30:25.9628616 Seconds per pass: 18.259640564999998
    SS9: Elapsed Time: 00:22:26.8034051 Seconds per pass: 13.468043221
@@ -138,3 +138,91 @@ System.InvalidOperationException: Can't write the message because the request is
    Maybe the network went down
 
 
+   Changed to dotnet8 and had same problems
+   Back to dotnet9 and change power plan to never shut down
+
+   Better results
+   Omen         Elapsed Time: 00:24:47.0722065 Seconds per pass: 14.870732215999999     1000 passes  (Note Omen ran solo)
+   Snapdragon - Elapsed Time: 00:37:26.4888478 Seconds per pass: 22.464924989           1000 passes
+   AMD -        Elapsed Time: 00:26:09.9735507 Seconds per pass: 15.699749922999999     1000 passes
+   Intel        Elapsed Time: 00:56:19.3942390 Seconds per pass: 33.794014644            997 passes 3 fails
+
+
+   Try   timedOut = !await fileEntry.Semaphore.WaitAsync(TimeSpan.FromSeconds(60), serviceState.Token);
+   Also power profile set to always on
+
+   Snapdragon   Elapsed Time: 00:43:32.6292145 Seconds per pass: 26.126336556000002     1000 passes
+   amd          Elapsed Time: 00:26:23.1169390 Seconds per pass: 15.831183454'          Counter Passes: 990 Fails: 10 ExecuteLoop encountered an exception: The HTTP request to the remote WebDriver server for URL http://localhost:55543/session/995c90a9df1a599b15202749d9e3d37a/url timed out after 60 seconds.  4:37 AM
+   Intel        Elapsed Time: 00:55:36.5732819 Seconds per pass: 33.365792256           Counter Passes: 990 Fails: 10 10 expected but found Current count: 5 4:58:19AM
+   Maximum response time is 67.395 seconds
+
+
+    Category: PeakSwc.StaticFiles.RemoteFileResolver EventId: 0 SpanId: 5c19dd60195855b7 TraceId: 2e4c9e6dee2a7e50c3b6726641c1b55e ParentId: 0000000000000000 ConnectionId: 0HN6Q5ATLNOU7 RequestId: 0HN6Q5ATLNOU7:0000004D RequestPath: /d63ab5e5-5d6d-4ba7-98bc-0b3cfa6be45f/_content/RemoteBlazorWebViewTutorial.Shared/css/open-iconic/font/fonts/open-iconic.woff Unable to insert wwwroot/_content/RemoteBlazorWebViewTutorial.Shared/css/open-iconic/font/fonts/open-iconic.woff id d63ab5e5-5d6d-4ba7-98bc-0b3cfa6be45f to dictionary  
+ 
+ This is running Release mode
+  Before:
+   Max response time 26.7 sec
+  ThreadPool.SetMinThreads(workerThreads: 100, completionPortThreads: 100);
+  After 
+   Max response time 13.7 sec
+
+  ThreadPool.SetMinThreads(workerThreads: 200, completionPortThreads: 200);
+  Max response time 13.1 sec
+
+  Now move back to 100 worker and port threads, run production
+  With 3 systems at 50 connections a piece we will stick with 200 threads
+
+
+  4 systems running in production mode
+  First, let's see how AMD runs
+  13.7 seconds max
+  Now,add Omen
+  still max 13.7 seconds
+  now add Qualcomm -> max 29 seconds
+  now add Intel -> max 35.3 seconds
+  avg 640ms max 35316ms
+
+  All 4 systems pass!!!
+  QualComm Elapsed Time: 00:38:57.9440700 Seconds per pass: 23.379478273999997
+  AMD      Elapsed Time: 00:24:15.7761510 Seconds per pass: 14.557772992
+  Intel    Elapsed Time: 00:55:14.7821006 Seconds per pass: 33.148158523
+  Omen     Elapsed Time: 00:22:31.7757289 Seconds per pass: 13.517767193
+  
+  
+ Using production server now 
+  Omen     Elapsed Time: 00:22:11.2683630 Seconds per pass: 13.31269382   1000 passes
+  QualComm Elapsed Time: 00:49:17.9974374 Seconds per pass: 29.580037116
+ Intel     Elapsed Time: 00:56:57.1143658 Seconds per pass: 34.171262776
+ Amd       Elapsed Time: 00:24:29.9418117 Seconds per pass: 14.699428143
+
+
+ app.css "1dac418b70a0e36"
+
+ Cached:
+ 24 requests
+28.7 kB transferred
+441 kB resources
+Finish: 1.09 s
+DOMContentLoaded: 73 ms
+Load: 182 ms
+
+Not cached:
+24 requests
+176 kB transferred
+473 kB resources
+Finish: 1.14 s
+DOMContentLoaded: 492 ms
+Load: 596 ms
+
+Server sends FileReadResponse (Path + Instance)
+Client is in loop FileReader.cs
+Gets a path then writes out
+1. Init
+2. Length + LastModified (FileReadLengthRequest)
+3. Data FileReadDataRequest
+
+Server is CreateReadStream
+
+
+Still reading but should 
+Omen Aloane Elapsed Time: 00:22:11.2487534 Seconds per pass: 13.312496605 (oops disable cache on chrome)

@@ -70,6 +70,7 @@ namespace PeakSWC.RemoteWebView
 
         #region private
 
+        private bool disconnectedFired = false;
         private IBlazorWebView BlazorWebView { get; init; }
         private readonly object bootLock = new();
         private WebViewIPC.WebViewIPCClient? client = null;
@@ -154,19 +155,17 @@ namespace PeakSWC.RemoteWebView
                     });
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
-              
+
                 Logger.LogInformation(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors);
                 var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
 
-                Exception? exception = ProcessBrowserMessages(BlazorWebView,events);
+                Exception? exception = ProcessBrowserMessages(BlazorWebView, events).Result;
 
                 if (exception != null)
-                {
                     FireDisconnected(exception);
-                    throw exception;
-                }
+            
 
-                FileReader.AttachFileReader(client.FileReader(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
+                FileReader.AttachFileReader(client.RequestClientFileRead(), cts.Token, BlazorWebView.Id.ToString(), FileProvider, FireDisconnected, Logger);
 
                 MonitorPingTask(BlazorWebView,client);
 
@@ -199,11 +198,11 @@ namespace PeakSWC.RemoteWebView
             }, cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
-        private Exception? ProcessBrowserMessages(IBlazorWebView blazorWebView, AsyncServerStreamingCall<WebMessageResponse> events)
+        private async Task<Exception?> ProcessBrowserMessages(IBlazorWebView blazorWebView, AsyncServerStreamingCall<WebMessageResponse> events)
         {
             Exception? exception = null;
             bool connected = false;
-            var completed = new ManualResetEventSlim(false);
+            var completionSource = new TaskCompletionSource<bool>();
 
             _ = Task.Factory.StartNew(async () =>
             {
@@ -221,104 +220,97 @@ namespace PeakSWC.RemoteWebView
 
                         ReadOnlySpan<char> commandSpan = responseSpan[..separatorIndex];
 
-                        try
+                        if (commandSpan.Equals("__bwv", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (commandSpan.Equals("__bwv", StringComparison.OrdinalIgnoreCase))
+                            OnWebMessageReceived?.Invoke(message.Url, message.Response);
+                        }
+                        else if (commandSpan.Equals("browserAttached", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _ = Task.Run(async () =>
                             {
-                                OnWebMessageReceived?.Invoke(message.Url, message.Response);
-                            }
-                            else if (commandSpan.Equals("browserAttached", StringComparison.OrdinalIgnoreCase))
-                            {
-                                _ = Task.Run(async () =>
+                                try
                                 {
                                     // TODO Create property for timeout value
-                                    await Task.Delay(TimeSpan.FromSeconds(90),cts.Token).ConfigureAwait(false);
+                                    await Task.Delay(TimeSpan.FromSeconds(90), cts.Token).ConfigureAwait(false);
+                                }
+                                catch (Exception) { }
 
-                                    if (!connected)
-                                    {
-                                        FireDisconnected(new Exception("Browser connection timed out"));
-                                        cts.Cancel();
-                                    }
-                                },cts.Token);
-                                completed.Set();
-                            }
-                            else if (commandSpan.Equals("created", StringComparison.OrdinalIgnoreCase))
-                            {
-                                completed.Set();
-                                await blazorWebView.WaitForInitializationComplete().ConfigureAwait(false);
-                                FireReadyToConnect();
-                            }
-                            else if (commandSpan.Equals("createFailed", StringComparison.OrdinalIgnoreCase))
-                            {
-                                exception = new Exception("WebView Create failed - Id must be unique");
-                                Logger.LogError(exception, "WebView creation failed due to duplicate Id.");
-                                completed.Set();
-                                break; // Exit processing on failure
-                            }
-                            
-                            else if (commandSpan.Equals("refreshed", StringComparison.OrdinalIgnoreCase))
-                            {
-                                lock (bootLock)
+                                if (!connected)
                                 {
-                                    Shutdown();
-                                    FireRefreshed();
-                                    Logger.LogInformation("Service refreshed. Connection shut down.");
+                                    FireDisconnected(new Exception("Browser connection timed out"));
                                     cts.Cancel();
                                 }
-                                break; // Exit processing after refresh
-                            }
-                            else if (commandSpan.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var shutdownException = new Exception("Server shut down connection");
-                                FireDisconnected(shutdownException);
-                                Logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
-                                cts.Cancel();
-                                break; // Exit processing on shutdown
-                            }
-                            else if (commandSpan.Equals("connected", StringComparison.OrdinalIgnoreCase))
-                            {
-                                ReadOnlySpan<char> payloadSpan = responseSpan[(separatorIndex + 1)..];
-                                string payloadString = payloadSpan.ToString(); // Convert span to string here
-                                connected = await HandleConnectedAsync(blazorWebView, payloadString, message.Cookies, cts.Token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                throw new Exception($"Unknown command received: {commandSpan}");
-                            }
+                            }, cts.Token);
+                            completionSource.TrySetResult(true); // Signal completion
                         }
-                        catch (Exception ex)
+                        else if (commandSpan.Equals("created", StringComparison.OrdinalIgnoreCase))
                         {
-                            exception = ex;
-                            await ShutdownChannelAsync().ConfigureAwait(false);
-                            completed.Set();
-                            break; // Exit processing on exception
+                            completionSource.TrySetResult(true); // Signal completion
+                            await blazorWebView.WaitForInitializationComplete().ConfigureAwait(false);
+                            FireReadyToConnect();
+                        }
+                        else if (commandSpan.Equals("createFailed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            exception = new Exception("WebView Create failed - Id must be unique");
+                            Logger.LogError(exception, "WebView creation failed due to duplicate Id.");
+                            completionSource.TrySetResult(false); // Signal failure
+                            break; // Exit processing on failure
+                        }
+                        else if (commandSpan.Equals("refreshed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            lock (bootLock)
+                            {
+                                Shutdown();
+                                FireRefreshed();
+                                Logger.LogInformation("Service refreshed. Connection shut down.");
+                                cts.Cancel();
+                            }
+                            break; // Exit processing after refresh
+                        }
+                        else if (commandSpan.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var shutdownException = new Exception("Server shut down connection");
+                            FireDisconnected(shutdownException);
+                            Logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
+                            cts.Cancel();
+                            break; // Exit processing on shutdown
+                        }
+                        else if (commandSpan.Equals("connected", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ReadOnlySpan<char> payloadSpan = responseSpan[(separatorIndex + 1)..];
+                            string payloadString = payloadSpan.ToString(); // Convert span to string here
+                            connected = await HandleConnectedAsync(blazorWebView, payloadString, message.Cookies, cts.Token).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            throw new Exception($"Unknown command received: {commandSpan}");
                         }
                     }
-                }
-                catch (OperationCanceledException ex) when (!connected)
-                {
-                    var timeoutException = new TimeoutException("Browser connection timed out.", ex);
-                    FireDisconnected(timeoutException);
-                    Logger.LogWarning(timeoutException, "Browser connection timed out.");
-                    exception = timeoutException;
                 }
                 catch (Exception ex)
                 {
                     exception = ex;
-                    Logger.LogError(ex, "An unexpected error occurred while processing browser messages.");
-                    await ShutdownChannelAsync().ConfigureAwait(false);
+
+                    if (connected)
+                        FireDisconnected(ex);
+
+                    if(ex is not TaskCanceledException)
+                        Logger.LogError(ex, "An unexpected error occurred while processing browser messages.");
+                    
+                    await DisposeAsyncCore().ConfigureAwait(false);
                 }
                 finally
                 {
-                    completed.Set();
+                    completionSource.TrySetResult(true); // Ensure the task completes even in case of an error
                 }
-            }, TaskCreationOptions.LongRunning); 
+            }, TaskCreationOptions.LongRunning);
 
-            // Wait for the processing task to complete
-            completed.Wait();
+            // Await the completion of the processing task
+            await completionSource.Task.ConfigureAwait(false);
 
             return exception;
         }
+
 
         #region Helper Methods
 
@@ -429,6 +421,8 @@ namespace PeakSWC.RemoteWebView
 
         void FireDisconnected(Exception exception)
         {
+            if (disconnectedFired) return;
+            disconnectedFired = true;
             Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!, exception)));
         }
 
@@ -487,6 +481,41 @@ namespace PeakSWC.RemoteWebView
         public void Initialize()
         {
             _ = Client();
+        }
+
+        public async ValueTask DisposeAsyncCore()
+        {
+            cts.Cancel();
+            await FileReader.ShutdownAsync();
+
+            if (channel != null)
+            {
+                try
+                {
+                    await channel.ShutdownAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error shutting down channel.");
+                }
+            }
+
+            cts.Dispose();
+
+
+            // cancel Tasks
+            //  _cts.Cancel();
+            // await _call.RequestStream.CompleteAsync();
+            // ping and file reader need RequestStream.CompleteAsync();
+            // if (_responseTask != null)
+            //{
+            //    await _responseTask;
+            //}
+            // Dispose of the call
+            // _call.Dispose();
+            // Dispose the cancellation token source
+            // _cts.Dispose();
+            await Task.CompletedTask;
         }
     }
 }

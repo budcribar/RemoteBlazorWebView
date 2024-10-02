@@ -7,6 +7,8 @@ using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using PeakSWC.RemoteBlazorWebView;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+
 #if WEBVIEW2_WINFORMS
 using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
@@ -71,6 +73,12 @@ namespace PeakSWC.RemoteWebView
         protected override void SendMessage(string message)
         {
             RemoteWebView.SendMessage(message);
+        }
+
+        protected override async ValueTask DisposeAsyncCore()
+        {
+            await base.DisposeAsyncCore();
+            await RemoteWebView.DisposeAsyncCore();
         }
     }
 }

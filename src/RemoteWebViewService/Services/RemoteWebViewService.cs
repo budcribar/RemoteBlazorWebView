@@ -71,13 +71,14 @@ namespace PeakSWC.RemoteWebView
          
         }
 
-        public override async Task FileReader(IAsyncStreamReader<FileReadRequest> requestStream, IServerStreamWriter<FileReadResponse> responseStream, ServerCallContext context)
+        public override async Task RequestClientFileRead(IAsyncStreamReader<ServerFileReadRequest> requestStream, IServerStreamWriter<ClientFileReadResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
             try
             {
-                await foreach (FileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+                await foreach (ServerFileReadRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
+                   
                     id = message.Id;
 
                     if (serviceDictionary.TryGetValue(id, out var serviceState))
@@ -85,7 +86,7 @@ namespace PeakSWC.RemoteWebView
                         if (serviceState.Token.IsCancellationRequested)
                             break;
 
-                        if (message.FileReadCase == FileReadRequest.FileReadOneofCase.Init && serviceState.FileReaderTask == null)
+                        if (message.RequestType == ServerFileReadRequest.Types.RequestType.Init && serviceState.FileReaderTask == null)
                         {
                             serviceState.FileReaderTask = Task.Run(async () =>
                             {
@@ -94,7 +95,7 @@ namespace PeakSWC.RemoteWebView
                                     while (!serviceState.Token.IsCancellationRequested)
                                     {
                                         var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-                                        await responseStream.WriteAsync(new FileReadResponse { Id = id, Path = fileEntry.Path, Instance = fileEntry.Instance }, serviceState.Token).ConfigureAwait(false);
+                                        await responseStream.WriteAsync(new ClientFileReadResponse { Id = id, Path = fileEntry.Path, Instance = fileEntry.Instance }).ConfigureAwait(false);
                                     }
                                 }
                                 catch (OperationCanceledException)
@@ -114,7 +115,10 @@ namespace PeakSWC.RemoteWebView
                             {
                                 var fileEntry = concurrentList[message.Length.Instance];
                                 fileEntry.Length = message.Length.Length;
+                                fileEntry.LastModified = DateTimeOffset.FromUnixTimeSeconds(message.Length.LastModified);
                                 fileEntry.Semaphore.Release();
+
+                                // send a FileReadData request
                             }
                             else
                             {
@@ -162,7 +166,7 @@ namespace PeakSWC.RemoteWebView
         {
             if (serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
 			{
-                await serviceState.IPC.SendMessage(request.Message, serviceState.Token).ConfigureAwait(false);
+                await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
 
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
