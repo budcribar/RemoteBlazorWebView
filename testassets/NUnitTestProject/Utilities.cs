@@ -56,7 +56,11 @@ namespace WebdriverTestProject
             sw.Start();
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
+#if DEBUG_SERVER
+            var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\x64\Debug\net9";
+#else
             var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\publishNoAuth";
+#endif
             var executable = @"RemoteWebViewService.exe";
             var f = Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, executable);
 
@@ -114,7 +118,7 @@ namespace WebdriverTestProject
             return process;
         }
 
-        #endregion
+#endregion
 
         #region WinForm
         public static Process StartRemoteBlazorWinFormsDebugApp() => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath());
