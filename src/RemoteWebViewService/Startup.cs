@@ -336,6 +336,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/stats", Endpoints.Stats()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).ConditionallyRequireAuthorization();
 #endif
+                endpoints.MapGet("/health", Endpoints.Health());
                 endpoints.MapGet("/", Endpoints.Contact());
                 endpoints.MapFallbackToFile("index.html");
             });

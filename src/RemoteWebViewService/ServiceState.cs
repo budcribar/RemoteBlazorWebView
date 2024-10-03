@@ -36,7 +36,6 @@ namespace PeakSWC.RemoteWebView
         public int TotalFilesRead { get; set; } = 0;
         public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
-        public ConcurrentDictionary<string, ConcurrentList<FileEntry>> FileDictionary { get; set; } = new();
         public Channel<FileEntry> FileCollection { get; set; } = Channel.CreateUnbounded<FileEntry>();
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
@@ -135,19 +134,7 @@ namespace PeakSWC.RemoteWebView
 
                 if (disposing)
                 {
-                    foreach (var entry in FileDictionary)
-                    {
-                        try
-                        {
-                            entry.Value?.Dispose();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Error disposing FileDictionary entry with key: {Key}.", entry.Key);
-                        }
-                    }
-
-                    FileDictionary.Clear();
+                   
                 }
 
                 // Free unmanaged resources here, if any...
