@@ -41,7 +41,7 @@ namespace Server
 
             // Verify that both Client and Server processes are running
             Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
-            Process.GetProcessesByName("Server").Length.Should().BeGreaterThan(0, "Server process should be running.");
+            Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
         }
 
         [Fact]

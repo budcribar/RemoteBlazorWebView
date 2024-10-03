@@ -1,45 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="CustomApplicationFactory.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="CustomApplicationFactory.cs" />
 
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.2" />
-    <PackageReference Include="FluentAssertions" Version="6.12.1" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
-    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.66.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.47.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-	  <PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
+		<PackageReference Include="coverlet.collector" Version="6.0.2" />
+		<PackageReference Include="FluentAssertions" Version="6.12.1" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
+		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.66.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0-rc.1.24431.7" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+		<PackageReference Include="Microsoft.Playwright" Version="1.47.0" />
+		<PackageReference Include="xunit" Version="2.9.2" />
+		<PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-	  <None Include="..\Client\publish\Client.exe">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Include="..\Server\publish\Server.exe">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Server\Server.csproj" />
-  </ItemGroup>
+		<Using Include="Xunit" />
+		<None Include="..\Client\publish\Client.exe">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<Folder Include="Protos\" />
+		<ProjectReference Include="..\..\..\RemoteWebView\RemoteWebView.csproj" />
+	</ItemGroup>
 
 </Project>

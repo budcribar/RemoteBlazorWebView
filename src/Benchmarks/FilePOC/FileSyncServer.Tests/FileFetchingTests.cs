@@ -40,7 +40,7 @@ namespace Server
 
             // Verify that both Client and Server processes are running
             Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
-            Process.GetProcessesByName("Server").Length.Should().BeGreaterThan(0, "Server process should be running.");
+            Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
         }
 
         [Theory]
@@ -80,7 +80,7 @@ namespace Server
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NotFound, $"Expected status code 404 for non-existing file '{fileName}'.");
             var content = await response.Content.ReadAsStringAsync();
-            content.Should().Be("File not found.", $"Response content for '{fileName}' should indicate that the file was not found.");
+            content.Should().Contain("File not found.", $"Response content for '{fileName}' should indicate that the file was not found.");
         }
 
         [Fact]

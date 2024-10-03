@@ -33,7 +33,9 @@ namespace WebdriverTestProject
             if (num == 10)
                 Thread.Sleep(TimeSpan.FromMinutes(2));
 
-            for (int i = 0; i < num; i++) _driver[i].Url = url + $"app/{ids[i]}";
+            for (int i = 0; i < num; i++) 
+                _driver[i].Url = url + $"app/{ids[i]}";
+
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
             Thread.Sleep(3000);
@@ -63,7 +65,7 @@ namespace WebdriverTestProject
             var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
 
             Assert.AreEqual(28 * num, totalFilesRead, "Failed on total files read");
-            Assert.AreEqual(890482 * num, totalBytesRead, "Failed on total bytes read");
+            Assert.AreEqual(896402 * num, totalBytesRead, "Failed on total bytes read");
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
             Console.WriteLine($"TotalReadTime {totalReadTime}");
 

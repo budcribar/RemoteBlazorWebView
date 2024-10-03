@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Net.Client;
+using PeakSWC.RemoteWebView;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,32 +14,73 @@ namespace FileSyncServer
 {
     public static class Utility
     {
-        public static async Task<bool> GetServerCache()
+
+        public static async Task SetServerCache(bool isEnabled)
         {
-            var client = Client();
-            var status = await (await client.GetAsync("/cache")).Content.ReadAsStringAsync();
-            return ParseCacheStatus(status).UseServerCache;
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+
+            var cacheRequest = new CacheRequest
+            {
+                EnableServerCache = isEnabled 
+            };
+
+            await grpcClient.SetCacheAsync(cacheRequest);
+
         }
 
         public static async Task SetClientCache(bool isEnabled)
         {
-            var client = Client();
-            var enabled = isEnabled ? "enable" : "disable";
-            var res = await (await client.GetAsync($"/cache/client/{enabled}")).Content.ReadAsStringAsync();
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+
+            var cacheRequest = new CacheRequest
+            {
+                EnableClientCache = isEnabled
+            };
+
+            await grpcClient.SetCacheAsync(cacheRequest);
+
+        }
+
+        public static async Task<bool> GetServerCache()
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+            var response = await grpcClient.GetServerStatusAsync(new Empty());
+            return response.ServerCacheEnabled;
         }
 
         public static async Task<bool> GetClientCache()
         {
-            var client = Client();
-            var status = await (await client.GetAsync("/cache")).Content.ReadAsStringAsync();
-            return ParseCacheStatus(status).UseClientCache;
-        }
+            var httpHandler = new HttpClientHandler();
 
-        public static async Task SetServerCache(bool isEnabled)
-        {
-            var client = Client();
-            var enabled = isEnabled ? "enable" : "disable";
-            var res = await (await client.GetAsync($"/cache/server/{enabled}")).Content.ReadAsStringAsync();
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+            var response = await grpcClient.GetServerStatusAsync(new Empty());
+            return response.ClientCacheEnabled;
         }
 
         public static string BASE_URL = "https://localhost:5001";
@@ -58,78 +102,25 @@ namespace FileSyncServer
             return client;
         }
 
-        public static (bool UseServerCache, bool UseClientCache) ParseCacheStatus(string input)
-            {
-                if (string.IsNullOrWhiteSpace(input))
-                    throw new ArgumentException("Input string cannot be null or empty.");
-
-                // Split the input by comma to separate key-value pairs
-                string[] pairs = input.Split(',');
-
-                if (pairs.Length != 2)
-                    throw new ArgumentException("Input string must contain exactly two key-value pairs separated by a comma.");
-
-                bool useServerCache = false;
-                bool useClientCache = false;
-                bool serverCacheSet = false;
-                bool clientCacheSet = false;
-
-                foreach (var pair in pairs)
-                {
-                    // Split each pair by colon
-                    string[] keyValue = pair.Split(':');
-
-                    if (keyValue.Length != 2)
-                        throw new ArgumentException($"Invalid key-value pair format: '{pair}'. Expected 'Key: Value'.");
-
-                    // Trim whitespaces
-                    string key = keyValue[0].Trim();
-                    string value = keyValue[1].Trim();
-
-                    // Parse the value to boolean
-                    if (!bool.TryParse(value, out bool boolValue))
-                        throw new FormatException($"Value for '{key}' is not a valid boolean: '{value}'.");
-
-                    // Assign to the correct variable based on the key
-                    switch (key)
-                    {
-                        case "UseServerCache":
-                            useServerCache = boolValue;
-                            serverCacheSet = true;
-                            break;
-
-                        case "UseClientCache":
-                            useClientCache = boolValue;
-                            clientCacheSet = true;
-                            break;
-
-                        default:
-                            throw new ArgumentException($"Unexpected key: '{key}'. Expected 'UseServerCache' or 'UseClientCache'.");
-                    }
-                }
-
-                if (!serverCacheSet || !clientCacheSet)
-                    throw new ArgumentException("Both 'UseServerCache' and 'UseClientCache' must be specified.");
-
-                return (useServerCache, useClientCache);
-            }
-      
         public static void KillExistingProcesses(string processName)
         {
-            try
+
+            foreach (var process in Process.GetProcessesByName(processName))
             {
-                foreach (var process in Process.GetProcessesByName(processName))
+                try
                 {
                     Console.WriteLine($"Killing process: {process.ProcessName} (ID: {process.Id})");
                     process.Kill();
                     process.WaitForExit(); // Optionally wait for the process to exit
                 }
-            }
-            catch (Exception ex)
-            {
+                catch (Exception ex)
+                {
 
-                Console.WriteLine($"Error killing process: {ex.Message}");
+                    Console.WriteLine($"Error killing process: {ex.Message}");
+                }
+
             }
+
         }
 
         /// <summary>

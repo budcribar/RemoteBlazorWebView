@@ -5,6 +5,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto"; 
 
 option csharp_namespace = "PeakSWC.RemoteWebView";
 
@@ -79,21 +80,17 @@ message PingMessageRequest {
     int32 pingIntervalSeconds = 3;
 }
 
-
-
-
 message ServerFileReadRequest {
   string client_id = 1;
   string request_id = 2;
   string path = 3;
  
-  RequestType request_type = 4; // Server indicates if it wants metadata or file data
+  RequestType request_type = 4; 
 
   enum RequestType {
     MetaData = 0;
     FileData = 1;
   }
-  // Add any other parameters the server needs to request a file read
 }
 
 message ClientFileReadResponse {
@@ -130,7 +127,6 @@ service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 
     rpc CreateWebView(CreateWebViewRequest) returns (stream WebMessageResponse);
-    //rpc FileReader(stream FileReadRequest) returns (stream FileReadResponse); 
     rpc RequestClientFileRead(stream ClientFileReadResponse ) returns (stream ServerFileReadRequest );
     rpc GetIds(google.protobuf.Empty) returns (IdArrayResponse);
     rpc Ping(stream PingMessageRequest) returns (stream PingMessageResponse);
@@ -207,6 +203,8 @@ message ServerResponse {
     repeated ConnectionResponse connectionResponses = 5;
     double totalProcessorTime = 6;
     double upTime = 7;
+    bool client_cache_enabled = 8;
+    bool server_cache_enabled = 9;
 }
 
 message EventResponse {
@@ -218,9 +216,15 @@ message LoggedEventResponse {
     repeated EventResponse eventResponses = 1;
 }
 
+message CacheRequest {
+    google.protobuf.BoolValue enable_server_cache = 1;
+    google.protobuf.BoolValue enable_client_cache = 2;
+}
+
 service ClientIPC {
     rpc GetClients(UserMessageRequest) returns (stream ClientResponseList);
     rpc GetUserGroups(UserRequest) returns (UserResponse);
     rpc GetServerStatus(google.protobuf.Empty) returns (ServerResponse);
     rpc GetLoggedEvents(google.protobuf.Empty) returns (LoggedEventResponse);
+    rpc SetCache(CacheRequest) returns (google.protobuf.Empty);
 }

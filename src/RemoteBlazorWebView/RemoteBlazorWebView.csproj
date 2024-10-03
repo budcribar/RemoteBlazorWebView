@@ -39,7 +39,7 @@
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0-rc.1.24431.7" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0-rc.1.24431.7" />
 		<PackageReference Include="Microsoft.JSInterop" Version="9.0.0-rc.1.24452.1" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2739.15" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
 		<PackageReference Include="Photino.Blazor" Version="2.7.0" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
 		
