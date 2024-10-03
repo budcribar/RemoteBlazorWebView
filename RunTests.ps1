@@ -104,6 +104,10 @@ else {
 
 Set-Location $currentDirectory
 
+Write-Host -ForegroundColor GREEN "Publish TestClient"
+dotnet publish -c Release --self-contained true -r win-x64 -p:PublishSingleFile=true .\src\Benchmarks\FilePOC\Client\Client.csproj -o .\src\Benchmarks\FilePOC\Client\publish
+
+
 if ($Rust -eq $true)
 {
 	 Write-Host -ForegroundColor GREEN "Build Release http_to_grpc_bridge"
@@ -154,6 +158,7 @@ if ($Rust -eq $true)
 	}
 
 }
+
 
 
 
@@ -208,8 +213,13 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publi
 
 if ($Build -ne $true)
 {
-	dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
-	Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
+	Set-Location src\Benchmarks\FilePOC\FileSyncServer.Tests
+	dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=FileSyncServerTestLog.html"
+	Invoke-Expression TestResults\FileSyncServerTestLog.html	
+	Set-Location $currentDirectory
+
+	dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=WebDriverTestLog.html"
+	Invoke-Expression testassets\NUnitTestProject\TestResults\WebDriverTestLog.html
 }
 
 # zip up files for github

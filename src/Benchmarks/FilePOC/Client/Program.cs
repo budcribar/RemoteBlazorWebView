@@ -19,7 +19,15 @@ namespace FileClientApp
 
         static async Task<int> Main(string[] args)
         {
+            CancellationTokenSource cts = new CancellationTokenSource();
             Console.WriteLine("Starting FileClient...");
+
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                Console.WriteLine("Ctrl+C pressed. Cancelling...");
+                cts.Cancel();  // Signal cancellation
+                eventArgs.Cancel = true;  // Prevent immediate termination
+            };
 
             // Parse and validate command-line arguments
             if (args.Length < 1)
@@ -72,32 +80,18 @@ namespace FileClientApp
             // Define the list of files to synchronize by creating them in a temp directory
             var filesToSync = Utilities.CreateTestFiles(tempDirectory);
             Utilities.CreateTestEnvironment(tempDirectory);
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
+          
             try
             {
                 // Start handling file synchronization requests from the server
-                fileClient.HandleServerRequests(tokenSource.Token);
+                fileClient.HandleServerRequests(cts.Token);
 
                 Console.WriteLine("File synchronization initiated.");
-                Console.WriteLine("Press 'q' to quit the application.");
-
-                // Wait for the user to press 'q' to exit
-                while (true)
-                {
-                    var key = Console.ReadKey(intercept: true);
-                    if (key.KeyChar == 'q' || key.KeyChar == 'Q')
-                    {
-                        Console.WriteLine("Shutdown initiated...");
-                        break;
-                    }
-                }
+                
+                await Task.Delay(Timeout.Infinite, cts.Token);
 
                 // Initiate shutdown
                 await fileClient.CloseAsync();
-
-                // TODO
-                // Wait for handleFilesTask to complete
-                // await handleFilesTask;
             }
             catch (Grpc.Core.RpcException rpcEx)
             {
@@ -109,7 +103,7 @@ namespace FileClientApp
             }
 
             Console.WriteLine("FileClient has exited.");
-            return 0; // Exit with success code
+            return 0; 
         }
 
         
