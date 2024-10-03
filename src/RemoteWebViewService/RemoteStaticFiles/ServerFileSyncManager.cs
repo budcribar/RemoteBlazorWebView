@@ -22,8 +22,6 @@ namespace PeakSWC.RemoteWebView
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DataRequest>> _fileDataRequests = new();
         private readonly ConcurrentDictionary<string,string> _htmlHostPaths = new();
 
-        private readonly string _serverCacheDirectory = "server_cache";
-
         // Optional: set expiration in seconds using environment variables (default to 10 minutes)
         private readonly int _cacheTimeoutSeconds = int.TryParse(
             Environment.GetEnvironmentVariable("CACHE_TIMEOUT_SECONDS"),
@@ -44,8 +42,7 @@ namespace PeakSWC.RemoteWebView
         public ServerFileSyncManager(ILogger<ServerFileSyncManager> logger)
         {
             _logger = logger;
-            Directory.CreateDirectory(_serverCacheDirectory);
-
+          
             // Start the channel reader
             _ = Task.Run(ProcessWriteChannelAsync, _cts.Token);
         }

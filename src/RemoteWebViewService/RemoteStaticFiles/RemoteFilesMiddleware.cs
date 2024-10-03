@@ -9,9 +9,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using System.Collections.Concurrent;
 
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView 
 {
     public class RemoteFilesMiddleware
     {
@@ -19,23 +20,6 @@ namespace PeakSWC.RemoteWebView
         private readonly IMemoryCache _memoryCache;
         private readonly ILogger<RemoteFilesMiddleware> _logger;
         private readonly RemoteFileResolver _remoteFileResolver;
-
-
-        private static async Task<byte[]> StreamToByteArrayAsync(Stream stream)
-        {
-            if (stream is MemoryStream memoryStream)
-            {
-                return memoryStream.ToArray();
-            }
-            else
-            {
-                using (var memStream = new MemoryStream())
-                {
-                    await stream.CopyToAsync(memStream);
-                    return memStream.ToArray();
-                }
-            }
-        }
 
         public RemoteFilesMiddleware(
             RequestDelegate next,
@@ -141,6 +125,7 @@ namespace PeakSWC.RemoteWebView
 
         }
 
+       
 
         private async Task HandleGetAsync(HttpContext context)
         {
@@ -169,6 +154,7 @@ namespace PeakSWC.RemoteWebView
             try
             {
                 clientMetadata = await _remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath);
+                FileStats.Update(context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>(), clientGuid.ToString(), clientMetadata);
             }
             catch (Exception ex)
             {
