@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager) : WebViewIPC.WebViewIPCBase
     {
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
@@ -71,89 +71,146 @@ namespace PeakSWC.RemoteWebView
          
         }
 
+        //public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
+        //{
+        //    var id = string.Empty;
+        //    try
+        //    {
+        //        await foreach (ClientFileReadResponse message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+        //        {
+        //            id = message.ClientId;
+
+        //            if (serviceDictionary.TryGetValue(id, out var serviceState))
+        //            {
+        //                if (serviceState.Token.IsCancellationRequested)
+        //                    break;
+
+        //                if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Init && serviceState.FileReaderTask == null)
+        //                {
+        //                    serviceState.FileReaderTask = Task.Run(async () =>
+        //                    {
+        //                        try
+        //                        {
+        //                            while (!serviceState.Token.IsCancellationRequested)
+        //                            {
+        //                                var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
+        //                                await responseStream.WriteAsync(new ServerFileReadRequest { ClientId = id, Path = fileEntry.Path, RequestId = fileEntry.Instance.ToString() }, serviceState.Token).ConfigureAwait(false);
+        //                            }
+        //                        }
+        //                        catch (OperationCanceledException)
+        //                        {
+        //                            // Handle cancellation if necessary
+        //                        }
+        //                        catch (Exception ex)
+        //                        {
+        //                            await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
+        //                        }
+        //                    }, serviceState.Token);
+        //                }
+
+        //                else if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Metadata)
+        //                {
+        //                    if (serviceState.FileDictionary.TryGetValue(message.Path, out var concurrentList) && concurrentList.Count > int.Parse(message.RequestId) && int.Parse(message.RequestId) >= 0)
+        //                    {
+        //                        var fileEntry = concurrentList[int.Parse(message.RequestId)];
+        //                        fileEntry.Length = message.Metadata.Length;
+        //                        fileEntry.Semaphore.Release();
+
+        //                        // send a FileReadData request
+        //                    }
+        //                    else
+        //                    {
+        //                        logger.LogError($"FileEntry not found for Path: {message.Path}, Instance: {message.RequestId}");
+        //                        await shutdownService.Shutdown(id).ConfigureAwait(false);
+        //                    }
+        //                }
+        //                else if(message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
+        //                {
+        //                    var fileEntry = serviceState.FileDictionary[message.Path][int.Parse(message.RequestId)]; 
+        //                    if (message.FileData.FileChunk.Length > 0)
+        //                    {        
+        //                        // TODO is there a limit on the Pipe write?
+        //                        await fileEntry.Pipe.Writer.WriteAsync(message.FileData.FileChunk.ToByteArray(), serviceState.Token).ConfigureAwait(false);
+        //                        // _ = fileEntry.Pipe.Writer.FlushAsync();
+        //                    }
+        //                    else
+        //                    {
+        //                        // Trigger the stream read                              
+        //                        fileEntry.Pipe.Writer.Complete();
+        //                    }
+        //                }
+        //            }
+
+        //            else break;
+        //        }
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        // No need to shutdown as we are in the process of shutting down
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await shutdownService.Shutdown(id,ex).ConfigureAwait(false);
+        //    }
+        //}
+
         public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
         {
-            var id = string.Empty;
+            // Handle Init message
+            if (!await requestStream.MoveNext())
+            {
+                logger.LogWarning("Client disconnected without sending Init message.");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Init message not received."));
+            }
+
+            var initResponse = requestStream.Current;
+
+            if (initResponse.Init == null)
+            {
+                logger.LogWarning("First message from client is not Init.");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "First message must be Init."));
+            }
+
+            string clientGuid = initResponse.ClientId;
+            logger.LogInformation($"Client '{clientGuid}' connected and initialized.");
+
+            // Register the client
+            _fileSyncManager.RegisterClient(clientGuid, initResponse.Init.HtmlHostPath);
+
+            // Associate the response stream with the clientGuid
+            _fileSyncManager.AssociateResponseStream(clientGuid, responseStream);
+
+            // Create a linked cancellation token to handle both client cancellation and server cancellation
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+            var cancellationToken = linkedCts.Token;
+
             try
             {
-                await foreach (ClientFileReadResponse message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+                // Continuously read messages from the client until cancellation
+                while (await requestStream.MoveNext(cancellationToken))
                 {
-                    id = message.ClientId;
-
-                    if (serviceDictionary.TryGetValue(id, out var serviceState))
-                    {
-                        if (serviceState.Token.IsCancellationRequested)
-                            break;
-
-                        if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Init && serviceState.FileReaderTask == null)
-                        {
-                            serviceState.FileReaderTask = Task.Run(async () =>
-                            {
-                                try
-                                {
-                                    while (!serviceState.Token.IsCancellationRequested)
-                                    {
-                                        var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-                                        await responseStream.WriteAsync(new ServerFileReadRequest { ClientId = id, Path = fileEntry.Path, RequestId = fileEntry.Instance.ToString() }, serviceState.Token).ConfigureAwait(false);
-                                    }
-                                }
-                                catch (OperationCanceledException)
-                                {
-                                    // Handle cancellation if necessary
-                                }
-                                catch (Exception ex)
-                                {
-                                    await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
-                                }
-                            }, serviceState.Token);
-                        }
-
-                        else if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Metadata)
-                        {
-                            if (serviceState.FileDictionary.TryGetValue(message.Path, out var concurrentList) && concurrentList.Count > int.Parse(message.RequestId) && int.Parse(message.RequestId) >= 0)
-                            {
-                                var fileEntry = concurrentList[int.Parse(message.RequestId)];
-                                fileEntry.Length = message.Metadata.Length;
-                                fileEntry.Semaphore.Release();
-
-                                // send a FileReadData request
-                            }
-                            else
-                            {
-                                logger.LogError($"FileEntry not found for Path: {message.Path}, Instance: {message.RequestId}");
-                                await shutdownService.Shutdown(id).ConfigureAwait(false);
-                            }
-                        }
-                        else if(message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
-                        {
-                            var fileEntry = serviceState.FileDictionary[message.Path][int.Parse(message.RequestId)]; 
-                            if (message.FileData.FileChunk.Length > 0)
-                            {        
-                                // TODO is there a limit on the Pipe write?
-                                await fileEntry.Pipe.Writer.WriteAsync(message.FileData.FileChunk.ToByteArray(), serviceState.Token).ConfigureAwait(false);
-                                // _ = fileEntry.Pipe.Writer.FlushAsync();
-                            }
-                            else
-                            {
-                                // Trigger the stream read                              
-                                fileEntry.Pipe.Writer.Complete();
-                            }
-                        }
-                    }
-
-                    else break;
+                    var response = requestStream.Current;
+                    await _fileSyncManager.HandleClientResponse(response);
                 }
+
+                logger.LogInformation($"Client '{clientGuid}' has completed sending messages.");
             }
-            catch (OperationCanceledException)
+            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
             {
-                // No need to shutdown as we are in the process of shutting down
+                logger.LogInformation($"Client '{clientGuid}' disconnected.");
             }
             catch (Exception ex)
             {
-                await shutdownService.Shutdown(id,ex).ConfigureAwait(false);
+                logger.LogError(ex, $"Error handling client '{clientGuid}' responses.");
+                throw new RpcException(new Status(StatusCode.Internal, "Internal server error."));
+            }
+            finally
+            {
+                // Clean up when the client disconnects
+                _fileSyncManager.RemoveClient(clientGuid);
+                logger.LogInformation($"Cleaned up resources for client '{clientGuid}'.");
             }
         }
-
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
             await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
