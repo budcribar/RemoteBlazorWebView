@@ -53,18 +53,13 @@ namespace WebdriverTestProject
 
         public async virtual Task Startup(int numClients)
         {
-            //var webview2 = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? "", "WebView2");
-            //Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", webview2);
-            //Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", webview2);
             _driver = new();
             Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
-            KillClient();
-
-           
+            KillClient();   
 
             process = StartServer();
             
-            for(int i=0; i < 10; i++)
+            for(int i=0; i < 100; i++)
 			{
                 // Wait for server to spin up
                 try
@@ -74,7 +69,7 @@ namespace WebdriverTestProject
                     break;
                 }
                 catch (Exception ){}
-                await Task.Delay(1000);
+                await Task.Delay(100);
             }
 
             clients = new List<Process>();
@@ -88,10 +83,22 @@ namespace WebdriverTestProject
             StartClient(numClients);
             Console.WriteLine($"Clients started in {sw.Elapsed}");
 
+            var chromeOptions = new ChromeOptions
+            {
+                BrowserVersion = "129.0",
+                AcceptInsecureCertificates = true,
+                PageLoadTimeout = TimeSpan.FromMinutes(2)
+            };
+            chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
+            chromeOptions.AddArgument("--disable-gpu");
+            chromeOptions.AddArgument("--no-sandbox");
+            chromeOptions.AddArgument("--disable-extensions");
+            chromeOptions.AddArgument("--disable-dev-shm-usage");
+
             sw.Restart();
             for (int i = 0; i < numClients; i++)
             {
-                _driver.Add(new());
+                _driver.Add(new(chromeOptions));
             }
 
             Console.WriteLine($"Browsers started in {sw.Elapsed}");
@@ -105,9 +112,9 @@ namespace WebdriverTestProject
             do
             {
                 ids = client.GetIds(new Empty()).Responses.ToArray();
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
                 count++;
-                Assert.IsTrue(count < 20, $"Timed out waiting to start {num} clients found {ids.Length}");
+                Assert.IsTrue(count < 200, $"Timed out waiting to start {num} clients found {ids.Length}");
             } while (ids.Length != num);
 
         }

@@ -211,16 +211,34 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
-if ($Build -ne $true)
-{
-	Set-Location src\Benchmarks\FilePOC\FileSyncServer.Tests
-	dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=FileSyncServerTestLog.html"
-	Invoke-Expression TestResults\FileSyncServerTestLog.html	
-	Set-Location $currentDirectory
+if ($Build -ne $true) {
+    # Navigate to the first test directory
+    $targetPath = Resolve-Path "src\Benchmarks\FilePOC\FileSyncServer.Tests"
+    Set-Location $targetPath
 
-	dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=WebDriverTestLog.html"
-	Invoke-Expression testassets\NUnitTestProject\TestResults\WebDriverTestLog.html
+    # Generate a timestamp
+    $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+
+    # Run the first test
+    $logfile1 = "FileSyncServerTestLog_$timestamp.html"
+    dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1"
+    
+    # Open the log file in the default browser
+    $logfilePath1 = Resolve-Path "TestResults\$logfile1"
+    Start-Process $logfilePath1
+
+    # Return to the original directory
+    Set-Location $currentDirectory
+
+    # Run the second test
+    $logfile2 = "WebDriverTestLog_$timestamp.html"
+    dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=$logfile2"
+
+    # Open the second log file in the default browser
+    $logfilePath2 = Resolve-Path "testassets\NUnitTestProject\TestResults\$logfile2"
+    Start-Process $logfilePath2
 }
+
 
 # zip up files for github
 $compress = @{

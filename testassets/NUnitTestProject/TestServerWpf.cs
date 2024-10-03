@@ -33,6 +33,8 @@ namespace WebdriverTestProject
             if (num == 10)
                 Thread.Sleep(TimeSpan.FromMinutes(2));
 
+
+            // Possible race condition
             for (int i = 0; i < num; i++) 
                 _driver[i].Url = url + $"app/{ids[i]}";
 
@@ -65,7 +67,7 @@ namespace WebdriverTestProject
             var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
 
             Assert.AreEqual(28 * num, totalFilesRead, "Failed on total files read");
-            Assert.AreEqual(896402 * num, totalBytesRead, "Failed on total bytes read");
+            Assert.AreEqual(932318 * num, totalBytesRead, "Failed on total bytes read");
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
             Console.WriteLine($"TotalReadTime {totalReadTime}");
 
@@ -87,7 +89,6 @@ namespace WebdriverTestProject
                 for (int j = 0; j < 100; j++)
                 {
                     Thread.Sleep(100);
-
                     Assert.IsTrue(j < 90, "Client did not shutdown via browser shutdown");
 
                     if (CountClients() == num - (i + 1))

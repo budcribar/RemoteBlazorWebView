@@ -157,7 +157,7 @@ namespace StressServer
                 {
                     BrowserVersion = "129.0",
                     AcceptInsecureCertificates = true,
-                    PageLoadTimeout = TimeSpan.FromMinutes(2)
+                    PageLoadTimeout = TimeSpan.FromMinutes(2)                
                 };
                 chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
                 chromeOptions.AddArgument("--disable-gpu");

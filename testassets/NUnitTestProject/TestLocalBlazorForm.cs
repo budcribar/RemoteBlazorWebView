@@ -40,7 +40,7 @@ namespace WebdriverTestProject
             {
                 BrowserVersion = "128.0",
                 UseWebView = true,
-                BinaryLocation = executable
+                BinaryLocation = executable,
             };
 
             try
