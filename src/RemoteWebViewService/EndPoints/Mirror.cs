@@ -54,6 +54,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     var home = serviceState.HtmlHostPath;
                     var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                     var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                    FileStats.Update(serviceDictionary, guid, fileInfo);
                     context.Response.StatusCode = fileInfo.StatusCode;
                     context.Response.ContentType = "text/html";
 
@@ -62,7 +63,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                         return;
                     }
-                    context.Response.ContentLength = fileInfo.Length;
+                    // TODO edit causes Length to be different than FileInfo
+                    //context.Response.ContentLength = fileInfo.Length;
                     var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
                     using Stream stream = fileStream.Stream;
                     await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
