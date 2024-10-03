@@ -41,7 +41,7 @@ namespace FileSyncClient.Services
         /// <summary>
         /// Starts handling requests from the server.
         /// </summary>
-        public void HandleServerRequestsAsync(CancellationToken ct)
+        public void HandleServerRequests(CancellationToken ct)
         {
             
 
@@ -93,7 +93,8 @@ namespace FileSyncClient.Services
         private async Task HandleMetaDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var subPath = request.Path;
+            // TODO
+            var subPath = request.Path.Replace("wwwroot/", "");
 
             _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
@@ -116,7 +117,7 @@ namespace FileSyncClient.Services
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var subPath = request.Path;
+            var subPath = request.Path.Replace("wwwroot/", "");
             _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
 
             const int chunkSize = 8192; // 8 KB
