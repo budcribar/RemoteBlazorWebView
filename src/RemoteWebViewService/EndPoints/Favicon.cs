@@ -28,7 +28,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
 
                 context.Response.ContentLength = stream.Length;
-                context.Response.Headers["Cache-Control"] = "public,max-age=604800"; // Cache for 7 days
+                context.Response.Headers.CacheControl = "public,max-age=604800"; // Cache for 7 days
 
                 await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
             };

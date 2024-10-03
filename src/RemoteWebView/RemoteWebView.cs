@@ -86,6 +86,8 @@ namespace PeakSWC.RemoteWebView
 
         public static async Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)
         {
+            if (serverUri == null) return null;
+
             Uri? _grpcBaseUri;
    
             try
@@ -170,7 +172,7 @@ namespace PeakSWC.RemoteWebView
                     throw exception;
                 }
                 var fileClient = new ClientFileSyncManager(client, BlazorWebView.Id, HostHtmlPath, FileProvider, FireDisconnected, Logger);
-                fileClient.HandleServerRequestsAsync(cts.Token);
+                fileClient.HandleServerRequests(cts.Token);
 
                 MonitorPingTask(BlazorWebView,client);
 
