@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService) : ClientIPC.ClientIPCBase
+    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
     {
         private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
@@ -51,6 +51,23 @@ namespace PeakSWC.RemoteWebView
             return response;
         }
 
+        public override Task<Empty> SetCache(CacheRequest request, ServerCallContext context)
+        {
+            if (request.EnableServerCache != null)
+            {
+                filesOptions.UseServerCache = request.EnableServerCache.Value;
+                Console.WriteLine($"Server cache enabled = {request.EnableServerCache.Value}");
+            }
+           
+
+            if (request.EnableClientCache != null)
+            {
+                filesOptions.UseClientCache = request.EnableClientCache.Value;
+                Console.WriteLine($"Server cache enabled = {request.EnableClientCache.Value}");
+            }
+            
+            return Task.FromResult(new Empty());
+        }
 
 
         public override Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
@@ -77,6 +94,9 @@ namespace PeakSWC.RemoteWebView
 
             var p = Process.GetCurrentProcess();
             var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet = p.PeakWorkingSet64, Threads = p.Threads.Count, WorkingSet = p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds, UpTime = (DateTime.UtcNow - p.StartTime.ToUniversalTime()).TotalSeconds };
+
+            response.ClientCacheEnabled = filesOptions.UseClientCache;
+            response.ServerCacheEnabled = filesOptions.UseServerCache;
 
             var responses = GetConnectionResponses(serviceDictionary);
             response.ConnectionResponses.AddRange(responses);

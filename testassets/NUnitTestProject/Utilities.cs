@@ -293,12 +293,28 @@ namespace WebdriverTestProject
         }
 
         public static int Count(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).Count();
-        public static void Kill(string name) => Process.GetProcesses().Where(p => p.ProcessName == name).ToList().ForEach(x =>
+        public static void Kill(string name)
         {
-            x.Kill();
-            // Wait for exit before re-starting
-            x.WaitForExit();
-        });
+            var processes = Process.GetProcessesByName(name).ToList();
+
+            foreach (var process in processes)
+            {
+                try
+                {
+                    // Attempt to kill the process
+                    process.Kill();
+
+                    // Wait for the process to exit
+                    process.WaitForExit();
+                }
+                
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Unexpected error occurred while killing process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
+                }
+            }
+        }
+
 
         #endregion
 
