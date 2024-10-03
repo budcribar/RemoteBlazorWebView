@@ -155,7 +155,7 @@ namespace StressServer
                 }
                 var chromeOptions = new ChromeOptions
                 {
-                    BrowserVersion = "128.0",
+                    BrowserVersion = "129.0",
                     AcceptInsecureCertificates = true,
                     PageLoadTimeout = TimeSpan.FromMinutes(2)
                 };

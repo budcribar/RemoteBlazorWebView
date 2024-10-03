@@ -34,14 +34,14 @@ namespace ClientBenchmark
 
 
         // what happens when you have multiple reads of the same file?
-        private string _testGuid;
-        private string _testFilePath;
-        private string _rootDirectory;
+        private string _testGuid = string.Empty;
+        private string _testFilePath = string.Empty;
+        private string _rootDirectory = string.Empty;
         private string _testFileName = "wwwroot/css/site";
-        private WebViewIPC.WebViewIPCClient _client;
-        private BrowserIPC.BrowserIPCClient _browser;
-        private string randomString;
-        private HttpClient httpClient;
+        public required WebViewIPC.WebViewIPCClient _client;
+        public required BrowserIPC.BrowserIPCClient _browser;
+        private string randomString = string.Empty;
+        public required HttpClient httpClient;
       
         [GlobalSetup]
         public void Setup()

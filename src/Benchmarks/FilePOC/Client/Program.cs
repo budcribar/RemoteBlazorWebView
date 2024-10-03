@@ -57,6 +57,7 @@ namespace FileClientApp
             var grpcClient = new WebViewIPC.WebViewIPCClient(channel);
 
             var tempDirectory = Path.Combine(AppContext.BaseDirectory, "client_cache");
+            Directory.CreateDirectory(tempDirectory);
 
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -75,7 +76,7 @@ namespace FileClientApp
             try
             {
                 // Start handling file synchronization requests from the server
-                fileClient.HandleServerRequestsAsync(tokenSource.Token);
+                fileClient.HandleServerRequests(tokenSource.Token);
 
                 Console.WriteLine("File synchronization initiated.");
                 Console.WriteLine("Press 'q' to quit the application.");
