@@ -25,6 +25,22 @@ if ($process) {
     Write-Host -ForegroundColor GREEN "RemoteWebViewService is not running"
 }
 
+# Check if visual studio is running. It will prevent remote.blazor.desktop.js from building in production mode
+$process = Get-Process -Name devenv -ErrorAction SilentlyContinue
+if ($process) {
+    Write-Host  -ForegroundColor RED "Cannot run tests with Visual Studio running"
+    exit 1
+}
+# Check if the process is running
+$process = Get-Process -Name Client -ErrorAction SilentlyContinue
+
+if ($process) {
+    Write-Host  -ForegroundColor YELLOW "Stopping Client"
+    Stop-Process -Name Client -Force
+} else {
+    Write-Host -ForegroundColor GREEN "Client is not running"
+}
+
 # Get the current Node.js version
 $currentVersion = node -v
 
@@ -136,6 +152,7 @@ if ($Rust -eq $true)
     Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 	# Publish the web site server
 	dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+    New-Item -Path "src\RemoteWebViewService\bin\publishNoAuth\wwwroot" -ItemType Directory
 	dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
 	dotnet build -c Release .\src\RemoteWebViewService
