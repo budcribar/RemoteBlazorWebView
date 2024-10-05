@@ -10,6 +10,8 @@ using System.Net;
 using System.Threading.Channels;
 using System.Threading;
 using Microsoft.Extensions.FileProviders;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace FileSyncClient.Services
 {
@@ -23,7 +25,9 @@ namespace FileSyncClient.Services
         private readonly IFileProvider _fileProvider;
         private readonly Action<Exception> _errorCallback;
        
-        private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount);
+        //private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount);
+        //private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(1);
+        private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateUnbounded<ClientFileReadResponse>();
         public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, IFileProvider fileProvider, Action<Exception> onException, ILogger logger)
         {
             _client = client;
@@ -63,7 +67,7 @@ namespace FileSyncClient.Services
                     _logger.LogInformation($"Sent Init response to server with clientGuid: {_clientGuid}");
 
                     await Parallel.ForEachAsync(_call.ResponseStream.ReadAllAsync(ct),
-                       new ParallelOptions { CancellationToken = ct },
+                       new ParallelOptions { CancellationToken = ct/*, MaxDegreeOfParallelism=1*/ },
                        async (request, token) =>
                     {
                         switch (request.RequestType)
@@ -76,7 +80,7 @@ namespace FileSyncClient.Services
                                 break;
                             default:
                                 _logger.LogWarning($"Received unknown request type: {request.RequestType}");
-                                break;
+                                throw new Exception($"Received unknown request type: {request.RequestType}");
                         }
                     });
                 }
@@ -94,7 +98,9 @@ namespace FileSyncClient.Services
         {
             var requestId = request.RequestId;
             // TODO
-            var subPath = request.Path.Replace("wwwroot/", "");
+            // var subPath = request.Path.Replace("wwwroot/", "");
+
+            var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
 
             _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
@@ -113,11 +119,20 @@ namespace FileSyncClient.Services
           
             _logger.LogInformation($"Sent metadata for file: {subPath}, requestId: {requestId}");
         }
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fileLocks = new();
+
+        private SemaphoreSlim GetFileLock(string filePath)
+        {
+            return _fileLocks.GetOrAdd(filePath, _ => new SemaphoreSlim(1, 1));
+        }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var subPath = request.Path.Replace("wwwroot/", "");
+       
+            var subPath = request.Path[(request.Path.IndexOf('/') + 1)..];
+            //var fileLock = GetFileLock(subPath);
+            //await fileLock.WaitAsync();
             _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
 
             const int chunkSize = 8192; // 8 KB
@@ -173,6 +188,13 @@ namespace FileSyncClient.Services
             }
             finally
             {
+                //fileLock.Release();
+                //// Clean up the semaphore if no one else needs it
+                //if (fileLock.CurrentCount == 1)
+                //{
+                //    _fileLocks.TryRemove(subPath, out _);
+                //}
+
                 ArrayPool<byte>.Shared.Return(buffer);
             }
         }
