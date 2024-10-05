@@ -43,11 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="FileReader.cs" />
-    <Compile Remove="RemoteWebView.Old.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="blazor.modules.json" />
     <EmbeddedResource Include="_framework\blazor.modules.json" />
     <EmbeddedResource Include="..\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js" Link="_framework/blazor.webview.js" />
