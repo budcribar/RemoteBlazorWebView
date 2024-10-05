@@ -148,13 +148,19 @@ namespace PeakSWC.RemoteWebView
             }
 
             _logger.LogInformation($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
+            var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             // Step 1: Retrieve client metadata
             FileMetadata clientMetadata;
             try
             {
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
                 clientMetadata = await _remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath);
-                FileStats.Update(context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>(), clientGuid.ToString(), clientMetadata);
+                FileStats.Update(serviceState, clientGuid.ToString(), clientMetadata);
+                ILogger<RemoteWebViewService> logger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
+                //logger.LogCritical($"Read {serviceState.TotalFilesRead} file {subPath}");
             }
             catch (Exception ex)
             {

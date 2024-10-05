@@ -110,7 +110,7 @@ namespace PeakSWC.RemoteWebView
 
             if (string.IsNullOrWhiteSpace(clientGuid) || string.IsNullOrWhiteSpace(requestId))
             {
-                _logger.LogWarning("Received response with empty clientId or requestId.");
+                _logger.LogError("Received response with empty clientId or requestId.");
                 return;
             }
 
@@ -126,7 +126,7 @@ namespace PeakSWC.RemoteWebView
             }
             else
             {
-                _logger.LogWarning($"Received unexpected response type for file from client GUID: {clientGuid}");
+                _logger.LogError($"Received unexpected response type for file from client GUID: {clientGuid}");
             }
         }
 
@@ -141,12 +141,12 @@ namespace PeakSWC.RemoteWebView
                 }
                 else
                 {
-                    _logger.LogWarning($"No pending metadata request for requestId: {requestId} from client GUID: {clientGuid}");
+                    _logger.LogError($"No pending metadata request for requestId: {requestId} from client GUID: {clientGuid}");
                 }
             }
             else
             {
-                _logger.LogWarning($"No metadata requests mapping found for client GUID: {clientGuid}");
+                _logger.LogError($"No metadata requests mapping found for client GUID: {clientGuid}");
             }
         }
         private void HandleFileDataStatus(string clientGuid, string requestId, FileDataStatus fileDataStatus)
@@ -160,12 +160,12 @@ namespace PeakSWC.RemoteWebView
                 }
                 else
                 {
-                    _logger.LogWarning($"No pending data status request for requestId: {requestId} from client GUID: {clientGuid}");
+                    _logger.LogError($"No pending data status request for requestId: {requestId} from client GUID: {clientGuid}");
                 }
             }
             else
             {
-                _logger.LogWarning($"No data status requests mapping found for client GUID: {clientGuid}");
+                _logger.LogError($"No data status requests mapping found for client GUID: {clientGuid}");
             }
         }
         private async Task HandleFileChunkResponse(string clientGuid, string requestId, FileData fileData)
@@ -203,6 +203,14 @@ namespace PeakSWC.RemoteWebView
                         _logger.LogError(ex, "Error processing file chunk.");
                     }
                 }
+                else
+                {
+                    _logger.LogError($"No pending client file data request for requestId: {requestId} from client GUID: {clientGuid}");
+                }
+            }
+            else
+            {
+                _logger.LogError($"No file data requests mapping found for client GUID: {clientGuid}");
             }
         }
 
@@ -231,7 +239,8 @@ namespace PeakSWC.RemoteWebView
             var tcs = new TaskCompletionSource<FileMetadata>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Add the TaskCompletionSource to the metadata requests
-            if (!_metadataRequests.TryGetValue(clientGuid, out var clientMetadataRequests) || !clientMetadataRequests.TryAdd(requestId, tcs))
+            var clientMetadataRequests = _metadataRequests.GetOrAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>());
+            if (!clientMetadataRequests.TryAdd(requestId, tcs))
             {
                 logger.LogCritical($"A metadata request with requestId '{requestId}' for client GUID '{clientGuid}' could not be created.");
                 return Task.FromResult(new FileMetadata { Length = -1, StatusCode = (int)HttpStatusCode.InternalServerError });
@@ -330,12 +339,15 @@ namespace PeakSWC.RemoteWebView
             {
                 if (!clientDataStatusRequests.TryAdd(requestId, tcs))
                 {
-                    throw new InvalidOperationException($"A data status request with requestId '{requestId}' for client GUID '{clientGuid}' is already in progress.");
+                    dataRequest.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    _logger.LogError($"A data status request with requestId '{requestId}' for client GUID '{clientGuid}' is already in progress.");
                 }
             }
             else
             {
-                throw new InvalidOperationException($"Client GUID '{clientGuid}' is not registered.");
+                dataRequest.StatusCode = (int)HttpStatusCode.InternalServerError;
+                _logger.LogError($"Client GUID '{clientGuid}' is not registered.");
+                return dataRequest;
             }
 
             var fds = await tcs.Task;

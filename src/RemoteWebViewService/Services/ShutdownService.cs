@@ -8,25 +8,32 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.Services
 {
-    public class ShutdownService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary)
+    public class ShutdownService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary)
     {
         public async Task Shutdown(string id, Exception? exception = null)
         {
            
             if (serviceDictionary.Remove(id, out var client))
             {
-                if (exception != null)
-                    logger.LogError($"Shutting down {id} Exception:{exception.Message}");
-
                 try
                 {
-                    await (client.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask);
+                    if (exception != null)
+                        logger.LogError($"Shutting down {id} Exception:{exception.Message}");
+
+                    var serviceState = await client.Task.WaitWithTimeout(TimeSpan.FromMilliseconds(5));
+
+                    try
+                    {
+                        await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask);
+                    }
+                    catch (Exception) { }
+
+                    serviceState.InUse = false;
+
+                    await serviceState.DisposeAsync();
                 }
-                catch (Exception) { }
+                catch { }
                 
-                client.InUse = false;
-               
-                await client.DisposeAsync();
 
                 // Notify other service state channels
                 foreach (var channel in serviceStateChannel.Values)

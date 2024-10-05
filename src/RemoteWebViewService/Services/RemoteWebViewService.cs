@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, ServiceState> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager) : WebViewIPC.WebViewIPCBase
     {
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
@@ -38,21 +38,22 @@ namespace PeakSWC.RemoteWebView
                 ProcessName = request.ProcessName,
             };
 
-            if (serviceDictionary.TryAdd(request.Id, state))
-            {
-                // No need to wait for writes to complete
-                serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}").ConfigureAwait(false));
-                state.IPC.ClientResponseStream = responseStream;
+            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }).ConfigureAwait(false);
-            }
-            else
+            if (serviceStateTaskSource.Task.IsCompleted)
             {
                 logger.LogError($"CreateWebView Id:{request.Id} failed to add client");
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }).ConfigureAwait(false);
                 return;
-            }
-            
+            }     
+
+            // No need to wait for writes to complete
+            serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}").ConfigureAwait(false));
+            state.IPC.ClientResponseStream = responseStream;
+
+            await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }).ConfigureAwait(false);
+
+            serviceStateTaskSource.SetResult(state);
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try
@@ -180,12 +181,20 @@ namespace PeakSWC.RemoteWebView
             // Associate the response stream with the clientGuid
             _fileSyncManager.AssociateResponseStream(clientGuid, responseStream);
 
-            // Create a linked cancellation token to handle both client cancellation and server cancellation
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
-            var cancellationToken = linkedCts.Token;
+
 
             try
             {
+                var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                serviceState.FileManagerReady.SetResult(true);
+
+                // Create a linked cancellation token to handle both client cancellation and server cancellation
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
+                var cancellationToken = linkedCts.Token;
+
+
                 // Continuously read messages from the client until cancellation
                 while (await requestStream.MoveNext(cancellationToken))
                 {
@@ -194,15 +203,12 @@ namespace PeakSWC.RemoteWebView
                 }
 
                 logger.LogInformation($"Client '{clientGuid}' has completed sending messages.");
+
             }
-            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
-            {
-                logger.LogInformation($"Client '{clientGuid}' disconnected.");
-            }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error handling client '{clientGuid}' responses.");
-                throw new RpcException(new Status(StatusCode.Internal, "Internal server error."));
             }
             finally
             {
@@ -219,12 +225,15 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            if (serviceDictionary.TryGetValue(request.Id,out ServiceState? serviceState))          
-			{
-                await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
+            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
+            try
+            {
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
+            catch { }
 
             return new SendMessageResponse { Id = request.Id, Success = false };
         }
@@ -237,14 +246,15 @@ namespace PeakSWC.RemoteWebView
                 DateTime responseReceived = DateTime.UtcNow;
                 DateTime responseSent = DateTime.UtcNow;
 
+                ServiceState? serviceState = null;
+
                 await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
                     id = message.Id;
-                    if (!serviceDictionary.TryGetValue(id, out ServiceState? serviceState))
+                    if (serviceState == null)
                     {
-                        await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                        await shutdownService.Shutdown(id).ConfigureAwait(false);
-                        break;
+                        var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                        serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
                     }
 
                     if (message.Initialize && serviceState.PingTask == null)

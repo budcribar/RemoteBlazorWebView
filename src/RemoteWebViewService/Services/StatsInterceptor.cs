@@ -72,7 +72,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 if (elapsedTime > ThresholdMs)
                 {
-                    _logger.LogWarning($"Unary request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    //_logger.LogWarning($"Unary request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
                 _stats.RecordConnectionEnd();
@@ -129,7 +129,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 if (elapsedTime > ThresholdMs)
                 {
-                    _logger.LogWarning($"Server streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    //_logger.LogWarning($"Server streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
                 _stats.RecordConnectionEnd();
@@ -183,7 +183,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 if (elapsedTime > ThresholdMs)
                 {
-                    _logger.LogWarning($"Client streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    //_logger.LogWarning($"Client streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
                 _stats.RecordConnectionEnd();
@@ -234,7 +234,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 if (elapsedTime > ThresholdMs)
                 {
-                    _logger.LogWarning($"Duplex streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    //_logger.LogWarning($"Duplex streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
                 _stats.RecordConnectionEnd();

@@ -12,6 +12,7 @@ namespace PeakSWC.RemoteWebView
 
     public class ServiceState : IDisposable
     {
+        public TaskCompletionSource<bool> FileManagerReady { get; set; } = new TaskCompletionSource<bool>();
         public IRequestCookieCollection? Cookies { get; set; }
         private CancellationTokenSource? CancellationTokenSource { get; set; }
         public ILogger<RemoteWebViewService> Logger;
@@ -32,8 +33,10 @@ namespace PeakSWC.RemoteWebView
         public Task? FileReaderTask { get; set; } = null;
         public Task? PingTask { get; set; } = null;
         public TimeSpan MaxClientPing { get; set; } = TimeSpan.Zero;
-        public long TotalBytesRead { get; set; } = 0;
-        public int TotalFilesRead { get; set; } = 0;
+
+        public long TotalBytesRead = 0;
+
+        public int TotalFilesRead = 0;
         public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
         public Channel<FileEntry> FileCollection { get; set; } = Channel.CreateUnbounded<FileEntry>();

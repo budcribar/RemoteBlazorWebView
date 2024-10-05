@@ -100,7 +100,7 @@ namespace PeakSWC.RemoteWebView
             return fileInfo != null && fileInfo.Exists && !fileInfo.IsDirectory;
         }
 
-        private ConcurrentDictionary<string, ServiceState> ServiceDictionary { get; } = new();
+        private ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> ServiceDictionary { get; } = new();
         private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
 
 

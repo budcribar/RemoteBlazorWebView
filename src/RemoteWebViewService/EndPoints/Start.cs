@@ -2,8 +2,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.Pages;
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
 {
@@ -22,46 +24,51 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
 
                 // Retrieve service state and channels
-                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
+                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
 
-                // Check if the service state exists
-                if (!serviceDictionary.TryGetValue(guid, out var serviceState))
+                try
+                {
+                    var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    // Check if the service is already in use
+                    if (serviceState.InUse)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status409Conflict; // Conflict
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
+                        return;
+                    }
+                    // Set the service state
+                    serviceState.Cookies = context.Request.Cookies;
+                    serviceState.InUse = true;
+                    serviceState.User = context.User.GetDisplayName() ?? "";
+
+                    // Notify that the browser is attached, if applicable
+                    if (serviceState.IPC.ClientResponseStream != null)
+                    {
+                        await serviceState.IPC.ClientResponseStream
+                            .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
+                            .ConfigureAwait(false);
+                    }
+                    // Notify all channels of the connection
+                    foreach (var channel in serviceStateChannel.Values)
+                    {
+                        await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
+                    }
+
+                    // Redirect to the specific GUID page
+                    context.Response.Redirect($"/{guid}", permanent: false);
+                }
+               
+                catch(Exception)
                 {
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(RestartFailedPage.Html(guid, false)).ConfigureAwait(false);
                     return;
                 }
-
-                // Check if the service is already in use
-                if (serviceState.InUse)
-                {
-                    context.Response.StatusCode = StatusCodes.Status409Conflict; // Conflict
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
-                    return;
-                }
-                // Set the service state
-                serviceState.Cookies = context.Request.Cookies;
-                serviceState.InUse = true;
-                serviceState.User = context.User.GetDisplayName() ?? "";
-
-                // Notify that the browser is attached, if applicable
-                if (serviceState.IPC.ClientResponseStream != null)
-                {
-                    await serviceState.IPC.ClientResponseStream
-                        .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
-                        .ConfigureAwait(false);
-                }
-                // Notify all channels of the connection
-                foreach (var channel in serviceStateChannel.Values)
-                {
-                    await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
-                }
-
-                // Redirect to the specific GUID page
-                context.Response.Redirect($"/{guid}", permanent: false);       
+               
             };
         }
     }

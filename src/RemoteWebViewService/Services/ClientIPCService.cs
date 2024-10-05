@@ -11,13 +11,22 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, ServiceState> serviceDictionary, IUserService userService, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
+    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, IUserService userService, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
     {
-        private Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
+        private async Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
             var list = new ClientResponseList();
-            list.ClientResponses.AddRange(serviceDictionary.Values.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
-            return responseStream.WriteAsync(list);
+            try
+            {
+                var serviceStateTaskSource = serviceDictionary.Values.ToList();
+                var tasks = serviceDictionary.Values.Select(x => x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
+                var results = await Task.WhenAll(tasks);
+
+                list.ClientResponses.AddRange(results.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+            }
+            catch { }
+           
+            await responseStream.WriteAsync(list);
         }
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
@@ -70,14 +79,18 @@ namespace PeakSWC.RemoteWebView
         }
 
 
-        public override Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
+        public override async Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
         { 
-            List<TaskResponse> GetTaskResponses(string id)
+            async Task<List<TaskResponse>> GetTaskResponses(string id)
             {
                 var responses = new List<TaskResponse>();
 
-                if (serviceDictionary.TryGetValue(id, out ServiceState? ss))
+                var serviceStateTaskSource = serviceDictionary.GetOrAdd(id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                try
                 {
+                    var ss = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+
+                   
                     if (ss.PingTask != null)
                         responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
                     if (ss.IPC.BrowserTask != null)
@@ -89,6 +102,7 @@ namespace PeakSWC.RemoteWebView
                     if (ss.IPC.ProcessMessagesTask != null)
                         responses.Add(new TaskResponse { Name = "ProcessMessages", Status = (TaskStatus)(int)ss.IPC.ProcessMessagesTask.Status });
                 }
+                catch { }
                 return responses;
             }
 
@@ -98,30 +112,38 @@ namespace PeakSWC.RemoteWebView
             response.ClientCacheEnabled = filesOptions.UseClientCache;
             response.ServerCacheEnabled = filesOptions.UseServerCache;
 
-            var responses = GetConnectionResponses(serviceDictionary);
+            var responses = await GetConnectionResponses(serviceDictionary);
             response.ConnectionResponses.AddRange(responses);
-            responses.ForEach(x => x.TaskResponses.AddRange(GetTaskResponses(x.Id)));
 
-            return Task.FromResult(response);
+            responses.ForEach(async x => x.TaskResponses.AddRange(await GetTaskResponses(x.Id)));
+
+            return response;
         }
 
-        private static List<ConnectionResponse> GetConnectionResponses(ConcurrentDictionary<string, ServiceState> serviceDictionary)
+        private static async Task<List<ConnectionResponse>> GetConnectionResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary)
         {
-            var snapshot = serviceDictionary.Values.ToList();
-           
-            return snapshot.Select(x => new ConnectionResponse
+            var snapshotTasks = serviceDictionary.Values.ToList();
+
+            try
             {
-                HostName = x.HostName,
-                Id = x.Id,
-                InUse = x.InUse,
-                UserName = x.User,
-                TotalFilesRead = x.TotalFilesRead,
-                TotalReadTime = x.TotalFileReadTime.TotalSeconds,
-                TotalBytesRead = x.TotalBytesRead,
-                MaxFileReadTime = x.MaxFileReadTime.TotalSeconds,
-                TimeConnected = (DateTime.UtcNow - x.StartTime).TotalSeconds
-            }).ToList();
-           
+                var tasks = snapshotTasks.Select( x =>  x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
+
+                var results = await Task.WhenAll(tasks);
+                return results.Select(x => new ConnectionResponse
+                {
+                    HostName = x.HostName,
+                    Id = x.Id,
+                    InUse = x.InUse,
+                    UserName = x.User,
+                    TotalFilesRead = x.TotalFilesRead,
+                    TotalReadTime = x.TotalFileReadTime.TotalSeconds,
+                    TotalBytesRead = x.TotalBytesRead,
+                    MaxFileReadTime = x.MaxFileReadTime.TotalSeconds,
+                    TimeConnected = (DateTime.UtcNow - x.StartTime).TotalSeconds
+                }).ToList();
+            }
+            catch { }
+            return new();
         }
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)

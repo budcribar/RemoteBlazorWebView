@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
 {
@@ -21,7 +22,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
 
                 // Retrieve service state from the service dictionary
-                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
+                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+
                 var response = new StatusResponse
                 {
                     Connected = serviceDictionary.ContainsKey(guid.ToString())

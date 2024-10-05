@@ -22,7 +22,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
 
                 // Retrieve the service state from the service dictionary
-                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, ServiceState>>();
+                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
 
                 // Wait for the specified service to appear in the dictionary, up to a 30-second timeout
                 for (int i = 0; i < 30; i++)
