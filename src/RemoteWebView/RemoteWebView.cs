@@ -1,6 +1,7 @@
 ﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
 using FileSyncClient.Services;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Components;
@@ -148,6 +149,17 @@ namespace PeakSWC.RemoteWebView
 
             if (client == null)
             {
+                bool healthy = false; 
+                string url = new Uri(BlazorWebView.ServerUri, "health").ToString();
+                Task.Run(async () => healthy = await HealthCheck.WaitAsync(url)).Wait();
+                if (!healthy)
+                {
+                    Exception exception1 = new Exception("Timeout waiting for server to start");
+                    FireDisconnected(exception1);
+                    throw exception1;
+                }
+                // Wait for server to start
+
                 channel = GrpcChannel.ForAddress(BlazorWebView.GrpcBaseUri,
                     new GrpcChannelOptions
                     {
@@ -175,7 +187,6 @@ namespace PeakSWC.RemoteWebView
                 fileClient.HandleServerRequests(cts.Token);
 
                 MonitorPingTask(BlazorWebView,client);
-
             }
             return client;
         }
@@ -348,7 +359,7 @@ namespace PeakSWC.RemoteWebView
                                 {
                                     var cookie = blazorWebView.CookieManager.CreateCookie(name, value, blazorWebView.ServerUri?.Host, "/");
                                     // Uncomment the line below if you intend to add/update cookies
-                                    // blazorWebView.CookieManager.AddOrUpdateCookie(cookie);
+                                    // blazorWebView.CookieManager.AddOrUpdateCookie(cookie);  // TODO
                                 }
                             }
                             catch (Exception ex)
@@ -507,7 +518,7 @@ namespace PeakSWC.RemoteWebView
                 }
             }
 
-            cts.Dispose();
+            //cts.Dispose();
 
 
             // cancel Tasks
