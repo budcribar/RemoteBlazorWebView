@@ -66,14 +66,16 @@ namespace WebdriverTestProject
 
             Assert.AreEqual(24 * num, totalFilesRead, "Failed on total files read");  
             Assert.AreEqual(931894 * num, totalBytesRead, "Failed on total bytes read"); // This will vary depending on the size of the Javascript  
+            
+            
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
-            Console.WriteLine($"TotalReadTime {totalReadTime}");
+            Console.WriteLine($"TotalFilesRead {totalFilesRead}");
 
 
             // Verify Server entries are cleared when browser is disconnected
             for (int i = 0; i < num; i++)
             {
-                _driver[i].Dispose();
+                _driver[i].Close();
 
                 for (int j = 0; j < 100; j++)
                 {

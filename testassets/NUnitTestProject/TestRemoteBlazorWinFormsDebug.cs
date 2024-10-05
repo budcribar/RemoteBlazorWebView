@@ -8,9 +8,9 @@ namespace WebdriverTestProject
     public class TestRemoteBlazorWinFormsDebug : TestRemoteBlazorForm
     {
 
-        public override Process CreateClient()
+        public override Process CreateClient(string url, string pid)
         {
-            return Utilities.StartRemoteBlazorWinFormsDebugApp();
+            return Utilities.StartRemoteBlazorWinFormsDebugApp(url, pid);
         }
 
     }

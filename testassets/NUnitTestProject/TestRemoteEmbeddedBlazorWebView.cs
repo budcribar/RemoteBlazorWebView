@@ -10,9 +10,9 @@ namespace WebdriverTestProject
         {
             // TODO Remove this to add back
         }
-        public override Process CreateClient()
+        public override Process CreateClient(string url, string pid)
         {
-            return Utilities.StartRemoteBlazorWebViewEmbeddedApp();
+            return Utilities.StartRemoteBlazorWebViewEmbeddedApp(url,pid);
         }
 
     }

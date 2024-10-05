@@ -26,14 +26,14 @@ namespace WebdriverTestProject
         protected readonly string url = @"https://localhost:5001/";
         protected string grpcUrl = @"https://localhost:5001/";
         protected static GrpcChannel? channel;
-        protected static string[] ids = Array.Empty<string>();
-        protected static Process? process;
+        protected static List<string> ids = new();
+        protected static Process? serverProcess;
         protected static List<Process> clients = new();
         protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 200;
 
-        public virtual Process CreateClient()
+        public virtual Process CreateClient(string url, string id)
         {
-            return Utilities.StartRemoteBlazorWpfApp();
+            return Utilities.StartRemoteBlazorWpfApp(url,id);
         }
 
         public virtual void KillClient()
@@ -57,30 +57,33 @@ namespace WebdriverTestProject
             Assert.AreEqual(0, _driver.Count, "_driver has not been cleared out at startup");
             KillClient();   
 
-            process = StartServer();
+            serverProcess = StartServer();
             
-            for(int i=0; i < 100; i++)
-			{
-                // Wait for server to spin up
-                try
-				{
-                    var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
-                    Assert.AreEqual(0, ids.Responses.Count, "Server has connections at startup");
-                    break;
-                }
-                catch (Exception ){}
-                await Task.Delay(100);
-            }
+   //         for(int i=0; i < 100; i++)
+			//{
+   //             // Wait for server to spin up
+   //             try
+			//	{
+   //                 var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
+   //                 Assert.AreEqual(0, ids.Responses.Count, "Server has connections at startup");
+   //                 break;
+   //             }
+   //             catch (Exception ){}
+   //             await Task.Delay(100);
+   //         }
 
             clients = new List<Process>();
 
             Stopwatch sw = new();
+            ids = new List<string>();
             for (int i = 0; i < numClients; i++)
             {
-                clients.Add(CreateClient());
+                ids.Add(Guid.NewGuid().ToString());
+                clients.Add(CreateClient(url, ids[i]));
             }
 
-            StartClient(numClients);
+            //WaitForClientToConnect(numClients);
+
             Console.WriteLine($"Clients started in {sw.Elapsed}");
 
             var chromeOptions = new ChromeOptions
@@ -89,11 +92,11 @@ namespace WebdriverTestProject
                 AcceptInsecureCertificates = true,
                 PageLoadTimeout = TimeSpan.FromMinutes(2)
             };
-            chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
-            chromeOptions.AddArgument("--disable-gpu");
-            chromeOptions.AddArgument("--no-sandbox");
-            chromeOptions.AddArgument("--disable-extensions");
-            chromeOptions.AddArgument("--disable-dev-shm-usage");
+            //chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
+            //chromeOptions.AddArgument("--disable-gpu");
+            //chromeOptions.AddArgument("--no-sandbox");
+            //chromeOptions.AddArgument("--disable-extensions");
+            //chromeOptions.AddArgument("--disable-dev-shm-usage");
 
             sw.Restart();
             for (int i = 0; i < numClients; i++)
@@ -102,20 +105,21 @@ namespace WebdriverTestProject
             }
 
             Console.WriteLine($"Browsers started in {sw.Elapsed}");
+            await Task.CompletedTask;
         }
 
 
-        protected static void StartClient(int num)
+        protected static void WaitForClientToConnect(int num)
         {
             var client = new WebViewIPC.WebViewIPCClient(channel);
             int count = 0;
             do
             {
-                ids = client.GetIds(new Empty()).Responses.ToArray();
+                ids = client.GetIds(new Empty()).Responses.ToList();
                 Thread.Sleep(100);
                 count++;
-                Assert.IsTrue(count < 200, $"Timed out waiting to start {num} clients found {ids.Length}");
-            } while (ids.Length != num);
+                Assert.IsTrue(count < 200, $"Timed out waiting to start {num} clients found {ids.Count}");
+            } while (ids.Count != num);
 
         }
 
@@ -316,7 +320,7 @@ namespace WebdriverTestProject
         {
             try
             {
-                process?.Kill();
+                serverProcess?.Kill();
             }
             catch (Exception) { }
 

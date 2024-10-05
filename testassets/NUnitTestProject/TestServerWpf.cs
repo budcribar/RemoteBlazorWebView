@@ -56,6 +56,10 @@ namespace WebdriverTestProject
                     Thread.Sleep(100);
                 }
             }
+
+            // Give time for all files to be read
+            Thread.Sleep(1000);
+
             var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
 
             var channel = GrpcChannel.ForAddress(grpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
@@ -69,7 +73,7 @@ namespace WebdriverTestProject
             Assert.AreEqual(28 * num, totalFilesRead, "Failed on total files read");
             Assert.AreEqual(932318 * num, totalBytesRead, "Failed on total bytes read");
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
-            Console.WriteLine($"TotalReadTime {totalReadTime}");
+            Console.WriteLine($"TotalFilesRead {totalFilesRead}");
 
 
             // Verify Server entries are cleared when browser is disconnected
@@ -95,8 +99,6 @@ namespace WebdriverTestProject
                         break;                  
                 }
             }
-                   
-                
 
         }
 

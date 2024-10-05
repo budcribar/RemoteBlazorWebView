@@ -121,11 +121,11 @@ namespace WebdriverTestProject
 #endregion
 
         #region WinForm
-        public static Process StartRemoteBlazorWinFormsDebugApp() => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath());
+        public static Process StartRemoteBlazorWinFormsDebugApp(string url, string id) => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath(), url, id);
 
-        public static Process StartRemoteBlazorWinFormsApp() => StartProcess(BlazorWinFormsAppExe(), BlazorWinFormsPath());
+        public static Process StartRemoteBlazorWinFormsApp(string url, string id) => StartProcess(BlazorWinFormsAppExe(), BlazorWinFormsPath(), url, id);
 
-        public static Process StartRemoteEmbeddedBlazorWinFormsApp() => StartProcess(BlazorWinFormsEmbeddedAppExe(), BlazorWinFormsEmbeddedPath());
+        public static Process StartRemoteEmbeddedBlazorWinFormsApp(string url, string id) => StartProcess(BlazorWinFormsEmbeddedAppExe(), BlazorWinFormsEmbeddedPath(), url, id);
 
         public static string BlazorWinFormsDebugPath()
         {
@@ -161,7 +161,7 @@ namespace WebdriverTestProject
 
         #region Wpf
 
-        public static Process StartRemoteBlazorWpfDebugApp() => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfPath());
+        public static Process StartRemoteBlazorWpfDebugApp(string url, string id) => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfPath(), url, id);
         public static string BlazorWpfDebugAppExe() => Path.Combine(BlazorWpfDebugPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
 
         public static string BlazorWpfDebugPath()
@@ -194,9 +194,9 @@ namespace WebdriverTestProject
             return Path.Combine(BlazorWpfEmbeddedPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
         }
 
-        public static Process  StartRemoteBlazorWpfEmbeddedApp() => StartProcess(BlazorWpfAppEmbeddedExe(), BlazorWpfEmbeddedPath());
+        public static Process  StartRemoteBlazorWpfEmbeddedApp(string url, string id) => StartProcess(BlazorWpfAppEmbeddedExe(), BlazorWpfEmbeddedPath(), url, id);
 
-        public static Process StartRemoteBlazorWpfApp() => StartProcess(BlazorWpfAppExe(), BlazorWpfPath());
+        public static Process StartRemoteBlazorWpfApp(string url, string id) => StartProcess(BlazorWpfAppExe(), BlazorWpfPath(), url, id);
 
         public static void KillRemoteBlazorWpfApp() => Kill("RemoteBlazorWebViewTutorial.WpfApp");
 
@@ -256,8 +256,8 @@ namespace WebdriverTestProject
             return Path.Combine(BlazorWebViewEmbeddedPath(), "RemoteBlazorWebViewTutorial.exe");
         }
 
-        public static Process StartRemoteBlazorWebViewApp() => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath());
-        public static Process StartRemoteBlazorWebViewEmbeddedApp() => StartProcess(BlazorWebViewAppEmbeddedExe(), BlazorWebViewEmbeddedPath());
+        public static Process StartRemoteBlazorWebViewApp(string url, string pid)  => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath(),url,pid);
+        public static Process StartRemoteBlazorWebViewEmbeddedApp(string url, string pid) => StartProcess(BlazorWebViewAppEmbeddedExe(), BlazorWebViewEmbeddedPath(), url, pid);
         public static void KillRemoteBlazorWebViewApp() => Kill("RemoteBlazorWebViewTutorial");
 
         #endregion
@@ -265,14 +265,14 @@ namespace WebdriverTestProject
         #region Common
 
         public static string JavascriptFile = Path.Combine(RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js");
-        public static Process StartProcess(string executable, string directory)
+        public static Process StartProcess(string executable, string directory, string url, string id)
         {
             Stopwatch sw = new();
 
             Process p = new();
             p.StartInfo.FileName = Path.GetFullPath(executable);
             p.StartInfo.UseShellExecute = false;
-            p.StartInfo.Arguments = @"-u=https://localhost:5001";
+            p.StartInfo.Arguments = $"-u={url} -i={id}";
             p.StartInfo.WorkingDirectory = directory;
             p.Start();
 
@@ -287,7 +287,7 @@ namespace WebdriverTestProject
                 Thread.Sleep(100);
             }
 
-            Console.WriteLine($"Clients started in {sw.Elapsed}");
+            Console.WriteLine($"{Path.GetFileName(executable)} started in {sw.Elapsed}");
 
             return p;
         }

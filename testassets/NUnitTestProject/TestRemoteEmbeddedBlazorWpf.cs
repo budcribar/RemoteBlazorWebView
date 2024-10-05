@@ -6,9 +6,9 @@ namespace WebdriverTestProject
     [TestClass]
     public class TestRemoteEmbeddedBlazorWpf : TestRemoteBlazorWpf
     {
-        public override Process CreateClient()
+        public override Process CreateClient(string url, string pid)
         {
-            return Utilities.StartRemoteBlazorWpfEmbeddedApp();
+            return Utilities.StartRemoteBlazorWpfEmbeddedApp(url,pid);
         }
 
     }
