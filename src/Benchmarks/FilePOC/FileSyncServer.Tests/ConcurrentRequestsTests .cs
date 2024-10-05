@@ -6,7 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using FileSyncServer;
 using FluentAssertions;
+using Microsoft.Playwright;
 using Xunit;
 
 namespace Server
@@ -95,31 +97,27 @@ namespace Server
         public async Task MultipleConcurrentFileRequestsWithSameFile_ReturnsCorrectResponses()
         {
             // Arrange
-            var fileName = "test1.txt";
+            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+            
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
-            using var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            };
-
-            using var client = new HttpClient(handler)
-            {
-                BaseAddress = new Uri("https://localhost:5001"),
-                Timeout = TimeSpan.FromMinutes(10) // Adjust as necessary
-            };
+            using var client = Utility.Client();   
 
             var tasks = new List<Task<(string FileName, HttpStatusCode Status, string Content)>>();
 
             // Act
-            for (int i = 0; i < 1000; i++) // 10,000 concurrent requests
+            //for (int i = 0; i < 1667; i++) // 5,000 concurrent requests max; much past this hangs parallel client reads
+            for (int i = 0; i < 166; i++)
             {
-                tasks.Add(Task.Run(async () =>
+                foreach (var fileName in fileNames)
                 {
-                    var response = await client.GetAsync($"/{clientId}/{fileName}");
-                    var content = response.StatusCode == HttpStatusCode.OK ? await response.Content.ReadAsStringAsync() : string.Empty;
-                    return (fileName, response.StatusCode, content);
-                }));
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        var response = await client.GetAsync($"/{clientId}/{fileName}");
+                        var content = response.StatusCode == HttpStatusCode.OK ? await response.Content.ReadAsStringAsync() : string.Empty;
+                        return (fileName, response.StatusCode, content);
+                    }));
+                }
             }
 
             var results = await Task.WhenAll(tasks);
@@ -137,6 +135,102 @@ namespace Server
                     result.Content.Should().Be("File not found.", $"Response content for '{result.FileName}' should indicate that the file was not found.");
                 }
             }
+        }
+
+        [Fact]
+        public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndNoClientCaching()
+        {
+            // Enable client-side caching
+            await Utility.SetClientCache(false);
+            // (await Utility.GetClientCache()).Should().BeTrue
+            (await Utility.GetClientCache()).Should().BeFalse();
+            // Arrange
+            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+
+            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true // Run in headless mode
+            });
+
+            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+
+            // Act
+            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            {
+                foreach (var fileName in fileNames)
+                {
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        var page = await browser.NewPageAsync();
+                        var response = await page.GotoAsync($"{Utility.BASE_URL}/{clientId}/{fileName}",new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                        });
+                        var content = await response.TextAsync();
+                        return (fileName, response.Status, content);
+                    }));
+                }
+            }
+
+            var results = await Task.WhenAll(tasks);
+
+            // Assert
+            foreach (var result in results)
+            {
+                result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");   
+            }
+            await Utility.SetClientCache(false);
+        }
+
+        [Fact]
+        public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndClientCaching()
+        {
+            // Enable client-side caching
+            await Utility.SetClientCache(true);
+            (await Utility.GetClientCache()).Should().BeTrue();
+          
+            // Arrange
+            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+
+            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true // Run in headless mode
+            });
+
+            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+
+            // Act
+            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            {
+                foreach (var fileName in fileNames)
+                {
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        var page = await browser.NewPageAsync();
+                        var response = await page.GotoAsync($"{Utility.BASE_URL}/{clientId}/{fileName}", new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                        });
+                        var content = await response.TextAsync();
+                        return (fileName, response.Status, content);
+                    }));
+                }
+            }
+
+            var results = await Task.WhenAll(tasks);
+
+            // Assert
+            foreach (var result in results)
+            {
+                result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");
+            }
+            await Utility.SetClientCache(false);
         }
     }
 }

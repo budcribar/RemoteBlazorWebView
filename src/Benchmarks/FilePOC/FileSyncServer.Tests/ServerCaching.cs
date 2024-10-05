@@ -73,6 +73,7 @@ namespace FileSyncServer.Tests
             content2.Should().Be(_fileContent);
 
             Utility.ModifyFilePermissions(_filePath, _currentUser, true);
+            await Utility.SetServerCache(false);
         }
 
         [Fact]

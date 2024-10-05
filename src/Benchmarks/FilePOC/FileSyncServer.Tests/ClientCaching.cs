@@ -105,6 +105,7 @@ namespace FileSyncServer.Tests
 
             // Restore file permissions after test
             Utility.ModifyFilePermissions(_filePath, _currentUser, true);
+            await Utility.SetClientCache(false);
         }
 
         [Fact]
