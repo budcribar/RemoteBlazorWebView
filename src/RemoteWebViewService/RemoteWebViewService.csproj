@@ -58,12 +58,7 @@
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'" />
-  <ItemGroup>
-    <Compile Remove="RemoteStaticFiles.Old\**" />
-    <Content Remove="RemoteStaticFiles.Old\**" />
-    <EmbeddedResource Remove="RemoteStaticFiles.Old\**" />
-    <None Remove="RemoteStaticFiles.Old\**" />
-  </ItemGroup>
+  
   <ItemGroup>
     <Compile Remove="GlobalSuppressions.cs" />
   </ItemGroup>
@@ -77,8 +72,8 @@
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.12.0" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.65.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.65.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.66.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.66.0" />
 	  
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-rc.1.24452.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0-rc.1.24431.7" />
