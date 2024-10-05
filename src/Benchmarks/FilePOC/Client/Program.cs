@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.FileProviders;
+using System.Diagnostics;
+using System.Net;
 
 namespace FileClientApp
 {
@@ -74,8 +76,12 @@ namespace FileClientApp
             ILogger<ClientFileSyncManager> logger = loggerFactory.CreateLogger<ClientFileSyncManager>();
             string appRootDir = AppContext.BaseDirectory;
 
-             // Instantiate the FileClient with the provided client GUID
-             var fileClient = new ClientFileSyncManager(grpcClient, clientGuid,"index.html", new PhysicalFileProvider(tempDirectory),(e)=> Console.Write(e.Message),  logger);
+            var client = new WebViewIPC.WebViewIPCClient(channel);
+            var events = client.CreateWebView(new CreateWebViewRequest { Id = clientGuid.ToString(), HtmlHostPath = "index.html", Markup = "", Group = "group", HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = true }, cancellationToken: cts.Token);
+
+
+            // Instantiate the FileClient with the provided client GUID
+            var fileClient = new ClientFileSyncManager(grpcClient, clientGuid,"index.html", new PhysicalFileProvider(tempDirectory),(e)=> Console.Write(e.Message),  logger);
 
             // Define the list of files to synchronize by creating them in a temp directory
             var filesToSync = Utilities.CreateTestFiles(tempDirectory);

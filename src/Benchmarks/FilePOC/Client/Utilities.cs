@@ -338,7 +338,7 @@ function calculateSimpleHash(arr) {{
     /// <param name="timeoutSeconds">Maximum time to wait for the server to become healthy.</param>
     /// <param name="retryIntervalSeconds">Time interval between health check attempts.</param>
     /// <returns>True if the server is healthy within the timeout; otherwise, false.</returns>
-    public static async Task<bool> WaitForServerHealthAsync(string healthCheckUrl, int timeoutSeconds = 30, int retryIntervalSeconds = 1)
+    public static async Task<bool> WaitForServerHealthAsync(string healthCheckUrl, int timeoutSeconds = 60, int retryIntervalSeconds = 1)
     {
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
