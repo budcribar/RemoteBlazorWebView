@@ -7,10 +7,8 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Buffers;
 using System.Net;
-using System.Threading.Channels;
 using System.Threading;
 using Microsoft.Extensions.FileProviders;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 namespace FileSyncClient.Services
@@ -25,9 +23,6 @@ namespace FileSyncClient.Services
         private readonly IFileProvider _fileProvider;
         private readonly Action<Exception> _errorCallback;
        
-        //private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(Environment.ProcessorCount);
-        //private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateBounded<ClientFileReadResponse>(1);
-        private readonly Channel<ClientFileReadResponse> _channel = Channel.CreateUnbounded<ClientFileReadResponse>();
         public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, IFileProvider fileProvider, Action<Exception> onException, ILogger logger)
         {
             _client = client;
@@ -48,16 +43,6 @@ namespace FileSyncClient.Services
         public void HandleServerRequests(CancellationToken ct)
         {
             
-
-            // Start a task to consume from the channel and write to the stream
-            _ = Task.Factory.StartNew(async () =>
-            {
-                await foreach (var request in _channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
-                {
-                    await _call.RequestStream.WriteAsync(request).ConfigureAwait(false);
-                }
-            }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
             // Start reading requests from the server
             _ = Task.Run(async () =>
             {
@@ -66,9 +51,7 @@ namespace FileSyncClient.Services
                     await SendInitResponse(_clientGuid, _htmlHostPath);
                     _logger.LogInformation($"Sent Init response to server with clientGuid: {_clientGuid}");
 
-                    await Parallel.ForEachAsync(_call.ResponseStream.ReadAllAsync(ct),
-                       new ParallelOptions { CancellationToken = ct/*, MaxDegreeOfParallelism=1*/ },
-                       async (request, token) =>
+                    await foreach (var request in _call.ResponseStream.ReadAllAsync(ct))                 
                     {
                         switch (request.RequestType)
                         {
@@ -82,14 +65,11 @@ namespace FileSyncClient.Services
                                 _logger.LogWarning($"Received unknown request type: {request.RequestType}");
                                 throw new Exception($"Received unknown request type: {request.RequestType}");
                         }
-                    });
+                    };
                 }
                 catch (Exception ex) 
                 {
                     _errorCallback?.Invoke(ex);
-                }
-                finally {
-                   _channel.Writer.Complete();
                 }
             });
         }
@@ -98,9 +78,9 @@ namespace FileSyncClient.Services
         {
             var requestId = request.RequestId;
             // TODO
-            // var subPath = request.Path.Replace("wwwroot/", "");
+            var subPath = request.Path.Replace("wwwroot/", "");
 
-            var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
+            //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
 
             _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
@@ -115,7 +95,7 @@ namespace FileSyncClient.Services
                 Path = subPath,
                 Metadata = metadata
             };
-            await _channel.Writer.WriteAsync(response).ConfigureAwait(false);
+            await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
           
             _logger.LogInformation($"Sent metadata for file: {subPath}, requestId: {requestId}");
         }
@@ -129,8 +109,8 @@ namespace FileSyncClient.Services
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-       
-            var subPath = request.Path[(request.Path.IndexOf('/') + 1)..];
+            var subPath = request.Path.Replace("wwwroot/", "");
+            //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..];
             //var fileLock = GetFileLock(subPath);
             //await fileLock.WaitAsync();
             _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
@@ -159,7 +139,7 @@ namespace FileSyncClient.Services
                             FileChunk = ByteString.CopyFrom(buffer, 0, bytesRead),
                         }
                     };
-                    await _channel.Writer.WriteAsync(response).ConfigureAwait(false);
+                    await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
                    
                     _logger.LogInformation($"Sent file chunk of size {bytesRead} bytes for file: {subPath}, requestId: {requestId}");
                 }
@@ -211,7 +191,8 @@ namespace FileSyncClient.Services
                     FileChunk = ByteString.Empty,
                 }
             };
-            await _channel.Writer.WriteAsync(completionResponse).ConfigureAwait(false);
+            await _call.RequestStream.WriteAsync(completionResponse).ConfigureAwait(false);
+
             _logger.LogInformation($"Completed file data transfer for file: {relativeFilePath}, requestId: {requestId}");
         }
        
@@ -224,7 +205,7 @@ namespace FileSyncClient.Services
                 Path = string.Empty,
                 Init = new Init { HtmlHostPath = htmlHostPath }
             };
-            await _channel.Writer.WriteAsync(initResponse).ConfigureAwait(false);
+            await _call.RequestStream.WriteAsync(initResponse).ConfigureAwait(false);
         }
 
         private async Task SendStatusCode(string requestId, string relativeFilePath, HttpStatusCode statusCode)
@@ -239,7 +220,7 @@ namespace FileSyncClient.Services
                     StatusCode = (int)statusCode
                 }
             };
-            await _channel.Writer.WriteAsync(statusResponse).ConfigureAwait(false);
+            await _call.RequestStream.WriteAsync(statusResponse).ConfigureAwait(false);
         }
 
         private FileMetadata GetFileMetadata(string localFilePath)
