@@ -5,11 +5,10 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
+		<DefineConstants>xDEBUG_SERVER</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="CustomApplicationFactory.cs" />
-
 		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		<PackageReference Include="coverlet.collector" Version="6.0.2" />
 		<PackageReference Include="FluentAssertions" Version="6.12.1" />

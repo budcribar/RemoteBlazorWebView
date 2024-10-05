@@ -1,5 +1,4 @@
-﻿//using FileSyncServer.Tests;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using FileSyncServer;
 
@@ -14,7 +13,13 @@ public class ServerFixture : IDisposable
         Utility.KillExistingProcesses("RemoteWebViewService");
         // Determine the path to the server executable
         var testOutputPath = Directory.GetCurrentDirectory();
-        var relative = "../../../../../../RemoteWebViewService/bin/publishNoAuth";
+
+#if DEBUG_SERVER
+        var relative = @"../../../../../../RemoteWebViewService\bin\x64\Debug\net9";
+      
+#else
+        var relative = "../../../../../../RemoteWebViewService/bin/publishNoAuth";           
+#endif
         _serverExePath = Path.Combine(testOutputPath, relative, "RemoteWebViewService.exe");
         if (!File.Exists(_serverExePath))
         {
