@@ -69,7 +69,7 @@ namespace PeakSWC.RemoteWebView
                             await ClientResponseStream.WriteAsync(m).ConfigureAwait(false);
 
                         if (logger.IsEnabled(LogLevel.Information))
-                            logger.LogInformation($"Browser -> WebView {m.Response}");
+                            logger.LogDebug($"Browser -> WebView {m.Response}");
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -110,7 +110,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary).ConfigureAwait(false);
                         if (logger.IsEnabled(LogLevel.Information))
-                            logger.LogInformation($"WebView -> Browser {request.Id} {request.Request}");
+                            logger.LogDebug($"WebView -> Browser {request.Id} {request.Request}");
                     }
                 }
             }

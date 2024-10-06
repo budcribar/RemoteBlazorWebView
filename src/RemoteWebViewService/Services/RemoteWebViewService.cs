@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {         
-            logger.LogInformation($"CreateWebView Id:{request.Id}");
+            logger.LogDebug($"CreateWebView Id:{request.Id}");
 
             ServiceState state= new(logger, request.EnableMirrors)
             {
@@ -173,7 +173,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             string clientGuid = initResponse.ClientId;
-            logger.LogInformation($"Client '{clientGuid}' connected and initialized.");
+            logger.LogDebug($"Client '{clientGuid}' connected and initialized.");
 
             // Register the client
             _fileSyncManager.RegisterClient(clientGuid, initResponse.Init.HtmlHostPath);
@@ -202,7 +202,7 @@ namespace PeakSWC.RemoteWebView
                     await _fileSyncManager.HandleClientResponse(response);
                 }
 
-                logger.LogInformation($"Client '{clientGuid}' has completed sending messages.");
+                logger.LogDebug($"Client '{clientGuid}' has completed sending messages.");
 
             }
             catch (OperationCanceledException) { }
@@ -214,7 +214,7 @@ namespace PeakSWC.RemoteWebView
             {
                 // Clean up when the client disconnects
                 _fileSyncManager.RemoveClient(clientGuid);
-                logger.LogInformation($"Cleaned up resources for client '{clientGuid}'.");
+                logger.LogDebug($"Cleaned up resources for client '{clientGuid}'.");
             }
         }
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)

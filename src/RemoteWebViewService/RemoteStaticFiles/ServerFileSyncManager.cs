@@ -55,7 +55,7 @@ namespace PeakSWC.RemoteWebView
             if (string.IsNullOrWhiteSpace(clientGuid))
                 throw new ArgumentException("Client GUID cannot be null or empty.", nameof(clientGuid));
 
-            _logger.LogInformation($"Registering new client with GUID: {clientGuid}");
+            _logger.LogDebug($"Registering new client with GUID: {clientGuid}");
             // Initialize the nested dictionaries for the client
             _metadataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>());
             _fileDataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, DataRequest>());
@@ -75,7 +75,7 @@ namespace PeakSWC.RemoteWebView
                 throw new InvalidOperationException($"Client with GUID '{clientGuid}' is already associated with a response stream.");
             }
 
-            _logger.LogInformation($"Associated response stream for client GUID: {clientGuid}");
+            _logger.LogDebug($"Associated response stream for client GUID: {clientGuid}");
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace PeakSWC.RemoteWebView
                 if (clientMetadataRequests.TryRemove(requestId, out var tcs))
                 {
                     tcs.SetResult(metadata);
-                    _logger.LogInformation($"Received metadata for requestId: {requestId} from client GUID: {clientGuid}");
+                    _logger.LogDebug($"Received metadata for requestId: {requestId} from client GUID: {clientGuid}");
                 }
                 else
                 {
@@ -240,7 +240,7 @@ namespace PeakSWC.RemoteWebView
                         };
 
                         await responseStream.WriteAsync(request).ConfigureAwait(false);
-                        _logger.LogInformation($"Sent metadata request (requestId: {requestId}) for file: {filePath} to client GUID: {clientGuid}");
+                        _logger.LogDebug($"Sent metadata request (requestId: {requestId}) for file: {filePath} to client GUID: {clientGuid}");
                     }
                     else
                     {
@@ -297,7 +297,7 @@ namespace PeakSWC.RemoteWebView
                         };
 
                         await responseStream.WriteAsync(request).ConfigureAwait(false);
-                        _logger.LogInformation($"Sent file data request (requestId: {requestId}) for file: {filePath} to client GUID: {clientGuid}");
+                        _logger.LogDebug($"Sent file data request (requestId: {requestId}) for file: {filePath} to client GUID: {clientGuid}");
                     }
                     else
                     {
@@ -331,13 +331,13 @@ namespace PeakSWC.RemoteWebView
                     {
                         tcs.SetException(new TimeoutException(
                             $"Metadata request for file '{filePath}', requestId '{requestId}' from client GUID '{clientGuid}' timed out."));
-                        _logger.LogInformation($"Metadata request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}' timed out.");
+                        _logger.LogDebug($"Metadata request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}' timed out.");
 
                         // Remove the request from the dictionary
                         if (_metadataRequests.TryGetValue(clientGuid, out var clientMetadataRequests))
                         {
                             clientMetadataRequests.TryRemove(requestId, out _);
-                            _logger.LogInformation($"Removed timed out metadata request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}'.");
+                            _logger.LogDebug($"Removed timed out metadata request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}'.");
                         }
                     }
                 }
@@ -356,23 +356,23 @@ namespace PeakSWC.RemoteWebView
         {
             if (_clientResponseStreams.TryRemove(clientGuid, out _))
             {
-                _logger.LogInformation($"Removed response stream association for client GUID: {clientGuid}");
+                _logger.LogDebug($"Removed response stream association for client GUID: {clientGuid}");
             }
 
             if (_metadataRequests.TryRemove(clientGuid, out _))
             {
-                _logger.LogInformation($"Removed all metadata requests for client GUID: {clientGuid}");
+                _logger.LogDebug($"Removed all metadata requests for client GUID: {clientGuid}");
             }
 
             if (_fileDataRequests.TryRemove(clientGuid, out _))
             {
-                _logger.LogInformation($"Removed all file data requests for client GUID: {clientGuid}");
+                _logger.LogDebug($"Removed all file data requests for client GUID: {clientGuid}");
             }
            
 
             if (_htmlHostPaths.TryRemove(clientGuid, out _))
             {
-                _logger.LogInformation($"Removed htmlHostPath for client GUID: {clientGuid}");
+                _logger.LogDebug($"Removed htmlHostPath for client GUID: {clientGuid}");
             }
         }
 
@@ -421,7 +421,7 @@ namespace PeakSWC.RemoteWebView
             _metadataRequests.Clear();
             _fileDataRequests.Clear();
 
-            _logger.LogInformation("ServerFileSyncManager disposed successfully.");
+            _logger.LogDebug("ServerFileSyncManager disposed successfully.");
         }
     }
 

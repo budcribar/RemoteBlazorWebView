@@ -62,7 +62,7 @@ namespace PeakSWC.RemoteWebView
                 // Skip messages from read only client
                 if (!request.IsPrimary)
                 {
-                    logger.LogInformation($"Skipped send message {request.Message} from connection {request.ClientId}");
+                    logger.LogDebug($"Skipped send message {request.Message} from connection {request.ClientId}");
                     return new SendMessageResponse { Id = request.Id, Success = true };
                 }
 

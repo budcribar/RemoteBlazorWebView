@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     await SendInitResponse(_clientGuid, _htmlHostPath);
-                    _logger.LogInformation($"Sent Init response to server with clientGuid: {_clientGuid}");
+                    _logger.LogDebug($"Sent Init response to server with clientGuid: {_clientGuid}");
 
                     await foreach (var request in _call.ResponseStream.ReadAllAsync(ct))                 
                     {
@@ -81,7 +81,7 @@ namespace PeakSWC.RemoteWebView
 
             //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
 
-            _logger.LogInformation($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
+            _logger.LogDebug($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
             // Retrieve file metadata
             FileMetadata metadata = GetFileMetadata(subPath);
@@ -96,7 +96,7 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
           
-            _logger.LogInformation($"Sent metadata for file: {subPath}, requestId: {requestId}");
+            _logger.LogDebug($"Sent metadata for file: {subPath}, requestId: {requestId}");
         }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
@@ -104,7 +104,7 @@ namespace PeakSWC.RemoteWebView
             var requestId = request.RequestId;
             var subPath = request.Path.Replace("wwwroot/", "");
            
-            _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
+            _logger.LogDebug($"Received FileData request (requestId: {requestId}) for file: {subPath}");
 
             const int chunkSize = 8192; // 8 KB
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -130,8 +130,6 @@ namespace PeakSWC.RemoteWebView
                         }
                     };
                     await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
-                   
-                    _logger.LogInformation($"Sent file chunk of size {bytesRead} bytes for file: {subPath}, requestId: {requestId}");
                 }
 
                 await SendCompletionResponse(requestId, subPath);
@@ -172,7 +170,7 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(completionResponse).ConfigureAwait(false);
 
-            _logger.LogInformation($"Completed file data transfer for file: {relativeFilePath}, requestId: {requestId}");
+            _logger.LogDebug($"Completed file data transfer for file: {relativeFilePath}, requestId: {requestId}");
         }
        
         private async Task SendInitResponse(string clientGuid, string htmlHostPath)
@@ -216,7 +214,7 @@ namespace PeakSWC.RemoteWebView
             {
                 return new FileMetadata { Length = -1, StatusCode = (int)HttpStatusCode.Forbidden, ETag = "" };
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return new FileMetadata
                 {
@@ -232,7 +230,7 @@ namespace PeakSWC.RemoteWebView
         public async Task CloseAsync()
         {
             await _call.RequestStream.CompleteAsync().ConfigureAwait(false);
-            _logger.LogInformation("Closed request stream.");
+            _logger.LogDebug("Closed request stream.");
         }
     }
 }

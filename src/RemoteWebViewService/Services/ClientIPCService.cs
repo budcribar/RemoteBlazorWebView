@@ -42,7 +42,7 @@ namespace PeakSWC.RemoteWebView
 
                 await foreach (var state in serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
-                    logger.LogInformation($"Client IPC: {state}");
+                    logger.LogDebug($"Client IPC: {state}");
                     await WriteResponse(responseStream, groups).ConfigureAwait(false);
                 }
             }

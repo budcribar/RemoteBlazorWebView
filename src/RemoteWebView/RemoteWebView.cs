@@ -174,7 +174,7 @@ namespace PeakSWC.RemoteWebView
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
-                Logger.LogInformation(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors);
+                Logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors);
                 var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
 
                 Exception? exception = ProcessBrowserMessages(BlazorWebView, events).Result;
@@ -280,7 +280,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 Shutdown();
                                 FireRefreshed();
-                                Logger.LogInformation("Service refreshed. Connection shut down.");
+                                Logger.LogDebug("Service refreshed. Connection shut down.");
                                 cts.Cancel();
                             }
                             break; // Exit processing after refresh

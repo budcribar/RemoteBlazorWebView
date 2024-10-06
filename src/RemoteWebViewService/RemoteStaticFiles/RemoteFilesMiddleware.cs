@@ -147,7 +147,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            _logger.LogInformation($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
+            _logger.LogDebug($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
@@ -188,17 +188,17 @@ namespace PeakSWC.RemoteWebView
                 if (serverMetadata?.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
-                    _logger.LogInformation($"File '{subPath}' needs update in server cache.");
+                    _logger.LogDebug($"File '{subPath}' needs update in server cache.");
                 }
                 else
                 {
-                    _logger.LogInformation($"File '{subPath}' is up-to-date in server cache.");
+                    _logger.LogDebug($"File '{subPath}' is up-to-date in server cache.");
                 }
             }
             else
             {
                 needsUpdate = true;
-                _logger.LogInformation($"File '{subPath}' not found in server cache or caching is disabled.");
+                _logger.LogDebug($"File '{subPath}' not found in server cache or caching is disabled.");
             }
 
             // Step 3: Handle Conditional GETs (ETag and If-None-Match)
@@ -207,7 +207,7 @@ namespace PeakSWC.RemoteWebView
                 string eTag = clientMetadata.ETag;
                 if (ifNoneMatch.Contains(eTag))
                 {
-                    _logger.LogInformation($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
+                    _logger.LogDebug($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
                     context.Response.StatusCode = StatusCodes.Status304NotModified;
                     return;
                 }
@@ -219,7 +219,7 @@ namespace PeakSWC.RemoteWebView
             // Step 5: Serve the file
             if (needsUpdate)
             {
-                _logger.LogInformation($"Fetching file '{subPath}' from client GUID '{clientGuid}'.");
+                _logger.LogDebug($"Fetching file '{subPath}' from client GUID '{clientGuid}'.");
 
                 FileStream dataRequest;
                 try
@@ -263,14 +263,14 @@ namespace PeakSWC.RemoteWebView
                     await dataRequest.Stream.CopyToAsync(context.Response.Body);
                 }
 
-                _logger.LogInformation($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                _logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
             }
             else
             {
                 // Serve from cache
                 if (_memoryCache.TryGetValue($"{subPath}_data", out byte[]? cachedData))
                 {
-                    _logger.LogInformation($"Serving file '{subPath}' from in-memory cache.");
+                    _logger.LogDebug($"Serving file '{subPath}' from in-memory cache.");
                     context.Response.ContentLength = cachedData?.Length ?? 0;
                     await context.Response.Body.WriteAsync(cachedData.AsMemory());
                 }
@@ -319,7 +319,7 @@ namespace PeakSWC.RemoteWebView
                         await dataRequest.Stream.CopyToAsync(context.Response.Body);
                     }
 
-                    _logger.LogInformation($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                    _logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
                 }
             }
         }
