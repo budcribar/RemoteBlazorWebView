@@ -1,10 +1,5 @@
 ﻿using Microsoft.Playwright;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Text;
 using FluentAssertions;
 using FileSyncServer; // Make sure you have this NuGet package installed
