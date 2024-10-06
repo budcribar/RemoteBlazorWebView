@@ -101,8 +101,7 @@ message ClientFileReadResponse {
   oneof response {
     Init init = 4;
     FileMetadata metadata = 5;
-    FileDataStatus file_data_status = 6;
-    FileData file_data = 7;
+    FileData file_data = 6;
   }
 }
 
@@ -114,14 +113,12 @@ message FileMetadata {
   int64 length = 1;
   int64 lastModified = 2;
   int32 status_code = 3;
+  string e_tag = 4;
 }
+
 message FileData {
     bytes file_chunk = 1;
 }
-message FileDataStatus {
-    int32 status_code = 1;
-}
-
 
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 

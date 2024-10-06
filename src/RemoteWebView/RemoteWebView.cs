@@ -1,5 +1,5 @@
 ﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
-using FileSyncClient.Services;
+
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;

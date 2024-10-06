@@ -1,13 +1,6 @@
 ﻿using Grpc.Net.Client;
 using PeakSWC.RemoteWebView; // Essential for accessing WebViewIPC and related classes
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using FileSyncClient.Services;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Net;

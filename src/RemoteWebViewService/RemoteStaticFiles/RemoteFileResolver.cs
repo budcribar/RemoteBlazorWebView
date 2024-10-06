@@ -17,7 +17,7 @@ namespace PeakSWC.RemoteWebView
         {
             if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
             {
-                return new FileStream { StatusCode = HttpStatusCode.OK, Stream = new MemoryStream(Encoding.ASCII.GetBytes("[]")) };
+                return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes("[]")) };
             }
 
             DataRequest dataRequest = await manager.RequestFileDataAsync(clientId, subpath,logger);
@@ -34,10 +34,10 @@ namespace PeakSWC.RemoteWebView
                 if (contents.Length == initialLength) logger.LogError("Unable to find base.href in the home page");
                 dataRequest.Dispose();
 
-                return new FileStream { StatusCode = (HttpStatusCode)dataRequest.StatusCode, Stream = new MemoryStream(Encoding.ASCII.GetBytes(contents)) };
+                return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes(contents)) };
             }
 
-            return new FileStream { StatusCode = (HttpStatusCode)dataRequest.StatusCode, Stream = dataRequest.Pipe.Reader.AsStream() };
+            return new FileStream { Stream = dataRequest.Pipe.Reader.AsStream() };
         }
         [GeneratedRegex("<base.*href.*=.*(\"|').*/.*(\"|')", RegexOptions.Multiline)]
         private static partial Regex HrefRegEx();

@@ -6,12 +6,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Buffers;
-using System.Net;
 using System.Threading;
 using Microsoft.Extensions.FileProviders;
-using System.Collections.Concurrent;
+using System.Net;
 
-namespace FileSyncClient.Services
+namespace PeakSWC.RemoteWebView
 {
     public class ClientFileSyncManager
     {
@@ -99,20 +98,12 @@ namespace FileSyncClient.Services
           
             _logger.LogInformation($"Sent metadata for file: {subPath}, requestId: {requestId}");
         }
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fileLocks = new();
-
-        private SemaphoreSlim GetFileLock(string filePath)
-        {
-            return _fileLocks.GetOrAdd(filePath, _ => new SemaphoreSlim(1, 1));
-        }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
             var subPath = request.Path.Replace("wwwroot/", "");
-            //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..];
-            //var fileLock = GetFileLock(subPath);
-            //await fileLock.WaitAsync();
+           
             _logger.LogInformation($"Received FileData request (requestId: {requestId}) for file: {subPath}");
 
             const int chunkSize = 8192; // 8 KB
@@ -122,7 +113,6 @@ namespace FileSyncClient.Services
             {
                 using var fileStream = _fileProvider.GetFileInfo(subPath).CreateReadStream();
 
-                await SendStatusCode(requestId, subPath, HttpStatusCode.OK);
                 // Send FileData messages
                 while (true)
                 {
@@ -148,33 +138,22 @@ namespace FileSyncClient.Services
             }
             catch (FileNotFoundException)
             {
-                _logger.LogWarning($"File '{subPath}' not found in client's cache.");
-                await SendStatusCode(requestId, subPath, HttpStatusCode.NotFound);
+                _logger.LogWarning($"File '{subPath}' not found in client's cache.");         
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogError($"Access denied to file '{subPath}'.");
-                await SendStatusCode(requestId, subPath, HttpStatusCode.Forbidden);
+                _logger.LogError($"Access denied to file '{subPath}'.");             
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"IO error reading file '{subPath}'.");
-                await SendStatusCode(requestId, subPath, HttpStatusCode.InternalServerError);
+                _logger.LogError(ex, $"IO error reading file '{subPath}'.");              
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unexpected error reading file '{subPath}'.");
-                await SendStatusCode(requestId, subPath, HttpStatusCode.InternalServerError);
+                _logger.LogError(ex, $"Unexpected error reading file '{subPath}'.");               
             }
             finally
             {
-                //fileLock.Release();
-                //// Clean up the semaphore if no one else needs it
-                //if (fileLock.CurrentCount == 1)
-                //{
-                //    _fileLocks.TryRemove(subPath, out _);
-                //}
-
                 ArrayPool<byte>.Shared.Return(buffer);
             }
         }
@@ -208,49 +187,41 @@ namespace FileSyncClient.Services
             await _call.RequestStream.WriteAsync(initResponse).ConfigureAwait(false);
         }
 
-        private async Task SendStatusCode(string requestId, string relativeFilePath, HttpStatusCode statusCode)
-        {
-            var statusResponse = new ClientFileReadResponse
-            {
-                ClientId = _clientGuid,
-                RequestId = requestId,
-                Path = relativeFilePath,
-                FileDataStatus = new FileDataStatus
-                {
-                    StatusCode = (int)statusCode
-                }
-            };
-            await _call.RequestStream.WriteAsync(statusResponse).ConfigureAwait(false);
-        }
-
         private FileMetadata GetFileMetadata(string localFilePath)
         {
             try
             {
                 var fileInfo = _fileProvider.GetFileInfo(localFilePath);
+               
 
                 if (!fileInfo.Exists)
                 {
                     return new FileMetadata
                     {
                         Length = -1,
-                        StatusCode = 404 // File not found
-                    };               
+                        StatusCode = (int)HttpStatusCode.NotFound,
+                        ETag = ""
+                    };
                 }
-               
+                var etag = ETagGenerator.GenerateETag(fileInfo);
                 return new FileMetadata
                 {
                     Length = fileInfo.Length,
                     LastModified = fileInfo.LastModified.ToUnixTimeSeconds(),
-                    StatusCode = 200  // Success
+                    StatusCode = (int)HttpStatusCode.OK,
+                    ETag = etag
                 };
             }
-            catch (Exception)
+            catch (UnauthorizedAccessException)
+            {
+                return new FileMetadata { Length = -1, StatusCode = (int)HttpStatusCode.Forbidden, ETag = "" };
+            }
+            catch (Exception ex)
             {
                 return new FileMetadata
                 {
                     Length = -1,
-                    StatusCode = 500, // Internal server error                  
+                    StatusCode = (int)HttpStatusCode.InternalServerError
                 };
             }
         }

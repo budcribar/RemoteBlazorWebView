@@ -211,7 +211,7 @@ namespace ClientBenchmark
             }
             Console.WriteLine("Read " + count.ToString() + " messages");
         }
-        string etagHashString = "abcdef123456";
+        //string etagHashString = "abcdef123456";
 
 
         // | ReadFilesClientBenchmark | 677.8 ms | 13.48 ms | 13.85 ms | 1000 files of len 

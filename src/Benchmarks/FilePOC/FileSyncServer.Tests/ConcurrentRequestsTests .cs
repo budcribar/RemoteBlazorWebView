@@ -169,8 +169,8 @@ namespace Server
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });
-                        var content = await response.TextAsync();
-                        return (fileName, response.Status, content);
+                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                        return (fileName, response?.Status ?? -1, content);
                     }));
                 }
             }
@@ -217,8 +217,8 @@ namespace Server
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });
-                        var content = await response.TextAsync();
-                        return (fileName, response.Status, content);
+                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                        return (fileName, response?.Status ?? -1, content);
                     }));
                 }
             }

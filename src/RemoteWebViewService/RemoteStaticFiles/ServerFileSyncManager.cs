@@ -18,7 +18,6 @@ namespace PeakSWC.RemoteWebView
         private readonly ILogger<ServerFileSyncManager> _logger;
         private readonly ConcurrentDictionary<string, IServerStreamWriter<ServerFileReadRequest>> _clientResponseStreams = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>> _metadataRequests = new();
-        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TaskCompletionSource<FileDataStatus>>> _dataStatusRequests = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DataRequest>> _fileDataRequests = new();
         private readonly ConcurrentDictionary<string,string> _htmlHostPaths = new();
 
@@ -59,7 +58,6 @@ namespace PeakSWC.RemoteWebView
             _logger.LogInformation($"Registering new client with GUID: {clientGuid}");
             // Initialize the nested dictionaries for the client
             _metadataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>());
-            _dataStatusRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileDataStatus>>());
             _fileDataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, DataRequest>());
             _htmlHostPaths.TryAdd(clientGuid, htmlHostPath);
         }
@@ -118,8 +116,6 @@ namespace PeakSWC.RemoteWebView
             {
                 HandleMetadataResponse(clientGuid, requestId, response.Metadata);
             }
-            else if (response.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileDataStatus)
-                HandleFileDataStatus (clientGuid, requestId, response.FileDataStatus);
             else if (response.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
             {
                 await HandleFileChunkResponse(clientGuid, requestId, response.FileData);
@@ -149,25 +145,7 @@ namespace PeakSWC.RemoteWebView
                 _logger.LogError($"No metadata requests mapping found for client GUID: {clientGuid}");
             }
         }
-        private void HandleFileDataStatus(string clientGuid, string requestId, FileDataStatus fileDataStatus)
-        {
-            if (_dataStatusRequests.TryGetValue(clientGuid, out var dataStatusRequests))
-            {
-                if (dataStatusRequests.TryRemove(requestId, out var tcs))
-                {
-                    tcs.SetResult(fileDataStatus);
-                    _logger.LogInformation($"Received data status for requestId: {requestId} from client GUID: {clientGuid}");
-                }
-                else
-                {
-                    _logger.LogError($"No pending data status request for requestId: {requestId} from client GUID: {clientGuid}");
-                }
-            }
-            else
-            {
-                _logger.LogError($"No data status requests mapping found for client GUID: {clientGuid}");
-            }
-        }
+     
         private async Task HandleFileChunkResponse(string clientGuid, string requestId, FileData fileData)
         {
             if (_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests))
@@ -332,30 +310,6 @@ namespace PeakSWC.RemoteWebView
 
             await _writeChannel.Writer.WriteAsync(writeRequest, dataRequest.CancellationToken).ConfigureAwait(false);
 
-            var tcs = new TaskCompletionSource<FileDataStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
-         
-            // Add the TaskCompletionSource to the metadata requests
-            if (_dataStatusRequests.TryGetValue(clientGuid, out var clientDataStatusRequests))
-            {
-                if (!clientDataStatusRequests.TryAdd(requestId, tcs))
-                {
-                    dataRequest.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    _logger.LogError($"A data status request with requestId '{requestId}' for client GUID '{clientGuid}' is already in progress.");
-                }
-            }
-            else
-            {
-                dataRequest.StatusCode = (int)HttpStatusCode.InternalServerError;
-                _logger.LogError($"Client GUID '{clientGuid}' is not registered.");
-                return dataRequest;
-            }
-
-            var fds = await tcs.Task;
-            dataRequest.StatusCode = fds.StatusCode;
-
-            // Start a timeout to cleanup the request if not completed in time
-            CleanupFileStatusRequest(clientGuid, requestId, tcs, filePath);
-
             // Return the DataRequest immediately
             return dataRequest;
         }
@@ -392,38 +346,7 @@ namespace PeakSWC.RemoteWebView
                     _logger.LogError(ex, $"Error during cleanup of metadata request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}'.");
                 }
             });
-        }
-
-        private void CleanupFileStatusRequest(string clientGuid, string requestId, TaskCompletionSource<FileDataStatus> tcs, string filePath)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    // Wait for the timeout duration
-                    await Task.Delay(_cacheTimeoutSeconds * 1000).ConfigureAwait(false);
-
-                    // If the task is not completed, set an exception
-                    if (!tcs.Task.IsCompleted)
-                    {
-                        tcs.SetException(new TimeoutException(
-                            $"Data status request for file '{filePath}', requestId '{requestId}' from client GUID '{clientGuid}' timed out."));
-                        _logger.LogInformation($"Data status request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}' timed out.");
-
-                        // Remove the request from the dictionary
-                        if (_dataStatusRequests.TryGetValue(clientGuid, out var clientDataStatusRequests))
-                        {
-                            clientDataStatusRequests.TryRemove(requestId, out _);
-                            _logger.LogInformation($"Removed timed out data status request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}'.");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error during cleanup of data status request (requestId: {requestId}) for file '{filePath}' from client GUID '{clientGuid}'.");
-                }
-            });
-        }
+        }  
 
         /// <summary>
         /// Removes a client from all mappings.
@@ -445,10 +368,7 @@ namespace PeakSWC.RemoteWebView
             {
                 _logger.LogInformation($"Removed all file data requests for client GUID: {clientGuid}");
             }
-            if (_dataStatusRequests.TryRemove(clientGuid, out _))
-            {
-                _logger.LogInformation($"Removed all file data status requests for client GUID: {clientGuid}");
-            }
+           
 
             if (_htmlHostPaths.TryRemove(clientGuid, out _))
             {
@@ -499,7 +419,6 @@ namespace PeakSWC.RemoteWebView
 
             _clientResponseStreams.Clear();
             _metadataRequests.Clear();
-            _dataStatusRequests.Clear();
             _fileDataRequests.Clear();
 
             _logger.LogInformation("ServerFileSyncManager disposed successfully.");
@@ -520,8 +439,6 @@ namespace PeakSWC.RemoteWebView
     public class DataRequest : IDisposable
     {
         public Pipe Pipe { get; }
-
-        public int StatusCode { get; set; }
 
         public CancellationToken CancellationToken { get; }
 

@@ -185,7 +185,7 @@ namespace PeakSWC.RemoteWebView
             // Step 2: Check if server cache is enabled and retrieve server metadata
             if (options.UseServerCache && _memoryCache.TryGetValue(subPath, out serverMetadata))
             {
-                if (serverMetadata?.Length != clientMetadata.Length || serverMetadata.LastModified != clientMetadata.LastModified)
+                if (serverMetadata?.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
                     _logger.LogInformation($"File '{subPath}' needs update in server cache.");
@@ -204,7 +204,7 @@ namespace PeakSWC.RemoteWebView
             // Step 3: Handle Conditional GETs (ETag and If-None-Match)
             if (options.UseClientCache && context.Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var ifNoneMatch))
             {
-                string eTag = GenerateETag(clientMetadata);
+                string eTag = clientMetadata.ETag;
                 if (ifNoneMatch.Contains(eTag))
                 {
                     _logger.LogInformation($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
@@ -234,14 +234,6 @@ namespace PeakSWC.RemoteWebView
                     return;
                 }
 
-                if (dataRequest.StatusCode != HttpStatusCode.OK)
-                {
-                    _logger.LogWarning($"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'. Status code: {dataRequest.StatusCode}");
-                    context.Response.StatusCode = (int)dataRequest.StatusCode;
-                    await context.Response.WriteAsync($"Failed to retrieve file from client. {subPath}");
-                    return;
-                }
-
                 // Stream directly to the response
                 context.Response.ContentLength = clientMetadata.Length;
 
@@ -254,12 +246,8 @@ namespace PeakSWC.RemoteWebView
                         memStream.Position = 0;
 
                         // Update metadata in cache
-                        serverMetadata = new FileMetadata
-                        {
-                            Length = clientMetadata.Length,
-                            LastModified = clientMetadata.LastModified
-                        };
-                        _memoryCache.Set(subPath, serverMetadata, TimeSpan.FromMinutes(10));
+                       
+                        _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromMinutes(10));
 
                         // Cache the data
                         _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromMinutes(10));
@@ -304,14 +292,6 @@ namespace PeakSWC.RemoteWebView
                         return;
                     }
 
-                    if (dataRequest.StatusCode != HttpStatusCode.OK)
-                    {
-                        _logger.LogWarning($"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'. Status code: {dataRequest.StatusCode}");
-                        context.Response.StatusCode = (int)dataRequest.StatusCode;
-                        await context.Response.WriteAsync($"Failed to retrieve file from client. {subPath}");
-                        return;
-                    }
-
                     // Optionally cache the data
                     if (options.UseServerCache)
                     {
@@ -321,12 +301,7 @@ namespace PeakSWC.RemoteWebView
                             memStream.Position = 0;
 
                             // Update metadata in cache
-                            serverMetadata = new FileMetadata
-                            {
-                                Length = clientMetadata.Length,
-                                LastModified = clientMetadata.LastModified
-                            };
-                            _memoryCache.Set(subPath, serverMetadata, TimeSpan.FromMinutes(10));
+                            _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromMinutes(10));
 
                             // Cache the data
                             _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromMinutes(10));
@@ -356,7 +331,7 @@ namespace PeakSWC.RemoteWebView
             // Set ETag and Last-Modified headers if client caching is enabled
             if (useClientCache)
             {
-                string eTag = GenerateETag(clientMetadata);
+                string eTag = clientMetadata.ETag;
                 context.Response.Headers[HeaderNames.ETag] = eTag;
 
                 // Ensure Last-Modified is set
@@ -374,11 +349,6 @@ namespace PeakSWC.RemoteWebView
             // For now, simply pass to the next middleware
             await _next(context);
             return;
-        }
-
-        private string GenerateETag(FileMetadata metadata)
-        {
-            return $"\"{metadata.Length}-{metadata.LastModified}\"";
         }
 
         private string GetContentType(string fileName)

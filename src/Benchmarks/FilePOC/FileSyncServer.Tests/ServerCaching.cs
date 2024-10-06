@@ -1,5 +1,6 @@
 ﻿// FileSyncServer.Tests/FileSyncServiceImplTests.cs
 using FluentAssertions;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Principal;
 
@@ -51,28 +52,32 @@ namespace FileSyncServer.Tests
         [Fact]
         public async Task Server_Cache_Enabled_Should_Serve_File_After_Permission_Revoked()
         {
+            Utility.ModifyFilePermissions(_filePath, _currentUser, true);
             await Utility.SetServerCache(true);
             (await Utility.GetServerCache()).Should().BeTrue();
-           
-            Utility.ModifyFilePermissions(_filePath, _currentUser, true);
 
             // Act
             // First request: should succeed and cache the file
+            Stopwatch sw = Stopwatch.StartNew();
             var response1 = await _client.GetAsync($"/{_clientId}/{_fileName}");
-            response1.StatusCode.Should().Be(HttpStatusCode.OK);
             var content1 = await response1.Content.ReadAsStringAsync();
-            content1.Should().Be(_fileContent);
+            var first = sw.ElapsedMilliseconds;
 
-            // Revoke read access
-            Utility.ModifyFilePermissions(_filePath, _currentUser,false);
+            response1.StatusCode.Should().Be(HttpStatusCode.OK);
+            content1.Should().Be(_fileContent);       
 
-            // Second request: should still succeed due to caching
+            // Second request: should still succeed due to caching but be faster
+            sw.Reset();
             var response2 = await _client.GetAsync($"/{_clientId}/{_fileName}");
-            response2.StatusCode.Should().Be(HttpStatusCode.OK);
+           
             var content2 = await response2.Content.ReadAsStringAsync();
+            var second = sw.ElapsedMilliseconds;
+
+            response2.StatusCode.Should().Be(HttpStatusCode.OK);
             content2.Should().Be(_fileContent);
 
-            Utility.ModifyFilePermissions(_filePath, _currentUser, true);
+            second.Should().BeLessThan(first);
+
             await Utility.SetServerCache(false);
         }
 

@@ -414,7 +414,7 @@ function calculateSimpleHash(arr) {{
                     Console.WriteLine($"Test file already exists: {filePath}");
                 }
                 //if (i == 3)
-                //    ModifyFilePermissions(filePath, false);
+                 //  ModifyFilePermissions(filePath, false);
 
                 filesToSync.Add(filePath);
             }

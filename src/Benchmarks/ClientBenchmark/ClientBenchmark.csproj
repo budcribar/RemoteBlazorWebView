@@ -14,7 +14,7 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0-rc.1.24431.7" />
 		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
-		<PackageReference Include="Grpc.Net.Client.Web" Version="2.65.0" />
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.66.0" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		
 		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
