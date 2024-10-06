@@ -9,7 +9,7 @@ namespace PeakSWC.RemoteWebView
         public static void Update(ServiceState serviceState, string clientId, FileMetadata metadata)
         {
             Interlocked.Increment(ref serviceState.TotalFilesRead);
-            Interlocked.Exchange(ref serviceState.TotalBytesRead, serviceState.TotalBytesRead + metadata.Length);
+            Interlocked.Add(ref serviceState.TotalBytesRead, metadata.Length);
         }
 
     }
