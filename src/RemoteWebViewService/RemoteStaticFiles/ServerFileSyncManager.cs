@@ -157,8 +157,8 @@ namespace PeakSWC.RemoteWebView
                     try
                     {
                         if (fileData.FileChunk.Length > 0)
-                        {                          
-                            await pipeWriter.WriteAsync(fileData.FileChunk.ToByteArray(), dataRequest.CancellationToken).ConfigureAwait(false);
+                        {                         
+                            await pipeWriter.WriteAsync(fileData.FileChunk.Memory, dataRequest.CancellationToken).ConfigureAwait(false);
                             await pipeWriter.FlushAsync(dataRequest.CancellationToken).ConfigureAwait(false);
                         }
                         else
