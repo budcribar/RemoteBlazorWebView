@@ -56,3 +56,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb_service.js
 /src/Benchmarks/FilePOC/Client/publish
 /src/Benchmarks/FilePOC/Server/publish
+/src/Benchmarks/FilePOC/FileSyncServer.Tests/TestResults
+/.yarn/install-state.gz
