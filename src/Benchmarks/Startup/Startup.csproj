@@ -10,9 +10,9 @@
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.28.0" />
-		<PackageReference Include="Grpc.Net.Client" Version="2.65.0" />
-		<PackageReference Include="Grpc.Net.Client.Web" Version="2.65.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.66.0" />
 		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 	</ItemGroup>

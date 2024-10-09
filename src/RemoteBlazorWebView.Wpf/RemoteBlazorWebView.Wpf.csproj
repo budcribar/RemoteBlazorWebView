@@ -43,8 +43,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.Private.Uri" Version="4.3.2" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2739.15" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.82" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.91" />
 	</ItemGroup>
 
 	<ItemGroup>
