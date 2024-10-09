@@ -22,7 +22,7 @@ namespace PeakSWC.RemoteWebView
         private readonly ConcurrentDictionary<string,string> _htmlHostPaths = new();
 
         // Optional: set expiration in seconds using environment variables (default to 10 minutes)
-        private readonly int _cacheTimeoutSeconds = int.TryParse(
+        public readonly int CacheTimeoutSeconds = int.TryParse(
             Environment.GetEnvironmentVariable("CACHE_TIMEOUT_SECONDS"),
             out var timeout) ? timeout : 600;
 
@@ -324,7 +324,7 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     // Wait for the timeout duration
-                    await Task.Delay(_cacheTimeoutSeconds * 1000).ConfigureAwait(false);
+                    await Task.Delay(CacheTimeoutSeconds * 1000).ConfigureAwait(false);
 
                     // If the task is not completed, set an exception
                     if (!tcs.Task.IsCompleted)

@@ -2,100 +2,110 @@
 using System.Diagnostics;
 using System.Text;
 using FluentAssertions;
-using FileSyncServer; // Make sure you have this NuGet package installed
+using System.IO;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using FileSyncServer;
 
 [Collection("Server collection")]
 public class LoadTest
 {
     private readonly ServerFixture _serverFixture;
-    private readonly ClientFixture _clientFixture; // Assuming you have a ClientFixture
+    private readonly ClientFixture _clientFixture;
     private readonly string clientCachePath;
+    private string filePath;
+    private readonly string clientId;
+
     public LoadTest(ClientFixture clientFixture, ServerFixture serverFixture)
     {
         _serverFixture = serverFixture;
         _clientFixture = clientFixture;
+        clientId = _clientFixture.ClientId.ToString();
 
-        // Determine the path to the client's cache directory
         var testDirectory = Directory.GetCurrentDirectory();
-
-        // Ensure test files exist in the client's cache directory under the specific clientId
-        clientCachePath = Path.Combine(testDirectory, "client_cache");
+        clientCachePath = Path.Combine(testDirectory, "client_cache", clientId);
         Directory.CreateDirectory(clientCachePath);
-        var filePath = Path.Combine(clientCachePath, $"maxconcurrenttest.txt");
 
-        StringBuilder fileContent = new StringBuilder();
-
-        for (int i = 1; i <= 1000; i++)
-        {
-            fileContent.AppendLine($"This is line {i} of test.txt");
-        }
-
-        File.WriteAllText(filePath, fileContent.ToString());
-
-        // Verify that both Client and Server processes are running
-        Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
-        Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
+        filePath = Path.Combine(clientCachePath, $"maxconcurrenttest.txt");
+        CreateTestFile(1000);
     }
 
-
+    private void CreateTestFile(int numLines)
+    {
+        using (StreamWriter writer = new StreamWriter(filePath))
+        {
+            for (int i = 1; i <= numLines; i++)
+            {
+                writer.WriteLine($"This is line {i} of test.txt for client {clientId}");
+            }
+        }
+    }
 
     [Fact]
     public async Task FindMaxConcurrentRequests()
     {
         double nonlinearityThreshold = 1.5;
         int timeoutSeconds = 30;
-        string url = Utility.BASE_URL;
-        var clientId = _clientFixture.ClientId;
-        url = $"{url}/{clientId}/maxconcurrenttest.txt"; // Example using test1.txt
+        string baseUrl = Utility.BASE_URL;
+        string testUrl = $"{baseUrl}/{clientId}/maxconcurrenttest.txt";
+
+        // Process checks (consider moving to fixtures)
+        Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
+        Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
+
+        await Utility.SetServerCache(true);
 
         int minConcurrentRequests = 1;
         int maxConcurrentRequests = 1;
-        double previousTime = 0;
-
-        await Utility.SetServerCache(true);
         List<Tuple<int, double>> results = new List<Tuple<int, double>>();
 
         while (true)
         {
-            double averageTime = await MeasureAverageResponseTime(url, maxConcurrentRequests, timeoutSeconds);
-
+            double averageTime = await MeasureAverageResponseTime(testUrl, maxConcurrentRequests, timeoutSeconds);
             results.Add(Tuple.Create(maxConcurrentRequests, averageTime));
 
-            if (averageTime > timeoutSeconds * 1000 || (previousTime > 0 && averageTime > previousTime * nonlinearityThreshold))
+            if (averageTime > timeoutSeconds * 1000)
             {
-                // Timeout occurred or time increased non-linearly
+                Console.WriteLine($"Timeout detected at {maxConcurrentRequests} requests.");
                 break;
             }
 
-            previousTime = averageTime;
-            minConcurrentRequests = maxConcurrentRequests;
-            maxConcurrentRequests *= 2; // Exponential increase in concurrency
+            if (results.Count > 1 && averageTime > results[results.Count - 2].Item2 * nonlinearityThreshold)
+            {
+                Console.WriteLine($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
+                break;
+            }
+
+            maxConcurrentRequests *= 2;
         }
 
-        // Binary search to refine the max concurrent requests (optional, but improves accuracy)
+        minConcurrentRequests = maxConcurrentRequests / 2;
         while (maxConcurrentRequests - minConcurrentRequests > 1)
         {
             int mid = (minConcurrentRequests + maxConcurrentRequests) / 2;
-            double midTime = await MeasureAverageResponseTime(url, mid, timeoutSeconds);
+            double midTime = await MeasureAverageResponseTime(testUrl, mid, timeoutSeconds);
             results.Add(Tuple.Create(mid, midTime));
 
-            if (midTime > timeoutSeconds * 1000 || (previousTime > 0 && midTime > previousTime * nonlinearityThreshold))
+            if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[results.Count - 2].Item2 * nonlinearityThreshold))
             {
                 maxConcurrentRequests = mid;
             }
             else
             {
                 minConcurrentRequests = mid;
-                previousTime = midTime;
             }
         }
 
         string html = CreateHtmlReport(results);
-   
-        File.WriteAllText(Path.Combine(clientCachePath, "report.html"), html);
+        string reportPath = Path.Combine(clientCachePath, "report.html");
+        File.WriteAllText(reportPath, html);
+        Console.WriteLine($"Load test report saved to {reportPath}");
+
+        // Your assertions about maxConcurrentRequests here.
+        // Example: maxConcurrentRequests.Should().BeLessThan(someValue);
     }
-
-
 
 
     private async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
@@ -105,7 +115,6 @@ public class LoadTest
         {
             Headless = true
         });
-
 
         var tasks = new List<Task<double>>();
         var stopwatch = new Stopwatch();
@@ -118,7 +127,7 @@ public class LoadTest
                 stopwatch.Start();
                 var response = await page.GotoAsync(url, new PageGotoOptions
                 {
-                    Timeout = timeoutSeconds * 1000, // Timeout in milliseconds
+                    Timeout = timeoutSeconds * 1000,
                     WaitUntil = WaitUntilState.NetworkIdle
                 });
                 stopwatch.Stop();
@@ -132,63 +141,45 @@ public class LoadTest
         }
         catch (TimeoutException)
         {
-            // Handle timeout
-            return timeoutSeconds * 1000 + 1; // Return a value indicating timeout
+            return timeoutSeconds * 1000 + 1;
         }
 
         return tasks.Select(t => t.Result).Average();
     }
 
-
-
-
     private string CreateHtmlReport(List<Tuple<int, double>> results)
     {
-
         var sb = new StringBuilder();
         sb.AppendLine("<html><head><title>Load Test Results</title></head><body>");
         sb.AppendLine("<h1>Load Test Results</h1>");
         sb.AppendLine("<canvas id=\"myChart\"></canvas>");
 
-
-
-        sb.AppendLine("<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>"); // Include Chart.js
-
+        sb.AppendLine("<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>");
 
         sb.AppendLine("<script>");
         sb.AppendLine("const ctx = document.getElementById('myChart').getContext('2d');");
         sb.AppendLine("const myChart = new Chart(ctx, {");
         sb.AppendLine("    type: 'line',");
         sb.AppendLine("    data: {");
-
-
-        sb.AppendLine($"      labels: [{string.Join(",", results.Select(r => r.Item1))}],"); // Requests
-
-
-
+        sb.AppendLine($"      labels: [{string.Join(",", results.Select(r => r.Item1))}],");
         sb.AppendLine("        datasets: [{");
         sb.AppendLine("            label: 'Response Time (ms)',");
-        sb.AppendLine($"            data: [{string.Join(",", results.Select(r => r.Item2))}],"); // Time
+        sb.AppendLine($"            data: [{string.Join(",", results.Select(r => r.Item2))}],");
         sb.AppendLine("            borderColor: 'rgb(75, 192, 192)',");
         sb.AppendLine("           tension: 0.1");
-
         sb.AppendLine("        }]");
         sb.AppendLine("    },");
         sb.AppendLine("    options: {");
-        sb.AppendLine("        scales: {");
-        sb.AppendLine("            y: {");
-        sb.AppendLine("                beginAtZero: false");  // Allow Y axis to start at non-zero values
-        sb.AppendLine("            }");
-        sb.AppendLine("        }");
-        sb.AppendLine("    }");
+        sb.AppendLine(" scales: {");
+        sb.AppendLine(" y: {");
+        sb.AppendLine(" beginAtZero: false");
+        sb.AppendLine(" }");
+        sb.AppendLine(" }");
+        sb.AppendLine(" }");
         sb.AppendLine("});");
         sb.AppendLine("</script>");
         sb.AppendLine("</body></html>");
 
         return sb.ToString();
     }
-
-
-
-
 }

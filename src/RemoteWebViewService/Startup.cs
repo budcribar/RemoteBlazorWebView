@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using IFileProvider = PeakSwc.StaticFiles.IFileProvider;
 #if AUTHORIZATION
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Client;
 using System.Net.Http;
 using Microsoft.Identity.Web.UI;

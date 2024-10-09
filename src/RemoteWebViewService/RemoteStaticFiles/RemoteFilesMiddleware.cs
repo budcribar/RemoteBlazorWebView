@@ -20,18 +20,21 @@ namespace PeakSWC.RemoteWebView
         private readonly IMemoryCache _memoryCache;
         private readonly ILogger<RemoteFilesMiddleware> _logger;
         private readonly RemoteFileResolver _remoteFileResolver;
+        private readonly ServerFileSyncManager _serverFileSyncManager;
 
         public RemoteFilesMiddleware(
             RequestDelegate next,
             IMemoryCache memoryCache,
             ILogger<RemoteFilesMiddleware> logger,
-            RemoteFileResolver remoteFileResolver
+            RemoteFileResolver remoteFileResolver,
+            ServerFileSyncManager fileSyncManager
            )
         {
             _next = next;
             _memoryCache = memoryCache;
             _logger = logger;
             _remoteFileResolver = remoteFileResolver;
+            _serverFileSyncManager = fileSyncManager;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -160,7 +163,6 @@ namespace PeakSWC.RemoteWebView
                 clientMetadata = await _remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath);
                 FileStats.Update(serviceState, clientGuid.ToString(), clientMetadata);
                 ILogger<RemoteWebViewService> logger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
-                //logger.LogCritical($"Read {serviceState.TotalFilesRead} file {subPath}");
             }
             catch (Exception ex)
             {
@@ -181,7 +183,6 @@ namespace PeakSWC.RemoteWebView
             bool needsUpdate = false;
             FileMetadata? serverMetadata = null;
 
-            // Step 2: Check if server cache is enabled and retrieve server metadata
             // Step 2: Check if server cache is enabled and retrieve server metadata
             if (options.UseServerCache && _memoryCache.TryGetValue(subPath, out serverMetadata))
             {
@@ -247,10 +248,10 @@ namespace PeakSWC.RemoteWebView
 
                         // Update metadata in cache
                        
-                        _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromMinutes(10));
+                        _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
 
                         // Cache the data
-                        _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromMinutes(10));
+                        _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
 
                         // Write the data to the response
                         memStream.Position = 0;
@@ -301,10 +302,10 @@ namespace PeakSWC.RemoteWebView
                             memStream.Position = 0;
 
                             // Update metadata in cache
-                            _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromMinutes(10));
+                            _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
 
                             // Cache the data
-                            _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromMinutes(10));
+                            _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
 
                             // Write the data to the response
                             memStream.Position = 0;
