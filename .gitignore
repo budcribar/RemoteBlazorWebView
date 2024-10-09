@@ -54,3 +54,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /testassets/NUnitTestProject/TestResults
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb.js
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb_service.js
+/src/Benchmarks/FilePOC/Client/publish
+/src/Benchmarks/FilePOC/Server/publish
