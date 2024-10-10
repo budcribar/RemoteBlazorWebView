@@ -8,6 +8,7 @@ using Microsoft.Extensions.FileProviders;
 using PhotinoNET;
 using Photino.Blazor;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteBlazorWebView;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -35,7 +36,7 @@ namespace PeakSWC.RemoteWebView
             RemoteWebView.OnWebMessageReceived += RemoteOnWebMessageReceived;
             //RemoteWebView.Initialize();
 
-            this.url = new Uri("https://0.0.0.0/");
+            this.url = new Uri($"https://{HostAddressHelper.GetAppHostAddress()}/");
         }
 
         private void RemoteOnWebMessageReceived(object? sender, string e)

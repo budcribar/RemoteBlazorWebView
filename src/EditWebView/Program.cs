@@ -1,4 +1,5 @@
 using EditWebView;
+using System.IO;
 
 class Program
 {
@@ -88,6 +89,11 @@ class Program
         Console.WriteLine($"Copying Web.JS files from {webJSource} to {webJSTarget}");
         Utility.DeleteDirectoryAndContents(webJSTarget);
         Utility.CopyDirectory(webJSource, webJSTarget);
+        string filePath = Path.Combine(webJSTarget, "yarn.lock");
+        using (File.Create(filePath))
+        {
+            Console.WriteLine($"Empty yarn.lock file created at: {filePath}");
+        }
     }
 
     static void ProcessFiles(string inputDir, string outputDir)
