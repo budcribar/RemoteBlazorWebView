@@ -15,6 +15,32 @@ Write-Host -ForegroundColor GREEN ("Build:",$Build)
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
+# Check if the process is running
+$process = Get-Process -Name RemoteWebViewService -ErrorAction SilentlyContinue
+
+if ($process) {
+    Write-Host  -ForegroundColor YELLOW "Stopping RemoteWebViewService"
+    Stop-Process -Name RemoteWebViewService -Force
+} else {
+    Write-Host -ForegroundColor GREEN "RemoteWebViewService is not running"
+}
+
+# Check if visual studio is running. It will prevent remote.blazor.desktop.js from building in production mode
+$process = Get-Process -Name devenv -ErrorAction SilentlyContinue
+if ($process) {
+    Write-Host  -ForegroundColor RED "Cannot run tests with Visual Studio running"
+    exit 1
+}
+# Check if the process is running
+$process = Get-Process -Name Client -ErrorAction SilentlyContinue
+
+if ($process) {
+    Write-Host  -ForegroundColor YELLOW "Stopping Client"
+    Stop-Process -Name Client -Force
+} else {
+    Write-Host -ForegroundColor GREEN "Client is not running"
+}
+
 # Get the current Node.js version
 $currentVersion = node -v
 
@@ -109,6 +135,7 @@ if ($Rust -eq $true)
     Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 	# Publish the web site server
 	dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+    New-Item -Path "src\RemoteWebViewService\bin\publishNoAuth\wwwroot" -ItemType Directory
 	dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
 	dotnet build -c Release .\src\RemoteWebViewService
@@ -183,11 +210,20 @@ dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebVi
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
-if ($Build -ne $true)
-{
-	dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=logFile.html" 
-	Invoke-Expression testassets\NUnitTestProject\TestResults\logFile.html
+if ($Build -ne $true) {
+    
+    # Generate a timestamp
+    $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+
+    # Run the second test
+    $logfile2 = "WebDriverTestLog_$timestamp.html"
+    dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=$logfile2"
+
+    # Open the second log file in the default browser
+    $logfilePath2 = Resolve-Path "testassets\NUnitTestProject\TestResults\$logfile2"
+    Start-Process $logfilePath2
 }
+
 
 # zip up files for github
 $compress = @{

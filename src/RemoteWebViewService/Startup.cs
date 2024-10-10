@@ -21,6 +21,8 @@ using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+
 #if AUTHORIZATION
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Configuration;
