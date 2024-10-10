@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView;
@@ -120,8 +122,53 @@ public class StaticFileMiddleware
         return false;
     }
 
+    private (string path, Guid guid) ParsePathAndGuid(string path, string referrer)
+    {
+        string subPath;
+
+        var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        if (pathSegments?.Length > 0)
+        {
+            string clientIdString = pathSegments[0];
+            if (Guid.TryParse(clientIdString, out var clientId))
+            {
+                subPath = string.Join('/', pathSegments.Skip(1));
+                return (subPath, clientId);
+            }
+            // getClientId from referrer
+
+            var referrerSegments = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
+            if (referrerSegments?.Length > 2)
+            {
+                clientIdString = referrerSegments[2];
+                if (Guid.TryParse(clientIdString, out clientId))
+                    return (path[1..], clientId);
+            }
+
+        }
+        var referrerSegments2 = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
+        if (referrerSegments2?.Length > 0)
+        {
+
+            if (Guid.TryParse(referrerSegments2[0], out var clientId2))
+                return (path, clientId2);
+        }
+
+        // can't find guid
+        return (path, Guid.Empty);
+
+    }
+
     private Task TryServeStaticFile(HttpContext context, string? contentType, PathString subPath)
     {
+        var referrer = context.Request.Headers.TryGetValue(HeaderNames.Referer, out var referrerValues)
+               ? referrerValues.FirstOrDefault() ?? string.Empty
+               : string.Empty;
+
+        var png = ParsePathAndGuid(subPath, referrer);
+        subPath = $"/{png.guid}/{png.path}";
+
         var fileContext = new StaticFileContext(context, _options, _logger, _fileProvider, contentType, subPath);
 
         if (!fileContext.LookupFileInfo())
