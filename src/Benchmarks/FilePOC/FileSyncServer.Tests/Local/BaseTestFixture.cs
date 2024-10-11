@@ -17,15 +17,16 @@ namespace WebdriverTestProject
         public IPage Page { get; private set; }
         public Process? AppProcess { get; private set; }
 
-        protected string AppExecutablePath { get; }
+        protected string AppExecutablePath { get; set; }
 
         private const int RemoteDebuggingPort = 9222;
         private readonly TimeSpan BrowserWsTimeout = TimeSpan.FromSeconds(15); // Increased timeout for reliability
 
-        public BaseTestFixture (string path)
-        {
-            AppExecutablePath = path;
-        }
+        protected BaseTestFixture() { }
+        //protected BaseTestFixture (string path)
+        //{
+        //    AppExecutablePath = path;
+        //}
 
         public async Task InitializeAsync()
         {

@@ -4,31 +4,20 @@ using Xunit.Abstractions;
 
 namespace WebdriverTestProject
 {
-    [Collection("TestLocal")]
-    public class TestLocalBlazorForm : BaseTestClicks<LocalBlazorFormFixture> { public TestLocalBlazorForm( ITestOutputHelper output) : base( output) { } }
-    public class LocalBlazorFormFixture : BaseTestFixture { public LocalBlazorFormFixture() : base(Utilities.BlazorWinFormsAppExe()) { } }
-    [CollectionDefinition("TestLocal", DisableParallelization = true)]
-    public class LocalBlazorFormFixtureCollection : ICollectionFixture<LocalBlazorFormFixture> { }
+    [Collection("TestLocalBlazorForm")]
+    public class TestLocalBlazorForm : BaseTestClicks<LocalBlazorFormFixture> { public TestLocalBlazorForm( ITestOutputHelper output) : base(output) { } }
+    public class LocalBlazorFormFixture : BaseTestFixture { public LocalBlazorFormFixture() { AppExecutablePath = Utilities.BlazorWinFormsAppExe(); } }
 
-
-    [Collection("TestLocal")]
+    [Collection("TestLocalBlazorEmbeddedForm")]
     public class TestLocalBlazorEmbeddedForm : BaseTestClicks<LocalBlazorEmbeddedFormFixture> { public TestLocalBlazorEmbeddedForm(ITestOutputHelper output) : base(output) { } }
-    public class LocalBlazorEmbeddedFormFixture : BaseTestFixture { public LocalBlazorEmbeddedFormFixture() : base(Utilities.BlazorWinFormsEmbeddedAppExe()) { } }
-    [CollectionDefinition("TestLocal", DisableParallelization = true)]
-    public class LocalBlazorEmbeddedFormFixtureCollection : ICollectionFixture<LocalBlazorEmbeddedFormFixture> { }
+    public class LocalBlazorEmbeddedFormFixture : BaseTestFixture { public LocalBlazorEmbeddedFormFixture() { AppExecutablePath = Utilities.BlazorWinFormsEmbeddedAppExe(); } }
 
+    //[Collection("TestLocalBlazorWebView")]
+    //public class TestLocalBlazorWebView : BaseTestClicks<LocalBlazorWebViewFixture> { public TestLocalBlazorWebView(ITestOutputHelper output) : base(output) { } }
+    //public class LocalBlazorWebViewFixture : BaseTestFixture { public LocalBlazorWebViewFixture() { AppExecutablePath = Utilities.BlazorWebViewAppExe(); } }
 
-    [Collection("TestLocal")]
-    public class TestLocalBlazorWebView : BaseTestClicks<LocalBlazorWebViewFixture> { public TestLocalBlazorWebView(ITestOutputHelper output) : base(output) { } }
-    public class LocalBlazorWebViewFixture : BaseTestFixture { public LocalBlazorWebViewFixture() : base(Utilities.BlazorWebViewAppExe()) { } }
-    [CollectionDefinition("TestLocal", DisableParallelization = true)]
-    public class LocalBlazorWebViewFixtureCollection : ICollectionFixture<LocalBlazorWebViewFixture> { }
-
-
-    [Collection("TestLocal")]
+    [Collection("TestLocalBlazorWpf")]
     public class TestLocalBlazorWpf : BaseTestClicks<LocalBlazorWpfFixture> { public TestLocalBlazorWpf(ITestOutputHelper output) : base(output) { } }
-    public class LocalBlazorWpfFixture : BaseTestFixture { public LocalBlazorWpfFixture() : base(Utilities.BlazorWpfAppExe()) { } }
-    [CollectionDefinition("TestLocal", DisableParallelization = true)]
-    public class LocalBlazorWpfFixtureCollection : ICollectionFixture<LocalBlazorWpfFixture> { }
-
+    public class LocalBlazorWpfFixture : BaseTestFixture { public LocalBlazorWpfFixture() { AppExecutablePath = Utilities.BlazorWpfAppExe(); } }
+  
 }

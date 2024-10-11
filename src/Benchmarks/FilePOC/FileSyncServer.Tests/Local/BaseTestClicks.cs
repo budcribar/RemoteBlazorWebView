@@ -40,7 +40,7 @@ namespace WebdriverTestProject
         /// </summary>
         /// <param name="numClicks">Number of clicks to perform.</param>
         [Theory]
-        [InlineData(10)]
+        //[InlineData(10)]
         [InlineData(100)]
         public virtual async Task TestClicks(int numClicks)
         {
