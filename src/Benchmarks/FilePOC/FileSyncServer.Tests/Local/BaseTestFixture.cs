@@ -89,7 +89,7 @@ namespace WebdriverTestProject
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = false,
-                WorkingDirectory = Path.GetDirectoryName(AppExecutablePath)
+                WorkingDirectory = Path.GetFullPath(Path.GetDirectoryName(AppExecutablePath)??"")
             };
 
             // Set the environment variable for remote debugging
@@ -100,8 +100,6 @@ namespace WebdriverTestProject
             {
                 throw new InvalidOperationException("Failed to start the application process.");
             }
-
-            //Directory.SetCurrentDirectory(Path.GetDirectoryName(AppExecutablePath) ?? string.Empty);
 
             return process;
         }
