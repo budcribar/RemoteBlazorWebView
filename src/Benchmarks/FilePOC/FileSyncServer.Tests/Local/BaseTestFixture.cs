@@ -1,4 +1,4 @@
-﻿// TestBlazorFormFixture.cs
+﻿// BaseTestFixture.cs
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -10,38 +10,53 @@ using Xunit;
 
 namespace WebdriverTestProject
 {
-    public class TestBlazorFormFixture : IAsyncLifetime
+    public abstract class BaseTestFixture : IAsyncLifetime
     {
         public IPlaywright PlaywrightInstance { get; private set; }
         public IBrowser Browser { get; private set; }
         public IPage Page { get; private set; }
-        public Process? BlazorAppProcess { get; private set; }
-        public string AppExecutablePath { get; private set; } = Utilities.BlazorWinFormsAppExe();
+        public Process? AppProcess { get; private set; }
+
+        protected abstract string AppExecutablePath { get; }
+
+        private const int RemoteDebuggingPort = 9222;
+        private readonly TimeSpan BrowserWsTimeout = TimeSpan.FromSeconds(15); // Increased timeout for reliability
 
         public async Task InitializeAsync()
         {
-            // Start the Blazor desktop application with remote debugging enabled
-            BlazorAppProcess = StartBlazorApp();
-
-            // Allow some time for the application to initialize and WebView2 to start
-            //await Task.Delay(5000); // Adjust the delay as necessary based on app startup time
+            // Start the application with remote debugging enabled
+            AppProcess = StartApplication();
 
             // Initialize Playwright
             PlaywrightInstance = await Playwright.CreateAsync();
 
-            // Retrieve the WebSocket Debugger URL
-            var browserWSUrl = await GetBrowserWebSocketUrlAsync(9222, TimeSpan.FromSeconds(20));
-            if (string.IsNullOrEmpty(browserWSUrl))
+            // Retrieve the WebSocket Debugger URL, waiting until it's available
+            var browserWsUrl = await GetBrowserWebSocketUrlAsync(RemoteDebuggingPort, BrowserWsTimeout);
+            if (string.IsNullOrEmpty(browserWsUrl))
             {
                 throw new InvalidOperationException("Failed to retrieve the WebSocket URL for Playwright to connect.");
             }
 
-            // Connect Playwright to the existing WebView2 instance
-            Browser = await PlaywrightInstance.Chromium.ConnectOverCDPAsync(browserWSUrl);
+            // Connect Playwright to the existing WebView2 instance via CDP
+            Browser = await PlaywrightInstance.Chromium.ConnectOverCDPAsync(browserWsUrl);
 
-            var c = Browser.Contexts.ToList();
-            Page = c.First().Pages.First();
+            // Access existing contexts and pages
+            var contexts = Browser.Contexts.ToList();
+            if (contexts.Count == 0)
+            {
+                throw new InvalidOperationException("No browser contexts found in the connected WebView2 instance.");
+            }
 
+            var pages = contexts[0].Pages.ToList();
+            if (pages.Count == 0)
+            {
+                throw new InvalidOperationException("No pages found in the first browser context.");
+            }
+
+            Page = pages[0];
+
+            // Optional: Verify that the page has loaded expected content
+            // await Page.WaitForSelectorAsync("selector-for-some-element");
         }
 
         public async Task DisposeAsync()
@@ -50,29 +65,31 @@ namespace WebdriverTestProject
             await Browser.CloseAsync();
             PlaywrightInstance.Dispose();
 
-            // Kill the Blazor application process
-            if (BlazorAppProcess != null && !BlazorAppProcess.HasExited)
+            // Terminate the application process
+            if (AppProcess != null && !AppProcess.HasExited)
             {
-                BlazorAppProcess.Kill();
-                BlazorAppProcess.WaitForExit();
+                AppProcess.Kill();
+                AppProcess.WaitForExit();
             }
         }
 
-        private Process StartBlazorApp()
+        // Method to start the application with remote debugging enabled
+        private Process StartApplication()
         {
             if (!File.Exists(AppExecutablePath))
             {
-                throw new FileNotFoundException($"Blazor application executable not found at {AppExecutablePath}");
+                throw new FileNotFoundException($"Application executable not found at path: {AppExecutablePath}");
             }
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = Path.GetFullPath( AppExecutablePath),
-                Arguments = "", // Add any necessary arguments
+                FileName = Path.GetFullPath(AppExecutablePath),
+                Arguments = "", // Add any necessary command-line arguments
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true
+                CreateNoWindow = false,
+                WorkingDirectory = Path.GetDirectoryName(AppExecutablePath)
             };
 
             // Set the environment variable for remote debugging
@@ -81,12 +98,15 @@ namespace WebdriverTestProject
             var process = Process.Start(startInfo);
             if (process == null)
             {
-                throw new InvalidOperationException("Failed to start the Blazor application process.");
+                throw new InvalidOperationException("Failed to start the application process.");
             }
+
+            //Directory.SetCurrentDirectory(Path.GetDirectoryName(AppExecutablePath) ?? string.Empty);
 
             return process;
         }
 
+        // Method to retrieve the WebSocket Debugger URL
         private async Task<string?> GetBrowserWebSocketUrlAsync(int port, TimeSpan timeout)
         {
             var httpClient = new HttpClient();
@@ -113,10 +133,11 @@ namespace WebdriverTestProject
                     // Ignore exceptions and retry
                 }
 
-                await Task.Delay(100);
+                await Task.Delay(100); // Reduced delay between retries for faster responsiveness
             }
 
             return null;
         }
+
     }
 }

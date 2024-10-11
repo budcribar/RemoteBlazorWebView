@@ -9,6 +9,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="BaseTestFixture.cs" />
+	  <Compile Remove="Local\TestBlazorFormFixtureOld.cs" />
+	  <Compile Remove="Local\TestLocalBlazorFormOld.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Local\BaseTestFixture.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		<PackageReference Include="coverlet.collector" Version="6.0.2" />
 		<PackageReference Include="FluentAssertions" Version="6.12.1" />

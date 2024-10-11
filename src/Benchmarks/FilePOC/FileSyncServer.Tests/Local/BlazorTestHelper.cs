@@ -1,35 +1,29 @@
-﻿// TestLocalBlazorForm.cs
+﻿// BlazorTestHelper.cs
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace WebdriverTestProject
 {
-    public class TestLocalBlazorForm : IClassFixture<TestBlazorFormFixture>
+    public class BlazorTestHelper
     {
-        private readonly TestBlazorFormFixture _fixture;
+        private readonly IPage _page;
         private readonly ITestOutputHelper _output;
 
-        public TestLocalBlazorForm(TestBlazorFormFixture fixture, ITestOutputHelper output)
+        public BlazorTestHelper(IPage page, ITestOutputHelper output)
         {
-            _fixture = fixture;
+            _page = page;
             _output = output;
         }
 
-        [Theory]
-        [InlineData(10)]
-        [InlineData(100)]
         public async Task TestClicks(int numClicks)
         {
-            var page = _fixture.Page;
-
             try
             {
-                // Example: Click on a link or button labeled "Counter"
-                await page.ClickAsync("text=Counter");
+                // Navigate to the Counter component
+                await _page.ClickAsync("text=Counter");
                 _output.WriteLine("Clicked on the 'Counter' link.");
             }
             catch (Exception ex)
@@ -39,17 +33,17 @@ namespace WebdriverTestProject
             }
 
             // Wait for the Counter component to load
-            await page.WaitForSelectorAsync("h1:text('Counter')");
+            await _page.WaitForSelectorAsync("h1:text('Counter')");
 
             // Locate the increment button and the paragraph displaying the count
-            var incrementButton = page.Locator("button:has-text('Click me')");
-            var countParagraph = page.Locator("p");
+            var incrementButton = _page.Locator("button:has-text('Click me')");
+            var countParagraph = _page.Locator("p");
 
             // Ensure elements are visible
             await incrementButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             await countParagraph.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-            // Perform clicks
+            // Perform clicks without delay
             Stopwatch sw = Stopwatch.StartNew();
             for (int i = 0; i < numClicks; i++)
             {
@@ -65,7 +59,17 @@ namespace WebdriverTestProject
             // Assert that the count contains the expected number
             Assert.Contains($"{numClicks}", countText);
 
-            await page.ClickAsync("text=Home");
-        }  
+            // Navigate back to the Home page
+            try
+            {
+                await _page.ClickAsync("text=Home");
+                _output.WriteLine("Navigated back to the 'Home' page.");
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine($"Error navigating back to 'Home' page: {ex.Message}");
+                throw;
+            }
+        }
     }
 }
