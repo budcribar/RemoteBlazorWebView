@@ -303,37 +303,22 @@ namespace WebdriverTestProject
             // Click on the "Counter" link for each page
             for (int i = 0; i < num; i++)
             {
-                bool clicked = false;
-                for (int j = 0; j < NumLoopsWaitingForPageLoad; j++)
-                {
-                    try
-                    {
-                        var link = await Pages[i].QuerySelectorAsync("text=Counter");
-                        if (link != null)
-                        {
-                            await link.ClickAsync();
-                            //await Task.Delay(100);
-                            clicked = true;
-                            break;
-                        }
-                    }
-                    catch (Exception) { }
-                    //await Task.Delay(100);
-                }
+                var linkLocator = Pages[i].Locator("text=Counter");
+                await linkLocator.ClickAsync();
 
-                Assert.True(clicked, $"Failed to click 'Counter' link on client {i + 1}");
-                await Pages[i].WaitForSelectorAsync("h1:text('Counter')");
+                // Wait for the header to appear, indicating navigation
+                var headerLocator = Pages[i].Locator("h1:text('Counter')");
+                await headerLocator.WaitForAsync(new LocatorWaitForOptions
+                {
+                    State = WaitForSelectorState.Visible,
+                    Timeout = 5000
+                });
             }
 
             Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
 
-            //await Task.Delay(3000);
-
             List<ILocator> buttons = new();
             List<ILocator> paragraphs = new();
-
-           
-           // await countParagraph.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
             for (int i = 0; i < num; i++)
             {
