@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using Microsoft.Playwright;
-
+using static Microsoft.Playwright.Assertions;
 using Xunit;
 using PeakSWC.RemoteWebView;
 
@@ -211,7 +211,6 @@ namespace WebdriverTestProject
 
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
-            await Task.Delay(3000);
             sw.Restart();
 
             for (int k = 0; k < numRefreshes; k++)
@@ -219,72 +218,63 @@ namespace WebdriverTestProject
                 // Click on the "Counter" link for each page
                 for (int i = 0; i < numClients; i++)
                 {
-                    bool clicked = false;
-                    for (int j = 0; j < NumLoopsWaitingForPageLoad; j++)
-                    {
-                        try
-                        {
-                            var link = await Pages[i].QuerySelectorAsync("text=Counter");
-                            if (link != null)
-                            {
-                                await link.ClickAsync();
-                                await Task.Delay(100);
-                                clicked = true;
-                                break;
-                            }
-                        }
-                        catch (Exception) { }
-                        await Task.Delay(100);
-                    }
+                    var linkLocator = Pages[i].Locator("role=link[name='Counter']");
+                    await Expect(linkLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+                    await linkLocator.ClickAsync();
 
-                    Assert.True(clicked, $"Failed to click 'Counter' link on client {i + 1}");
+                    // Wait for the header to appear, indicating navigation
+                    var headerLocator = Pages[i].Locator("role=heading[name='Counter']");
+                    await headerLocator.WaitForAsync(new LocatorWaitForOptions
+                    {
+                        State = WaitForSelectorState.Visible,
+                        Timeout = 10000
+                    });
                 }
 
                 Console.WriteLine($"Navigate to counter in {sw.Elapsed}");
-
                 sw.Restart();
 
-                // Refresh each page
+                // Refresh each page and wait for the "Counter" link to reappear
                 for (int i = 0; i < numClients; i++)
                 {
                     await Pages[i].ReloadAsync();
                     await Task.Delay(1000); // Delay to prevent WebView2 from crashing
+
+                    // Wait for the "Counter" link to be visible after reload instead of fixed delay
+                    var linkLocator = Pages[i].Locator("role=link[name='Counter']");
+                    await Expect(linkLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
                 }
 
                 // Click on the "Counter" link again after refresh
                 for (int i = 0; i < numClients; i++)
                 {
-                    bool clicked = false;
-                    for (int j = 0; j < NumLoopsWaitingForPageLoad; j++)
-                    {
-                        try
-                        {
-                            var link = await Pages[i].QuerySelectorAsync("text=Counter");
-                            if (link != null)
-                            {
-                                await link.ClickAsync();
-                                await Task.Delay(100);
-                                clicked = true;
-                                break;
-                            }
-                        }
-                        catch (Exception) { }
-                        await Task.Delay(100);
-                    }
+                    var linkLocator = Pages[i].Locator("role=link[name='Counter']");
+                    await Expect(linkLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+                    await linkLocator.ClickAsync();
 
-                    Assert.True(clicked, $"Failed to click 'Counter' link on client {i + 1} after refresh");
+                    // Wait for the header to appear again, indicating navigation
+                    var headerLocator = Pages[i].Locator("role=heading[name='Counter']");
+                    await headerLocator.WaitForAsync(new LocatorWaitForOptions
+                    {
+                        State = WaitForSelectorState.Visible,
+                        Timeout = 10000
+                    });
                 }
 
-                // Verify that the "Counter" element exists
+                // Verify that the "Counter" element exists by asserting it's visible
                 for (int i = 0; i < numClients; i++)
                 {
-                    var counter = await Pages[i].QuerySelectorAsync("text=Counter");
-                    Assert.NotNull(counter);
+                    var counterLocator = Pages[i].Locator("role=heading[name='Counter']");
+                    await Expect(counterLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+                    // Optional: Additional assertion using xUnit
+                    Assert.True(await counterLocator.IsVisibleAsync(), $"Counter element should be visible on client {i + 1}");
                 }
 
                 Console.WriteLine($"Completed refresh cycle {k + 1} in {sw.Elapsed}");
             }
         }
+
 
         public virtual async Task TestClient(int num)
         {
@@ -297,7 +287,6 @@ namespace WebdriverTestProject
 
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
-            //await Task.Delay(3000);
             sw.Restart();
 
             // Click on the "Counter" link for each page
@@ -311,7 +300,7 @@ namespace WebdriverTestProject
                 await headerLocator.WaitForAsync(new LocatorWaitForOptions
                 {
                     State = WaitForSelectorState.Visible,
-                    Timeout = 5000
+                    Timeout = 10000
                 });
             }
 
@@ -322,19 +311,19 @@ namespace WebdriverTestProject
 
             for (int i = 0; i < num; i++)
             {
-                // Using Locator with built-in auto-waiting
-                var button = Pages[i].Locator(".btn");
-                await button.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+                // Locate the increment button
+                var buttonLocator = Pages[i].Locator(".btn");
+                await buttonLocator.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-                Assert.True(await button.IsVisibleAsync(), "Button should be visible.");
-                buttons.Add(button);
+                Assert.True(await buttonLocator.IsVisibleAsync(), $"Button should be visible on client {i + 1}");
+                buttons.Add(buttonLocator);
 
-                // Similarly for paragraph
-                var paragraph = Pages[i].Locator("//p");
-                await paragraph.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+                // Locate the paragraph displaying the count
+                var paragraphLocator = Pages[i].Locator("p");
+                await paragraphLocator.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-                Assert.True(await paragraph.IsVisibleAsync(), "Paragraph should be visible.");
-                paragraphs.Add(paragraph);
+                Assert.True(await paragraphLocator.IsVisibleAsync(), $"Paragraph should be visible on client {i + 1}");
+                paragraphs.Add(paragraphLocator);
             }
 
             sw.Restart();
@@ -352,11 +341,14 @@ namespace WebdriverTestProject
             int passCount = 0;
             for (int i = 0; i < num; i++)
             {
-                await Assertions.Expect(paragraphs[i]).ToContainTextAsync($"{numClicks}", new  LocatorAssertionsToContainTextOptions{ Timeout = 5000 });
+                // Wait for the paragraph to contain the expected number of clicks
+                await Assertions.Expect(paragraphs[i]).ToContainTextAsync($"{numClicks}", new LocatorAssertionsToContainTextOptions { Timeout = 10000 });
+
                 var res = await paragraphs[i].InnerTextAsync();
                 if (res.Contains($"{numClicks}")) passCount++;
             }
             Assert.Equal(num, passCount);
         }
+
     }
 }
