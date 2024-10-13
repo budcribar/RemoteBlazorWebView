@@ -1,17 +1,19 @@
 ﻿// TestRemoteBlazorWpf.cs
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace WebdriverTestProject
 {
     [Collection("RemoteBlazorWpf Collection")]
-    public class TestRemoteBlazorWpf : IClassFixture<RemoteBlazorWpfFixture>
+    public class BaseTestRemote<T> : IAsyncLifetime where T : BaseTestRemoteFixture, new()
     {
-        private readonly RemoteBlazorWpfFixture _fixture;
+        private readonly T _fixture = new T();
+        protected readonly ITestOutputHelper Output;
 
-        public TestRemoteBlazorWpf(RemoteBlazorWpfFixture fixture)
+        public BaseTestRemote(ITestOutputHelper output)
         {
-            _fixture = fixture;
+            Output = output;
         }
 
         [Fact]
@@ -36,6 +38,16 @@ namespace WebdriverTestProject
         public async Task Test5Client()
         {
             await _fixture.TestClient(5);
+        }
+
+        public virtual async Task InitializeAsync()
+        {
+            await _fixture.InitializeAsync();
+        }
+
+        public async Task DisposeAsync()
+        {
+            await _fixture.DisposeAsync();
         }
     }
 }

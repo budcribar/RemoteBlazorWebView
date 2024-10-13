@@ -14,10 +14,10 @@ using PeakSWC.RemoteWebView;
 
 namespace WebdriverTestProject
 {
-    public class RemoteBlazorWpfFixture : IAsyncLifetime, IDisposable
+    public class BaseTestRemoteFixture : IAsyncLifetime, IDisposable
     {
-        public IPlaywright PlaywrightInstance { get; private set; }
-        public IBrowser Browser { get; private set; }
+        public IPlaywright PlaywrightInstance { get; private set; } = default!;
+        public IBrowser Browser { get; private set; } = default!;
         public List<IPage> Pages { get; private set; } = new();
         public string Url { get; } = @"https://localhost:5001/";
         public string GrpcUrl { get; private set; } = @"https://localhost:5001/";
@@ -27,14 +27,16 @@ namespace WebdriverTestProject
         public List<Process> Clients { get; private set; } = new();
         public int NumLoopsWaitingForPageLoad { get; } = 200;
 
-        public RemoteBlazorWpfFixture()
+        protected Func<string,string,Process> ClientExecutablePath { get; set; } = default!;
+
+        public BaseTestRemoteFixture()
         {
             // Default constructor without ITestOutputHelper
         }
 
         public virtual Process CreateClient(string url, string id)
         {
-            return Utilities.StartRemoteBlazorWpfApp(url, id);
+            return ClientExecutablePath!.Invoke(url, id);
         }
 
         public virtual void KillClient()

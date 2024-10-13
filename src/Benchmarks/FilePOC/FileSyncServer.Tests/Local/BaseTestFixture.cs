@@ -17,16 +17,12 @@ namespace WebdriverTestProject
         public IPage Page { get; private set; }
         public Process? AppProcess { get; private set; }
 
-        protected string AppExecutablePath { get; set; }
+        protected string ClientExecutablePath { get; set; }
 
         private const int RemoteDebuggingPort = 9222;
         private readonly TimeSpan BrowserWsTimeout = TimeSpan.FromSeconds(15); // Increased timeout for reliability
 
         protected BaseTestFixture() { }
-        //protected BaseTestFixture (string path)
-        //{
-        //    AppExecutablePath = path;
-        //}
 
         public async Task InitializeAsync()
         {
@@ -82,20 +78,20 @@ namespace WebdriverTestProject
         // Method to start the application with remote debugging enabled
         private Process StartApplication()
         {
-            if (!File.Exists(AppExecutablePath))
+            if (!File.Exists(ClientExecutablePath))
             {
-                throw new FileNotFoundException($"Application executable not found at path: {AppExecutablePath}");
+                throw new FileNotFoundException($"Application executable not found at path: {ClientExecutablePath}");
             }
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = Path.GetFullPath(AppExecutablePath),
+                FileName = Path.GetFullPath(ClientExecutablePath),
                 Arguments = "", // Add any necessary command-line arguments
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = false,
-                WorkingDirectory = Path.GetFullPath(Path.GetDirectoryName(AppExecutablePath)??"")
+                WorkingDirectory = Path.GetFullPath(Path.GetDirectoryName(ClientExecutablePath)??"")
             };
 
             // Set the environment variable for remote debugging
