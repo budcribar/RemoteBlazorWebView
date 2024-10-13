@@ -42,12 +42,14 @@ namespace WebdriverTestProject
         public virtual void KillClient()
         {
             Utilities.KillRemoteBlazorWpfApp();
+            Utilities.KillBlazorWinFormsApp();
+            Utilities.KillRemoteBlazorWebViewApp();
         }
 
-        public virtual int CountClients()
-        {
-            return Utilities.CountRemoteBlazorWpfApp();
-        }
+        //public virtual int CountClients()
+        //{
+        //    return Utilities.CountRemoteBlazorWpfApp();
+        //}
 
         public virtual Process StartServer()
         {

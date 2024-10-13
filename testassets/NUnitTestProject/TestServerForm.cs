@@ -16,7 +16,7 @@ namespace WebdriverTestProject
 {
 
     [TestClass]
-    public class TestServerForm : TestRemoteBlazorForm
+    public class TestServerForm : TestRemoteBlazorWebView
     {
         private ClientIPC.ClientIPCClient? client;
 

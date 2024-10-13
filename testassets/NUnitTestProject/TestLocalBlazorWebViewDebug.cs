@@ -3,7 +3,7 @@
 namespace WebdriverTestProject
 {
     [TestClass]
-    public class TestLocalBlazorWebViewDebug : TestLocalBlazorForm
+    public class TestLocalBlazorWebViewDebug : TestLocalBlazorWebView
     {
         public override string BinaryLocation()
         {

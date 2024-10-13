@@ -14,7 +14,7 @@ using System.Net.Http;
 namespace WebdriverTestProject
 {
     [TestClass]
-    public class TestServerWpf : TestRemoteBlazorWpf
+    public class TestServerWpf : TestRemoteEmbeddedBlazorWebView
     {
         private ClientIPC.ClientIPCClient? client;
 

@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace WebdriverTestProject
 {
    [TestClass]
-    public class TestRemoteBlazorWebView : TestRemoteBlazorWpf
+    public class TestRemoteBlazorWebView : TestRemoteEmbeddedBlazorWebView
     {
         public override Process CreateClient(string url, string pid)
         {
