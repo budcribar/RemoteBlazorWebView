@@ -7,6 +7,7 @@ using Xunit.Abstractions;
 
 namespace WebdriverTestProject
 {
+    #region WPF
     [Collection("TestRemoteBlazorWpf")]
     public class TestRemoteBlazorWpf : BaseTestRemote<RemoteBlazorWpfFixture> { public TestRemoteBlazorWpf(ITestOutputHelper output) : base(output) { } }
     public class RemoteBlazorWpfFixture : BaseTestRemoteFixture { public RemoteBlazorWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfApp; } }
@@ -14,8 +15,12 @@ namespace WebdriverTestProject
     [Collection("TestRemoteBlazorDebugWpf")]
     public class TestRemoteBlazorDebugWpf : BaseTestRemote<RemoteBlazorDebugWpfFixture> { public TestRemoteBlazorDebugWpf(ITestOutputHelper output) : base(output) { } }
     public class RemoteBlazorDebugWpfFixture : BaseTestRemoteFixture { public RemoteBlazorDebugWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfDebugApp; } }
+    [Collection("TestRemoteEmbeddedBlazorWpf")]
+    public class TestRemoteEmbeddedBlazorWpf : BaseTestRemote<TestRemoteEmbeddedBlazorWpfFixture> { public TestRemoteEmbeddedBlazorWpf(ITestOutputHelper output) : base(output) { } }
+    public class TestRemoteEmbeddedBlazorWpfFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfEmbeddedApp; } }
+    #endregion
 
-
+    #region Form
     [Collection("TestRemoteBlazorForm")]
     public class TestRemoteBlazorForm : BaseTestRemote<TestRemoteBlazorFormFixture> { public TestRemoteBlazorForm(ITestOutputHelper output) : base(output) { } }
     public class TestRemoteBlazorFormFixture : BaseTestRemoteFixture { public TestRemoteBlazorFormFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWinFormsApp; } }
@@ -27,11 +32,20 @@ namespace WebdriverTestProject
     [Collection("TestRemoteEmbeddedBlazorForm")]
     public class TestRemoteEmbeddedBlazorForm : BaseTestRemote<TestRemoteEmbeddedBlazorFormFixture> { public TestRemoteEmbeddedBlazorForm(ITestOutputHelper output) : base(output) { } }
     public class TestRemoteEmbeddedBlazorFormFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorFormFixture() { ClientExecutablePath = Utilities.StartRemoteEmbeddedBlazorWinFormsApp; } }
+    #endregion
 
-    [Collection("TestRemoteEmbeddedBlazorWpf")]
-    public class TestRemoteEmbeddedBlazorWpf : BaseTestRemote<TestRemoteEmbeddedBlazorWpfFixture> { public TestRemoteEmbeddedBlazorWpf(ITestOutputHelper output) : base(output) { } }
-    public class TestRemoteEmbeddedBlazorWpfFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfEmbeddedApp; } }
+    #region Photino
+
+    [Collection("TestRemoteBlazorWebView")]
+    public class TestRemoteBlazorWebView : BaseTestRemote<TestRemoteBlazorWebViewFixture> { public TestRemoteBlazorWebView(ITestOutputHelper output) : base(output) { } }
+    public class TestRemoteBlazorWebViewFixture : BaseTestRemoteFixture { public TestRemoteBlazorWebViewFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWebViewApp; } }
+
+    [Collection("TestRemoteEmbeddedBlazorWebView")]
+    public class TestRemoteEmbeddedBlazorWebView : BaseTestRemote<TestRemoteEmbeddedBlazorWebViewFixture> { public TestRemoteEmbeddedBlazorWebView(ITestOutputHelper output) : base(output) { } }
+    public class TestRemoteEmbeddedBlazorWebViewFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorWebViewFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWebViewEmbeddedApp; } }
 
 
-    
+
+    #endregion
+
 }
