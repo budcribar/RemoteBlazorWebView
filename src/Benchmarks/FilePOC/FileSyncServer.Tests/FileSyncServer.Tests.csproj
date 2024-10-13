@@ -24,6 +24,7 @@
 		<PackageReference Include="FluentAssertions" Version="6.12.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
 		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.66.0" />
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.66.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0-rc.2.24474.3" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0-rc.2.24473.5" />
 		<PackageReference Include="System.Management" Version="9.0.0-rc.2.24473.5" />

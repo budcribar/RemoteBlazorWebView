@@ -11,6 +11,7 @@ using Microsoft.Playwright;
 using static Microsoft.Playwright.Assertions;
 using Xunit;
 using PeakSWC.RemoteWebView;
+using Grpc.Net.Client.Web;
 
 namespace WebdriverTestProject
 {
@@ -26,6 +27,8 @@ namespace WebdriverTestProject
         public Process? ServerProcess { get; private set; }
         public List<Process> Clients { get; private set; } = new();
         public int NumLoopsWaitingForPageLoad { get; } = 200;
+
+        public List<IBrowserContext> BrowserContexts = new();
 
         protected Func<string,string,Process> ClientExecutablePath { get; set; } = default!;
 
@@ -135,6 +138,8 @@ namespace WebdriverTestProject
                     ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
                 });
 
+                BrowserContexts.Add(context);
+             
                 var page = await context.NewPageAsync();
                 Pages.Add(page);
             }
@@ -169,6 +174,67 @@ namespace WebdriverTestProject
             } while (Ids.Count != num);
         }
 
+        public virtual int CountClients(bool isWpf)
+        {
+            if (isWpf)
+               return Utilities.CountRemoteBlazorWpfApp();
+            return Utilities.CountRemoteBlazorWinFormsApp();
+        }
+
+
+        public async Task VerifyDisconnect(int num,bool isWpf)
+        {
+            using var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
+
+            using var channel = GrpcChannel.ForAddress(GrpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
+            var client = new ClientIPC.ClientIPCClient(channel);
+
+            // Verify Server entries are cleared when browser is disconnected
+            for (int i = 0; i < num; i++)
+            {
+                await BrowserContexts[i].DisposeAsync();
+
+                for (int j = 0; j < 100; j++)
+                {
+                    Thread.Sleep(100);
+                    var response = await client!.GetServerStatusAsync(new Empty { });
+                    Assert.True(j < 90);
+                    //Assert.IsTrue(j < 90, "Server did not shutdown via browser shutdown");
+                    if (response.ConnectionResponses.Count == num - (i + 1))
+                        break;
+                }
+
+                for (int j = 0; j < 100; j++)
+                {
+                    Thread.Sleep(100);
+                    Assert.True(j < 90);
+                    //Assert.IsTrue(j < 90, "Client did not shutdown via browser shutdown");
+
+                    if (CountClients(isWpf) == num - (i + 1))
+                        break;
+                }
+            }
+        }
+
+        public async Task VerifyServerStats(int num, int expectedFiles, int expectedBytes)
+        {
+            using var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
+
+            using var channel = GrpcChannel.ForAddress(GrpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
+            var client = new ClientIPC.ClientIPCClient(channel);
+            var response = await client!.GetServerStatusAsync(new Empty { });
+            var totalReadTime = response.ConnectionResponses.Sum(x => x.TotalReadTime);
+            var maxFileReadTime = response.ConnectionResponses.Sum(x => x.MaxFileReadTime);
+            var totalFilesRead = response.ConnectionResponses.Sum(x => x.TotalFilesRead);
+            var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
+
+            Assert.Equal(expectedFiles * num, totalFilesRead);
+            Assert.Equal(expectedBytes * num, totalBytesRead); // This will vary depending on the size of the Javascript  
+
+
+            Console.WriteLine($"TotalBytesRead {totalBytesRead}");
+            Console.WriteLine($"TotalFilesRead {totalFilesRead}");
+        }
         public void Cleanup()
         {
             try
@@ -274,6 +340,10 @@ namespace WebdriverTestProject
             sw.Start();
 
             Assert.Equal(num, Pages.Count);
+
+            // Verify we can hang out before attaching browser
+            if (num == 10)
+                Thread.Sleep(TimeSpan.FromMinutes(2));
 
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
