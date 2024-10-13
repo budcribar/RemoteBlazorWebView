@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Extensions.FileProviders;
-using PhotinoNET;
+using Photino.NET;
 
 namespace PeakSWC.RemoteWebView
 {

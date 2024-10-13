@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PeakSWC.RemoteWebView;
 using Photino.Blazor;
-using PhotinoNET;
+using Photino.NET;
 using System;
 using System.Collections.Generic;
 using System.IO;

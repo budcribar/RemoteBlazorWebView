@@ -5,7 +5,7 @@ using System;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.FileProviders;
-using PhotinoNET;
+using Photino.NET;
 using Photino.Blazor;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteBlazorWebView;

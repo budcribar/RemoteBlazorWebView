@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Web.WebView2.Core;
 using PeakSWC.RemoteWebView;
-using PhotinoNET;
+using Photino.NET;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
