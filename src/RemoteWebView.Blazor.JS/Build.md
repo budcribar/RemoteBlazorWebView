@@ -30,6 +30,7 @@ nvm use 22.3.0
 ```
 
 * npm install -g protoc-gen-ts
+* npm install -g protoc-gen-grpc-web
 
 * Add RemoteWebView.Blazor.JS\protoc\bin to your path variable
 * Verify you can run "protoc -h" from a terminal window 
