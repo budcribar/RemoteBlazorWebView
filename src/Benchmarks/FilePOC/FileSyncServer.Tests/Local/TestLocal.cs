@@ -15,17 +15,17 @@ namespace WebdriverTestProject
     #endregion
 
     #region Photino
-    //[Collection("TestLocalBlazorWebView")]
-    //public class TestLocalBlazorWebView : BaseTestClicks<LocalBlazorWebViewFixture> { public TestLocalBlazorWebView(ITestOutputHelper output) : base(output) { } }
-    //public class LocalBlazorWebViewFixture : BaseTestFixture { public LocalBlazorWebViewFixture() { ClientExecutablePath = Utilities.BlazorWebViewAppExe(); } }
+    [Collection("TestLocalBlazorWebView")]
+    public class TestLocalBlazorWebView : BaseTestClicks<LocalBlazorWebViewFixture> { public TestLocalBlazorWebView(ITestOutputHelper output) : base(output) { } }
+    public class LocalBlazorWebViewFixture : BaseTestFixture { public LocalBlazorWebViewFixture() { ClientExecutablePath = Utilities.BlazorWebViewAppExe(); } }
 
-    //[Collection("TestLocalBlazorWebViewDebug")]
-    //public class TestLocalBlazorWebViewDebug : BaseTestClicks<TestLocalBlazorWebViewDebugFixture> { public TestLocalBlazorWebViewDebug(ITestOutputHelper output) : base(output) { } }
-    //public class TestLocalBlazorWebViewDebugFixture : BaseTestFixture { public TestLocalBlazorWebViewDebugFixture() { ClientExecutablePath = Utilities.BlazorWebViewDebugAppExe(); } }
+    [Collection("TestLocalBlazorWebViewDebug")]
+    public class TestLocalBlazorWebViewDebug : BaseTestClicks<TestLocalBlazorWebViewDebugFixture> { public TestLocalBlazorWebViewDebug(ITestOutputHelper output) : base(output) { } }
+    public class TestLocalBlazorWebViewDebugFixture : BaseTestFixture { public TestLocalBlazorWebViewDebugFixture() { ClientExecutablePath = Utilities.BlazorWebViewDebugAppExe(); } }
 
-    //[Collection("TestLocalEmbeddedBlazorWebView")]
-    //public class TestLocalEmbeddedBlazorWebView : BaseTestClicks<TestLocalEmbeddedBlazorWebViewFixture> { public TestLocalEmbeddedBlazorWebView(ITestOutputHelper output) : base(output) { } }
-    //public class TestLocalEmbeddedBlazorWebViewFixture : BaseTestFixture { public TestLocalEmbeddedBlazorWebViewFixture() { ClientExecutablePath = Utilities.BlazorWebViewAppEmbeddedExe(); } }
+    [Collection("TestLocalEmbeddedBlazorWebView")]
+    public class TestLocalEmbeddedBlazorWebView : BaseTestClicks<TestLocalEmbeddedBlazorWebViewFixture> { public TestLocalEmbeddedBlazorWebView(ITestOutputHelper output) : base(output) { } }
+    public class TestLocalEmbeddedBlazorWebViewFixture : BaseTestFixture { public TestLocalEmbeddedBlazorWebViewFixture() { ClientExecutablePath = Utilities.BlazorWebViewAppEmbeddedExe(); } }
 
     #endregion
 

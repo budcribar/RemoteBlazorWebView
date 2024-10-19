@@ -90,20 +90,39 @@ namespace WebdriverTestProject
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true,
                 CreateNoWindow = false,
                 WorkingDirectory = Path.GetFullPath(Path.GetDirectoryName(ClientExecutablePath)??"")
             };
 
             // Set the environment variable for remote debugging
             startInfo.Environment["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = "--remote-debugging-port=9222";
+            var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.WriteLine($"[Output]: {e.Data}");
+                }
+            };
 
-            var process = Process.Start(startInfo);
-            if (process == null)
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.Error.WriteLine($"[Error]: {e.Data}");
+                }
+            };
+
+            
+            if (!process.Start())
             {
                 throw new InvalidOperationException("Failed to start the application process.");
             }
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
-            return process;
+            return process;     
         }
 
         // Method to retrieve the WebSocket Debugger URL

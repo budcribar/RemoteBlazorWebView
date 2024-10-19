@@ -222,7 +222,7 @@ namespace WebdriverTestProject
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\debug\net9.0";
+            var exePath = @"bin\x64\debug\net9.0";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 

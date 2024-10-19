@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Extensions.FileProviders;
+using PeakSWC.RemoteBlazorWebView;
 using Photino.NET;
 
 namespace PeakSWC.RemoteWebView
@@ -27,8 +28,7 @@ namespace PeakSWC.RemoteWebView
             ? "http"
             : "app";
 
-        public static readonly string AppBaseUri
-            = $"{BlazorAppScheme}://0.0.0.0/";
+        public static readonly string AppBaseUri = $"{BlazorAppScheme}://{HostAddressHelper.GetAppHostAddress()}/";
 
         public PhotinoWebViewManager(PhotinoWindow window, IServiceProvider provider, Dispatcher dispatcher, Uri appBaseUri, IFileProvider fileProvider, JSComponentConfigurationStore jsComponents, string hostPageRelativePath)
             : base(provider, dispatcher, appBaseUri, fileProvider, jsComponents, hostPageRelativePath)
