@@ -35,6 +35,8 @@ namespace FileWatcherClientService
                     // Define the file to watch. You can modify this to read from a config or environment variable.
                     string filePath = Environment.GetEnvironmentVariable("WATCH_FILE_PATH") ?? @"C:\Path\To\Watch\file.exe";
 
+                    _logger.LogInformation($"Attempting to watch file: {filePath}");
+
                     var request = new WatchFileRequest { FilePath = filePath };
 
                     using var call = _client.WatchFile(request);
@@ -74,19 +76,70 @@ namespace FileWatcherClientService
         {
             try
             {
-                var process = new Process
+                string processName = Path.GetFileNameWithoutExtension(filePath);
+
+                _logger.LogInformation($"Checking for existing processes named: {processName}");
+
+                // Retrieve all running processes with the specified name
+                var existingProcesses = Process.GetProcessesByName(processName);
+
+                foreach (var process in existingProcesses)
                 {
-                    StartInfo = new ProcessStartInfo
+                    try
                     {
-                        FileName = filePath,
-                        Arguments = arguments,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
+                        _logger.LogInformation($"Attempting to close process ID: {process.Id}, Name: {process.ProcessName}");
+
+                        // Attempt to close the main window gracefully
+                        if (process.CloseMainWindow())
+                        {
+                            // Wait for the process to exit gracefully within 5 seconds
+                            if (!process.WaitForExit(5000))
+                            {
+                                _logger.LogWarning($"Process ID: {process.Id} did not exit gracefully. Attempting to kill.");
+                                process.Kill(); // Forcefully terminate the process
+                                process.WaitForExit(); // Wait indefinitely for the process to exit
+                                _logger.LogInformation($"Process ID: {process.Id} has been forcefully terminated.");
+                            }
+                            else
+                            {
+                                _logger.LogInformation($"Process ID: {process.Id} has exited gracefully.");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Process ID: {process.Id} does not have a main window or could not receive the close message. Attempting to kill.");
+                            process.Kill(); // Forcefully terminate the process
+                            process.WaitForExit(); // Wait indefinitely for the process to exit
+                            _logger.LogInformation($"Process ID: {process.Id} has been forcefully terminated.");
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error while attempting to terminate process ID: {process.Id}");
+                    }
+                }
+
+                _logger.LogInformation($"Executing file: {filePath} with arguments: {arguments}");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.GetDirectoryName(filePath) // Optional: Set the working directory
                 };
 
-                process.Start();
-                _logger.LogInformation($"Executed file: {filePath} with arguments: {arguments}");
+                var processStart = Process.Start(startInfo);
+
+                if (processStart != null)
+                {
+                    _logger.LogInformation($"Successfully started process ID: {processStart.Id}, Name: {processStart.ProcessName}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Failed to start the process for file: {filePath}");
+                }
             }
             catch (Exception ex)
             {
