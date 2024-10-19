@@ -1,0 +1,25 @@
+Make the timeout a property on the WebView (Form and WPF)
+Fix cannot dispose of task while running exception
+Markup and Group cannot call StartWebViewCoreIfPossible because  RequiredStartupPropertiesSet does not check if they are set or not. Also, Markup and Group MUST be set only before the remote web view is created!!
+WaitForInitializationComplete relies on a 5 second delay
+Remove the server from the release package and have user install dotnet tool instead
+Add detailed build instructions for the server
+
+Add detailed instructions for modifying existing Wpf and WinForms app
+
+
+The README file provides a comprehensive overview of the RemoteBlazorWebViewTutorial project. It explains what the project is about, its use cases, and how it works. The steps for downloading and running the demo, building and running the demo, and accessing the application from the cloud server are clearly explained.
+
+I have a few suggestions that could enhance the readme file:
+
+Adding a screenshot or an image that shows what the application looks like when running could make it more visually appealing.
+
+Clarifying the system requirements for running the application (e.g. .NET 7, Windows, Mac, or Linux) would be helpful.
+
+Adding a section that explains how to deploy the RemoteWebViewService to a cloud server could be useful for developers who want to run the application in production.
+
+Providing a brief explanation of what photino.Blazor is and how it relates to RemoteBlazorWebView would make it easier for readers to understand the project's background.
+
+Mentioning the security measures in place to ensure the safety of the data being transmitted through the server could help to build trust with users.
+
+Adding a section on troubleshooting common issues that might arise during setup or usage of the application would be helpful for users who might encounter problems.

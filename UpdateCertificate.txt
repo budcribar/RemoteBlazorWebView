@@ -1,5 +1,0 @@
-App Service -> RemoteableWebViewAdmin -> TLS/SSL Binding
-   Add private key certificate
-
-Now go back and bind certificate
-
