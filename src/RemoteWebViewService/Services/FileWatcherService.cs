@@ -86,7 +86,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             // If not set, return a default or empty string
-            return "default_argument";
+            return "";
         }
     }
 }

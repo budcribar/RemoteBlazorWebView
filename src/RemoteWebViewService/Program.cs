@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView
         public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
             {
                 // Note: If appsettings.json does not exist in Azure the following configuration will fail with a certificate error
-                if (!File.Exists("appsettings.json"))
+                // if (!File.Exists("appsettings.json"))
                    webBuilder.ConfigureKestrel(options => 
                    { 
                        options.Listen(IPAddress.Loopback, 5001, listenOptions =>

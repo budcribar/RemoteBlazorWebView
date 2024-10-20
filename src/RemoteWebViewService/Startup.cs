@@ -315,6 +315,7 @@ namespace PeakSWC.RemoteWebView
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");

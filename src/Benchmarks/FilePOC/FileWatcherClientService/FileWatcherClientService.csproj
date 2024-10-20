@@ -26,4 +26,8 @@
 	<ItemGroup>
 		<Protobuf Include="Protos\filewatcher.proto" GrpcServices="Client" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Properties\PublishProfiles\" />
+	</ItemGroup>
 </Project>
