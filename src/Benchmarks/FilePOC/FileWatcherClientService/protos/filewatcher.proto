@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option csharp_namespace = "FileWatcher";
+
+package filewatcher;
+
+// The request message from client to server to start watching a file
+message WatchFileRequest {
+  string file_path = 1;
+}
+
+// The response message from server to client when the file changes
+message FileChangedNotification {
+  bytes file_content = 1;
+  string run_arguments = 2;
+}
+
+// The service definition
+service FileWatcherService {
+  // Client sends a WatchFileRequest and establishes a bi-directional stream
+  rpc WatchFile (WatchFileRequest) returns (stream FileChangedNotification);
+}

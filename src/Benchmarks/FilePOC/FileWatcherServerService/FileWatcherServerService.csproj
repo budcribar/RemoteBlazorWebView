@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>dotnet-FileWatcherServerService-87ba14c9-9e82-4ccf-9f94-f4c37c7ba8f3</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.66.0" />
+		<!--<PackageReference Include="Grpc.Net.ServerFactory" Version="2.66.0" />-->
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0-rc.2.24473.5" />
+		<PackageReference Include="Grpc.AspNetCore" Version="2.66.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
+		<PackageReference Include="Grpc.Tools" Version="2.67.0">
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0-rc.2.24473.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Protobuf Include="..\FileWatcherClientService\Protos\filewatcher.proto" GrpcServices="Server" Link="Protos\filewatcher.proto" />
+	</ItemGroup>
+
+</Project>
