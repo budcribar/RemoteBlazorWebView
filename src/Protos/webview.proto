@@ -120,6 +120,21 @@ message FileData {
     bytes file_chunk = 1;
 }
 
+message WatchFileRequest {
+  string file_path = 1;
+}
+
+message FileChangedNotification {
+  bytes file_content = 1;
+  string run_arguments = 2;
+}
+
+service FileWatcherIPC {
+  // Client sends a WatchFileRequest and establishes a bi-directional stream
+  rpc WatchFile (WatchFileRequest) returns (stream FileChangedNotification);
+}
+
+
 service WebViewIPC {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse); 
     rpc Shutdown(IdMessageRequest) returns (google.protobuf.Empty); 

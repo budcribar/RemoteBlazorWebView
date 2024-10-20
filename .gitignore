@@ -65,3 +65,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/Benchmarks/FilePOC/FileSyncServer.Tests/TestResults
 /.yarn/install-state.gz
 /test/FileSyncServer.Tests/TestResults/
+/src/Benchmarks/FilePOC/FileWatcherClientService/publish

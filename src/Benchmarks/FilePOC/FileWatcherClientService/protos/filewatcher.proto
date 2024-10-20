@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option csharp_namespace = "FileWatcher";
+option csharp_namespace = "PeakSWC.RemoteWebView";
 
-package filewatcher;
+package webview;
 
 // The request message from client to server to start watching a file
 message WatchFileRequest {
@@ -16,7 +16,7 @@ message FileChangedNotification {
 }
 
 // The service definition
-service FileWatcherService {
+service FileWatcherIPC {
   // Client sends a WatchFileRequest and establishes a bi-directional stream
   rpc WatchFile (WatchFileRequest) returns (stream FileChangedNotification);
 }

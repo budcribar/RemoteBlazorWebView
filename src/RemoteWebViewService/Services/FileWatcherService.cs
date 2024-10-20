@@ -1,14 +1,15 @@
 using Grpc.Core;
-using FileWatcher;
-using System.IO;
+
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using static FileWatcher.FileWatcherService;
+using System.IO;
 
-namespace FileWatcherServerService.Services
+
+
+namespace PeakSWC.RemoteWebView
 {
-    public class FileWatcherService : /*FileWatcherService.*/FileWatcherServiceBase
+    public partial class FileWatcherService : FileWatcherIPC.FileWatcherIPCBase
     {
         public override async Task WatchFile(WatchFileRequest request, IServerStreamWriter<FileChangedNotification> responseStream, ServerCallContext context)
         {
@@ -29,7 +30,7 @@ namespace FileWatcherServerService.Services
                 RunArguments = runArguments
             });
 
-            using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
+            using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath)??string.Empty, Path.GetFileName(filePath))
             {
                 NotifyFilter = NotifyFilters.LastWrite
             };
@@ -78,7 +79,7 @@ namespace FileWatcherServerService.Services
         private string GetRunArguments()
         {
             // First, try to get from environment variable
-            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS");
+            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS") ?? string.Empty;
             if (!string.IsNullOrEmpty(envArgs))
             {
                 return envArgs;

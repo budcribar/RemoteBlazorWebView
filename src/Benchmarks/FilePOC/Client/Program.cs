@@ -1,4 +1,4 @@
-﻿using Grpc.Net.Client;
+using Grpc.Net.Client;
 using PeakSWC.RemoteWebView; // Essential for accessing WebViewIPC and related classes
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.FileProviders;
@@ -11,6 +11,8 @@ namespace FileClientApp
     {
         // Define the server address. Use 'https' for secure connection.
         private const string ServerAddress = "https://localhost:5001"; // Use HTTPS
+        //private const string ServerAddress = "https://192.168.1.35:5002";
+       
 
         static async Task<int> Main(string[] args)
         {
@@ -41,7 +43,7 @@ namespace FileClientApp
             }
 
             // Replace fixed delay with health check
-            bool serverIsHealthy = await Utilities.WaitForServerHealthAsync("https://localhost:5001/health");
+            bool serverIsHealthy = await Utilities.WaitForServerHealthAsync($"{ServerAddress}/health");
 
             if (!serverIsHealthy)
             {

@@ -29,12 +29,12 @@ namespace PeakSWC.RemoteWebView
                            //listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3; // http3 needs a real certificate
                            listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                        });
-                       //options.Listen(IPAddress.Parse("192.168.1.35"), 5002, listenOptions =>
-                       //{
-                       //    //listenOptions.UseHttps("C:\\Certificates\\DevCertificate_192.168.1.35.pfx", "YourStrongPassword");
-                       //    //listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3; // http3 needs a real certificate
-                       //    listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-                       //});
+                       options.Listen(IPAddress.Parse("192.168.1.35"), 5002, listenOptions =>
+                       {
+                           listenOptions.UseHttps("C:\\Certificates\\DevCertificate_192.168.1.35.pfx", "YourStrongPassword");
+                           //listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3; // http3 needs a real certificate
+                           listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+                       });
                    });
                 
                 webBuilder.UseStartup<Startup>();

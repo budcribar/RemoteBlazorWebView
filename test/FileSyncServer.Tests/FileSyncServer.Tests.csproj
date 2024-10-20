@@ -6,6 +6,7 @@
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
 		<DefineConstants>xDEBUG_SERVER</DefineConstants>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>

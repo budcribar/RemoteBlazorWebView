@@ -1,5 +1,5 @@
 using Grpc.Net.Client;
-using FileWatcher;
+//using FileWatcher;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -8,15 +8,17 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
+using PeakSWC.RemoteWebView;
 
 namespace FileWatcherClientService
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private readonly FileWatcherService.FileWatcherServiceClient _client;
+        private readonly FileWatcherIPC.FileWatcherIPCClient _client;
+        
 
-        public Worker(ILogger<Worker> logger, FileWatcherService.FileWatcherServiceClient client)
+        public Worker(ILogger<Worker> logger, FileWatcherIPC.FileWatcherIPCClient client)
         {
             _logger = logger;
             _client = client;
@@ -33,7 +35,7 @@ namespace FileWatcherClientService
                 try
                 {
                     // Define the file to watch. You can modify this to read from a config or environment variable.
-                    string filePath = Environment.GetEnvironmentVariable("WATCH_FILE_PATH") ?? @"C:\Path\To\Watch\file.exe";
+                    string filePath = Environment.GetEnvironmentVariable("WATCH_FILE_PATH") ?? @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
 
                     _logger.LogInformation($"Attempting to watch file: {filePath}");
 
@@ -57,7 +59,7 @@ namespace FileWatcherClientService
                         ExecuteFile(tempFilePath, notification.RunArguments);
                     }
                 }
-                catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.Cancelled)
+                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
                 {
                     _logger.LogInformation("File watching cancelled.");
                 }
