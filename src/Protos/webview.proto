@@ -125,13 +125,23 @@ message WatchFileRequest {
 }
 
 message FileChangedNotification {
-  bytes file_content = 1;
-  string run_arguments = 2;
+  string run_arguments = 1;
+}
+
+message FileChunk {
+  bytes content = 1;
+}
+
+message WatchFileResponse {
+  oneof response {
+    FileChangedNotification notification = 1;
+    FileChunk chunk = 2;
+  }
 }
 
 service FileWatcherIPC {
-  // Client sends a WatchFileRequest and establishes a bi-directional stream
-  rpc WatchFile (WatchFileRequest) returns (stream FileChangedNotification);
+  // Client sends a WatchFileRequest and server streams WatchFileResponse messages
+  rpc WatchFile (WatchFileRequest) returns (stream WatchFileResponse);
 }
 
 

@@ -1,4 +1,4 @@
-using Grpc.Net.Client;*******
+using Grpc.Net.Client;
 //using FileWatcher;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -51,12 +51,43 @@ namespace FileWatcherClientService
 
                         // Save the file
                         string tempFilePath = Path.Combine(Path.GetTempPath(), Path.GetFileName(filePath));
-                        await File.WriteAllBytesAsync(tempFilePath, notification.FileContent.ToByteArray(), stoppingToken);
+
+                        using var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+                        bool isStreaming = false;
+                        string runArguments = string.Empty;
+
+                        await foreach (var response in call.ResponseStream.ReadAllAsync(stoppingToken))
+                        {
+                            if (response.ResponseCase == WatchFileResponse.ResponseOneofCase.Notification)
+                            {
+                                _logger.LogInformation("File change detected. Preparing to download...");
+
+                                // Update run arguments if needed
+                                if (!string.IsNullOrEmpty(response.Notification.RunArguments))
+                                {
+                                    runArguments = response.Notification.RunArguments;
+                                }
+
+                                _logger.LogInformation($"Run arguments set to: {runArguments}");
+
+                                // Reset the file stream for a new file
+                                fileStream.SetLength(0);
+                                isStreaming = true;
+                            }
+                            else if (response.ResponseCase == WatchFileResponse.ResponseOneofCase.Chunk && isStreaming)
+                            {
+                                byte[] bytes = response.Chunk.Content.ToByteArray();
+                                await fileStream.WriteAsync(bytes, 0, bytes.Length, stoppingToken);
+                                _logger.LogInformation("Received and wrote a 32KB chunk.");
+                            }
+                        }
+
 
                         _logger.LogInformation($"File downloaded to: {tempFilePath}");
 
                         // Execute the file with arguments
-                        ExecuteFile(tempFilePath, notification.RunArguments);
+                        ExecuteFile(tempFilePath, runArguments);
                     }
                 }
                 catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
