@@ -40,14 +40,13 @@
 		</PackageReference>
 
 		<Using Include="Xunit" />
-		<None Include="..\Client\publish\Client.exe">
+		<None Include="..\..\src\Benchmarks\FilePOC\Client\publish\Client.exe">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<Folder Include="Protos\" />
-		<ProjectReference Include="..\..\..\RemoteWebView\RemoteWebView.csproj" />
-
-		<ProjectReference Include="..\..\..\RemoteBlazorWebView.WinForms\RemoteBlazorWebView.WindowsForms.csproj" />
-		<ProjectReference Include="..\..\..\RemoteBlazorWebView\RemoteBlazorWebView.csproj" />
+		<ProjectReference Include="..\..\src\RemoteWebView\RemoteWebView.csproj" />
+		<ProjectReference Include="..\..\src\RemoteBlazorWebView.WinForms\RemoteBlazorWebView.WindowsForms.csproj" />
+		<ProjectReference Include="..\..\src\RemoteBlazorWebView\RemoteBlazorWebView.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

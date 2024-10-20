@@ -212,9 +212,9 @@ namespace WebdriverTestProject
             {
                 var ppn = GetParentProcessName();
                 if (ppn == "vstest.console")
-                    return @"..\..\..\..\..\..\..\..\"; // visual studio
+                    return @"..\..\..\..\..\..\"; // visual studio
                 else
-                    return @"..\..\..\..\..\..\..\..\"; // // powershell
+                    return @"..\..\..\..\..\..\"; // // powershell
             }
         }
 

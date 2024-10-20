@@ -230,7 +230,7 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publi
 
 if ($Build -ne $true) {
     # Navigate to the first test directory
-    $targetPath = Resolve-Path "src\Benchmarks\FilePOC\FileSyncServer.Tests"
+    $targetPath = Resolve-Path "test\FileSyncServer.Tests"
     Set-Location $targetPath
 
     # Generate a timestamp
@@ -246,16 +246,7 @@ if ($Build -ne $true) {
 
     # Return to the original directory
     Set-Location $currentDirectory
-
-    # Run the second test
-    $logfile2 = "WebDriverTestLog_$timestamp.html"
-    dotnet test testassets\NUnitTestProject\WebDriverTestProject.csproj --logger:"html;LogFileName=$logfile2"
-
-    # Open the second log file in the default browser
-    $logfilePath2 = Resolve-Path "testassets\NUnitTestProject\TestResults\$logfile2"
-    Start-Process $logfilePath2
 }
-
 
 # zip up files for github
 $compress = @{
