@@ -5,11 +5,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System;
 using System.Threading;
-using PeakSWC.RemoteWebView;
 
 namespace PeakSWC.RemoteWebView
 {
-    public partial class FileWatcherService : FileWatcherIPC.FileWatcherIPCBase
+    public class FileWatcherService : FileWatcherIPC.FileWatcherIPCBase
     {
         private readonly ILogger<FileWatcherService> _logger;
 
@@ -30,7 +29,7 @@ namespace PeakSWC.RemoteWebView
                 throw new RpcException(new Status(StatusCode.NotFound, $"File {filePath} does not exist."));
             }
 
-            // Initial notification
+            // Send initial notification
             string runArguments = GetRunArguments();
 
             await responseStream.WriteAsync(new WatchFileResponse
@@ -41,7 +40,11 @@ namespace PeakSWC.RemoteWebView
                 }
             });
 
-            using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
+            // Stream the initial file
+            await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
+
+            // Start watching for changes
+            using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
             };
@@ -55,16 +58,17 @@ namespace PeakSWC.RemoteWebView
                     // Wait briefly to ensure the file write is complete
                     await Task.Delay(500);
 
-                    // Notify the client about the file change
+                    // Send notification about the change
+                    string updatedRunArguments = GetRunArguments(); // Update if necessary
                     await responseStream.WriteAsync(new WatchFileResponse
                     {
                         Notification = new FileChangedNotification
                         {
-                            RunArguments = GetRunArguments()
+                            RunArguments = updatedRunArguments
                         }
                     });
 
-                    // Stream the file in chunks
+                    // Stream the updated file
                     await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
                 }
                 catch (Exception ex)
@@ -98,12 +102,12 @@ namespace PeakSWC.RemoteWebView
         {
             const int chunkSize = 32 * 1024; // 32KB
 
+            _logger.LogInformation($"Streaming file: {filePath} in {chunkSize / 1024}KB chunks.");
+
             using System.IO.FileStream fs = new System.IO.FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
             byte[] buffer = new byte[chunkSize];
             int bytesRead;
-
-            _logger.LogInformation($"Streaming file: {filePath} in {chunkSize} byte chunks.");
 
             while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
             {
@@ -113,7 +117,6 @@ namespace PeakSWC.RemoteWebView
                     break;
                 }
 
-                // If bytesRead < chunkSize, adjust the buffer
                 byte[] actualBytes = buffer;
                 if (bytesRead < chunkSize)
                 {
@@ -121,9 +124,9 @@ namespace PeakSWC.RemoteWebView
                     Array.Copy(buffer, actualBytes, bytesRead);
                 }
 
-                await responseStream.WriteAsync(new WatchFileResponse 
+                await responseStream.WriteAsync(new WatchFileResponse
                 {
-                    Chunk = new  FileChunk
+                    Chunk = new FileChunk
                     {
                         Content = Google.Protobuf.ByteString.CopyFrom(actualBytes)
                     }
@@ -136,7 +139,7 @@ namespace PeakSWC.RemoteWebView
         private string GetRunArguments()
         {
             // Retrieve run arguments from environment variables or configuration
-            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS") ?? string.Empty;
+            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS");
             if (!string.IsNullOrEmpty(envArgs))
             {
                 return envArgs;
