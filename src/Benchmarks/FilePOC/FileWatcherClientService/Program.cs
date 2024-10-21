@@ -1,25 +1,108 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Grpc.Net.Client;
 using PeakSWC.RemoteWebView;
 
-using Microsoft.Extensions.Hosting.WindowsServices;
-using Microsoft.Extensions.DependencyInjection;
-using FileWatcherClientService;
-internal class Program
+namespace FileWatcherClientService
 {
-    private static async Task Main(string[] args)
+    internal class Program
     {
-        const string ServerAddress = "https://192.168.1.35:5002";
-        var host = Host.CreateDefaultBuilder(args)
-        .UseWindowsService()
-        .ConfigureServices((hostContext, services) =>
+        static async Task Main(string[] args)
         {
-            services.AddGrpcClient<FileWatcherIPC.FileWatcherIPCClient>(options =>
-            {
-                options.Address = new Uri(ServerAddress);
-            });
-            services.AddHostedService<Worker>();
-        })
-        .Build();
+            // Build configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
 
-        await host.RunAsync();
+            // Setup Dependency Injection
+            var serviceCollection = new ServiceCollection();
+            ConfigureServices(serviceCollection, configuration);
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            // Get the logger
+            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+
+            // Setup cancellation
+            using var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                logger.LogInformation("Cancellation requested via console. Shutting down...");
+                eventArgs.Cancel = true; // Prevent the process from terminating immediately.
+                cts.Cancel();
+            };
+
+            try
+            {
+                logger.LogInformation("FileWatcher Client Service is starting...");
+
+                // Get the worker and execute
+                var worker = serviceProvider.GetRequiredService<Worker>();
+                await worker.ExecuteAsync(cts.Token);
+
+                logger.LogInformation("FileWatcher Client Service has stopped.");
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogInformation("FileWatcher Client Service is shutting down...");
+            }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "FileWatcher Client Service terminated unexpectedly.");
+            }
+            finally
+            {
+                // Ensure to flush and stop internal timers/threads before application exit
+                if (serviceProvider is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+        }
+
+        private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+        {
+            // Configure logging to use Event Log
+            services.AddLogging(configure =>
+            {
+                configure.ClearProviders();
+                configure.AddEventLog(eventLogSettings =>
+                {
+                    eventLogSettings.SourceName = "FileWatcherClientService"; // Must match the created event source
+                    eventLogSettings.LogName = "Application"; // Or your custom log name
+                });
+            });
+
+            // Add configuration
+            services.AddSingleton(configuration);
+
+            // Configure gRPC client
+            services.AddSingleton(provider =>
+            {
+                var grpcServerAddress = configuration["Grpc:ServerAddress"];
+                if (string.IsNullOrEmpty(grpcServerAddress))
+                {
+                    throw new ArgumentException("Grpc:ServerAddress is not configured.");
+                }
+                var channel = GrpcChannel.ForAddress(grpcServerAddress);
+                return new FileWatcherIPC.FileWatcherIPCClient(channel);
+            });
+
+            // Register Worker
+            services.AddSingleton<Worker>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<Worker>>();
+                var filePath = configuration["FileWatcher:WatchFilePath"];
+                var runArguments = configuration["FileWatcher:RunArguments"];
+                var client = provider.GetRequiredService<FileWatcherIPC.FileWatcherIPCClient>();
+                return new Worker(logger, filePath, runArguments, client);
+            });
+        }
     }
 }
