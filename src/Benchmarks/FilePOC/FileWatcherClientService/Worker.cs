@@ -35,8 +35,9 @@ namespace FileWatcherClientService
             {
                 if (string.IsNullOrEmpty(_fileToWatch))
                 {
-                    _fileToWatch = @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
+                   
                     _logger.LogError("WatchFilePath is not configured. Please set it in appsettings.json or environment variables.");
+                    return;
                    
                 }
 

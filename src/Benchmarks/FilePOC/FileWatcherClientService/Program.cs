@@ -98,8 +98,8 @@ namespace FileWatcherClientService
             services.AddSingleton<Worker>(provider =>
             {
                 var logger = provider.GetRequiredService<ILogger<Worker>>();
-                var filePath = configuration["FileWatcher:WatchFilePath"];
-                var runArguments = configuration["FileWatcher:RunArguments"];
+                var filePath = configuration["FileWatcher:WatchFilePath"] ?? @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
+                var runArguments = configuration["FileWatcher:RunArguments"] ?? string.Empty;
                 var client = provider.GetRequiredService<FileWatcherIPC.FileWatcherIPCClient>();
                 return new Worker(logger, filePath, runArguments, client);
             });
