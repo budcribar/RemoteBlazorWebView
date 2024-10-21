@@ -49,8 +49,7 @@ namespace FileWatcherClientService
 
                 _logger.LogInformation($"Started watching file: {_fileToWatch}");
 
-                // Stop any existing processes before starting
-                StopProcess(Path.GetFileNameWithoutExtension(_tempFilePath));
+                
 
                 FileStream fileStream = null;
                 bool isStreaming = false;
@@ -66,6 +65,9 @@ namespace FileWatcherClientService
                     switch (response.ResponseCase)
                     {
                         case WatchFileResponse.ResponseOneofCase.Notification:
+                            // Stop any existing processes before starting
+                            StopProcess(Path.GetFileNameWithoutExtension(_tempFilePath));
+
                             _logger.LogInformation("File change detected. Preparing to download...");
 
                             string currentRunArguments = _runArguments;
