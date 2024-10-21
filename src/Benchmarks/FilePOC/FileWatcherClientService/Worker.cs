@@ -41,12 +41,6 @@ namespace FileWatcherClientService
                    
                 }
 
-                if (!File.Exists(_fileToWatch))
-                {
-                    _logger.LogError($"File {_fileToWatch} does not exist. Please check the path.");
-                    return;
-                }
-
                 _logger.LogInformation($"Attempting to watch file: {_fileToWatch}");
 
                 var request = new WatchFileRequest { FilePath = _fileToWatch };
