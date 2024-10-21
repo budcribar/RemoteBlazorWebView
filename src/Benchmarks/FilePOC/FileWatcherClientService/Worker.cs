@@ -13,7 +13,7 @@ namespace FileWatcherClientService
     public class Worker
     {
         private readonly ILogger<Worker> _logger;
-        private readonly string _fileToWatch;
+        private string _fileToWatch;
         private readonly string _runArguments;
         private readonly string _tempFilePath;
         private readonly FileWatcherIPC.FileWatcherIPCClient _client;
@@ -35,8 +35,9 @@ namespace FileWatcherClientService
             {
                 if (string.IsNullOrEmpty(_fileToWatch))
                 {
+                    _fileToWatch = @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
                     _logger.LogError("WatchFilePath is not configured. Please set it in appsettings.json or environment variables.");
-                    return;
+                   
                 }
 
                 if (!File.Exists(_fileToWatch))
