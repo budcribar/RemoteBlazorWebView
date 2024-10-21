@@ -8,10 +8,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Grpc.Core;
 using PeakSWC.RemoteWebView;
-
 namespace FileWatcherClientService
 {
     public class Worker : BackgroundService
@@ -42,7 +40,7 @@ namespace FileWatcherClientService
                 if (string.IsNullOrEmpty(filePath))
                 {
                     filePath = @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
-                    _logger.LogError("WatchFilePath is not configured. Please set it in appsettings.json or environment variables.");               
+                    _logger.LogError("WatchFilePath is not configured. Please set it in appsettings.json or environment variables.");
                 }
 
                 _logger.LogInformation($"Attempting to watch file: {filePath}");
@@ -88,13 +86,30 @@ namespace FileWatcherClientService
                         case WatchFileResponse.ResponseOneofCase.Chunk:
                             if (isStreaming && fileStream != null)
                             {
-                                // Convert ByteString to byte array
-                                byte[] bytes = response.Chunk.Content.ToByteArray();
+                                // Check for zero-length chunk indicating end of transfer
+                                if (response.Chunk.Content.Length == 0)
+                                {
+                                    _logger.LogInformation("File transfer complete.");
 
-                                // Asynchronously write bytes to the file
-                                await fileStream.WriteAsync(bytes, 0, bytes.Length, stoppingToken);
+                                    // Flush and dispose the FileStream
+                                    await fileStream.FlushAsync(stoppingToken);
+                                    fileStream.Dispose();
+                                    fileStream = null;
+                                    isStreaming = false;
 
-                                _logger.LogInformation($"Received and wrote a {bytes.Length / 1024}KB chunk.");
+                                    // Execute the file after transfer
+                                    ExecuteFile(tempFilePath, runArguments);
+                                }
+                                else
+                                {
+                                    // Convert ByteString to byte array
+                                    byte[] bytes = response.Chunk.Content.ToByteArray();
+
+                                    // Asynchronously write bytes to the file
+                                    await fileStream.WriteAsync(bytes, 0, bytes.Length, stoppingToken);
+
+                                    _logger.LogInformation($"Received and wrote a {bytes.Length / 1024}KB chunk.");
+                                }
                             }
                             else
                             {
@@ -114,8 +129,7 @@ namespace FileWatcherClientService
                     fileStream = null;
                 }
 
-                // After streaming, execute the file
-                ExecuteFile(tempFilePath, runArguments);
+                _logger.LogInformation("FileWatcher Client Service has stopped.");
             }
             catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.Cancelled)
             {
@@ -127,8 +141,6 @@ namespace FileWatcherClientService
                 // Implement retry logic or backoff if necessary
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }
-
-            _logger.LogInformation("FileWatcher Client Service has stopped.");
         }
 
         private void ExecuteFile(string filePath, string arguments)
