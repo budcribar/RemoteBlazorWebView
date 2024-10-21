@@ -88,7 +88,8 @@ namespace FileWatcherClientService
                 var grpcServerAddress = configuration["Grpc:ServerAddress"];
                 if (string.IsNullOrEmpty(grpcServerAddress))
                 {
-                    throw new ArgumentException("Grpc:ServerAddress is not configured.");
+                    grpcServerAddress = @"https://192.168.1.35:5002";
+                    
                 }
                 var channel = GrpcChannel.ForAddress(grpcServerAddress);
                 return new FileWatcherIPC.FileWatcherIPCClient(channel);
