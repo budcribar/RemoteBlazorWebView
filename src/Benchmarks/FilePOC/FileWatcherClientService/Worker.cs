@@ -1,12 +1,14 @@
 using Grpc.Net.Client;
-//using FileWatcher;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Grpc.Core;
 using PeakSWC.RemoteWebView;
 
@@ -16,12 +18,13 @@ namespace FileWatcherClientService
     {
         private readonly ILogger<Worker> _logger;
         private readonly FileWatcherIPC.FileWatcherIPCClient _client;
-        
+        private readonly IConfiguration _configuration;
 
-        public Worker(ILogger<Worker> logger, FileWatcherIPC.FileWatcherIPCClient client)
+        public Worker(ILogger<Worker> logger, FileWatcherIPC.FileWatcherIPCClient client, IConfiguration configuration)
         {
             _logger = logger;
             _client = client;
+            _configuration = configuration;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -30,76 +33,99 @@ namespace FileWatcherClientService
 
             stoppingToken.Register(() => _logger.LogInformation("FileWatcher Client Service is stopping."));
 
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                try
+                // Read configurations from appsettings.json or environment variables
+                string filePath = _configuration["FileWatcher:WatchFilePath"];
+                string runArguments = _configuration["FileWatcher:RunArguments"];
+
+                if (string.IsNullOrEmpty(filePath))
                 {
-                    // Define the file to watch. You can modify this to read from a config or environment variable.
-                    string filePath = Environment.GetEnvironmentVariable("WATCH_FILE_PATH") ?? @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
+                    filePath = @"C:\Users\budcr\source\repos\RemoteBlazorWebView\src\Benchmarks\StressServer\publish\StressServer.exe";
+                    _logger.LogError("WatchFilePath is not configured. Please set it in appsettings.json or environment variables.");               
+                }
 
-                    _logger.LogInformation($"Attempting to watch file: {filePath}");
+                _logger.LogInformation($"Attempting to watch file: {filePath}");
 
-                    var request = new WatchFileRequest { FilePath = filePath };
+                var request = new WatchFileRequest { FilePath = filePath };
 
-                    using var call = _client.WatchFile(request);
+                using var call = _client.WatchFile(request);
 
-                    _logger.LogInformation($"Started watching file: {filePath}");
+                _logger.LogInformation($"Started watching file: {filePath}");
 
-                    await foreach (var notification in call.ResponseStream.ReadAllAsync(stoppingToken))
+                string tempFilePath = Path.Combine(Path.GetTempPath(), Path.GetFileName(filePath));
+
+                FileStream fileStream = null;
+                bool isStreaming = false;
+
+                await foreach (var response in call.ResponseStream.ReadAllAsync(stoppingToken))
+                {
+                    switch (response.ResponseCase)
                     {
-                        _logger.LogInformation("File change detected. Downloading...");
+                        case WatchFileResponse.ResponseOneofCase.Notification:
+                            _logger.LogInformation("File change detected. Preparing to download...");
 
-                        // Save the file
-                        string tempFilePath = Path.Combine(Path.GetTempPath(), Path.GetFileName(filePath));
-
-                        using var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-
-                        bool isStreaming = false;
-                        string runArguments = string.Empty;
-
-                        await foreach (var response in call.ResponseStream.ReadAllAsync(stoppingToken))
-                        {
-                            if (response.ResponseCase == WatchFileResponse.ResponseOneofCase.Notification)
+                            // Update run arguments if provided
+                            if (!string.IsNullOrEmpty(response.Notification.RunArguments))
                             {
-                                _logger.LogInformation("File change detected. Preparing to download...");
-
-                                // Update run arguments if needed
-                                if (!string.IsNullOrEmpty(response.Notification.RunArguments))
-                                {
-                                    runArguments = response.Notification.RunArguments;
-                                }
-
-                                _logger.LogInformation($"Run arguments set to: {runArguments}");
-
-                                // Reset the file stream for a new file
-                                fileStream.SetLength(0);
-                                isStreaming = true;
+                                runArguments = response.Notification.RunArguments;
                             }
-                            else if (response.ResponseCase == WatchFileResponse.ResponseOneofCase.Chunk && isStreaming)
+
+                            _logger.LogInformation($"Run arguments set to: {runArguments}");
+
+                            // Dispose previous FileStream if any
+                            if (fileStream != null)
                             {
+                                await fileStream.FlushAsync(stoppingToken);
+                                fileStream.Dispose();
+                            }
+
+                            // Create a new FileStream for the incoming file
+                            fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                            isStreaming = true;
+                            break;
+
+                        case WatchFileResponse.ResponseOneofCase.Chunk:
+                            if (isStreaming && fileStream != null)
+                            {
+                                // Convert ByteString to byte array
                                 byte[] bytes = response.Chunk.Content.ToByteArray();
+
+                                // Asynchronously write bytes to the file
                                 await fileStream.WriteAsync(bytes, 0, bytes.Length, stoppingToken);
-                                _logger.LogInformation("Received and wrote a 32KB chunk.");
+
+                                _logger.LogInformation($"Received and wrote a {bytes.Length / 1024}KB chunk.");
                             }
-                        }
-
-
-                        _logger.LogInformation($"File downloaded to: {tempFilePath}");
-
-                        // Execute the file with arguments
-                        ExecuteFile(tempFilePath, runArguments);
+                            else
+                            {
+                                _logger.LogWarning("Received a chunk without an active file stream.");
+                            }
+                            break;
                     }
                 }
-                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.Cancelled)
+
+                _logger.LogInformation("File watching completed.");
+
+                // Ensure the last FileStream is properly closed
+                if (fileStream != null)
                 {
-                    _logger.LogInformation("File watching cancelled.");
+                    await fileStream.FlushAsync(stoppingToken);
+                    fileStream.Dispose();
+                    fileStream = null;
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An error occurred while watching the file.");
-                    // Optional: Implement retry logic or backoff
-                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-                }
+
+                // After streaming, execute the file
+                ExecuteFile(tempFilePath, runArguments);
+            }
+            catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.Cancelled)
+            {
+                _logger.LogInformation("File watching cancelled.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while watching the file.");
+                // Implement retry logic or backoff if necessary
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }
 
             _logger.LogInformation("FileWatcher Client Service has stopped.");
