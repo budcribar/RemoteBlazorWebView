@@ -43,6 +43,15 @@ namespace PeakSWC.RemoteWebView
             // Stream the initial file
             await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
 
+            // Send zero-length chunk to indicate end of initial transfer
+            await responseStream.WriteAsync(new WatchFileResponse
+            {
+                Chunk = new FileChunk
+                {
+                    Content = Google.Protobuf.ByteString.Empty
+                }
+            });
+
             // Start watching for changes
             using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
             {
@@ -51,6 +60,8 @@ namespace PeakSWC.RemoteWebView
 
             FileSystemEventHandler handler = async (sender, args) =>
             {
+                if(watcher != null)
+                    watcher.EnableRaisingEvents = false;
                 try
                 {
                     _logger.LogInformation($"Change detected in file: {filePath}");
@@ -70,13 +81,28 @@ namespace PeakSWC.RemoteWebView
 
                     // Stream the updated file
                     await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
+
+                    // Send zero-length chunk to indicate end of transfer
+                    await responseStream.WriteAsync(new WatchFileResponse
+                    {
+                        Chunk = new FileChunk
+                        {
+                            Content = Google.Protobuf.ByteString.Empty
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Error processing file change for {filePath}");
                 }
+                if (watcher != null)
+                    watcher.EnableRaisingEvents = true;
             };
-
+            watcher.Error += (sender, args) =>
+            {
+                _logger.LogError("FileSystemWatcher encountered an error.");
+                // Optionally, notify the client about the error
+            };
             watcher.Changed += handler;
             watcher.EnableRaisingEvents = true;
 

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
 	<!--<DefineConstants>RATELIMIT</DefineConstants>-->
-	  <DefineConstants>STATS</DefineConstants>
+	  <!--<DefineConstants>STATS</DefineConstants>-->
 	<ServerGarbageCollection>true</ServerGarbageCollection>
 	<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
