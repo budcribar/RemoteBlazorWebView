@@ -20,6 +20,7 @@
 		<PackageReference Include="Grpc.Tools" Version="2.67.0">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
+		<PackageReference Include="System.Management" Version="8.0.0" />
 		
 	</ItemGroup>
 

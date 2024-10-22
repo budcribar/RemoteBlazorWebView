@@ -7,6 +7,7 @@ using Grpc.Core;
 using PeakSWC.RemoteWebView;
 
 using Microsoft.Extensions.Logging;
+using System.Management;
 
 namespace FileWatcherClientService
 {
@@ -230,7 +231,14 @@ namespace FileWatcherClientService
                 {
                     _logger.LogInformation($"Attempting to close process ID: {process.Id}, Name: {process.ProcessName}");
 
-                    // Attempt to close the main window gracefully
+                    // First, terminate child processes
+                    var childProcesses = GetChildProcesses(process.Id);
+                    foreach (var child in childProcesses)
+                    {
+                        TerminateProcess(child);
+                    }
+
+                    // Attempt to close the parent process gracefully
                     if (process.CloseMainWindow())
                     {
                         // Wait for the process to exit gracefully within 5 seconds
@@ -260,5 +268,90 @@ namespace FileWatcherClientService
                 }
             }
         }
+
+        private List<Process> GetChildProcesses(int parentId)
+        {
+            var childProcesses = new List<Process>();
+
+            try
+            {
+                string query = $"Select * From Win32_Process Where ParentProcessId={parentId}";
+                using (var searcher = new ManagementObjectSearcher(query))
+                using (var results = searcher.Get())
+                {
+                    foreach (ManagementObject mo in results)
+                    {
+                        try
+                        {
+                            int processId = Convert.ToInt32(mo["ProcessId"]);
+                            var childProcess = Process.GetProcessById(processId);
+                            childProcesses.Add(childProcess);
+                            _logger.LogInformation($"Found child process: ID={childProcess.Id}, Name={childProcess.ProcessName}");
+
+                            // Recursively find grandchildren
+                            childProcesses.AddRange(GetChildProcesses(childProcess.Id));
+                        }
+                        catch (ArgumentException)
+                        {
+                            // Process might have exited between the time we got the list and now
+                            _logger.LogWarning($"Process with ID {mo["ProcessId"]} no longer exists.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving child processes for parent ID: {parentId}");
+            }
+
+            return childProcesses;
+        }
+
+        /// <summary>
+        /// Terminates a process and its child processes.
+        /// </summary>
+        /// <param name="process">Process to terminate</param>
+        private void TerminateProcess(Process process)
+        {
+            try
+            {
+                _logger.LogInformation($"Attempting to terminate child process ID: {process.Id}, Name: {process.ProcessName}");
+
+                // First, terminate any child processes of this process
+                var childProcesses = GetChildProcesses(process.Id);
+                foreach (var child in childProcesses)
+                {
+                    TerminateProcess(child);
+                }
+
+                // Attempt to close the process gracefully
+                if (process.CloseMainWindow())
+                {
+                    if (!process.WaitForExit(5000))
+                    {
+                        _logger.LogWarning($"Child process ID: {process.Id} did not exit gracefully. Attempting to kill.");
+                        process.Kill();
+                        process.WaitForExit();
+                        _logger.LogInformation($"Child process ID: {process.Id} has been forcefully terminated.");
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Child process ID: {process.Id} has exited gracefully.");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"Child process ID: {process.Id} does not have a main window or could not receive the close message. Attempting to kill.");
+                    process.Kill();
+                    process.WaitForExit();
+                    _logger.LogInformation($"Child process ID: {process.Id} has been forcefully terminated.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error while attempting to terminate child process ID: {process.Id}");
+            }
+        }
     }
 }
+
