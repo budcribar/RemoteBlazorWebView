@@ -68,6 +68,7 @@ namespace FileWatcherClientService
                         case WatchFileResponse.ResponseOneofCase.Notification:
                             // Stop any existing processes before starting
                             StopProcess(Path.GetFileNameWithoutExtension(_tempFilePath));
+                            StopProcess("chromedriver");
 
                             _logger.LogInformation("File change detected. Preparing to download...");
 
@@ -189,6 +190,7 @@ namespace FileWatcherClientService
                 string processName = Path.GetFileNameWithoutExtension(filePath);
 
                 StopProcess(processName);
+                StopProcess("chromedriver");
 
                 _logger.LogInformation($"Executing file: {filePath} with arguments: {arguments}");
 
