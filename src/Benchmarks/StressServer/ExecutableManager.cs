@@ -15,7 +15,7 @@ namespace StressServer
 
     public static class ExecutableManager
     {
-        private static async Task<bool> WaitForClientToConnectAsync(string clientId, GrpcChannel channel, int timeoutMs = 3000, int checkIntervalMs = 100)
+        public static async Task<bool> WaitForClientToConnectAsync(string clientId, GrpcChannel channel, int timeoutMs = 3000, int checkIntervalMs = 100)
         {
             var client = new WebViewIPC.WebViewIPCClient(channel);
             int elapsedMs = 0;
@@ -29,6 +29,39 @@ namespace StressServer
 
                     // Check if the client ID is present
                     if (idsSet.Contains(clientId))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogEvent($"gRPC call failed: {ex.Message}", EventLogEntryType.Error);
+                    return false;
+                }
+
+                await Task.Delay(checkIntervalMs);
+                elapsedMs += checkIntervalMs;
+            }
+
+            // Timeout reached without registering the client ID
+            Logging.LogEvent($"Timeout waiting for client ID '{clientId}' to register.", EventLogEntryType.Error);
+            return false;
+        }
+
+        public static async Task<bool> WaitForClientToDisconnectAsync(string clientId, GrpcChannel channel, int timeoutMs = 3000, int checkIntervalMs = 100)
+        {
+            var client = new WebViewIPC.WebViewIPCClient(channel);
+            int elapsedMs = 0;
+
+            while (elapsedMs < timeoutMs)
+            {
+                try
+                {
+                    var response = await client.GetIdsAsync(new Empty());
+                    var idsSet = new HashSet<string>(response.Responses);
+
+                    // Check if the client ID is present
+                    if (!idsSet.Contains(clientId))
                     {
                         return true;
                     }
@@ -105,7 +138,7 @@ namespace StressServer
                 bool isClientConnected = await WaitForClientToConnectAsync(
                     clientId: clientId,
                     channel: channel,
-                    timeoutMs: 3000, // 3 seconds timeout
+                    timeoutMs: 10000, // 3 seconds timeout
                     checkIntervalMs: 100 // Check every 100ms
                 );
 

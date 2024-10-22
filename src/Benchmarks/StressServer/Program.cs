@@ -131,7 +131,7 @@ namespace StressServer
 
             // ExecutableManager.CleanUp(path); // Uncomment if cleanup is necessary
 
-           Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
+            Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
         }
 
         private static async Task<(int, int)> ExecuteLoop(string url, GrpcChannel channel, int numClients, string path, List<string> clientIds)
@@ -144,20 +144,20 @@ namespace StressServer
             try
             {
                 // Use thread-safe collections
-             
+
                 ConcurrentBag<ChromeDriver> driverBag = new ConcurrentBag<ChromeDriver>();
-                Dictionary<string,Process> processDict = new Dictionary<string,Process>();
+                Dictionary<string, Process> processDict = new Dictionary<string, Process>();
 
                 foreach (var clientId in clientIds)
                 {
-                    Process clientProcess = await ExecutableManager.RunExecutableAsync(path, clientId,channel, $"-u={url}", $"-i={clientId}");
-                    processDict.Add(clientId,clientProcess);
+                    Process clientProcess = await ExecutableManager.RunExecutableAsync(path, clientId, channel, $"-u={url}", $"-i={clientId}");
+                    processDict.Add(clientId, clientProcess);
                 }
                 var chromeOptions = new ChromeOptions
                 {
                     BrowserVersion = "129.0",
                     AcceptInsecureCertificates = true,
-                    PageLoadTimeout = TimeSpan.FromMinutes(2)                
+                    PageLoadTimeout = TimeSpan.FromMinutes(2)
                 };
                 chromeOptions.AddArgument("--headless"); // Uncomment for headless mode
                 chromeOptions.AddArgument("--disable-gpu");
@@ -220,26 +220,26 @@ namespace StressServer
                 await Parallel.ForEachAsync(drivers.Select((driver, index) => new { driver, index }), new ParallelOptions
                 {
                     MaxDegreeOfParallelism = Environment.ProcessorCount
-                },async  (item, cancellationToken) =>
+                }, async (item, cancellationToken) =>
                 {
                     //for (int j = 0; j < NUM_LOOPS_WAITING_FOR_PAGE_LOAD; j++)
                     //{
-                        try
-                        {
-                            var link = waits[item.index].Until(d => d.FindElement(By.PartialLinkText("Counter")));
-                            link?.Click();
-                            //await Task.Delay(100, cancellationToken);
-                            //break;
-                        }
-                        catch (WebDriverTimeoutException)
-                        {
-                            // Element not found yet, retry
-                        }
-                        catch (Exception ex)
-                        {
-                            Logging.LogEvent($"Unexpected error while clicking 'Counter' link for client {clientIds[item.index]}: {ex.Message}", EventLogEntryType.Error);
-                        }
+                    try
+                    {
+                        var link = waits[item.index].Until(d => d.FindElement(By.PartialLinkText("Counter")));
+                        link?.Click();
                         //await Task.Delay(100, cancellationToken);
+                        //break;
+                    }
+                    catch (WebDriverTimeoutException)
+                    {
+                        // Element not found yet, retry
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogEvent($"Unexpected error while clicking 'Counter' link for client {clientIds[item.index]}: {ex.Message}", EventLogEntryType.Error);
+                    }
+                    //await Task.Delay(100, cancellationToken);
                     // }
                     await Task.CompletedTask;
                 });
@@ -377,23 +377,24 @@ namespace StressServer
                     await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
                 });
 
-                // Cleanup client processes concurrently using Parallel.ForEachAsync
-                //await Parallel.ForEachAsync(clients, new ParallelOptions
-                //{
-                //    MaxDegreeOfParallelism = Environment.ProcessorCount
-                //}, async (client, cancellationToken) =>
-                //{
-                //    try
-                //    {
-                //        if (!client.HasExited)
-                //            client.Kill();
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Logging.LogEvent($"Unable to kill client process (ID: {client.Id}): {ex.Message}", EventLogEntryType.Error);
-                //    }
-                //    await Task.CompletedTask; // Placeholder for any asynchronous operations if needed
-                //});
+
+                foreach (var clientId in clientIds)
+                {
+
+                    bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(
+                      clientId: clientId,
+                      channel: channel,
+                      timeoutMs: 10000, // 10 seconds timeout
+                      checkIntervalMs: 100 // Check every 100ms
+                  );
+
+                    if (!isClientDisconnected)
+                    {
+                        Logging.LogEvent($"Client process (ID: {clientId}) did not shut down", EventLogEntryType.Error);
+                        Environment.Exit(-1);
+                    }
+
+                }
             }
         }
     }
