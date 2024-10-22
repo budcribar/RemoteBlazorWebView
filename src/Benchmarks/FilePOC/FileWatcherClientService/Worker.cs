@@ -9,7 +9,7 @@ using PeakSWC.RemoteWebView;
 using Microsoft.Extensions.Logging;
 using System.Management;
 
-namespace FileWatcherClientService
+namespace FileWatcherClient
 {
     public class Worker
     {

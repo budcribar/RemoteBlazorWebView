@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Grpc.Net.Client;
 using PeakSWC.RemoteWebView;
 
-namespace FileWatcherClientService
+namespace FileWatcherClient
 {
     internal class Program
     {
@@ -74,7 +74,7 @@ namespace FileWatcherClientService
                 configure.ClearProviders();
                 configure.AddEventLog(eventLogSettings =>
                 {
-                    eventLogSettings.SourceName = "FileWatcherClientService"; // Must match the created event source
+                    eventLogSettings.SourceName = "FileWatcherClient"; // Must match the created event source
                     eventLogSettings.LogName = "Application"; // Or your custom log name
                 });
             });

@@ -52,7 +52,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{1F1FA526-F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSyncServer.Tests", "test\FileSyncServer.Tests\FileSyncServer.Tests.csproj", "{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileWatcherClientService", "src\Benchmarks\FilePOC\FileWatcherClientService\FileWatcherClientService.csproj", "{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileWatcherClient", "src\Benchmarks\FilePOC\FileWatcherClientService\FileWatcherClient.csproj", "{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
