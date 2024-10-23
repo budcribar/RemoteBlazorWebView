@@ -158,7 +158,7 @@ namespace PeakSWC.RemoteWebView
         public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
         {
             // Handle Init message
-            if (!await requestStream.MoveNext())
+            if (!await requestStream.MoveNext().ConfigureAwait(false))
             {
                 logger.LogWarning("Client disconnected without sending Init message.");
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "Init message not received."));
@@ -187,7 +187,7 @@ namespace PeakSWC.RemoteWebView
             {
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
-                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 serviceState.FileManagerReady.SetResult(true);
 
                 // Create a linked cancellation token to handle both client cancellation and server cancellation
@@ -196,10 +196,10 @@ namespace PeakSWC.RemoteWebView
 
 
                 // Continuously read messages from the client until cancellation
-                while (await requestStream.MoveNext(cancellationToken))
+                while (await requestStream.MoveNext(cancellationToken).ConfigureAwait(false))
                 {
                     var response = requestStream.Current;
-                    await _fileSyncManager.HandleClientResponse(response);
+                    await _fileSyncManager.HandleClientResponse(response).ConfigureAwait(false);
                 }
 
                 logger.LogDebug($"Client '{clientGuid}' has completed sending messages.");
@@ -229,7 +229,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
@@ -254,7 +254,7 @@ namespace PeakSWC.RemoteWebView
                     if (serviceState == null)
                     {
                         var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-                        serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                        serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     }
 
                     if (message.Initialize && serviceState.PingTask == null)

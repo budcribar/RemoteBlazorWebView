@@ -38,10 +38,10 @@ namespace PeakSWC.RemoteWebView
                 {
                     RunArguments = runArguments
                 }
-            });
+            }).ConfigureAwait(false);
 
             // Stream the initial file
-            await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
+            await StreamFileInChunks(filePath, responseStream, context.CancellationToken).ConfigureAwait(false);
 
             // Send zero-length chunk to indicate end of initial transfer
             await responseStream.WriteAsync(new WatchFileResponse
@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     Content = Google.Protobuf.ByteString.Empty
                 }
-            });
+            }).ConfigureAwait(false);
 
             // Start watching for changes
             using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
@@ -60,14 +60,14 @@ namespace PeakSWC.RemoteWebView
 
             FileSystemEventHandler handler = async (sender, args) =>
             {
-                if(watcher != null)
+                if(watcher != null && !context.CancellationToken.IsCancellationRequested)
                     watcher.EnableRaisingEvents = false;
                 try
                 {
                     _logger.LogInformation($"Change detected in file: {filePath}");
 
                     // Wait briefly to ensure the file write is complete
-                    await Task.Delay(500);
+                    await Task.Delay(500, context.CancellationToken).ConfigureAwait(false);
 
                     // Send notification about the change
                     string updatedRunArguments = GetRunArguments(); // Update if necessary
@@ -77,10 +77,10 @@ namespace PeakSWC.RemoteWebView
                         {
                             RunArguments = updatedRunArguments
                         }
-                    });
+                    }).ConfigureAwait(false);
 
                     // Stream the updated file
-                    await StreamFileInChunks(filePath, responseStream, context.CancellationToken);
+                    await StreamFileInChunks(filePath, responseStream, context.CancellationToken).ConfigureAwait(false);
 
                     // Send zero-length chunk to indicate end of transfer
                     await responseStream.WriteAsync(new WatchFileResponse
@@ -89,13 +89,13 @@ namespace PeakSWC.RemoteWebView
                         {
                             Content = Google.Protobuf.ByteString.Empty
                         }
-                    });
+                    }).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Error processing file change for {filePath}");
                 }
-                if (watcher != null)
+                if (watcher != null && !context.CancellationToken.IsCancellationRequested)
                     watcher.EnableRaisingEvents = true;
             };
             watcher.Error += (sender, args) =>
@@ -111,7 +111,7 @@ namespace PeakSWC.RemoteWebView
             // Keep the streaming RPC alive until the client disconnects
             try
             {
-                await Task.Delay(Timeout.Infinite, context.CancellationToken);
+                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {
@@ -119,6 +119,7 @@ namespace PeakSWC.RemoteWebView
             }
             finally
             {
+                watcher.EnableRaisingEvents = false;
                 watcher.Changed -= handler;
             }
         }
@@ -134,7 +135,7 @@ namespace PeakSWC.RemoteWebView
             byte[] buffer = new byte[chunkSize];
             int bytesRead;
 
-            while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+            while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -155,7 +156,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         Content = Google.Protobuf.ByteString.CopyFrom(actualBytes)
                     }
-                });
+                }).ConfigureAwait(false);
             }
 
             _logger.LogInformation($"Completed streaming file: {filePath}");

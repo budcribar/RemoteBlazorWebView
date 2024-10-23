@@ -21,7 +21,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false); 
                 using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                 serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
                 try
@@ -58,7 +58,7 @@ namespace PeakSWC.RemoteWebView
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 // Skip messages from read only client
                 if (!request.IsPrimary)
                 {
@@ -72,7 +72,7 @@ namespace PeakSWC.RemoteWebView
 
                 try
                 {
-                    await state.Semaphore.WaitAsync(serviceState.Token);
+                    await state.Semaphore.WaitAsync(serviceState.Token).ConfigureAwait(false);
 
                     if (request.Sequence == state.SequenceNum)
                     {

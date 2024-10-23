@@ -14,7 +14,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
             return async context =>
             {
                 context.Response.StatusCode = StatusCodes.Status200OK;
-                await context.Response.WriteAsync("OK");
+                await context.Response.WriteAsync("OK").ConfigureAwait(false);
             };
         }
     }

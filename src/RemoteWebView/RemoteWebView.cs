@@ -196,7 +196,7 @@ namespace PeakSWC.RemoteWebView
             _ = Task.Factory.StartNew(async () =>
             {
                 var pings = client.Ping();
-
+             
                 try
                 {
                     await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = blazorWebView.Id.ToString(), Initialize = true, PingIntervalSeconds = (int)PingIntervalSeconds },cts.Token).ConfigureAwait(false);
@@ -504,8 +504,7 @@ namespace PeakSWC.RemoteWebView
         public async ValueTask DisposeAsyncCore()
         {
             cts.Cancel();
-            // TODO Shutdown FileSyncManager
-
+       
             if (channel != null)
             {
                 try
@@ -517,22 +516,7 @@ namespace PeakSWC.RemoteWebView
                     Logger.LogError(ex, "Error shutting down channel.");
                 }
             }
-
-            //cts.Dispose();
-
-
-            // cancel Tasks
-            //  _cts.Cancel();
-            // await _call.RequestStream.CompleteAsync();
-            // ping and file reader need RequestStream.CompleteAsync();
-            // if (_responseTask != null)
-            //{
-            //    await _responseTask;
-            //}
-            // Dispose of the call
-            // _call.Dispose();
-            // Dispose the cancellation token source
-            // _cts.Dispose();
+          
             await Task.CompletedTask;
         }
     }

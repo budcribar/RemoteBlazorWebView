@@ -20,17 +20,17 @@ namespace PeakSWC.RemoteWebView.Services
                     if (exception != null)
                         logger.LogError($"Shutting down {id} Exception:{exception.Message}");
 
-                    var serviceState = await client.Task.WaitWithTimeout(TimeSpan.FromMilliseconds(5));
+                    var serviceState = await client.Task.WaitWithTimeout(TimeSpan.FromMilliseconds(5)).ConfigureAwait(false);
 
                     try
                     {
-                        await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask);
+                        await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
                     }
                     catch (Exception) { }
 
                     serviceState.InUse = false;
 
-                    await serviceState.DisposeAsync();
+                    await serviceState.DisposeAsync().ConfigureAwait(false);
                 }
                 catch { }
                 

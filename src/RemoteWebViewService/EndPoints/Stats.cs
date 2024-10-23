@@ -143,7 +143,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 context.Response.ContentType = "text/html; charset=utf-8";
 
                 // Write the HTML content to the response
-                await context.Response.WriteAsync(htmlBuilder.ToString());
+                await context.Response.WriteAsync(htmlBuilder.ToString()).ConfigureAwait(false);
             };
         }
     }

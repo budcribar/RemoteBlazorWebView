@@ -83,7 +83,7 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         private async Task ProcessWriteChannelAsync()
         {
-            await foreach (var writeRequest in _writeChannel.Reader.ReadAllAsync(_cts.Token))
+            await foreach (var writeRequest in _writeChannel.Reader.ReadAllAsync(_cts.Token).ConfigureAwait(false))
             {
                 try
                 {
@@ -118,7 +118,7 @@ namespace PeakSWC.RemoteWebView
             }
             else if (response.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
             {
-                await HandleFileChunkResponse(clientGuid, requestId, response.FileData);
+                await HandleFileChunkResponse(clientGuid, requestId, response.FileData).ConfigureAwait(false);
             }
             else
             {

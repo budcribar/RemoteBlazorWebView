@@ -20,13 +20,13 @@ namespace PeakSWC.RemoteWebView
             {
                 var serviceStateTaskSource = serviceDictionary.Values.ToList();
                 var tasks = serviceDictionary.Values.Select(x => x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
-                var results = await Task.WhenAll(tasks);
+                var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
                 list.ClientResponses.AddRange(results.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
             }
             catch { }
            
-            await responseStream.WriteAsync(list);
+            await responseStream.WriteAsync(list).ConfigureAwait(false);
         }
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
@@ -88,9 +88,9 @@ namespace PeakSWC.RemoteWebView
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 try
                 {
-                    var ss = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    var ss = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
-                   
+
                     if (ss.PingTask != null)
                         responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
                     if (ss.IPC.BrowserTask != null)
@@ -112,10 +112,10 @@ namespace PeakSWC.RemoteWebView
             response.ClientCacheEnabled = filesOptions.UseClientCache;
             response.ServerCacheEnabled = filesOptions.UseServerCache;
 
-            var responses = await GetConnectionResponses(serviceDictionary);
+            var responses = await GetConnectionResponses(serviceDictionary).ConfigureAwait(false);
             response.ConnectionResponses.AddRange(responses);
 
-            responses.ForEach(async x => x.TaskResponses.AddRange(await GetTaskResponses(x.Id)));
+            responses.ForEach(async x => x.TaskResponses.AddRange(await GetTaskResponses(x.Id).ConfigureAwait(false)));
 
             return response;
         }
@@ -128,7 +128,7 @@ namespace PeakSWC.RemoteWebView
             {
                 var tasks = snapshotTasks.Select( x =>  x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
 
-                var results = await Task.WhenAll(tasks);
+                var results = await Task.WhenAll(tasks).ConfigureAwait(false); 
                 return results.Select(x => new ConnectionResponse
                 {
                     HostName = x.HostName,

@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                 try
                 {
-                    var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     // Check if the service is already in use
                     if (serviceState.InUse)
                     {

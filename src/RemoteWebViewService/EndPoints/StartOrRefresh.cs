@@ -33,8 +33,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 try
                 {
                     // Wait for the task to be completed or time out using the extension method
-                    var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
-                    var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
                     // Handle the case where refresh is not enabled
                     if (!serviceState.Refresh)

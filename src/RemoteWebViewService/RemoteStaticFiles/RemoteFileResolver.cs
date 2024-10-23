@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView
                 return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes("[]")) };
             }
 
-            DataRequest dataRequest = await manager.RequestFileDataAsync(clientId, subpath,logger);
+            DataRequest dataRequest = await manager.RequestFileDataAsync(clientId, subpath,logger).ConfigureAwait(false);
 
             var htmlHostPath = manager.GetHtmlHostPath(clientId);
 

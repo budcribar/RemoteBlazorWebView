@@ -43,7 +43,7 @@ namespace PeakSWC.RemoteWebView.Services
                 }
                 _stats.RecordBytesReceived(bytesReceived);
 
-                var response = await continuation(request, context);
+                var response = await continuation(request, context).ConfigureAwait(false);
 
                 if (response is IMessage message2)
                 {
@@ -105,7 +105,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
 
-                await continuation(request, wrappedStream, context);
+                await continuation(request, wrappedStream, context).ConfigureAwait(false);
 
                 _stats.RecordBytesSent(wrappedStream.BytesSent);
 
@@ -154,7 +154,7 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
 
-                var response = await continuation(wrappedStream, context);
+                var response = await continuation(wrappedStream, context).ConfigureAwait(false);
 
                 if (response is IMessage message)
                 {
@@ -210,7 +210,7 @@ namespace PeakSWC.RemoteWebView.Services
                 var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
                 var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
 
-                await continuation(wrappedRequestStream, wrappedResponseStream, context);
+                await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
 
                 _stats.RecordBytesSent(wrappedResponseStream.BytesSent);
 
@@ -274,7 +274,7 @@ namespace PeakSWC.RemoteWebView.Services
                     Interlocked.Add(ref _bytesSent, size); // Thread-safe increment
                 }
 
-                await _inner.WriteAsync(message);
+                await _inner.WriteAsync(message).ConfigureAwait(false);
             }
         }
 
@@ -300,7 +300,7 @@ namespace PeakSWC.RemoteWebView.Services
 
             public async Task<bool> MoveNext(CancellationToken cancellationToken)
             {
-                var result = await _inner.MoveNext(cancellationToken);
+                var result = await _inner.MoveNext(cancellationToken).ConfigureAwait(false);
                 if (result && _inner.Current is IMessage message)
                 {
                     // Calculate bytes received for this message
