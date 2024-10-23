@@ -120,7 +120,6 @@ namespace PeakSWC.RemoteWebView
             finally
             {
                 watcher.Changed -= handler;
-                watcher.Dispose();
             }
         }
 

@@ -24,13 +24,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Include="..\..\..\..\..\..\..\..\Certificates\DevCertificate_192.168.1.35.cer" Link="DevCertificate.cer">
+	  <EmbeddedResource Include="..\..\..\..\..\..\..\..\Certificates\DevCertificate_192.168.1.35.cer" Link="Resources\DevCertificate.cer">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </None>
+	  </EmbeddedResource>
+	  <EmbeddedResource Include="Resources\.playwright.zip" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Selenium.WebDriver" Version="4.25.0" />
+		<PackageReference Include="Microsoft.Playwright" Version="1.48.0" />
+		<PackageReference Include="System.Management" Version="9.0.0-rc.2.24473.5" />
+		<PackageReference Include="FluentAssertions" Version="6.12.1" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0-rc.2.24473.5" />
 		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
@@ -40,24 +43,23 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="publish\**\*" Exclude="publish\StressServer.exe; publish\Microsoft.Web.WebView2.Core.xml; publish\PeakSWC.RemoteWebView.pdb">
+		<EmbeddedResource Include="publish\**\*" Exclude=" publish\Microsoft.Web.WebView2.Core.xml; publish\PeakSWC.RemoteWebView.pdb; publish\StressServer.exe; publish\.playwright\**\*">
 			<Link>resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</EmbeddedResource>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <EmbeddedResource Remove="publish\selenium-manager\linux.selenium-manager" />
-	  <EmbeddedResource Remove="publish\selenium-manager\macos.selenium-manager" />
+	  <None Remove="Resources\.playwright.zip" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
-	  <None Remove="publish\selenium-manager\linux.selenium-manager" />
-	  <None Remove="publish\selenium-manager\macos.selenium-manager" />
+	  <Compile Include="..\..\..\test\FileSyncServer.Tests\Utilities.cs" Link="Utilities.cs" />
 	</ItemGroup>
 
 
 	<ItemGroup>
-	  <Folder Include="Resources\" />
+	  <Folder Include="publish\" />
 	</ItemGroup>
+
 
 </Project>

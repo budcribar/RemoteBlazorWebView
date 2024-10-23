@@ -14,6 +14,7 @@ using System.Net;
 using PeakSWC.RemoteWebView;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.IO.Compression;
 
 namespace WebdriverTestProject
 {
@@ -622,6 +623,10 @@ namespace WebdriverTestProject
                 }
 
                 Console.WriteLine("All embedded resources have been extracted successfully.");
+
+                ZipFile.ExtractToDirectory("playwright.zip", executionDirectory);
+               
+                Console.WriteLine("Extracted playwright files");
             }
             catch (Exception ex)
             {
