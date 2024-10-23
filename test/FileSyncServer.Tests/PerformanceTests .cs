@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
+using WebdriverTestProject;
 using Xunit;
 
 namespace Server
@@ -26,7 +27,7 @@ namespace Server
         public async Task InitializeAsync()
         {
             // Kill any existing Client processes to ensure a clean start
-            Utility.KillExistingProcesses("Client");
+            Utilities.KillExistingProcesses("Client");
 
             int numberOfClients = 5; // Adjust as needed
             for (int i = 0; i < numberOfClients; i++)

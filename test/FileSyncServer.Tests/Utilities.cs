@@ -7,13 +7,20 @@ using System.Threading;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Management;
+using Google.Protobuf.WellKnownTypes;
+using Grpc.Net.Client;
+using System.Security.AccessControl;
+using System.Net;
+using PeakSWC.RemoteWebView;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 namespace WebdriverTestProject
 {
-    public class Utilities
+    public static class Utilities
     {
         #region Server
-        
+
         static string GetParentProcessName()
         {
             try
@@ -118,7 +125,7 @@ namespace WebdriverTestProject
             return process;
         }
 
-#endregion
+        #endregion
 
         #region WinForm
         public static Process StartRemoteBlazorWinFormsDebugApp(string url, string id) => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath(), url, id);
@@ -130,7 +137,7 @@ namespace WebdriverTestProject
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\x64\debug\net9.0-windows";  
+            var exePath = @"bin\x64\debug\net9.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -194,7 +201,7 @@ namespace WebdriverTestProject
             return Path.Combine(BlazorWpfEmbeddedPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
         }
 
-        public static Process  StartRemoteBlazorWpfEmbeddedApp(string url, string id) => StartProcess(BlazorWpfAppEmbeddedExe(), BlazorWpfEmbeddedPath(), url, id);
+        public static Process StartRemoteBlazorWpfEmbeddedApp(string url, string id) => StartProcess(BlazorWpfAppEmbeddedExe(), BlazorWpfEmbeddedPath(), url, id);
 
         public static Process StartRemoteBlazorWpfApp(string url, string id) => StartProcess(BlazorWpfAppExe(), BlazorWpfPath(), url, id);
 
@@ -203,9 +210,7 @@ namespace WebdriverTestProject
         public static int CountRemoteBlazorWinFormsApp() => Count("RemoteBlazorWebViewTutorial.WinFormsApp");
         public static int CountRemoteBlazorWpfApp() => Count("RemoteBlazorWebViewTutorial.WpfApp");
         #endregion
-        
-        
-        
+
         private static string RelativeRoot
         {
             get
@@ -249,14 +254,14 @@ namespace WebdriverTestProject
             var exePath = "publishEmbedded";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
-      
+
 
         public static string BlazorWebViewAppEmbeddedExe()
         {
             return Path.Combine(BlazorWebViewEmbeddedPath(), "RemoteBlazorWebViewTutorial.exe");
         }
 
-        public static Process StartRemoteBlazorWebViewApp(string url, string pid)  => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath(),url,pid);
+        public static Process StartRemoteBlazorWebViewApp(string url, string pid) => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath(), url, pid);
         public static Process StartRemoteBlazorWebViewEmbeddedApp(string url, string pid) => StartProcess(BlazorWebViewAppEmbeddedExe(), BlazorWebViewEmbeddedPath(), url, pid);
         public static void KillRemoteBlazorWebViewApp() => Kill("RemoteBlazorWebViewTutorial");
 
@@ -307,7 +312,7 @@ namespace WebdriverTestProject
                     // Wait for the process to exit
                     process.WaitForExit();
                 }
-                
+
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Unexpected error occurred while killing process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
@@ -448,7 +453,466 @@ namespace WebdriverTestProject
             }
         }
 
-    }
+        #endregion
 
-    #endregion
+        public static async Task SetServerCache(bool isEnabled)
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+
+            var cacheRequest = new CacheRequest
+            {
+                EnableServerCache = isEnabled
+            };
+
+            await grpcClient.SetCacheAsync(cacheRequest);
+
+        }
+
+        public static async Task SetClientCache(bool isEnabled)
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+
+            var cacheRequest = new CacheRequest
+            {
+                EnableClientCache = isEnabled
+            };
+
+            await grpcClient.SetCacheAsync(cacheRequest);
+
+        }
+
+        public static async Task<bool> GetServerCache()
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+            var response = await grpcClient.GetServerStatusAsync(new Empty());
+            return response.ServerCacheEnabled;
+        }
+
+        public static async Task<bool> GetClientCache()
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+
+            // Create the WebViewIPC client
+            var grpcClient = new ClientIPC.ClientIPCClient(channel);
+
+            var response = await grpcClient.GetServerStatusAsync(new Empty());
+            return response.ClientCacheEnabled;
+        }
+
+        public static string BASE_URL = "https://localhost:5001";
+
+        public static HttpClient Client(HttpMessageHandler? handler = null)
+        {
+            // Instantiate HttpClient with the provided handler or default handler
+            var client = handler != null ? new HttpClient(handler) : new HttpClient();
+
+            // Set the base address
+            client.BaseAddress = new Uri(BASE_URL);
+
+            // Set the timeout
+            client.Timeout = TimeSpan.FromMinutes(5); // Adjust as necessary
+
+            // Set the default HTTP version
+            client.DefaultRequestVersion = HttpVersion.Version11;
+
+            return client;
+        }
+
+        /// <summary>
+        /// Extracts all embedded resources from the 'resources' directory and copies them to the execution directory.
+        /// </summary>
+        public static void ExtractResourcesToExecutionDirectory()
+        {
+            try
+            {
+                // Get the executing assembly
+                Assembly assembly = Assembly.GetExecutingAssembly();
+
+                // Get the base directory where the executable is running
+                string executionDirectory = AppContext.BaseDirectory;
+
+                // Get all embedded resource names
+                string[] resourceNames = assembly.GetManifestResourceNames();
+
+                // Define the prefix to identify resources in the 'resources' directory
+                // Replace 'YourDefaultNamespace' with your project's default namespace
+                string resourcePrefix = "StressServer.resources.";
+
+                foreach (string resourceName in resourceNames)
+                {
+                    // Check if the resource is within the 'resources' directory
+                    if (resourceName.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Determine the relative path by removing the prefix
+                        string relativePath = resourceName.Substring(resourcePrefix.Length);
+
+                        // Handle file names with multiple dots
+                        // For example, 'subfolder.config.json' should map to 'subfolder\config.json'
+                        // Split the relative path into segments based on dots
+                        string[] segments = relativePath.Split('.');
+                        if (segments.Length < 2)
+                        {
+                            // Not enough segments to form a valid path, skip this resource
+                            Console.WriteLine($"Invalid resource format: {resourceName}");
+                            continue;
+                        }
+
+                        // Reconstruct the file path
+                        // Assume the last segment is the file extension
+                        string fileExtension = segments[^1];
+                        string fileName = segments[^2] + "." + segments[^1];
+                        string[] directorySegments = new string[segments.Length - 2];
+                        Array.Copy(segments, 0, directorySegments, 0, segments.Length - 2);
+                        string directoryPath = Path.Combine(directorySegments);
+
+                        // Combine to form the full relative path
+                        string combinedRelativePath = Path.Combine(directoryPath, fileName);
+
+                        // Determine the destination path in the execution directory
+                        string destinationPath = Path.Combine(executionDirectory, combinedRelativePath).Replace("_", "-");
+
+                        // Ensure the destination directory exists
+                        string destinationDirectory = Path.GetDirectoryName(destinationPath) ?? string.Empty;
+                        if (!Directory.Exists(destinationDirectory))
+                        {
+                            Directory.CreateDirectory(destinationDirectory);
+                            Console.WriteLine($"Created directory: {destinationDirectory}");
+                        }
+
+                        // Extract and write the resource to the destination path
+                        using (Stream? resourceStream = assembly.GetManifestResourceStream(resourceName))
+                        {
+                            if (resourceStream == null)
+                            {
+                                Console.WriteLine($"Failed to load resource: {resourceName}");
+                                continue;
+                            }
+
+                            using (FileStream fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
+                            {
+                                resourceStream.CopyTo(fileStream);
+                                Console.WriteLine($"Extracted resource: {resourceName} to {destinationPath}");
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine("All embedded resources have been extracted successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while extracting resources: {ex.Message}");
+            }
+        }
+
+        public static void KillExistingProcesses(string processName)
+        {
+
+            foreach (var process in Process.GetProcessesByName(processName))
+            {
+                try
+                {
+                    Console.WriteLine($"Killing process: {process.ProcessName} (ID: {process.Id})");
+                    process.Kill();
+                    process.WaitForExit(); // Optionally wait for the process to exit
+                }
+                catch (Exception ex)
+                {
+
+                    Console.WriteLine($"Error killing process: {ex.Message}");
+                }
+
+            }
+
+        }
+
+        /// <summary>
+        /// Modifies the Read and Delete permissions for a specified user on a given file.
+        /// </summary>
+        /// <param name="filePath">The path to the file.</param>
+        /// <param name="user">The user account (e.g., "DOMAIN\\Username").</param>
+        /// <param name="grantRead">True to grant Read and Delete permissions; False to remove them.</param>
+        /// <param name="disableInheritance">Optional. True to disable inheritance on the file; False to leave it as is.</param>
+        public static void ModifyFilePermissions(string filePath, string user, bool grantRead, bool disableInheritance = true)
+        {
+            // Validate input parameters
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+
+            if (string.IsNullOrWhiteSpace(user))
+                throw new ArgumentException("User cannot be null or empty.", nameof(user));
+
+            FileInfo fileInfo = new FileInfo(filePath);
+
+            if (!fileInfo.Exists)
+                throw new FileNotFoundException("The specified file does not exist.", filePath);
+
+            try
+            {
+                // Get the current ACL (Access Control List) of the file
+                FileSecurity fileSecurity = fileInfo.GetAccessControl();
+
+                if (grantRead)
+                {
+                    // Define the access rule to grant Read and Delete permissions
+                    FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                        user,
+                        FileSystemRights.Read | FileSystemRights.Delete,
+                        InheritanceFlags.None,
+                        PropagationFlags.NoPropagateInherit,
+                        AccessControlType.Allow);
+
+                    // Check if the rule already exists to prevent duplicates
+                    bool ruleExists = false;
+                    foreach (FileSystemAccessRule rule in fileSecurity.GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount)))
+                    {
+                        if (rule.IdentityReference.Value.Equals(user, StringComparison.OrdinalIgnoreCase) &&
+                            rule.FileSystemRights.HasFlag(FileSystemRights.Read) &&
+                            rule.FileSystemRights.HasFlag(FileSystemRights.Delete) &&
+                            rule.AccessControlType == AccessControlType.Allow)
+                        {
+                            ruleExists = true;
+                            break;
+                        }
+                    }
+
+                    if (!ruleExists)
+                    {
+                        // Add the access rule since it doesn't exist
+                        fileSecurity.AddAccessRule(allowReadDeleteRule);
+                        Console.WriteLine($"Granted Read and Delete permissions to {user}.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Read and Delete permissions for {user} are already granted.");
+                    }
+                }
+                else
+                {
+                    // Define the access rule to remove Read and Delete permissions
+                    FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                        user,
+                        FileSystemRights.Read | FileSystemRights.Delete,
+                        InheritanceFlags.None,
+                        PropagationFlags.NoPropagateInherit,
+                        AccessControlType.Allow);
+
+                    // Remove all matching Allow Read and Delete rules for the user
+                    fileSecurity.RemoveAccessRuleAll(allowReadDeleteRule);
+
+                }
+
+                // Optionally, handle inheritance
+                if (disableInheritance)
+                {
+                    bool isInheritanceEnabled = !fileSecurity.AreAccessRulesProtected;
+
+                    if (isInheritanceEnabled)
+                    {
+                        // Disable inheritance and remove inherited rules
+                        fileSecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+                        Console.WriteLine("Inheritance disabled and inherited rules removed.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Inheritance is already disabled.");
+                    }
+                }
+
+                // Apply the updated ACL to the file
+                fileInfo.SetAccessControl(fileSecurity);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Access denied: {ex.Message}");
+                // Handle according to your application's requirements
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while modifying file permissions: {ex.Message}");
+                // Handle according to your application's requirements
+                throw;
+            }
+        }
+
+
+        //private static readonly char[] chars =
+        //   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".ToCharArray();
+
+        //   public static string GenerateRandomString(int length)
+        //   {
+        //       StringBuilder result = new StringBuilder(length);
+        //       Random random = new Random();
+
+        //       for (int i = 0; i < length; i++)
+        //       {
+        //           result.Append(chars[random.Next(chars.Length)]);
+        //       }
+
+        //       return result.ToString();
+        //   }
+
+        public static X509Certificate2 LoadCerCertificate(string cerFilePath)
+        {
+            return X509CertificateLoader.LoadCertificateFromFile(cerFilePath);
+        }
+        public static void AddCertificateToLocalMachine(string cerFilePath)
+        {
+            try
+            {
+                // Load the certificate
+                X509Certificate2 certificate = LoadCerCertificate(cerFilePath);
+
+                // Check if the certificate has expired
+                DateTime now = DateTime.Now;
+                if (now < certificate.NotBefore || now > certificate.NotAfter)
+                {
+                    Console.WriteLine("Error: Certificate is either not yet valid or has expired.");
+                    return;
+                }
+
+                // Open the Local Machine's Trusted Root store
+                using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+                {
+                    store.Open(OpenFlags.ReadWrite);
+
+                    // Check if the certificate already exists
+                    bool exists = false;
+                    foreach (var cert in store.Certificates)
+                    {
+                        if (cert.Thumbprint.Equals(certificate.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists)
+                    {
+                        store.Add(certificate);
+                        Console.WriteLine("Certificate added to Local Machine's Trusted Root store.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Certificate already exists in Local Machine's Trusted Root store.");
+                    }
+
+                    store.Close();
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine("Error: Access denied. Please run the application with the necessary permissions.");
+            }
+            catch (CryptographicException ex)
+            {
+                Console.WriteLine($"Cryptographic error: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"IO error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+            }
+        }
+
+        public static async Task KillProcessesAsync(string processName)
+        {
+            var existingProcesses = Process.GetProcessesByName(processName);
+
+            if (!existingProcesses.Any())
+            {
+                Console.WriteLine($"No running processes found with name: {processName}");
+                return;
+            }
+
+            Console.WriteLine($"Killing {existingProcesses.Length} instance(s) of process: {processName}");
+
+            List<Task> killTasks = existingProcesses.Select(async process =>
+            {
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill();
+                        Console.WriteLine($"Sent kill signal to process ID: {process.Id}");
+
+                        // Wait for the process to exit with a timeout (e.g., 5 seconds)
+                        await process.WaitForExitAsync();
+
+                        if (process.HasExited)
+                        {
+                            Console.WriteLine($"Process ID: {process.Id} has exited.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to kill process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
+                }
+            }).ToList();
+
+            await Task.WhenAll(killTasks);
+        }
+
+        public static void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDir);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException($"Source directory does not exist: {sourceDir}");
+            }
+
+            // Create the destination directory if it doesn't exist.
+            if (!Directory.Exists(destinationDir))
+            {
+                Directory.CreateDirectory(destinationDir);
+            }
+
+            // Copy all the files to the destination directory.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath, true); // Overwrite if exists
+            }
+
+            // Copy all subdirectories and their files recursively.
+            DirectoryInfo[] subdirectories = dir.GetDirectories();
+            foreach (DirectoryInfo subdir in subdirectories)
+            {
+                string newDestinationDir = Path.Combine(destinationDir, subdir.Name);
+                CopyDirectory(subdir.FullName, newDestinationDir);
+            }
+        }
+    }
 }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using FileSyncServer;
+using WebdriverTestProject;
 
 [Collection("Server collection")]
 public class LoadTest
@@ -48,14 +49,14 @@ public class LoadTest
     {
         double nonlinearityThreshold = 1.5;
         int timeoutSeconds = 30;
-        string baseUrl = Utility.BASE_URL;
+        string baseUrl = Utilities.BASE_URL;
         string testUrl = $"{baseUrl}/{clientId}/maxconcurrenttest.txt";
 
         // Process checks (consider moving to fixtures)
         Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
         Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
 
-        await Utility.SetServerCache(true);
+        await Utilities.SetServerCache(true);
 
         int minConcurrentRequests = 1;
         int maxConcurrentRequests = 1;

@@ -49,11 +49,6 @@ namespace WebdriverTestProject
             Utilities.KillRemoteBlazorWebViewApp();
         }
 
-        //public virtual int CountClients()
-        //{
-        //    return Utilities.CountRemoteBlazorWpfApp();
-        //}
-
         public virtual Process StartServer()
         {
             return Utilities.StartServer();

@@ -15,7 +15,7 @@ public class ClientFixture : IDisposable
     public ClientFixture()
     {
         // Kill any existing Client processes to ensure a clean start
-        // Utility.KillExistingProcesses("Client");
+        // Utilities.KillExistingProcesses("Client");
 
         // Determine the path to the client executable
         var testOutputPath = Directory.GetCurrentDirectory();

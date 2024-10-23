@@ -30,7 +30,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0-rc.2.24473.5" />
 		<PackageReference Include="System.Management" Version="9.0.0-rc.2.24473.5" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-		<PackageReference Include="Microsoft.Playwright" Version="1.47.0" />
+		<PackageReference Include="Microsoft.Playwright" Version="1.48.0" />
 		<PackageReference Include="PeakSWC.RemoteBlazorWebView.Wpf" Version="9.0.0-preview7" />
 		<PackageReference Include="xunit" Version="2.9.2" />
 		<PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />

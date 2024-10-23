@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
 using Microsoft.Playwright;
+using WebdriverTestProject;
 using Xunit;
 
 namespace Server
@@ -101,7 +102,7 @@ namespace Server
             
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
-            using var client = Utility.Client();   
+            using var client = Utilities.Client();   
 
             var tasks = new List<Task<(string FileName, HttpStatusCode Status, string Content)>>();
 
@@ -141,9 +142,9 @@ namespace Server
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndNoClientCaching()
         {
             // Enable client-side caching
-            await Utility.SetClientCache(false);
-            // (await Utility.GetClientCache()).Should().BeTrue
-            (await Utility.GetClientCache()).Should().BeFalse();
+            await Utilities.SetClientCache(false);
+            // (await Utilities.GetClientCache()).Should().BeTrue
+            (await Utilities.GetClientCache()).Should().BeFalse();
             // Arrange
             var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
 
@@ -165,7 +166,7 @@ namespace Server
                     tasks.Add(Task.Run(async () =>
                     {
                         var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utility.BASE_URL}/{clientId}/{fileName}",new PageGotoOptions
+                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}",new PageGotoOptions
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });
@@ -182,15 +183,15 @@ namespace Server
             {
                 result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");   
             }
-            await Utility.SetClientCache(false);
+            await Utilities.SetClientCache(false);
         }
 
         [Fact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndClientCaching()
         {
             // Enable client-side caching
-            await Utility.SetClientCache(true);
-            (await Utility.GetClientCache()).Should().BeTrue();
+            await Utilities.SetClientCache(true);
+            (await Utilities.GetClientCache()).Should().BeTrue();
           
             // Arrange
             var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
@@ -213,7 +214,7 @@ namespace Server
                     tasks.Add(Task.Run(async () =>
                     {
                         var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utility.BASE_URL}/{clientId}/{fileName}", new PageGotoOptions
+                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}", new PageGotoOptions
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });
@@ -230,7 +231,7 @@ namespace Server
             {
                 result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");
             }
-            await Utility.SetClientCache(false);
+            await Utilities.SetClientCache(false);
         }
     }
 }

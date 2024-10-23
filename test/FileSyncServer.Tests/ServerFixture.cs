@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 
 using FileSyncServer;
+using WebdriverTestProject;
 
 public class ServerFixture : IDisposable
 {
@@ -10,7 +11,7 @@ public class ServerFixture : IDisposable
 
     public ServerFixture()
     {
-        Utility.KillExistingProcesses("RemoteWebViewService");
+        Utilities.KillExistingProcesses("RemoteWebViewService");
         // Determine the path to the server executable
         var testOutputPath = Directory.GetCurrentDirectory();
 

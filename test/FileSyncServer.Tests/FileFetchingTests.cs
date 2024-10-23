@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
+using WebdriverTestProject;
 using Xunit;
 
 namespace Server
@@ -50,7 +51,7 @@ namespace Server
         public async Task GetExistingFile_ReturnsFileContent(string fileName)
         {
             // Arrange
-            var client = Utility.Client();
+            var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
@@ -70,7 +71,7 @@ namespace Server
         public async Task GetNonExistingFile_ReturnsNotFound(string fileName)
         {
             // Arrange
-            var client = Utility.Client();
+            var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
@@ -95,7 +96,7 @@ namespace Server
             // Ensure the large file exists (e.g., 100MB)
             LargeFileSetup.EnsureLargeFileExists(largeFilePath, 100 * 1024 * 1024); // 100MB
 
-            var client = Utility.Client();
+            var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
