@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -11,6 +12,10 @@ namespace PeakSWC.RemoteWebView
     {
         public Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
         {
+            if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
+            {
+                return Task.FromResult(new FileMetadata { ETag = "etag", LastModified = DateTimeOffset.MinValue.Ticks, Length=2, StatusCode=(int)HttpStatusCode.OK });
+            }
             return manager.RequestFileMetadataAsync(clientId, subpath, logger);
         }
         public async Task<FileStream> GetFileStreamAsync(string clientId, string subpath)
