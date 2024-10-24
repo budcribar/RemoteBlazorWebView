@@ -68,93 +68,9 @@ namespace PeakSWC.RemoteWebView
             {
                 logger.LogError($"CreateWebView Id:{request.Id} failed {ex.Message}");
                 await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
-            }
-         
+            }         
         }
-
-        //public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
-        //{
-        //    var id = string.Empty;
-        //    try
-        //    {
-        //        await foreach (ClientFileReadResponse message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
-        //        {
-        //            id = message.ClientId;
-
-        //            if (serviceDictionary.TryGetValue(id, out var serviceState))
-        //            {
-        //                if (serviceState.Token.IsCancellationRequested)
-        //                    break;
-
-        //                if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Init && serviceState.FileReaderTask == null)
-        //                {
-        //                    serviceState.FileReaderTask = Task.Run(async () =>
-        //                    {
-        //                        try
-        //                        {
-        //                            while (!serviceState.Token.IsCancellationRequested)
-        //                            {
-        //                                var fileEntry = await serviceState.FileCollection.Reader.ReadAsync(serviceState.Token).ConfigureAwait(false);
-        //                                await responseStream.WriteAsync(new ServerFileReadRequest { ClientId = id, Path = fileEntry.Path, RequestId = fileEntry.Instance.ToString() }, serviceState.Token).ConfigureAwait(false);
-        //                            }
-        //                        }
-        //                        catch (OperationCanceledException)
-        //                        {
-        //                            // Handle cancellation if necessary
-        //                        }
-        //                        catch (Exception ex)
-        //                        {
-        //                            await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
-        //                        }
-        //                    }, serviceState.Token);
-        //                }
-
-        //                else if (message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Metadata)
-        //                {
-        //                    if (serviceState.FileDictionary.TryGetValue(message.Path, out var concurrentList) && concurrentList.Count > int.Parse(message.RequestId) && int.Parse(message.RequestId) >= 0)
-        //                    {
-        //                        var fileEntry = concurrentList[int.Parse(message.RequestId)];
-        //                        fileEntry.Length = message.Metadata.Length;
-        //                        fileEntry.Semaphore.Release();
-
-        //                        // send a FileReadData request
-        //                    }
-        //                    else
-        //                    {
-        //                        logger.LogError($"FileEntry not found for Path: {message.Path}, Instance: {message.RequestId}");
-        //                        await shutdownService.Shutdown(id).ConfigureAwait(false);
-        //                    }
-        //                }
-        //                else if(message.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
-        //                {
-        //                    var fileEntry = serviceState.FileDictionary[message.Path][int.Parse(message.RequestId)]; 
-        //                    if (message.FileData.FileChunk.Length > 0)
-        //                    {        
-        //                        // TODO is there a limit on the Pipe write?
-        //                        await fileEntry.Pipe.Writer.WriteAsync(message.FileData.FileChunk.ToByteArray(), serviceState.Token).ConfigureAwait(false);
-        //                        // _ = fileEntry.Pipe.Writer.FlushAsync();
-        //                    }
-        //                    else
-        //                    {
-        //                        // Trigger the stream read                              
-        //                        fileEntry.Pipe.Writer.Complete();
-        //                    }
-        //                }
-        //            }
-
-        //            else break;
-        //        }
-        //    }
-        //    catch (OperationCanceledException)
-        //    {
-        //        // No need to shutdown as we are in the process of shutting down
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await shutdownService.Shutdown(id,ex).ConfigureAwait(false);
-        //    }
-        //}
-
+     
         public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
         {
             // Handle Init message
@@ -180,8 +96,6 @@ namespace PeakSWC.RemoteWebView
 
             // Associate the response stream with the clientGuid
             _fileSyncManager.AssociateResponseStream(clientGuid, responseStream);
-
-
 
             try
             {
@@ -215,6 +129,7 @@ namespace PeakSWC.RemoteWebView
                 // Clean up when the client disconnects
                 _fileSyncManager.RemoveClient(clientGuid);
                 logger.LogDebug($"Cleaned up resources for client '{clientGuid}'.");
+                await shutdownService.Shutdown(clientGuid);
             }
         }
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
@@ -241,14 +156,15 @@ namespace PeakSWC.RemoteWebView
         public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
+            CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
             try
             {
                 DateTime responseReceived = DateTime.UtcNow;
                 DateTime responseSent = DateTime.UtcNow;
 
                 ServiceState? serviceState = null;
-
-                await foreach (PingMessageRequest message in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+                
+                await foreach (PingMessageRequest message in requestStream.ReadAllAsync(linkedToken.Token).ConfigureAwait(false))
                 {
                     id = message.Id;
                     if (serviceState == null)
@@ -256,16 +172,17 @@ namespace PeakSWC.RemoteWebView
                         var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                         serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     }
-
+                    linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                     if (message.Initialize && serviceState.PingTask == null)
                     {
                         serviceState.PingTask = Task.Run(async () =>
                         {
-                            while (!serviceState.Token.IsCancellationRequested)
+                           
+                            while (!linkedToken.Token.IsCancellationRequested)
                             {
                                 responseSent = DateTime.UtcNow;
                                 await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }).ConfigureAwait(false);
-                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), serviceState.Token).ConfigureAwait(false);
+                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), linkedToken.Token).ConfigureAwait(false);
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
@@ -274,7 +191,7 @@ namespace PeakSWC.RemoteWebView
                                 }
 
                             }
-                        }, serviceState.Token);
+                        }, linkedToken.Token);
                     }
                     else
                     {
@@ -288,11 +205,13 @@ namespace PeakSWC.RemoteWebView
             catch (OperationCanceledException)
             {
                 // No need to shutdown as we are in the process of shutting down
+                await shutdownService.Shutdown(id).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
             }
+            linkedToken.Dispose();
         }
     }
 }

@@ -369,7 +369,6 @@ namespace PeakSWC.RemoteWebView
                 _logger.LogDebug($"Removed all file data requests for client GUID: {clientGuid}");
             }
            
-
             if (_htmlHostPaths.TryRemove(clientGuid, out _))
             {
                 _logger.LogDebug($"Removed htmlHostPath for client GUID: {clientGuid}");
