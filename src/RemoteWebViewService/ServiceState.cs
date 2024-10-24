@@ -71,8 +71,6 @@ namespace PeakSWC.RemoteWebView
             if (_disposed)
                 return;
 
-           
-
             if (CancellationTokenSource != null)
             {
                 // Signal cancellation
@@ -94,6 +92,7 @@ namespace PeakSWC.RemoteWebView
 
                 // Await all relevant tasks
                 var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
+                var timeout = TimeSpan.FromSeconds(30); 
 
                 foreach (var task in tasks)
                 {
@@ -101,7 +100,17 @@ namespace PeakSWC.RemoteWebView
                     {
                         try
                         {
-                            await task.ConfigureAwait(false);
+                            // Apply timeout to prevent indefinite hangs
+                            if (await Task.WhenAny(task, Task.Delay(timeout)) == task)
+                            {
+                                // Task completed within the timeout
+                                await task.ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                // Task timed out
+                                Logger.LogError("Task timed out during async disposal.");
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -113,9 +122,6 @@ namespace PeakSWC.RemoteWebView
                         }
                     }
                 }
-
-               
-              
 
                 // Dispose of the CTS after task completion
                 CancellationTokenSource?.Dispose();
