@@ -122,8 +122,8 @@ Global
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|linux-x64.ActiveCfg = Release|Any CPU
 		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|linux-x64.Build.0 = Release|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.ActiveCfg = Release|Any CPU
-		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.Build.0 = Release|Any CPU
+		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.ActiveCfg = Release|x64
+		{BA890C82-9117-4554-864D-BE55C4B0564A}.Release|x64.Build.0 = Release|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|linux-x64.ActiveCfg = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|linux-x64.Build.0 = Debug|x64
 		{17D4D295-890F-412B-A137-24E19BF8E430}.Authorization|x64.ActiveCfg = Debug|x64
