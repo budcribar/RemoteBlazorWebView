@@ -189,21 +189,37 @@ namespace StressServer
                 {
                     Process clientProcess = await ExecutableManager.RunExecutableAsync(path, clientId, channel, $"-u={url}", $"-i={clientId}");
                     processDict.Add(clientId, clientProcess);
-                }           
+                }
 
+                // Creating BrowserContexts and Pages with exception handling
                 for (int i = 0; i < numClients; i++)
                 {
-                    var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+                    try
                     {
-                        IgnoreHTTPSErrors = true,
-                        ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
-                    });
+                        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+                        {
+                            IgnoreHTTPSErrors = true,
+                            ViewportSize = new ViewportSize { Width = 1280, Height = 720 }
+                        });
 
-                    BrowserContexts.Add(context);
+                        BrowserContexts.Add(context);
 
-                    var page = await context.NewPageAsync();
-                    Pages.Add(page);
-                }            
+                        var page = await context.NewPageAsync();
+                        Pages.Add(page);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogEvent($"Error creating context or page for client {i}: {ex.Message}", EventLogEntryType.Error);
+                        // Handle or rethrow the exception as appropriate
+                    }
+                }
+
+                // Verify counts before proceeding
+                if (Pages.Count != numClients || BrowserContexts.Count != numClients)
+                {
+                    Logging.LogEvent("Mismatch in number of Pages or BrowserContexts. Aborting this loop iteration.", EventLogEntryType.Error);
+                    return (passCount, numClients - passCount);
+                }
 
                 // Transfer from ConcurrentBag to List for further processing
                 clients = processDict.Values.ToList();
@@ -273,6 +289,12 @@ namespace StressServer
                     
                 };
 
+                if (buttons.Count != numClients || paragraphs.Count != numClients)
+                {
+                    Logging.LogEvent("Not all buttons and paragraphs were found. Aborting this loop iteration.", EventLogEntryType.Error);
+                    return (passCount, numClients - passCount);
+                }
+
 
                 int numClicks = 10;
                 // Click buttons asynchronously using Parallel.ForEachAsync
@@ -323,17 +345,51 @@ namespace StressServer
             {
                 foreach (var page in Pages)
                 {
-                    await page.CloseAsync();
-                    //await Task.Delay(400);
-                }
-                  
+                    var pageUrl = page.Url;
+                    try
+                    {
+                        await page.CloseAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogEvent($"Error closing page {pageUrl} {ex.Message}", EventLogEntryType.Error);
+                    }           
+                } 
                
                 foreach (var bc in BrowserContexts)
-                    await bc.DisposeAsync();
-          
-                await Browser.DisposeAsync();
-                PlaywrightInstance.Dispose();
-                
+                {
+                    try
+                    {
+                        await bc.DisposeAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogEvent($"Error disposing browser context: {ex.Message}", EventLogEntryType.Error);
+                    }             
+                }
+
+
+                // Dispose of Browser
+                try
+                {
+                    await Browser.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogEvent($"Error disposing browser: {ex.Message}", EventLogEntryType.Error);
+                }
+
+                // Dispose of PlaywrightInstance
+                try
+                {
+                    PlaywrightInstance.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogEvent($"Error disposing Playwright instance: {ex.Message}", EventLogEntryType.Error);
+                }
+
+
                 foreach (var clientId in clientIds)
                 {
 
