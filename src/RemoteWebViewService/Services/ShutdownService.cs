@@ -13,36 +13,38 @@ namespace PeakSWC.RemoteWebView.Services
         public async Task Shutdown(string id, Exception? exception = null)
         {
            
-            if (serviceDictionary.Remove(id, out var client))
+            if (serviceDictionary.TryRemove(id, out var client))
             {
                 try
                 {
                     if (exception != null)
                         logger.LogError($"Shutting down {id} Exception:{exception.Message}");
-
+                 
                     var serviceState = await client.Task.WaitWithTimeout(TimeSpan.FromMilliseconds(5)).ConfigureAwait(false);
-
-                    try
-                    {
-                        await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
-                    }
-                    catch (Exception) { }
-
+                    await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
                     serviceState.InUse = false;
-
-                    await serviceState.DisposeAsync().ConfigureAwait(false);
+                    await serviceState.DisposeAsync().ConfigureAwait(false);      
                 }
-                catch { }
-                
-
-                // Notify other service state channels
-                foreach (var channel in serviceStateChannel.Values)
+                catch (Exception ex)
                 {
-                    if (!channel.Writer.TryWrite($"Shutdown:{id}"))
+                    logger.LogError($"Failed shutdown {id} {ex.Message}.");
+                }
+
+                try
+                {
+                    foreach (var channel in serviceStateChannel.Values)
                     {
-                        logger.LogError($"Failed to write shutdown notification to channel for {id}.");
+                        if (!channel.Writer.TryWrite($"Shutdown:{id}"))
+                        {
+                            logger.LogError($"Failed to write shutdown notification to channel for {id}.");
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    logger.LogError($"Failed shutdown {id} {ex.Message}.");
+                }
+
             }
             
         }

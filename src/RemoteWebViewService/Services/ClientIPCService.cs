@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteWebView
             }
             finally 
             {
-                serviceStateChannel.Remove(id, out _);
+                serviceStateChannel.TryRemove(id, out _);
             }        
         }
 
