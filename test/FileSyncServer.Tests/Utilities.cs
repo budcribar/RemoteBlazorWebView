@@ -524,20 +524,21 @@ namespace WebdriverTestProject
             return response.ClientCacheEnabled;
         }
         public static string BASE_URL = "https://localhost:5001";
-        //public static async Task Shutdown(string id, string url= "https://localhost:5001")
-        //{
-        //    var httpHandler = new HttpClientHandler();
 
-        //    // Create the gRPC channel with the custom handler
-        //    using var channel = GrpcChannel.ForAddress(url, new GrpcChannelOptions { HttpHandler = httpHandler });
+        public static async Task ShutdownAsync(string id, string url = "https://localhost:5001")
+        {
+            var httpHandler = new HttpClientHandler();
 
-        //    // Create the WebViewIPC client
-        //    var grpcClient = new RemoteWebView(channel);
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(url, new GrpcChannelOptions { HttpHandler = httpHandler });
 
-        //    var response = await grpcClient.GetServerStatusAsync(new Empty());
-        //}
+            // Create the WebViewIPC client
+            var client = new WebViewIPC.WebViewIPCClient(channel);
 
-       
+            var response = await client.ShutdownAsync(new IdMessageRequest { Id = id });
+        }
+
+
 
         public static HttpClient Client(HttpMessageHandler? handler = null)
         {
