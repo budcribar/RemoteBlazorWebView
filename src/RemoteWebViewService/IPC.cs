@@ -40,11 +40,18 @@ namespace PeakSWC.RemoteWebView
 
         private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
         {
-            await serverStreamWriter.WriteAsync(message).ConfigureAwait(false);
-            if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
+            try
             {
-                if (isMirror)
-                    await Task.Delay(1000).ConfigureAwait(false);
+                await serverStreamWriter.WriteAsync(message).ConfigureAwait(false);
+                if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
+                {
+                    if (isMirror)
+                        await Task.Delay(1000).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Exception on Write Message {ex.Message}");
             }
         }
 
