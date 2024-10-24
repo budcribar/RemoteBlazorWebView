@@ -53,17 +53,16 @@ namespace PeakSWC.RemoteWebView
             }).ConfigureAwait(false);
 
             // Start watching for changes
-            using var watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
+            FileSystemWatcher? watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
             };
 
             FileSystemEventHandler handler = async (sender, args) =>
             {
-                if(watcher != null && !context.CancellationToken.IsCancellationRequested)
-                    watcher.EnableRaisingEvents = false;
                 try
                 {
+                    watcher.EnableRaisingEvents = false;
                     _logger.LogInformation($"Change detected in file: {filePath}");
 
                     // Wait briefly to ensure the file write is complete
@@ -95,8 +94,10 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogError(ex, $"Error processing file change for {filePath}");
                 }
-                if (watcher != null && !context.CancellationToken.IsCancellationRequested)
+
+                if (watcher != null)
                     watcher.EnableRaisingEvents = true;
+
             };
             watcher.Error += (sender, args) =>
             {
@@ -121,6 +122,9 @@ namespace PeakSWC.RemoteWebView
             {
                 watcher.EnableRaisingEvents = false;
                 watcher.Changed -= handler;
+                var temp = watcher;
+                watcher = null;
+                temp.Dispose();
             }
         }
 
