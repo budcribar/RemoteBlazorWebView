@@ -10,13 +10,29 @@ using System.Threading.Tasks;
 using WebdriverTestProject;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace StressServer
 {
+   
+
     internal class Program
     {
         protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 200;
         protected static string url = "https://192.168.1.35:5002";
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        // Import GetConsoleWindow function from kernel32.dll
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetConsoleWindow();
+
+        // Special window handle values
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+
 
         static async Task<bool> PollHttpRequest(HttpClient httpClient, string url)
         {
@@ -33,6 +49,11 @@ namespace StressServer
 
         public static async Task Main(string[] args)
         {
+            IntPtr consoleWindow = GetConsoleWindow();
+
+            // Set the console window to be the topmost window
+            SetWindowPos(consoleWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+
             try
             {
                 await DoMain(args);
@@ -390,26 +411,55 @@ namespace StressServer
                 }
 
 
-                foreach (var clientId in clientIds)
+                try
                 {
-
-                    bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(clientId,channel, timeoutMs: 60000, checkIntervalMs: 100 );
-
-                    if (!isClientDisconnected)
+                    foreach (var clientId in clientIds)
                     {
-                        Logging.LogEvent($"Client process (ID: {clientId}) did not shut down", EventLogEntryType.Error);
-                        //Environment.Exit(-1);
 
-                        processDict[clientId].Kill();
-                        bool isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+                        bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
 
-                        Logging.LogEvent($"Client process (ID: {clientId}) did not shut down after killing process", EventLogEntryType.Error);
+                        if (!isClientDisconnected)
+                        {
+                            Logging.LogEvent($"Client process (ID: {clientId}) did not shut down", EventLogEntryType.Error);
+                            //Environment.Exit(-1);
 
+                            processDict[clientId].Kill();
+                            bool isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
 
+                            if (!isClientDisconnectedNow)
+                            {
+                                Logging.LogEvent($"Client process (ID: {clientId}) did not shut down after killing process", EventLogEntryType.Error);
 
-                        Environment.Exit(-1);
+                                var shutdownTask = Utilities.ShutdownAsync(url, clientId);
+                                var delayTask = Task.Delay(TimeSpan.FromSeconds(30));
+
+                                if (await Task.WhenAny(shutdownTask, delayTask) == shutdownTask)
+                                {
+                                    // ShutdownAsync completed before timeout
+                                    await shutdownTask; // Ensure any exceptions from the original task are propagated
+                                }
+                                else
+                                {
+                                    Logging.LogEvent($"ShutdownAsync operation timed out after 30 seconds.", EventLogEntryType.Error);
+                                }
+                               
+                                isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+
+                                if (!isClientDisconnectedNow)
+                                {
+                                    Logging.LogEvent($"Client process (ID: {clientId}) won't die so I'm otta here", EventLogEntryType.Error);
+                                    Environment.Exit(-1);
+                                }
+
+                            }
+
+                        }
+
                     }
 
+                }
+                catch (Exception ex)
+                {
                 }
             }
         }
