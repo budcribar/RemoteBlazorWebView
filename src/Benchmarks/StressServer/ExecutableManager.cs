@@ -52,13 +52,14 @@ namespace StressServer
         {
             var client = new WebViewIPC.WebViewIPCClient(channel);
             int elapsedMs = 0;
+            HashSet<string> idsSet = new();
 
             while (elapsedMs < timeoutMs)
             {
                 try
                 {
                     var response = await client.GetIdsAsync(new Empty());
-                    var idsSet = new HashSet<string>(response.Responses);
+                    idsSet = new HashSet<string>(response.Responses);
 
                     // Check if the client ID is present
                     if (!idsSet.Contains(clientId))
@@ -77,7 +78,7 @@ namespace StressServer
             }
 
             // Timeout reached without registering the client ID
-            Logging.LogEvent($"Timeout waiting for client ID '{clientId}' to register.", EventLogEntryType.Error);
+            Logging.LogEvent($"Timeout waiting for client ID '{clientId}' to unregister. {string.Join(",", idsSet)}", EventLogEntryType.Error);
             return false;
         }
         /// <param name="clientId">The client ID to wait for.</param>
@@ -138,7 +139,7 @@ namespace StressServer
                 bool isClientConnected = await WaitForClientToConnectAsync(
                     clientId: clientId,
                     channel: channel,
-                    timeoutMs: 10000, // 3 seconds timeout
+                    timeoutMs: 10000, // 10 seconds timeout
                     checkIntervalMs: 100 // Check every 100ms
                 );
 

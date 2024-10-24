@@ -41,7 +41,6 @@ namespace StressServer
             {
                 Console.ReadLine();
             }
-            Console.ReadLine();
         }
         public static async Task DoMain(string[] args)
         {
@@ -50,10 +49,6 @@ namespace StressServer
 
             Utilities.ExtractResourcesToExecutionDirectory();
             Console.WriteLine("Extracting Resources Completed");
-
-            //Console.WriteLine("Setting up playwright...");
-            //SetupPlaywright();
-            //Console.WriteLine("Setting up playwright completed");
 
             try
             {
@@ -97,7 +92,7 @@ namespace StressServer
 
 
             int numClients = 10;
-            int numLoops = 10;
+            int numLoops = 100;
 
             if (args.Length == 2)
             {
@@ -134,8 +129,8 @@ namespace StressServer
                 var results = await ExecuteLoop(url, httpClient, channel, numClients, path, clientIds);
                 totalPasses += results.Item1;
                 totalFailures += results.Item2;
-
-                Logging.LogEvent($"Counter Passes: {totalPasses} Fails: {totalFailures}", EventLogEntryType.SuccessAudit);
+                Console.WriteLine($"Passes: {totalPasses} Fails: {totalFailures}");
+                Logging.LogEvent($"Passes: {totalPasses} Fails: {totalFailures}", EventLogEntryType.SuccessAudit);
             }
 
             // ExecutableManager.CleanUp(path); // Uncomment if cleanup is necessary
@@ -183,25 +178,18 @@ namespace StressServer
 
             List<IBrowserContext> BrowserContexts = new();
             List<IPage> Pages = new();
+            Dictionary<string, Process> processDict = new Dictionary<string, Process>();
 
             int passCount = 0;
             int failCount = 0;
 
             try
             {
-                // Use thread-safe collections
-
-               
-                Dictionary<string, Process> processDict = new Dictionary<string, Process>();
-
                 foreach (var clientId in clientIds)
                 {
                     Process clientProcess = await ExecutableManager.RunExecutableAsync(path, clientId, channel, $"-u={url}", $"-i={clientId}");
                     processDict.Add(clientId, clientProcess);
-                }
-
-
-              
+                }           
 
                 for (int i = 0; i < numClients; i++)
                 {
@@ -229,8 +217,6 @@ namespace StressServer
                 {
                     await item.driver.GotoAsync($"{url}/app/{clientIds[item.index]}");
                 });
-
-                //await Task.Delay(3000); // Consider reducing if possible
 
                 // Interact with the page: Click 'Counter' link using Parallel.ForEachAsync
                 await Parallel.ForEachAsync(Pages.Select((driver, index) => new { driver, index }), new ParallelOptions
@@ -335,25 +321,36 @@ namespace StressServer
             }
             finally
             {
+                foreach (var page in Pages)
+                {
+                    await page.CloseAsync();
+                    //await Task.Delay(400);
+                }
+                  
+               
                 foreach (var bc in BrowserContexts)
                     await bc.DisposeAsync();
-               
+          
                 await Browser.DisposeAsync();
                 PlaywrightInstance.Dispose();
                 
                 foreach (var clientId in clientIds)
                 {
 
-                    bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(
-                      clientId: clientId,
-                      channel: channel,
-                      timeoutMs: 10000, // 10 seconds timeout
-                      checkIntervalMs: 100 // Check every 100ms
-                  );
+                    bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(clientId,channel, timeoutMs: 60000, checkIntervalMs: 100 );
 
                     if (!isClientDisconnected)
                     {
                         Logging.LogEvent($"Client process (ID: {clientId}) did not shut down", EventLogEntryType.Error);
+                        //Environment.Exit(-1);
+
+                        processDict[clientId].Kill();
+                        bool isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+
+                        Logging.LogEvent($"Client process (ID: {clientId}) did not shut down after killing process", EventLogEntryType.Error);
+
+
+
                         Environment.Exit(-1);
                     }
 

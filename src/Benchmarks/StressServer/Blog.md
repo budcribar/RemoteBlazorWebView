@@ -226,3 +226,22 @@ Server is CreateReadStream
 
 Still reading but should 
 Omen Aloane Elapsed Time: 00:22:11.2487534 Seconds per pass: 13.312496605 (oops disable cache on chrome)
+
+
+10/23/24
+
+Getting Timeout waiting for client to register
+
+Getting errors with 10 or 15 clients per loop
+5 clients per loop
+Omen      Elapsed Time: 00:08:53.0392569 Seconds per pass: 5.3304024960000005   500 passes
+QualComm  Elapsed Time: 00:17:43.7368850 Seconds per pass: 10.637413630000001
+Intel     Elapsed Time: 00:16:50.6624376 Seconds per pass: 10.106659353
+Amd       Elapsed Time: 00:11:44.1810467 Seconds per pass: 7.041826286 
+
+
+Client and server cache 5 clients per loop
+Omen        Elapsed Time: 00:08:45.8324661 Seconds per pass: 5.258333784
+Qualcomm    Elapsed Time: 00:17:29.9424616 Seconds per pass: 10.499472235999999
+Intel       Elapsed Time: 00:17:02.5863716 Seconds per pass: 10.225888786 
+amd         Elapsed Time: 00:11:50.5901785 Seconds per pass: 7.105918794000001
