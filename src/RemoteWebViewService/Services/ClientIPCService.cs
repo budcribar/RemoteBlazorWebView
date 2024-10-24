@@ -18,8 +18,8 @@ namespace PeakSWC.RemoteWebView
             var list = new ClientResponseList();
             try
             {
-                var serviceStateTaskSource = serviceDictionary.Values.ToList();
-                var tasks = serviceDictionary.Values.Select(x => x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
+                // Show only complete values
+                var tasks = serviceDictionary.Values.Where(x => x.Task.IsCompleted).Select(x => x.Task);
                 var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
                 list.ClientResponses.AddRange(results.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
