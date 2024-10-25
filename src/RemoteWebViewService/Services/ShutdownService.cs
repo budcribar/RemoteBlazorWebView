@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteWebView.Services
         public void Shutdown(string id, Exception? exception = null)
         {
            
-            if (serviceDictionary.Remove(id, out var client))
+            if (serviceDictionary.TryRemove(id, out var client))
             {
                 if (exception != null)
                     logger.LogError($"Shutting down {id} Exception:{exception.Message}");
