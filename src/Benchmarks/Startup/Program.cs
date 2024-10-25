@@ -9,6 +9,8 @@ using Google.Protobuf.WellKnownTypes;
 using PeakSWC.RemoteWebView;
 using Grpc.Core;
 using System.Collections.Concurrent;
+using WebdriverTestProject;
+using System.Buffers.Text;
 
 namespace ServerStartupTimer
 {
@@ -25,25 +27,45 @@ namespace ServerStartupTimer
             return fileInfo.Length;
         }
 
-        public static void TestCreateWebView(int numBuffers, int minSize, int maxSize)
+        public static async Task TestCreateWebView(string url,int numBuffers, int minSize, int maxSize)
         {
+            Console.WriteLine($"Creating {numBuffers} clients");
             List<Process> processList = new List<Process>();
+
+           
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(url, new GrpcChannelOptions { HttpHandler = httpHandler });
+            var client = new WebViewIPC.WebViewIPCClient(channel);
+             
 
             for (int i = 0; i < numBuffers; i++)
             {
 
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = @"..\..\..\..\..\StressClient\publish\StressClient.exe",
+                    FileName = @"..\..\..\..\..\StressClient\bin\publish\StressClient.exe",
                     Arguments = $"{numBuffers} {minSize} {maxSize}",
                     RedirectStandardOutput = true
                 };
                 var process = Process.Start(processStartInfo);
+              
+                Console.WriteLine($"Number of clients {(await client.GetIdsAsync(new Empty())).Responses.Count}");
                 if (process != null)
                     processList.Add(process);
-                Task.Delay(100).Wait();
+                //await Task.Delay(100);
             }
             int count = 0;
+
+            while (true)
+            {
+                var numClients = (await client.GetIdsAsync(new Empty())).Responses.Count;
+                Console.WriteLine($"Number of clients {numClients}");
+                if (numClients == 0) break;
+                await Task.Delay(300);
+            }
+
             foreach (var process in processList)
             {
                 if (!process?.WaitForExit(30000) ?? true)
@@ -51,6 +73,7 @@ namespace ServerStartupTimer
                     Console.WriteLine($"Process {count++} timed out");
                 }
             }
+            Console.WriteLine("Done");
             
         }
 
@@ -321,7 +344,7 @@ namespace ServerStartupTimer
                     Console.WriteLine($"TestCreateWebView loop{i}");
                     //await TestCreateWebView(200);
                     KillExistingProcesses("StressClient");
-                    TestCreateWebView(1000,1024,10240);
+                    await TestCreateWebView(url,1000,1024,10240);
                 }
 
                 // TestClientIPCService();

@@ -270,7 +270,7 @@ namespace WebdriverTestProject
 
         #region Common
 
-        public static string JavascriptFile = Path.Combine(RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js");
+        public static string JavascriptFile => Path.Combine(RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js");
         public static Process StartProcess(string executable, string directory, string url, string id)
         {
             Stopwatch sw = new();
@@ -455,6 +455,17 @@ namespace WebdriverTestProject
         }
 
         #endregion
+
+        public static async Task<List<string>> GetIds()
+        {
+            var httpHandler = new HttpClientHandler();
+
+            // Create the gRPC channel with the custom handler
+            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            var client = new WebViewIPC.WebViewIPCClient(channel);
+            var ids = await client.GetIdsAsync(new Empty());
+            return ids.Responses.ToList();
+        }
 
         public static async Task SetServerCache(bool isEnabled)
         {
