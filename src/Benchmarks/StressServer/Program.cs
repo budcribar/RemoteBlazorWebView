@@ -159,29 +159,6 @@ namespace StressServer
             Logging.LogEvent($"Elapsed Time: {stopwatch.Elapsed} Seconds per pass: {stopwatch.Elapsed.TotalSeconds / numLoops}", EventLogEntryType.Warning);
         }
 
-        private static void SetupPlaywright()
-        {
-            // Set the environment variable to point to the correct .playwright directory
-            string playwrightSourcePath = Path.Combine(AppContext.BaseDirectory, "playwright");
-
-            string appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "..");
-            appDataPath = Path.GetFullPath(appDataPath); // Resolves the ".." to get the actual path
-
-            // Append the .playwright folder
-            string playwrightTargetPath = Path.Combine(appDataPath, ".playwright");
-
-            //Environment.SetEnvironmentVariable("PLAYWRIGHT_DRIVER_PATH", playwrightTargetPath, EnvironmentVariableTarget.Process);
-
-            try
-            {
-                Utilities.CopyDirectory(playwrightSourcePath, playwrightTargetPath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Unable to copy playwright files {ex.Message}");
-                Console.ReadLine();
-            }
-        }
 
         private static async Task<(int, int)> ExecuteLoop(string url,HttpClient httpClient, GrpcChannel channel, int numClients, string path, List<string> clientIds)
         {
@@ -373,6 +350,7 @@ namespace StressServer
                     }
                     catch (Exception ex)
                     {
+                        passCount = 0; failCount = numClients;
                         Logging.LogEvent($"Error closing page {pageUrl} {ex.Message}", EventLogEntryType.Error);
                     }           
                 } 
@@ -385,6 +363,7 @@ namespace StressServer
                     }
                     catch (Exception ex)
                     {
+                        passCount = 0; failCount = numClients;
                         Logging.LogEvent($"Error disposing browser context: {ex.Message}", EventLogEntryType.Error);
                     }             
                 }
@@ -397,6 +376,7 @@ namespace StressServer
                 }
                 catch (Exception ex)
                 {
+                    passCount = 0; failCount = numClients;
                     Logging.LogEvent($"Error disposing browser: {ex.Message}", EventLogEntryType.Error);
                 }
 
@@ -407,6 +387,7 @@ namespace StressServer
                 }
                 catch (Exception ex)
                 {
+                    passCount = 0; failCount = numClients;
                     Logging.LogEvent($"Error disposing Playwright instance: {ex.Message}", EventLogEntryType.Error);
                 }
 
@@ -416,7 +397,7 @@ namespace StressServer
                     foreach (var clientId in clientIds)
                     {
 
-                        bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+                        bool isClientDisconnected = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 10_000, checkIntervalMs: 100);
 
                         if (!isClientDisconnected)
                         {
@@ -424,14 +405,14 @@ namespace StressServer
                             //Environment.Exit(-1);
 
                             processDict[clientId].Kill();
-                            bool isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+                            bool isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 10_000, checkIntervalMs: 100);
 
                             if (!isClientDisconnectedNow)
                             {
                                 Logging.LogEvent($"Client process (ID: {clientId}) did not shut down after killing process", EventLogEntryType.Error);
 
                                 var shutdownTask = Utilities.ShutdownAsync(url, clientId);
-                                var delayTask = Task.Delay(TimeSpan.FromSeconds(30));
+                                var delayTask = Task.Delay(TimeSpan.FromSeconds(10));
 
                                 if (await Task.WhenAny(shutdownTask, delayTask) == shutdownTask)
                                 {
@@ -440,13 +421,15 @@ namespace StressServer
                                 }
                                 else
                                 {
+                                    passCount = 0; failCount = numClients;
                                     Logging.LogEvent($"ShutdownAsync operation timed out after 30 seconds.", EventLogEntryType.Error);
                                 }
                                
-                                isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 60000, checkIntervalMs: 100);
+                                isClientDisconnectedNow = await ExecutableManager.WaitForClientToDisconnectAsync(clientId, channel, timeoutMs: 10_000, checkIntervalMs: 100);
 
                                 if (!isClientDisconnectedNow)
                                 {
+                                    passCount = 0; failCount = numClients;
                                     Logging.LogEvent($"Client process (ID: {clientId}) won't die so I'm otta here", EventLogEntryType.Error);
                                     Environment.Exit(-1);
                                 }
