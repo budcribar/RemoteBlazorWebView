@@ -50,7 +50,7 @@ namespace WebdriverTestProject
             using (var query = new ManagementObjectSearcher(
                 $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {processId}"))
             {
-                foreach (ManagementObject mo in query.Get())
+                foreach (ManagementObject mo in query.Get().Cast<ManagementObject>())
                 {
                     return Convert.ToInt32(mo["ParentProcessId"]);
                 }

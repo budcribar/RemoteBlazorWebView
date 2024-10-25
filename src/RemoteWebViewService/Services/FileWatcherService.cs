@@ -53,7 +53,7 @@ namespace PeakSWC.RemoteWebView
             }).ConfigureAwait(false);
 
             // Start watching for changes
-            FileSystemWatcher? watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath), Path.GetFileName(filePath))
+            FileSystemWatcher? watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
             };
@@ -169,7 +169,7 @@ namespace PeakSWC.RemoteWebView
         private string GetRunArguments()
         {
             // Retrieve run arguments from environment variables or configuration
-            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS");
+            string envArgs = Environment.GetEnvironmentVariable("RUN_ARGS") ?? string.Empty;
             if (!string.IsNullOrEmpty(envArgs))
             {
                 return envArgs;

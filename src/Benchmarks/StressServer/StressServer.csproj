@@ -17,6 +17,7 @@
 		<Platforms>x64</Platforms>
 		<PlatformTargets>x64</PlatformTargets>
 		<NoWarn>$(NoWarn);CA1416</NoWarn>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>

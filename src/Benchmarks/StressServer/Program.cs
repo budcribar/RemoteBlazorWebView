@@ -16,16 +16,17 @@ namespace StressServer
 {
    
 
-    internal class Program
+    internal partial class Program
     {
         protected static int NUM_LOOPS_WAITING_FOR_PAGE_LOAD = 200;
         protected static string url = "https://192.168.1.35:5002";
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
         // Import GetConsoleWindow function from kernel32.dll
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr GetConsoleWindow();
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        public static partial IntPtr GetConsoleWindow();
 
         // Special window handle values
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -441,7 +442,7 @@ namespace StressServer
                     }
 
                 }
-                catch (Exception ex)
+                catch 
                 {
                 }
             }
