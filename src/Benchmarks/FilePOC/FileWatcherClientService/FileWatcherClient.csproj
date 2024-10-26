@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Platforms>x64</Platforms>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

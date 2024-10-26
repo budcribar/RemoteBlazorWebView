@@ -107,10 +107,17 @@ namespace PeakSWC.RemoteWebView
             }
 
             var p = Process.GetCurrentProcess();
-            var response = new ServerResponse { Handles = p.HandleCount, PeakWorkingSet = p.PeakWorkingSet64, Threads = p.Threads.Count, WorkingSet = p.WorkingSet64, TotalProcessorTime = p.TotalProcessorTime.TotalSeconds, UpTime = (DateTime.UtcNow - p.StartTime.ToUniversalTime()).TotalSeconds };
-
-            response.ClientCacheEnabled = filesOptions.UseClientCache;
-            response.ServerCacheEnabled = filesOptions.UseServerCache;
+            var response = new ServerResponse
+            {
+                Handles = p.HandleCount,
+                PeakWorkingSet = p.PeakWorkingSet64,
+                Threads = p.Threads.Count,
+                WorkingSet = p.WorkingSet64,
+                TotalProcessorTime = p.TotalProcessorTime.TotalSeconds,
+                UpTime = (DateTime.UtcNow - p.StartTime.ToUniversalTime()).TotalSeconds,
+                ClientCacheEnabled = filesOptions.UseClientCache,
+                ServerCacheEnabled = filesOptions.UseServerCache
+            };
 
             var responses = await GetConnectionResponses(serviceDictionary).ConfigureAwait(false);
             response.ConnectionResponses.AddRange(responses);

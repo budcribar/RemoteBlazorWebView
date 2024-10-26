@@ -218,7 +218,7 @@ namespace WebdriverTestProject
             {
                 var ppn = GetParentProcessName();
                 if (ppn == "vstest.console")
-                    return @"..\..\..\..\..\..\"; // visual studio
+                    return @"..\..\..\..\..\..\..\"; // visual studio
                 else
                     return @"..\..\..\..\..\..\"; // // powershell
             }
@@ -877,7 +877,7 @@ namespace WebdriverTestProject
         {
             var existingProcesses = Process.GetProcessesByName(processName);
 
-            if (!existingProcesses.Any())
+            if (existingProcesses.Length == 0)
             {
                 Console.WriteLine($"No running processes found with name: {processName}");
                 return;

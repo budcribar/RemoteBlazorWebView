@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,15 +8,10 @@ using Xunit.Abstractions;
 
 namespace WebdriverTestProject
 {
-    public class TestServerWpf : TestRemoteBlazorWpf
+    public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {
-        public TestServerWpf(ITestOutputHelper output) : base(output) { }
-
-        //private int BYTES_READ = 928282;
-        private int BYTES_READ = 960320;
-        
-        //private int FILES_READ = 28;
-        private int FILES_READ = 29;
+        private readonly int BYTES_READ = 976498;
+        private readonly int FILES_READ = 29;
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
         [Fact]

@@ -5,16 +5,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using PeakSWC.RemoteWebView;
-
+using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using System.Management;
+using System.Linq;
 
 namespace FileWatcherClient
 {
     public class Worker
     {
         private readonly ILogger<Worker> _logger;
-        private string _fileToWatch;
+        private readonly string _fileToWatch;
         private readonly string _runArguments;
         private readonly string _tempFilePath;
         private readonly FileWatcherIPC.FileWatcherIPCClient _client;
@@ -46,13 +47,13 @@ namespace FileWatcherClient
 
                 var request = new WatchFileRequest { FilePath = _fileToWatch };
 
-                using var call = _client.WatchFile(request);
+                using var call = _client.WatchFile(request,null,null,cancellationToken);
 
                 _logger.LogInformation($"Started watching file: {_fileToWatch}");
 
                 
 
-                FileStream fileStream = null;
+                FileStream? fileStream = null;
                 bool isStreaming = false;
 
                 await foreach (var response in call.ResponseStream.ReadAllAsync(cancellationToken))
@@ -133,7 +134,7 @@ namespace FileWatcherClient
                                     // Asynchronously write bytes to the file
                                     try
                                     {
-                                        await fileStream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
+                                        await fileStream.WriteAsync(response.Chunk.Content.Memory, cancellationToken);     
                                         _logger.LogInformation($"Received and wrote a {bytes.Length / 1024}KB chunk.");
                                     }
                                     catch (Exception ex)
@@ -281,7 +282,7 @@ namespace FileWatcherClient
                 using (var searcher = new ManagementObjectSearcher(query))
                 using (var results = searcher.Get())
                 {
-                    foreach (ManagementObject mo in results)
+                    foreach (ManagementObject mo in results.Cast<ManagementObject>())
                     {
                         try
                         {
