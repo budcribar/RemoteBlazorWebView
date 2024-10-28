@@ -72,6 +72,7 @@
  
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.13.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.28.3" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.66.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.66.0" />
 	  

@@ -16,11 +16,11 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0-rc.2.24473.5" />
 		
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
-		<PackageReference Include="Google.Protobuf" Version="3.28.2" />
+		<PackageReference Include="Google.Protobuf" Version="3.28.3" />
 		<PackageReference Include="Grpc.Tools" Version="2.67.0">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="System.Management" Version="8.0.0" />
+		<PackageReference Include="System.Management" Version="9.0.0-rc.2.24473.5" />
 		
 	</ItemGroup>
 
