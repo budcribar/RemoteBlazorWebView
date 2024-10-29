@@ -37,7 +37,7 @@ namespace WebdriverTestProject
                 try
                 {
                     var ids = new WebViewIPC.WebViewIPCClient(channel).GetIds(new Empty());
-                    Assert.Equal(0, ids.Responses.Count); // Using xUnit's Assert
+                    Assert.Empty(ids.Responses); // Using xUnit's Assert
                     break;
                 }
                 catch (Exception)

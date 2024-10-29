@@ -16,28 +16,29 @@ using System.Net.Security;
 using System.Net.Quic;
 using System.Runtime.Versioning;
 using System.Net.Sockets;
+using System.Collections.ObjectModel;
 
 
 namespace ClientBenchmark
 {
     public class ClientBenchmarks
     {
-        private string URL = "https://192.168.1.35:5002";
+        private readonly string URL = "https://192.168.1.35:5002";
         //private string URL = "https://127.0.0.1:5001";
         //private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private bool _prodServer = true;
-        private int fileSize = 102400;
-        private int maxFiles = 700;
-        private bool useHttp3 = false;
+        private readonly bool _prodServer = true;
+        private readonly int fileSize = 102400;
+        private readonly int maxFiles = 700;
+        private readonly bool useHttp3 = false;
 
 
 
         // what happens when you have multiple reads of the same file?
-        private string _testGuid = string.Empty;
+        private readonly string _testGuid = string.Empty;
         private string _testFilePath = string.Empty;
         private string _rootDirectory = string.Empty;
-        private string _testFileName = "wwwroot/css/site";
+        private readonly string _testFileName = "wwwroot/css/site";
         public required WebViewIPC.WebViewIPCClient _client;
         public required BrowserIPC.BrowserIPCClient _browser;
         private string randomString = string.Empty;
@@ -354,7 +355,7 @@ namespace ClientBenchmark
                         //FileReader.AttachFileReader(_client.FileReader(), cts.Token, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { });//Console.Write($"File reader threw {x.Message}"));
                        
 
-                        List<Task> tasks = new List<Task>();
+                        List<Task> tasks = [];
                         for (int i = 1; i <= maxFiles; i++)
                         {
                             string url = $"{URL}/{id}/{_testFileName}{i}.css";

@@ -16,7 +16,7 @@ namespace FileClientApp
 
         static async Task<int> Main(string[] args)
         {
-            CancellationTokenSource cts = new CancellationTokenSource();
+            CancellationTokenSource cts = new();
             Console.WriteLine("Starting FileClient...");
 
             Console.CancelKeyPress += (sender, eventArgs) =>
@@ -52,8 +52,10 @@ namespace FileClientApp
             }
 
             // Create a handler to bypass certificate validation (development only)
-            var httpHandler = new HttpClientHandler();
-            httpHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            var httpHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
 
             // Create the gRPC channel with the custom handler
             using var channel = GrpcChannel.ForAddress(ServerAddress, new GrpcChannelOptions { HttpHandler = httpHandler });

@@ -13,15 +13,9 @@ using Xunit;
 namespace Server
 {
     [Collection("Performance collection")]
-    public class PerformanceTests : IAsyncLifetime
+    public class PerformanceTests() : IAsyncLifetime
     {
-        private readonly ServerFixture _serverFixture;
         private readonly List<ClientFixture> _clientFixtures = new();
-
-        public PerformanceTests(ServerFixture serverFixture)
-        {
-            _serverFixture = serverFixture;
-        }
 
         // Initialize multiple clients before any tests run
         public async Task InitializeAsync()
@@ -120,11 +114,11 @@ namespace Server
             var totalDuration = totalStopwatch.Elapsed;
 
             // Assert
-            foreach (var result in results)
+            foreach (var (FileName, Status, Duration) in results)
             {
-                result.Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for file '{result.FileName}'.");
-                result.Duration.Should().BeLessThan(10000, $"File '{result.FileName}' took too long to fetch ({result.Duration} ms).");
-                Console.WriteLine($"Fetched '{result.FileName}' in {result.Duration} ms.");
+                Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for file '{FileName}'.");
+                Duration.Should().BeLessThan(10000, $"File '{FileName}' took too long to fetch ({Duration} ms).");
+                Console.WriteLine($"Fetched '{FileName}' in {Duration} ms.");
             }
 
             totalDuration.TotalSeconds.Should().BeLessThan(30, $"Total time {totalDuration.TotalSeconds} seconds exceeds the threshold.");
@@ -192,10 +186,10 @@ namespace Server
             var results = await Task.WhenAll(tasks);
 
             // Assert
-            foreach (var result in results)
+            foreach (var (ClientId, FileName, Status, Content) in results)
             {
-                result.Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for file '{result.FileName}' from client '{result.ClientId}'.");
-                result.Content.Should().Contain($"This is {Path.GetFileName(result.FileName)}", $"File content for '{result.FileName}' from client '{result.ClientId}' should match the expected content.");
+                Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for file '{FileName}' from client '{ClientId}'.");
+                Content.Should().Contain($"This is {Path.GetFileName(FileName)}", $"File content for '{FileName}' from client '{ClientId}' should match the expected content.");
             }
         }
     }

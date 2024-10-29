@@ -150,7 +150,7 @@ namespace PeakSWC.RemoteWebView
                 }).ToList();
             }
             catch { }
-            return new();
+            return [];
         }
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)

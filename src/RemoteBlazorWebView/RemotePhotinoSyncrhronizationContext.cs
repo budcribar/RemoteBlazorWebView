@@ -328,14 +328,9 @@ namespace PeakSWC.RemoteWebView
             public object State;
         }
 
-        private class PhotinoSynchronizationTaskCompletionSource<TCallback, TResult> : TaskCompletionSource<TResult>
+        private class PhotinoSynchronizationTaskCompletionSource<TCallback, TResult>(TCallback callback) : TaskCompletionSource<TResult>
         {
-            public PhotinoSynchronizationTaskCompletionSource(TCallback callback)
-            {
-                Callback = callback;
-            }
-
-            public TCallback Callback { get; }
+            public TCallback Callback { get; } = callback;
         }
     }
 }

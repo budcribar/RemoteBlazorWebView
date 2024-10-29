@@ -32,7 +32,7 @@ public static class Utilities
             if (grantRead)
             {
                 // Define the access rule to grant Read and Delete permissions
-                FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                FileSystemAccessRule allowReadDeleteRule = new(
                     user,
                     FileSystemRights.Read | FileSystemRights.Delete,
                     InheritanceFlags.None,
@@ -114,12 +114,12 @@ public static class Utilities
     }
     private static byte[] CreateSimplePngIcon(int width, int height, Color color)
     {
-        using (Bitmap bmp = new Bitmap(width, height))
+        using (Bitmap bmp = new(width, height))
         using (Graphics gfx = Graphics.FromImage(bmp))
         using (SolidBrush brush = new SolidBrush(color))
         {
             gfx.FillRectangle(brush, 0, 0, width, height);
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new())
             {
                 bmp.Save(ms, ImageFormat.Png);
                 return ms.ToArray();

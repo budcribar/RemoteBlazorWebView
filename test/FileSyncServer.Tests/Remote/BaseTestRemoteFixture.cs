@@ -280,7 +280,7 @@ namespace WebdriverTestProject
 
             for (int k = 0; k < numRefreshes; k++)
             {
-                ILocator linkLocator = null;
+                ILocator? linkLocator = null;
                 // Click on the "Counter" link for each page
                 for (int i = 0; i < numClients; i++)
                 {            

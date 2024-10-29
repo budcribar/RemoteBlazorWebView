@@ -6,15 +6,10 @@ using Xunit.Abstractions;
 namespace WebdriverTestProject
 {
     [Collection("RemoteBlazorWpf Collection")]
-    public abstract class BaseTestRemote<T> : IAsyncLifetime where T : BaseTestRemoteFixture, new()
+    public abstract class BaseTestRemote<T>(ITestOutputHelper output) : IAsyncLifetime where T : BaseTestRemoteFixture, new()
     {
         protected readonly T _fixture = new T();
-        protected readonly ITestOutputHelper Output;
-
-        public BaseTestRemote(ITestOutputHelper output)
-        {
-            Output = output;
-        }
+        protected readonly ITestOutputHelper Output = output;
 
         [Fact]
         public async virtual Task Test2Client5Refresh()

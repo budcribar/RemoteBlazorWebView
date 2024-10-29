@@ -12,12 +12,12 @@ namespace WebdriverTestProject
 {
     public abstract class BaseTestFixture : IAsyncLifetime
     {
-        public IPlaywright PlaywrightInstance { get; private set; }
-        public IBrowser Browser { get; private set; }
-        public IPage Page { get; private set; }
+        public IPlaywright PlaywrightInstance { get; private set; } = default!;
+        public IBrowser Browser { get; private set; } = default!;
+        public IPage Page { get; private set; } = default!;
         public Process? AppProcess { get; private set; }
 
-        protected string ClientExecutablePath { get; set; }
+        protected string ClientExecutablePath { get; set; } = string.Empty;
 
         private const int RemoteDebuggingPort = 9222;
         private readonly TimeSpan BrowserWsTimeout = TimeSpan.FromSeconds(15); // Increased timeout for reliability

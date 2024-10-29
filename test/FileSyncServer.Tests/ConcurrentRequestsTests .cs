@@ -87,10 +87,10 @@ namespace Server
             var results = await Task.WhenAll(tasks);
 
             // Assert
-            foreach (var result in results)
+            foreach (var (FileName, Status, Content) in results)
             {
-                result.Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for existing file '{result.FileName}'.");
-                result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");
+                Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for existing file '{FileName}'.");
+                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
             }
         }
 
@@ -124,16 +124,16 @@ namespace Server
             var results = await Task.WhenAll(tasks);
 
             // Assert
-            foreach (var result in results)
+            foreach (var (FileName, Status, Content) in results)
             {
-                if (result.Status == HttpStatusCode.OK)
+                if (Status == HttpStatusCode.OK)
                 {
-                    result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");
+                    Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
                 }
                 else
                 {
-                    result.Status.Should().Be(HttpStatusCode.NotFound, $"Expected status code 404 for non-existing file '{result.FileName}'.");
-                    result.Content.Should().Be("File not found.", $"Response content for '{result.FileName}' should indicate that the file was not found.");
+                    Status.Should().Be(HttpStatusCode.NotFound, $"Expected status code 404 for non-existing file '{FileName}'.");
+                    Content.Should().Be("File not found.", $"Response content for '{FileName}' should indicate that the file was not found.");
                 }
             }
         }
@@ -179,9 +179,9 @@ namespace Server
             var results = await Task.WhenAll(tasks);
 
             // Assert
-            foreach (var result in results)
+            foreach (var (FileName, Status, Content) in results)
             {
-                result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");   
+                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");   
             }
             await Utilities.SetClientCache(false);
         }
@@ -227,9 +227,9 @@ namespace Server
             var results = await Task.WhenAll(tasks);
 
             // Assert
-            foreach (var result in results)
+            foreach (var (FileName, Status, Content) in results)
             {
-                result.Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(result.FileName)}.txt", $"File content for '{result.FileName}' should match the expected content.");
+                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
             }
             await Utilities.SetClientCache(false);
         }

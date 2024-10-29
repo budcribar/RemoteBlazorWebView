@@ -9,17 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace PeakSWC.RemoteWebView.Services
 {
-    public class StatsInterceptor : Interceptor
+    public class StatsInterceptor(ServerStats stats) : Interceptor
     {
-        private readonly ServerStats _stats;
-        private readonly ILogger<RemoteWebViewService> _logger;
-
-        public StatsInterceptor(ServerStats stats, ILogger<RemoteWebViewService> logger)
-        {
-            _stats = stats;
-            _logger = logger;
-        }
-
         private const double ThresholdMs = 50000; // 50 seconds threshold for logging long requests
 
         // Override for Unary Calls
@@ -27,7 +18,7 @@ namespace PeakSWC.RemoteWebView.Services
             TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
             where TRequest : class where TResponse : class
         {
-            _stats.RecordConnectionStart();
+            stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             bool success = false;
@@ -39,17 +30,17 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 if (request is IMessage message)
                 {
-                    bytesReceived = _stats.CalculateMessageSize(message);
+                    bytesReceived = stats.CalculateMessageSize(message);
                 }
-                _stats.RecordBytesReceived(bytesReceived);
+                stats.RecordBytesReceived(bytesReceived);
 
                 var response = await continuation(request, context).ConfigureAwait(false);
 
                 if (response is IMessage message2)
                 {
-                    bytesSent = _stats.CalculateMessageSize(message2);
+                    bytesSent = stats.CalculateMessageSize(message2);
                 }
-                _stats.RecordBytesSent(bytesSent);
+                stats.RecordBytesSent(bytesSent);
 
                 success = true;
                 return response;
@@ -68,14 +59,14 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 stopwatch.Stop();
                 var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                _stats.RecordRequest(success, elapsedTime, errorType);
+                stats.RecordRequest(success, elapsedTime, errorType);
 
                 if (elapsedTime > ThresholdMs)
                 {
                     //_logger.LogWarning($"Unary request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
-                _stats.RecordConnectionEnd();
+                stats.RecordConnectionEnd();
             }
         }
 
@@ -88,7 +79,7 @@ namespace PeakSWC.RemoteWebView.Services
             where TRequest : class
             where TResponse : class
         {
-            _stats.RecordConnectionStart();
+            stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             bool success = false;
@@ -99,15 +90,15 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 if (request is IMessage message)
                 {
-                    bytesReceived = _stats.CalculateMessageSize(message);
+                    bytesReceived = stats.CalculateMessageSize(message);
                 }
-                _stats.RecordBytesReceived(bytesReceived);
+                stats.RecordBytesReceived(bytesReceived);
 
-                var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
+                var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
 
                 await continuation(request, wrappedStream, context).ConfigureAwait(false);
 
-                _stats.RecordBytesSent(wrappedStream.BytesSent);
+                stats.RecordBytesSent(wrappedStream.BytesSent);
 
                 success = true;
             }
@@ -125,14 +116,14 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 stopwatch.Stop();
                 var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                _stats.RecordRequest(success, elapsedTime, errorType);
+                stats.RecordRequest(success, elapsedTime, errorType);
 
                 if (elapsedTime > ThresholdMs)
                 {
                     //_logger.LogWarning($"Server streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
-                _stats.RecordConnectionEnd();
+                stats.RecordConnectionEnd();
             }
         }
 
@@ -143,7 +134,7 @@ namespace PeakSWC.RemoteWebView.Services
             ClientStreamingServerMethod<TRequest, TResponse> continuation)
             where TRequest : class where TResponse : class
         {
-            _stats.RecordConnectionStart();
+            stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             bool success = false;
@@ -152,15 +143,15 @@ namespace PeakSWC.RemoteWebView.Services
 
             try
             {
-                var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
+                var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
 
                 var response = await continuation(wrappedStream, context).ConfigureAwait(false);
 
                 if (response is IMessage message)
                 {
-                    bytesSent = _stats.CalculateMessageSize(message);
+                    bytesSent = stats.CalculateMessageSize(message);
                 }
-                _stats.RecordBytesSent(bytesSent);
+                stats.RecordBytesSent(bytesSent);
 
                 success = true;
                 return response;
@@ -179,14 +170,14 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 stopwatch.Stop();
                 var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                _stats.RecordRequest(success, elapsedTime, errorType);
+                stats.RecordRequest(success, elapsedTime, errorType);
 
                 if (elapsedTime > ThresholdMs)
                 {
                     //_logger.LogWarning($"Client streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
-                _stats.RecordConnectionEnd();
+                stats.RecordConnectionEnd();
             }
         }
 
@@ -199,7 +190,7 @@ namespace PeakSWC.RemoteWebView.Services
             where TRequest : class
             where TResponse : class
         {
-            _stats.RecordConnectionStart();
+            stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             bool success = false;
@@ -207,12 +198,12 @@ namespace PeakSWC.RemoteWebView.Services
 
             try
             {
-                var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, _stats);
-                var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, _stats);
+                var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
+                var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
 
                 await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
 
-                _stats.RecordBytesSent(wrappedResponseStream.BytesSent);
+                stats.RecordBytesSent(wrappedResponseStream.BytesSent);
 
                 success = true;
             }
@@ -230,39 +221,31 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 stopwatch.Stop();
                 var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                _stats.RecordRequest(success, elapsedTime, errorType);
+                stats.RecordRequest(success, elapsedTime, errorType);
 
                 if (elapsedTime > ThresholdMs)
                 {
                     //_logger.LogWarning($"Duplex streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
                 }
 
-                _stats.RecordConnectionEnd();
+                stats.RecordConnectionEnd();
             }
         }
 
         /// <summary>
         /// Wrapper for IServerStreamWriter to intercept sent messages
         /// </summary>
-        private class StatsServerStreamWriter<TResponse> : IServerStreamWriter<TResponse>
+        private class StatsServerStreamWriter<TResponse>(IServerStreamWriter<TResponse> inner, ServerStats stats) : IServerStreamWriter<TResponse>
             where TResponse : class
         {
-            private readonly IServerStreamWriter<TResponse> _inner;
-            private readonly ServerStats _stats;
             private long _bytesSent = 0; // Backing field
 
             public long BytesSent => Interlocked.Read(ref _bytesSent);
 
-            public StatsServerStreamWriter(IServerStreamWriter<TResponse> inner, ServerStats stats)
-            {
-                _inner = inner;
-                _stats = stats;
-            }
-
             public WriteOptions? WriteOptions
             {
-                get => _inner.WriteOptions;
-                set => _inner.WriteOptions = value;
+                get => inner.WriteOptions;
+                set => inner.WriteOptions = value;
             }
 
             public async Task WriteAsync(TResponse message)
@@ -270,41 +253,33 @@ namespace PeakSWC.RemoteWebView.Services
                 // Calculate bytes sent for this message
                 if (message is IMessage message2)
                 {
-                    long size = _stats.CalculateMessageSize(message2);
+                    long size = stats.CalculateMessageSize(message2);
                     Interlocked.Add(ref _bytesSent, size); // Thread-safe increment
                 }
 
-                await _inner.WriteAsync(message).ConfigureAwait(false);
+                await inner.WriteAsync(message).ConfigureAwait(false);
             }
         }
 
         /// <summary>
         /// Wrapper for IAsyncStreamReader to intercept received messages
         /// </summary>
-        private class StatsAsyncStreamReader<TRequest> : IAsyncStreamReader<TRequest>
+        private class StatsAsyncStreamReader<TRequest>(IAsyncStreamReader<TRequest> inner, ServerStats stats) : IAsyncStreamReader<TRequest>
             where TRequest : class
         {
-            private readonly IAsyncStreamReader<TRequest> _inner;
-            private readonly ServerStats _stats;
             private long _bytesReceived = 0; // Backing field
 
             public long BytesReceived => Interlocked.Read(ref _bytesReceived);
 
-            public StatsAsyncStreamReader(IAsyncStreamReader<TRequest> inner, ServerStats stats)
-            {
-                _inner = inner;
-                _stats = stats;
-            }
-
-            public TRequest Current => _inner.Current;
+            public TRequest Current => inner.Current;
 
             public async Task<bool> MoveNext(CancellationToken cancellationToken)
             {
-                var result = await _inner.MoveNext(cancellationToken).ConfigureAwait(false);
-                if (result && _inner.Current is IMessage message)
+                var result = await inner.MoveNext(cancellationToken).ConfigureAwait(false);
+                if (result && inner.Current is IMessage message)
                 {
                     // Calculate bytes received for this message
-                    long size = _stats.CalculateMessageSize(message);
+                    long size = stats.CalculateMessageSize(message);
                     Interlocked.Add(ref _bytesReceived, size); // Thread-safe increment
                 }
                 return result;

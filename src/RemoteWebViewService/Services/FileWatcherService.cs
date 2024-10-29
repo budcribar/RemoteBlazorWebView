@@ -8,24 +8,17 @@ using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class FileWatcherService : FileWatcherIPC.FileWatcherIPCBase
+    public class FileWatcherService(ILogger<FileWatcherService> logger) : FileWatcherIPC.FileWatcherIPCBase
     {
-        private readonly ILogger<FileWatcherService> _logger;
-
-        public FileWatcherService(ILogger<FileWatcherService> logger)
-        {
-            _logger = logger;
-        }
-
         public override async Task WatchFile(WatchFileRequest request, IServerStreamWriter<WatchFileResponse> responseStream, ServerCallContext context)
         {
             string filePath = request.FilePath;
 
-            _logger.LogInformation($"Client requested to watch file: {filePath}");
+            logger.LogInformation($"Client requested to watch file: {filePath}");
 
             if (!File.Exists(filePath))
             {
-                _logger.LogWarning($"File {filePath} does not exist.");
+                logger.LogWarning($"File {filePath} does not exist.");
                 throw new RpcException(new Status(StatusCode.NotFound, $"File {filePath} does not exist."));
             }
 
@@ -63,7 +56,7 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     watcher.EnableRaisingEvents = false;
-                    _logger.LogInformation($"Change detected in file: {filePath}");
+                    logger.LogInformation($"Change detected in file: {filePath}");
 
                     // Wait briefly to ensure the file write is complete
                     await Task.Delay(500, context.CancellationToken).ConfigureAwait(false);
@@ -92,7 +85,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error processing file change for {filePath}");
+                    logger.LogError(ex, $"Error processing file change for {filePath}");
                 }
 
                 if (watcher != null)
@@ -101,13 +94,13 @@ namespace PeakSWC.RemoteWebView
             };
             watcher.Error += (sender, args) =>
             {
-                _logger.LogError("FileSystemWatcher encountered an error.");
+                logger.LogError("FileSystemWatcher encountered an error.");
                 // Optionally, notify the client about the error
             };
             watcher.Changed += handler;
             watcher.EnableRaisingEvents = true;
 
-            _logger.LogInformation($"Started watching file: {filePath}");
+            logger.LogInformation($"Started watching file: {filePath}");
 
             // Keep the streaming RPC alive until the client disconnects
             try
@@ -116,7 +109,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (TaskCanceledException)
             {
-                _logger.LogInformation($"Client disconnected from watching file: {filePath}");
+                logger.LogInformation($"Client disconnected from watching file: {filePath}");
             }
             finally
             {
@@ -132,7 +125,7 @@ namespace PeakSWC.RemoteWebView
         {
             const int chunkSize = 32 * 1024; // 32KB
 
-            _logger.LogInformation($"Streaming file: {filePath} in {chunkSize / 1024}KB chunks.");
+            logger.LogInformation($"Streaming file: {filePath} in {chunkSize / 1024}KB chunks.");
 
             using System.IO.FileStream fs = new System.IO.FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
@@ -143,7 +136,7 @@ namespace PeakSWC.RemoteWebView
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Streaming cancelled.");
+                    logger.LogInformation("Streaming cancelled.");
                     break;
                 }
 
@@ -163,7 +156,7 @@ namespace PeakSWC.RemoteWebView
                 }).ConfigureAwait(false);
             }
 
-            _logger.LogInformation($"Completed streaming file: {filePath}");
+            logger.LogInformation($"Completed streaming file: {filePath}");
         }
 
         private string GetRunArguments()

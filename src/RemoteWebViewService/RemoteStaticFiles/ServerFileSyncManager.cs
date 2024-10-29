@@ -435,17 +435,11 @@ namespace PeakSWC.RemoteWebView
     /// <summary>
     /// Represents a data request for file synchronization.
     /// </summary>
-    public class DataRequest : IDisposable
+    public class DataRequest(CancellationToken cancellationToken) : IDisposable
     {
-        public Pipe Pipe { get; }
+        public Pipe Pipe { get; } = new Pipe();
 
-        public CancellationToken CancellationToken { get; }
-
-        public DataRequest(CancellationToken cancellationToken)
-        {
-            Pipe = new Pipe();
-            CancellationToken = cancellationToken;
-        }
+        public CancellationToken CancellationToken { get; } = cancellationToken;
 
         public void Dispose()
         {

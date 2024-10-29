@@ -14,29 +14,14 @@ using System.Collections.Concurrent;
 
 namespace PeakSWC.RemoteWebView 
 {
-    public class RemoteFilesMiddleware
-    {
-        private readonly RequestDelegate _next;
-        private readonly IMemoryCache _memoryCache;
-        private readonly ILogger<RemoteFilesMiddleware> _logger;
-        private readonly RemoteFileResolver _remoteFileResolver;
-        private readonly ServerFileSyncManager _serverFileSyncManager;
-
-        public RemoteFilesMiddleware(
-            RequestDelegate next,
-            IMemoryCache memoryCache,
-            ILogger<RemoteFilesMiddleware> logger,
-            RemoteFileResolver remoteFileResolver,
-            ServerFileSyncManager fileSyncManager
+    public class RemoteFilesMiddleware(
+        RequestDelegate next,
+        IMemoryCache memoryCache,
+        ILogger<RemoteFilesMiddleware> logger,
+        RemoteFileResolver remoteFileResolver,
+        ServerFileSyncManager fileSyncManager
            )
-        {
-            _next = next;
-            _memoryCache = memoryCache;
-            _logger = logger;
-            _remoteFileResolver = remoteFileResolver;
-            _serverFileSyncManager = fileSyncManager;
-        }
-
+    {
         public async Task InvokeAsync(HttpContext context)
         {
             if (HttpMethods.IsGet(context.Request.Method))
@@ -50,7 +35,7 @@ namespace PeakSWC.RemoteWebView
             else
             {
                 // Pass to the next middleware for other HTTP methods
-                await _next(context).ConfigureAwait(false);
+                await next(context).ConfigureAwait(false);
             }
         }
         //private (string subPath, Guid clientGuid) ParsePathAndGuid(string path, string referrer)
@@ -144,13 +129,13 @@ namespace PeakSWC.RemoteWebView
 
             if (clientGuid == Guid.Empty)
             {
-                _logger.LogWarning("Invalid request path. Expected format: /clientGuid/subPath");
+                logger.LogWarning("Invalid request path. Expected format: /clientGuid/subPath");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync("Invalid request path. Expected format: /clientGuid/subPath").ConfigureAwait(false);
                 return;
             }
 
-            _logger.LogDebug($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
+            logger.LogDebug($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
@@ -160,13 +145,13 @@ namespace PeakSWC.RemoteWebView
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                clientMetadata = await _remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
+                clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
                 FileStats.Update(serviceState, clientGuid.ToString(), clientMetadata);
                 ILogger<RemoteWebViewService> logger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving metadata for file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogError(ex, $"Error retrieving metadata for file '{subPath}' from client GUID '{clientGuid}'.");
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Error retrieving file metadata from client.").ConfigureAwait(false);
                 return;
@@ -174,32 +159,31 @@ namespace PeakSWC.RemoteWebView
 
             if (clientMetadata.StatusCode != StatusCodes.Status200OK)
             {
-                _logger.LogWarning($"Client GUID '{clientGuid}' does not have the file '{subPath}'. Cannot serve.");
+                logger.LogWarning($"Client GUID '{clientGuid}' does not have the file '{subPath}'. Cannot serve.");
                 context.Response.StatusCode = clientMetadata.StatusCode;
                 await context.Response.WriteAsync($"File not found. {subPath}").ConfigureAwait(false);
                 return;
             }
 
             bool needsUpdate = false;
-            FileMetadata? serverMetadata = null;
 
             // Step 2: Check if server cache is enabled and retrieve server metadata
-            if (options.UseServerCache && _memoryCache.TryGetValue(subPath, out serverMetadata))
+            if (options.UseServerCache && memoryCache.TryGetValue(subPath, out FileMetadata? serverMetadata))
             {
                 if (serverMetadata?.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
-                    _logger.LogDebug($"File '{subPath}' needs update in server cache.");
+                    logger.LogDebug($"File '{subPath}' needs update in server cache.");
                 }
                 else
                 {
-                    _logger.LogDebug($"File '{subPath}' is up-to-date in server cache.");
+                    logger.LogDebug($"File '{subPath}' is up-to-date in server cache.");
                 }
             }
             else
             {
                 needsUpdate = true;
-                _logger.LogDebug($"File '{subPath}' not found in server cache or caching is disabled.");
+                logger.LogDebug($"File '{subPath}' not found in server cache or caching is disabled.");
             }
 
             // Step 3: Handle Conditional GETs (ETag and If-None-Match)
@@ -208,7 +192,7 @@ namespace PeakSWC.RemoteWebView
                 string eTag = clientMetadata.ETag;
                 if (ifNoneMatch.Contains(eTag))
                 {
-                    _logger.LogDebug($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
+                    logger.LogDebug($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
                     context.Response.StatusCode = StatusCodes.Status304NotModified;
                     return;
                 }
@@ -220,16 +204,16 @@ namespace PeakSWC.RemoteWebView
             // Step 5: Serve the file
             if (needsUpdate)
             {
-                _logger.LogDebug($"Fetching file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogDebug($"Fetching file '{subPath}' from client GUID '{clientGuid}'.");
 
                 FileStream dataRequest;
                 try
                 {
-                    dataRequest = await _remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
+                    dataRequest = await remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
+                    logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                     return;
@@ -248,10 +232,10 @@ namespace PeakSWC.RemoteWebView
 
                         // Update metadata in cache
                        
-                        _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
+                        memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                         // Cache the data
-                        _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
+                        memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                         // Write the data to the response
                         memStream.Position = 0;
@@ -264,30 +248,30 @@ namespace PeakSWC.RemoteWebView
                     await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
 
-                _logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
             }
             else
             {
                 // Serve from cache
-                if (_memoryCache.TryGetValue($"{subPath}_data", out byte[]? cachedData))
+                if (memoryCache.TryGetValue($"{subPath}_data", out byte[]? cachedData))
                 {
-                    _logger.LogDebug($"Serving file '{subPath}' from in-memory cache.");
+                    logger.LogDebug($"Serving file '{subPath}' from in-memory cache.");
                     context.Response.ContentLength = cachedData?.Length ?? 0;
                     await context.Response.Body.WriteAsync(cachedData.AsMemory()).ConfigureAwait(false);
                 }
                 else
                 {
-                    _logger.LogWarning($"Data for file '{subPath}' not found in cache. Fetching from client.");
+                    logger.LogWarning($"Data for file '{subPath}' not found in cache. Fetching from client.");
 
                     // Fetch from client
                     FileStream dataRequest;
                     try
                     {
-                        dataRequest = await _remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
+                        dataRequest = await remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
+                        logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
                         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                         await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                         return;
@@ -302,10 +286,10 @@ namespace PeakSWC.RemoteWebView
                             memStream.Position = 0;
 
                             // Update metadata in cache
-                            _memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
+                            memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                             // Cache the data
-                            _memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(_serverFileSyncManager.CacheTimeoutSeconds));
+                            memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                             // Write the data to the response
                             memStream.Position = 0;
@@ -320,7 +304,7 @@ namespace PeakSWC.RemoteWebView
                         await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
 
-                    _logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                    logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
                 }
             }
         }
@@ -348,7 +332,7 @@ namespace PeakSWC.RemoteWebView
         {
             // Implement POST handling logic if necessary
             // For now, simply pass to the next middleware
-            await _next(context).ConfigureAwait(false);
+            await next(context).ConfigureAwait(false);
             return;
         }
 
