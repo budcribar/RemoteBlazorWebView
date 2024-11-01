@@ -17,6 +17,8 @@ using System.Net.Quic;
 using System.Runtime.Versioning;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 
 namespace ClientBenchmark
@@ -29,7 +31,7 @@ namespace ClientBenchmark
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
         private readonly bool _prodServer = true;
         private readonly int fileSize = 102400;
-        private readonly int maxFiles = 700;
+        private readonly int maxFiles = 100;
         private readonly bool useHttp3 = false;
 
 
@@ -54,7 +56,7 @@ namespace ClientBenchmark
             var processStartInfo = new ProcessStartInfo
             {
 #if DEBUG
-                FileName = @"..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
+                FileName = @"..\..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
 #else
                 FileName = @"..\..\..\..\..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
 #endif
@@ -339,11 +341,14 @@ namespace ClientBenchmark
         //| ReadFilesClientBenchmark | 224.5 ms | 5.72 ms | 16.33 ms |
 
         [Benchmark]
-        public void ReadFilesClientBenchmark()
-        {     
+        public async Task ReadFilesClientBenchmark()
+        {
+            
+
+            ILogger<ClientBenchmarks> logger = NullLogger<ClientBenchmarks>.Instance;
             string id = Guid.NewGuid().ToString();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
-            var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot" }, null,null, cts.Token);
+            var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot/index.html" }, null,null, cts.Token);
 
             var wrapper = new HttpClientWrapper(httpClient);
             try
@@ -352,8 +357,9 @@ namespace ClientBenchmark
                 {
                     if (message.Response == "created:")
                     {
-                        //FileReader.AttachFileReader(_client.FileReader(), cts.Token, id, new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { });//Console.Write($"File reader threw {x.Message}"));
-                       
+                        ClientFileSyncManager  clientFileSyncManager = new ClientFileSyncManager(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
+                        clientFileSyncManager.HandleServerRequests(cts.Token);
+                      
 
                         List<Task> tasks = [];
                         for (int i = 1; i <= maxFiles; i++)

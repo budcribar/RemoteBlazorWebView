@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ClientBenchmark": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}
