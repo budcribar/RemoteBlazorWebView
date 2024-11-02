@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Time vs Number of Clients</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            margin: 20px;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .card-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .chart-container {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Processing Time vs Number of Clients</h2>
+        </div>
+        <div class="chart-container">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('lineChart').getContext('2d');
+
+        // Updated data with new points for 16,000 and 32,000 clients
+        const data = {
+            labels: ['1,000', '2,000', '4,000', '8,000', '16,000', '32,000'],
+            datasets: [{
+                label: 'Processing Time (seconds)',
+                data: [0.3939, 0.8059, 1.637, 3.319, 6.698, 14.42],
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#2563eb'
+            }]
+        };
+
+        const config = {
+            type: 'line',
+            data: data,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Clients'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Time (seconds)'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.parsed.y.toFixed(3)} s`;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        const lineChart = new Chart(ctx, config);
+    </script>
+</body>
+</html>

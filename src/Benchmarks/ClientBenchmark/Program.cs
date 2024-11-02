@@ -19,7 +19,7 @@ using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
-
+using WebdriverTestProject;
 
 namespace ClientBenchmark
 {
@@ -29,9 +29,9 @@ namespace ClientBenchmark
         //private string URL = "https://127.0.0.1:5001";
         //private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private readonly bool _prodServer = true;
+        private readonly bool _prodServer = true;// true;
         private readonly int fileSize = 102400;
-        private readonly int maxFiles = 100;
+        private readonly int maxFiles = 32000;//20000;
         private readonly bool useHttp3 = false;
 
 
@@ -41,13 +41,13 @@ namespace ClientBenchmark
         private string _testFilePath = string.Empty;
         private string _rootDirectory = string.Empty;
         private readonly string _testFileName = "wwwroot/css/site";
-        public required WebViewIPC.WebViewIPCClient _client;
-        public required BrowserIPC.BrowserIPCClient _browser;
+        private WebViewIPC.WebViewIPCClient _client = default!;
+        private BrowserIPC.BrowserIPCClient _browser = default!;
         private string randomString = string.Empty;
-        public required HttpClient httpClient;
-      
+        private HttpClient httpClient = default!;
+
         [GlobalSetup]
-        public void Setup()
+        public async Task Setup()
 
         {
             if (_prodServer)
@@ -58,7 +58,7 @@ namespace ClientBenchmark
 #if DEBUG
                 FileName = @"..\..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
 #else
-                FileName = @"..\..\..\..\..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
+                FileName = @"..\..\..\..\..\..\..\..\..\..\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe",
 #endif
                 RedirectStandardOutput = true
             };
@@ -149,6 +149,8 @@ namespace ClientBenchmark
 
             _client = new WebViewIPC.WebViewIPCClient(channel);
             _browser = new BrowserIPC.BrowserIPCClient(channel);
+
+            await Utilities.SetServerCache(true);
         }
        // [Benchmark]
         public void CreateClientBenchmark()
@@ -340,6 +342,25 @@ namespace ClientBenchmark
         //| ReadFilesClientBenchmark | 224.1 ms | 5.13 ms | 14.97 ms |
         //| ReadFilesClientBenchmark | 224.5 ms | 5.72 ms | 16.33 ms |
 
+
+        // | ReadFilesClientBenchmark | 651.0 ms | 12.96 ms | 28.18 ms | 700 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 724.6 ms | 13.73 ms | 16.34 ms | 800 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 914.0 ms | 16.32 ms | 15.27 ms | 1000 files 102400  with Client and server caching off
+        //  | ReadFilesClientBenchmark | 1.946 s | 0.0296 s | 0.0277 s | 2000 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 4.025 s | 0.0645 s | 0.0572 s | 4000 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 8.229 s | 0.1148 s | 0.1073 s | 8000 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 21.40 s | 0.392 s | 0.367 s | 20000 files 102400  with Client and server caching off
+        // | ReadFilesClientBenchmark | 22.81 s | 0.447 s | 0.565 s |20000 files 102400  with Client off and server caching on but all unique files
+        // | ReadFilesClientBenchmark | 8.392 s | 0.1396 s | 0.1306 s | 20000 files 102400  with Client off and server caching on but only 1 file
+
+        // | ReadFilesClientBenchmark | 8.652 s | 0.0822 s | 0.0686 s |20000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 14.42 s | 0.286 s | 0.306 s | 32000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 6.698 s | 0.0572 s | 0.0535 s | 16000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 3.319 s | 0.0500 s | 0.0468 s | 8000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 1.637 s | 0.0200 s | 0.0187 s | 4000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 805.9 ms | 4.81 ms | 4.50 ms |  2000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 393.9 ms | 3.84 ms | 3.59 ms | 1000 2000 files 102400  with Client off and server caching on all unique files
+
         [Benchmark]
         public async Task ReadFilesClientBenchmark()
         {
@@ -364,6 +385,7 @@ namespace ClientBenchmark
                         List<Task> tasks = [];
                         for (int i = 1; i <= maxFiles; i++)
                         {
+                            //string url = $"{URL}/{id}/{_testFileName}{1}.css";
                             string url = $"{URL}/{id}/{_testFileName}{i}.css";
                             tasks.Add(Task.Run(async () =>
 
@@ -374,7 +396,8 @@ namespace ClientBenchmark
                             }));//.Wait();
                         }
 
-                        Task.WaitAll(tasks.ToArray());
+                        await Task.WhenAll(tasks);
+                        //Task.WaitAll( tasks.ToArray());
                         cts.Cancel();
                     }
 
@@ -427,8 +450,10 @@ namespace ClientBenchmark
        
         public static void Main(string[] args)
         {
-         
-            var summary = BenchmarkRunner.Run<ClientBenchmarks>();
+            var config = ManualConfig.Create(DefaultConfig.Instance)
+               .WithOptions(ConfigOptions.DisableOptimizationsValidator);
+
+            var summary = BenchmarkRunner.Run<ClientBenchmarks>(config);
             Console.WriteLine(summary);
             Console.ReadLine();
         }

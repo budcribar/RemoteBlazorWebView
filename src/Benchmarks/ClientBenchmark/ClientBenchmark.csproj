@@ -8,15 +8,36 @@
 	  <LangVersion>latest</LangVersion>
 	  <EnablePreviewFeatures>true</EnablePreviewFeatures>
 	  <Platforms>x64</Platforms>
+	  <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Utilitiesx.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\test\FileSyncServer.Tests\Utilities.cs" Link="Utilities.cs" />
+  </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0-rc.2.24473.5" />
 		<PackageReference Include="Google.Protobuf" Version="3.28.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.66.0" />
+		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.0-rc2" />
+		<PackageReference Include="System.Management" Version="9.0.0-rc.2.24473.5" />
+		<!--<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2895-prerelease" />-->
+		<!--<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />-->
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-		
-		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
 	</ItemGroup>
+	<PropertyGroup>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+	</PropertyGroup>
+	<!--<ItemGroup>
+		<Reference Include="WindowsBase">
+			<HintPath>C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\9.0.0-rc.2.24473.5\ref\net9.0\WindowsBase.dll</HintPath>
+		</Reference>
+	</ItemGroup>-->
+
 </Project>

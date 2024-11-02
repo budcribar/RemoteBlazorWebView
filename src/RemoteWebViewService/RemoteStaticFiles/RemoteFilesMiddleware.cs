@@ -11,8 +11,7 @@ using System;
 using System.Linq;
 using System.Collections.Concurrent;
 
-
-namespace PeakSWC.RemoteWebView 
+namespace PeakSWC.RemoteWebView
 {
     public class RemoteFilesMiddleware(
         RequestDelegate next,
@@ -20,7 +19,7 @@ namespace PeakSWC.RemoteWebView
         ILogger<RemoteFilesMiddleware> logger,
         RemoteFileResolver remoteFileResolver,
         ServerFileSyncManager fileSyncManager
-           )
+    )
     {
         public async Task InvokeAsync(HttpContext context)
         {
@@ -38,42 +37,46 @@ namespace PeakSWC.RemoteWebView
                 await next(context).ConfigureAwait(false);
             }
         }
-        //private (string subPath, Guid clientGuid) ParsePathAndGuid(string path, string referrer)
-        //{
-        //    // Try to parse the client GUID from the request path
-        //    var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        //    if (pathSegments.Length >= 1)
-        //    {
-        //        string clientIdString = pathSegments[0];
-        //        if (Guid.TryParse(clientIdString, out var clientGuid))
-        //        {
-        //            // The remaining segments form the subPath
-        //            string subPath = string.Join('/', pathSegments.Skip(1));
-        //            return (subPath, clientGuid);
-        //        }
-        //    }
+        // Original ParsePathAndGuid method for reference
+        /*
+        private (string subPath, Guid clientGuid) ParsePathAndGuid(string path, string referrer)
+        {
+            // Try to parse the client GUID from the request path
+            var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        //    // If not found in the path, try to parse the client GUID from the referrer
-        //    if (!string.IsNullOrEmpty(referrer))
-        //    {
-        //        var referrerUri = new Uri(referrer);
-        //        var referrerSegments = referrerUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (pathSegments.Length >= 1)
+            {
+                string clientIdString = pathSegments[0];
+                if (Guid.TryParse(clientIdString, out var clientGuid))
+                {
+                    // The remaining segments form the subPath
+                    string subPath = string.Join('/', pathSegments.Skip(1));
+                    return (subPath, clientGuid);
+                }
+            }
 
-        //        if (referrerSegments.Length >= 1)
-        //        {
-        //            string clientIdString = referrerSegments[0];
-        //            if (Guid.TryParse(clientIdString, out var clientGuid))
-        //            {
-        //                // Use the original path as the subPath
-        //                return (path.TrimStart('/'), clientGuid);
-        //            }
-        //        }
-        //    }
+            // If not found in the path, try to parse the client GUID from the referrer
+            if (!string.IsNullOrEmpty(referrer))
+            {
+                var referrerUri = new Uri(referrer);
+                var referrerSegments = referrerUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        //    // If the client GUID is not found, return an empty GUID
-        //    return (path.TrimStart('/'), Guid.Empty);
-        //}
+                if (referrerSegments.Length >= 1)
+                {
+                    string clientIdString = referrerSegments[0];
+                    if (Guid.TryParse(clientIdString, out var clientGuid))
+                    {
+                        // Use the original path as the subPath
+                        return (path.TrimStart('/'), clientGuid);
+                    }
+                }
+            }
+
+            // If the client GUID is not found, return an empty GUID
+            return (path.TrimStart('/'), Guid.Empty);
+        }
+        */
 
         private (string, Guid) ParsePathAndGuid(string path, string referrer)
         {
@@ -89,8 +92,8 @@ namespace PeakSWC.RemoteWebView
                     subPath = string.Join('/', pathSegments.Skip(1));
                     return (subPath, clientId);
                 }
-                // getClientId from referrer
 
+                // Attempt to get clientId from referrer
                 var referrerSegments = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
                 if (referrerSegments?.Length > 2)
                 {
@@ -98,46 +101,43 @@ namespace PeakSWC.RemoteWebView
                     if (Guid.TryParse(clientIdString, out clientId))
                         return (path[1..], clientId);
                 }
-
             }
+
             var referrerSegments2 = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
             if (referrerSegments2?.Length > 0)
             {
-               
                 if (Guid.TryParse(referrerSegments2[0], out var clientId2))
                     return (path, clientId2);
             }
 
-            // can't find guid
+            // Can't find GUID
             return (path, Guid.Empty);
-
         }
-
-       
 
         private async Task HandleGetAsync(HttpContext context)
         {
             RemoteFilesOptions options = context.RequestServices.GetRequiredService<RemoteFilesOptions>();
 
-            // Extract clientGuid and subPath from the request path and referrer
+            // Extract clientId and subPath from the request path and referrer
             var path = context.Request.Path.Value ?? string.Empty;
             var referrer = context.Request.Headers.TryGetValue(HeaderNames.Referer, out var referrerValues)
                 ? referrerValues.FirstOrDefault() ?? string.Empty
                 : string.Empty;
 
-            var (subPath, clientGuid) = ParsePathAndGuid(path, referrer);
+            var (subPath, clientId) = ParsePathAndGuid(path, referrer);
 
-            if (clientGuid == Guid.Empty)
+            if (clientId == Guid.Empty)
             {
-                logger.LogWarning("Invalid request path. Expected format: /clientGuid/subPath");
+                logger.LogWarning("Invalid request path. Expected format: /clientId/subPath");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Invalid request path. Expected format: /clientGuid/subPath").ConfigureAwait(false);
+                await context.Response.WriteAsync("Invalid request path. Expected format: /clientId/subPath").ConfigureAwait(false);
                 return;
             }
 
-            logger.LogDebug($"Received GET request for file '{subPath}' from client GUID '{clientGuid}'.");
+            logger.LogDebug($"Received GET request for file '{subPath}' from client ID '{clientId}'.");
+
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientId.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             // Step 1: Retrieve client metadata
             FileMetadata clientMetadata;
@@ -145,13 +145,13 @@ namespace PeakSWC.RemoteWebView
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
-                FileStats.Update(serviceState, clientGuid.ToString(), clientMetadata);
-                ILogger<RemoteWebViewService> logger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
+                clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath).ConfigureAwait(false);
+                FileStats.Update(serviceState, clientId.ToString(), clientMetadata);
+                ILogger<RemoteWebViewService> serviceLogger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Error retrieving metadata for file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogError(ex, $"Error retrieving metadata for file '{subPath}' from client ID '{clientId}'.");
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Error retrieving file metadata from client.").ConfigureAwait(false);
                 return;
@@ -159,7 +159,7 @@ namespace PeakSWC.RemoteWebView
 
             if (clientMetadata.StatusCode != StatusCodes.Status200OK)
             {
-                logger.LogWarning($"Client GUID '{clientGuid}' does not have the file '{subPath}'. Cannot serve.");
+                logger.LogWarning($"Client ID '{clientId}' does not have the file '{subPath}'. Cannot serve.");
                 context.Response.StatusCode = clientMetadata.StatusCode;
                 await context.Response.WriteAsync($"File not found. {subPath}").ConfigureAwait(false);
                 return;
@@ -204,16 +204,16 @@ namespace PeakSWC.RemoteWebView
             // Step 5: Serve the file
             if (needsUpdate)
             {
-                logger.LogDebug($"Fetching file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogDebug($"Fetching file '{subPath}' from client ID '{clientId}'.");
 
                 FileStream dataRequest;
                 try
                 {
-                    dataRequest = await remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
+                    dataRequest = await remoteFileResolver.GetFileStreamAsync(clientId.ToString(), subPath).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
+                    logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client ID '{clientId}'.");
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                     return;
@@ -231,8 +231,7 @@ namespace PeakSWC.RemoteWebView
                         memStream.Position = 0;
 
                         // Update metadata in cache
-                       
-                        memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                        memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                         // Cache the data
                         memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
@@ -248,7 +247,7 @@ namespace PeakSWC.RemoteWebView
                     await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
 
-                logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                logger.LogDebug($"Successfully fetched and served file '{subPath}' from client ID '{clientId}'.");
             }
             else
             {
@@ -267,11 +266,11 @@ namespace PeakSWC.RemoteWebView
                     FileStream dataRequest;
                     try
                     {
-                        dataRequest = await remoteFileResolver.GetFileStreamAsync(clientGuid.ToString(), subPath).ConfigureAwait(false);
+                        dataRequest = await remoteFileResolver.GetFileStreamAsync(clientId.ToString(), subPath).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client GUID '{clientGuid}'.");
+                        logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client ID '{clientId}'.");
                         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                         await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                         return;
@@ -286,7 +285,7 @@ namespace PeakSWC.RemoteWebView
                             memStream.Position = 0;
 
                             // Update metadata in cache
-                            memoryCache.Set(subPath, clientMetadata.ETag, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                            memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                             // Cache the data
                             memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
@@ -304,10 +303,11 @@ namespace PeakSWC.RemoteWebView
                         await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
 
-                    logger.LogDebug($"Successfully fetched and served file '{subPath}' from client GUID '{clientGuid}'.");
+                    logger.LogDebug($"Successfully fetched and served file '{subPath}' from client ID '{clientId}'.");
                 }
             }
         }
+
         private void SetResponseHeaders(HttpContext context, FileMetadata clientMetadata, string subPath, bool useClientCache)
         {
             // Set the content type based on the file extension
@@ -326,7 +326,6 @@ namespace PeakSWC.RemoteWebView
                 context.Response.Headers[HeaderNames.CacheControl] = "public,max-age=3600";
             }
         }
-
 
         private async Task HandlePostAsync(HttpContext context)
         {
@@ -347,6 +346,3 @@ namespace PeakSWC.RemoteWebView
         }
     }
 }
-
-
-

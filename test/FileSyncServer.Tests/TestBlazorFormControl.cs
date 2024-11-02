@@ -248,7 +248,7 @@ namespace WebdriverTestProject
         }
 
         [Fact]
-        public void TestJsDownload()
+        public async Task TestJsDownload()
         {
             var rootComponent = CreateRootComponent();
             var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
@@ -289,7 +289,7 @@ namespace WebdriverTestProject
 
             Assert.True(threadInitialized.WaitOne(30000));
             // Javascript is still running need a sync mechanism
-            Task.Delay(TimeSpan.FromSeconds(10)).Wait();
+            await Task.Delay(TimeSpan.FromSeconds(10));
         }
     }
 }

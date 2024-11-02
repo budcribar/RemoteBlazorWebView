@@ -52,6 +52,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileWatcherClient", "src\Be
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StressClient", "src\Benchmarks\StressClient\StressClient.csproj", "{463E76D4-5543-4994-A9CA-9AC198DE77E2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientBenchmark", "src\Benchmarks\ClientBenchmark\ClientBenchmark.csproj", "{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Authorization|linux-x64 = Authorization|linux-x64
@@ -411,6 +413,34 @@ Global
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|linux-x64.Build.0 = Release|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|x64.ActiveCfg = Release|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|x64.Build.0 = Release|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Authorization|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Authorization|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Authorization|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Authorization|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Developer|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Developer|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Developer|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Developer|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Embedded|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Embedded|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Embedded|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Embedded|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|linux-x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|x64.ActiveCfg = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|linux-x64.ActiveCfg = Release|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|linux-x64.Build.0 = Release|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|x64.ActiveCfg = Release|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -430,6 +460,7 @@ Global
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF} = {1F1FA526-FA6C-4B81-9D64-8DF99356CB8A}
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A} = {3F894B2C-1045-4C84-B986-393C4DD12C62}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}
