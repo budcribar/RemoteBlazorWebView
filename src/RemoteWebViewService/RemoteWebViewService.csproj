@@ -91,8 +91,8 @@
     <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
   
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.3.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.3.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.3.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.3.1" />
   </ItemGroup>
   <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
