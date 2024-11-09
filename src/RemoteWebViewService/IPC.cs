@@ -73,7 +73,7 @@ namespace PeakSWC.RemoteWebView
                         // Serialize the write
 
                         if (ClientResponseStream != null)
-                            await ClientResponseStream.WriteAsync(m).ConfigureAwait(false);
+                            await ClientResponseStream.WriteAsync(m,token).ConfigureAwait(false);
 
                         if (logger.IsEnabled(LogLevel.Information))
                             logger.LogDebug($"Browser -> WebView {m.Response}");

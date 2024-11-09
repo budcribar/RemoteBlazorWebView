@@ -143,8 +143,8 @@ namespace PeakSWC.RemoteWebView
             FileMetadata clientMetadata;
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                var ready = await serviceState.FileManagerReady.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath).ConfigureAwait(false);
                 FileStats.Update(serviceState, clientId.ToString(), clientMetadata);
                 ILogger<RemoteWebViewService> serviceLogger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();

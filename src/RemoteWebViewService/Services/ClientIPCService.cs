@@ -88,7 +88,7 @@ namespace PeakSWC.RemoteWebView
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 try
                 {
-                    var ss = await serviceStateTaskSource.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    var ss = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
 
                     if (ss.PingTask != null)
@@ -133,7 +133,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var tasks = snapshotTasks.Select( x =>  x.Task.WaitWithTimeout(TimeSpan.FromSeconds(60)));
+                var tasks = snapshotTasks.Select( x =>  x.Task.WaitAsync(TimeSpan.FromSeconds(60)));
 
                 var results = await Task.WhenAll(tasks).ConfigureAwait(false); 
                 return results.Select(x => new ConnectionResponse
