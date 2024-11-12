@@ -20,6 +20,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using WebdriverTestProject;
+using BenchmarkDotNet.Disassemblers;
 
 namespace ClientBenchmark
 {
@@ -31,7 +32,8 @@ namespace ClientBenchmark
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
         private readonly bool _prodServer = true;// true;
         private readonly int fileSize = 102400;
-        private readonly int maxFiles = 32000;//20000;
+        private readonly int messageSize = 256;
+        private readonly int maxFiles = 100;//20000;
         private readonly bool useHttp3 = false;
 
 
@@ -44,6 +46,7 @@ namespace ClientBenchmark
         private WebViewIPC.WebViewIPCClient _client = default!;
         private BrowserIPC.BrowserIPCClient _browser = default!;
         private string randomString = string.Empty;
+        private string randomMessage = string.Empty;
         private HttpClient httpClient = default!;
 
         [GlobalSetup]
@@ -138,6 +141,7 @@ namespace ClientBenchmark
             Directory.CreateDirectory(Path.GetDirectoryName(_testFilePath)!);
 
             randomString = Utilities.GenerateRandomString(fileSize);
+            randomMessage = Utilities.GenerateRandomString(messageSize);
 
             for (int i=1; i<=maxFiles; i++)
                 File.WriteAllText($"{_testFilePath}{i}.css", randomString);         
@@ -359,9 +363,14 @@ namespace ClientBenchmark
         // | ReadFilesClientBenchmark | 3.319 s | 0.0500 s | 0.0468 s | 8000 files 102400  with Client off and server caching on all unique files
         // | ReadFilesClientBenchmark | 1.637 s | 0.0200 s | 0.0187 s | 4000 files 102400  with Client off and server caching on all unique files
         // | ReadFilesClientBenchmark | 805.9 ms | 4.81 ms | 4.50 ms |  2000 files 102400  with Client off and server caching on all unique files
-        // | ReadFilesClientBenchmark | 393.9 ms | 3.84 ms | 3.59 ms | 1000 2000 files 102400  with Client off and server caching on all unique files
+        // | ReadFilesClientBenchmark | 393.9 ms | 3.84 ms | 3.59 ms | 1000  files 102400  with Client off and server caching on all unique files
 
-        [Benchmark]
+
+        // | ReadFilesClientBenchmark | 391.6 ms | 2.10 ms | 1.75 ms | 1000  files 102400  with Client off and server caching on all unique files WaitAsync instead of WaitWithTimeout
+        // | ReadFilesClientBenchmark | 807.7 ms | 10.75 ms | 10.06 ms | 2000  files 102400  with Client off and server caching on all unique files WaitAsync instead of WaitWithTimeout
+        // | ReadFilesClientBenchmark | 1.644 s | 0.0079 s | 0.0074 s | 4000  files 102400  with Client off and server caching on all unique files WaitAsync instead of WaitWithTimeout
+
+        //[Benchmark]
         public async Task ReadFilesClientBenchmark()
         {
             
@@ -397,7 +406,7 @@ namespace ClientBenchmark
                         }
 
                         await Task.WhenAll(tasks);
-                        //Task.WaitAll( tasks.ToArray());
+                       
                         cts.Cancel();
                     }
 
@@ -418,6 +427,90 @@ namespace ClientBenchmark
         }
 
 
+        //if (message.Response == "created:")
+        //        {
+        //            _ = Task.Run(() => {
+        //                for (int i = 1; i <= max; i++)
+        //                    _browser.SendMessage(new SendSequenceMessageRequest { ClientId = id, Id=id, Sequence = (uint) i, Message = $"Message {i} {randomString}", IsPrimary = true, Url = "url", Cookies = "" });
+        //            } );
+
+        //        }
+               
+        [Benchmark]
+        public async Task ReadFilesAndSendMessagesBenchmark()
+        {
+
+            int maxMessages = 100;
+            ILogger<ClientBenchmarks> logger = NullLogger<ClientBenchmarks>.Instance;
+            string id = Guid.NewGuid().ToString();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
+            var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors = false, HtmlHostPath = "wwwroot/index.html" }, null, null, cts.Token);
+            var messageId = 0;
+            var wrapper = new HttpClientWrapper(httpClient);
+            try
+            {
+                foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
+                {
+                    if (message.Response == "created:")
+                    {
+                        ClientFileSyncManager clientFileSyncManager = new ClientFileSyncManager(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
+                        clientFileSyncManager.HandleServerRequests(cts.Token);
+
+
+                        List<Task> tasks = [];
+                        for (int i = 1; i <= maxFiles; i++)
+                        {
+                            //string url = $"{URL}/{id}/{_testFileName}{1}.css";
+                            string url = $"{URL}/{id}/{_testFileName}{i}.css";
+                            tasks.Add(Task.Run(async () =>
+
+                            //Task.Run(async () =>
+                            {
+                                var data = await wrapper.GetWithRetryAsync(url);
+
+                            }));//.Wait();
+
+                            tasks.Add(Task.Run( () =>
+                            {
+                                for (int j = 1; j <= maxMessages; j++)
+                                {
+                                    messageId++;
+                                    _browser.SendMessage(new SendSequenceMessageRequest { ClientId = id, Id = id, Sequence = (uint)messageId, Message = $"Message {j} {randomMessage}", IsPrimary = true, Url = "url", Cookies = "" });
+                                }
+
+                            }));
+
+                            await Task.WhenAll(tasks);
+
+                            //cts.Cancel();
+                        }
+                    }
+                    else if (message.Response.StartsWith("Message"))
+                    {
+                        
+                        if (int.Parse(message.Response.Split(" ")[1]) == maxMessages)
+                        {
+                            _client.Shutdown(new IdMessageRequest { Id = id });
+                            break;
+                        }
+
+                    }
+
+        }
+            }
+            catch (Exception ex)
+            {
+                if (ex.InnerException is not OperationCanceledException)
+                    Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                //_client.Shutdown(new IdMessageRequest { Id = id });
+            }
+            Debug.Assert(wrapper.count == maxFiles);
+            Debug.Assert(wrapper.bytes == maxFiles * fileSize);
+            //Console.WriteLine($"Read {wrapper.count} files total bytes {wrapper.bytes}");
+        }
         [GlobalCleanup]
         public void Cleanup()
         {
