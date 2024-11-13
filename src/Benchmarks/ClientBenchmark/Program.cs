@@ -39,7 +39,7 @@ namespace ClientBenchmark
 
 
         // what happens when you have multiple reads of the same file?
-        private readonly string _testGuid = string.Empty;
+        //private readonly string _testGuid = string.Empty;
         private string _testFilePath = string.Empty;
         private string _rootDirectory = string.Empty;
         private readonly string _testFileName = "wwwroot/css/site";

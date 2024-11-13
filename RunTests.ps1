@@ -99,7 +99,7 @@ Set-Location $currentDirectory
 Write-Host -ForegroundColor GREEN "Install dotnet-runtime"
 # Define the source and destination directories
 $sourceDir = "src/RemoteWebView.Blazor.JS/dotnet-runtime"
-$destDir = "src/RemoteWebView.Blazor.JS/Web.JS/node_modules"
+$destDir = "src/RemoteWebView.Blazor.JS/Web.JS/node_modules/@microsoft/dotnet-runtime"
 
 # Check if the destination directory exists, if not, create it
 if (-not (Test-Path -Path $destDir)) {
