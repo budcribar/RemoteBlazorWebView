@@ -61,3 +61,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /test/FileSyncServer.Tests/TestResults
 /src/RemoteWebView.Blazor.JS/src/generated/WebviewServiceClientPb.ts
 /src/RemoteWebView.Blazor.JS/src/generated/ts/webview_pb.d.ts
+/Report20241109-1011.diagsession
+/Report20241109-1437.diagsession
