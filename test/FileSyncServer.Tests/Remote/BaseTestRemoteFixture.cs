@@ -303,7 +303,7 @@ namespace WebdriverTestProject
                 // Refresh each page and wait for the "Counter" link to reappear
                 for (int i = 0; i < numClients; i++)
                 {
-                    await Pages[i].ReloadAsync();
+                    await Pages[i].ReloadAsync(new PageReloadOptions { Timeout=60000 });
                     await Task.Delay(1000); // Delay to prevent WebView2 from crashing
                 }
 
