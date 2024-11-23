@@ -73,8 +73,8 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.13.1" />
     <PackageReference Include="Google.Protobuf" Version="3.28.3" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.66.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.66.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.67.0" />
 	  
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.0" />
@@ -91,8 +91,8 @@
     <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
   
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.3.1" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.3.1" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.4.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.4.0" />
   </ItemGroup>
   <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">

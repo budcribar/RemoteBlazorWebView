@@ -51,9 +51,9 @@
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.28.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-	  <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2849.39" />
+	  <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
    
   </ItemGroup>
 
