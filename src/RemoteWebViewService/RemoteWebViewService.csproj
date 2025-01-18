@@ -50,7 +50,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Fix startup bug </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 9.0.30</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
