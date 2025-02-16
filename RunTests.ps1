@@ -58,6 +58,10 @@ if ($currentVersion -eq "v22.3.0") {
     }
 }
 
+Write-Output "Installing playwright"
+npx playwright install
+playwright install
+
 # Get the path of the script's directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
