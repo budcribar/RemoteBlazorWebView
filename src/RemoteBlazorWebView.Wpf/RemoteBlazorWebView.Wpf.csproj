@@ -43,8 +43,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="9.0.30" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="9.0.40" />
 	</ItemGroup>
 
 	<ItemGroup>
