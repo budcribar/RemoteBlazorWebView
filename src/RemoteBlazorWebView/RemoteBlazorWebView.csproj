@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Based on maui 9.0.30 </PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 9.0.40 </PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<Platforms>x64</Platforms>
