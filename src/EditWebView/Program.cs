@@ -8,7 +8,7 @@ class Program
 
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";
-    private const int TargetMajorVersion = 9;
+    private const int TargetMajorVersion = 10;
     private const string RelativePath = "../../../../../";
     private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
 
