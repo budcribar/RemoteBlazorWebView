@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net9-windows7.0</TargetFramework>
+		<TargetFramework>net10-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<PublishAot>false</PublishAot>
@@ -34,7 +34,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
 		<PackageReference Include="System.Management" Version="9.0.2" />
-		<PackageReference Include="FluentAssertions" Version="8.0.1" />
+		<PackageReference Include="FluentAssertions" Version="8.1.1" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.2" />
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />

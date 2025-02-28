@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	  <LangVersion>latest</LangVersion>
@@ -24,7 +24,7 @@
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.67.0" />
-		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.1" />
+		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.2" />
 		<PackageReference Include="System.Management" Version="9.0.2" />
 		<!--<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />-->
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
