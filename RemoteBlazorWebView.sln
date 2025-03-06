@@ -310,8 +310,8 @@ Global
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Authorization|x64.Build.0 = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|linux-x64.ActiveCfg = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|linux-x64.Build.0 = Debug|Any CPU
-		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|x64.ActiveCfg = Debug|Any CPU
-		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|x64.Build.0 = Debug|Any CPU
+		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|x64.ActiveCfg = Release|Any CPU
+		{2E33860A-2A73-40B7-80ED-F875969E4773}.AzureNoAuth|x64.Build.0 = Release|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Debug|linux-x64.ActiveCfg = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Debug|linux-x64.Build.0 = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Debug|x64.ActiveCfg = Debug|x64
@@ -326,7 +326,6 @@ Global
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Embedded|x64.Build.0 = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.NoAuthorization|linux-x64.ActiveCfg = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
-		{2E33860A-2A73-40B7-80ED-F875969E4773}.NoAuthorization|x64.Build.0 = Debug|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Release|linux-x64.ActiveCfg = Release|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Release|linux-x64.Build.0 = Release|Any CPU
 		{2E33860A-2A73-40B7-80ED-F875969E4773}.Release|x64.ActiveCfg = Release|Any CPU
@@ -352,7 +351,6 @@ Global
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.Embedded|x64.Build.0 = Debug|Any CPU
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.NoAuthorization|linux-x64.ActiveCfg = Debug|Any CPU
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.NoAuthorization|x64.ActiveCfg = Debug|Any CPU
-		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.NoAuthorization|x64.Build.0 = Debug|Any CPU
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.Release|linux-x64.ActiveCfg = Release|Any CPU
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.Release|linux-x64.Build.0 = Release|Any CPU
 		{B26CB9D5-9EE9-4BB6-A2BD-32AF1B6A57EF}.Release|x64.ActiveCfg = Release|Any CPU
@@ -380,7 +378,6 @@ Global
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.NoAuthorization|linux-x64.Build.0 = Debug|x64
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.NoAuthorization|x64.ActiveCfg = Debug|x64
-		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.NoAuthorization|x64.Build.0 = Debug|x64
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.Release|linux-x64.ActiveCfg = Release|x64
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.Release|linux-x64.Build.0 = Release|x64
 		{C9458A3E-6070-4A0A-9551-FF5088C3A8BE}.Release|x64.ActiveCfg = Release|x64
@@ -408,7 +405,6 @@ Global
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.NoAuthorization|linux-x64.Build.0 = Debug|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.NoAuthorization|x64.ActiveCfg = Debug|x64
-		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.NoAuthorization|x64.Build.0 = Debug|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|linux-x64.ActiveCfg = Release|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|linux-x64.Build.0 = Release|x64
 		{463E76D4-5543-4994-A9CA-9AC198DE77E2}.Release|x64.ActiveCfg = Release|x64
@@ -419,8 +415,8 @@ Global
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Authorization|x64.Build.0 = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|linux-x64.ActiveCfg = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|linux-x64.Build.0 = Debug|x64
-		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.ActiveCfg = Debug|x64
-		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.Build.0 = Debug|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.ActiveCfg = Release|x64
+		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.AzureNoAuth|x64.Build.0 = Release|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|linux-x64.ActiveCfg = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|linux-x64.Build.0 = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Debug|x64.ActiveCfg = Debug|x64
@@ -436,7 +432,6 @@ Global
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|linux-x64.Build.0 = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|x64.ActiveCfg = Debug|x64
-		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.NoAuthorization|x64.Build.0 = Debug|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|linux-x64.ActiveCfg = Release|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|linux-x64.Build.0 = Release|x64
 		{8EC60BB5-0A81-4BAC-BF42-6219CAB42A9A}.Release|x64.ActiveCfg = Release|x64
