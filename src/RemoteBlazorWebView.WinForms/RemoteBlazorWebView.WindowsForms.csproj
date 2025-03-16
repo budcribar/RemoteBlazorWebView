@@ -53,10 +53,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-preview.1.25120.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.0-preview.1.25122.6" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.1.25080.5" />
-	  <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
-   
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
   </ItemGroup>

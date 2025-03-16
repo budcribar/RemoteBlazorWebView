@@ -38,17 +38,13 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
-		<PackageReference Include="System.Private.Uri" Version="4.3.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0-preview.1.25120.3" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0-preview.1.25120.3" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.1.25080.5" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-preview.1.25080.5" />
 		<PackageReference Include="Microsoft.JSInterop" Version="10.0.0-preview.1.25120.3" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
 		<PackageReference Include="Photino.Blazor" Version="3.2.0" />
 		<PackageReference Include="Photino.Net" Version="3.2.3" />
-		<PackageReference Include="System.Collections" Version="4.3.0" />
-		
 	</ItemGroup>
 
 	<ItemGroup>
