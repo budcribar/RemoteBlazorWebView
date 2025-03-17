@@ -65,7 +65,7 @@ namespace WebdriverTestProject
 
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
 #if DEBUG_SERVER
-            var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\x64\Debug\net9";
+            var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\x64\Debug\net10.0";
 #else
             var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\publishNoAuth";
 #endif
