@@ -42,8 +42,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.0-preview.1.25122.6" />
+		<PackageReference Include="Google.Protobuf" Version="3.30.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.0-preview.2.25165.1" />
 	</ItemGroup>
 
 	<ItemGroup>
