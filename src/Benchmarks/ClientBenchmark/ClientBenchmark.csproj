@@ -21,7 +21,7 @@
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.2.25163.2" />
-		<PackageReference Include="Google.Protobuf" Version="3.30.1" />
+		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.70.0" />
 		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.2" />
