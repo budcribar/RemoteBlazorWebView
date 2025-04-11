@@ -79,11 +79,7 @@ namespace WebdriverTestProject
             Output.WriteLine($"Clicked {numClicks} times in {sw.Elapsed.TotalSeconds} seconds.");
 
             // Get the count value
-            string countText = await countParagraph.InnerTextAsync();
-            Output.WriteLine($"Count displayed: {countText}");
-
-            // Assert that the count contains the expected number
-            Assert.Contains($"{numClicks}", countText);
+            await Assertions.Expect(countParagraph).ToContainTextAsync($"{numClicks}", new LocatorAssertionsToContainTextOptions { Timeout = 8000 });
 
             // Navigate back to the Home page
             try

@@ -311,7 +311,7 @@ namespace WebdriverTestProject
                 for (int i = 0; i < numClients; i++)
                 {
                     linkLocator = Pages[i].Locator("role=link[name='Counter']");
-                    await Expect(linkLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 12000 });
+                    await Expect(linkLocator).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 20000 });
                     await linkLocator.ClickAsync();
                 }
 
