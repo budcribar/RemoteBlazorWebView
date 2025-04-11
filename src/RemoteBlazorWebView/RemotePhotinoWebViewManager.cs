@@ -29,7 +29,7 @@ namespace PeakSWC.RemoteWebView
                 window,
                 hostPageRelativePath,
                 dispatcher,
-                new CompositeFileProvider(StaticWebAssetsLoader.UseStaticWebAssets(fileProvider), new EmbeddedFileProvider(typeof(RemoteWebView).Assembly)),
+                new CompositeFileProvider(new EmbeddedFileProvider(typeof(RemoteWebView).Assembly),StaticWebAssetsLoader.UseStaticWebAssets(fileProvider) ),
                 logger
                 );
 
