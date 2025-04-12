@@ -37,16 +37,16 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
+		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
 		<PackageReference Include="System.Private.Uri" Version="4.3.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
-		<PackageReference Include="Microsoft.JSInterop" Version="9.0.2" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
-		<PackageReference Include="Photino.Blazor" Version="3.2.0" />
-		<PackageReference Include="Photino.Net" Version="3.2.3" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.4" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
+		<PackageReference Include="Microsoft.JSInterop" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3179.45" />
+		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
+		<PackageReference Include="Photino.Net" Version="4.0.16" />
 		<PackageReference Include="System.Collections" Version="4.3.0" />
 		
 	</ItemGroup>

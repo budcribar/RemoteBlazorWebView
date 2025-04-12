@@ -22,11 +22,11 @@
 	  <Compile Include="..\..\..\RemoteWebView\EtagGenerator.cs" Link="EtagGenerator.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
-		<PackageReference Include="Grpc.AspNetCore.Web" Version="2.67.0" />
-		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
-		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.2" />
+		<PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
+		<PackageReference Include="Grpc.AspNetCore.Web" Version="2.70.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.4" />
 		
 	
 		<Protobuf Include="..\..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
