@@ -50,9 +50,9 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.30.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-preview.2.25164.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.0-preview.2.25165.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.2.25163.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-preview.3.25172.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.0-preview.3.25208.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.3.25171.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />

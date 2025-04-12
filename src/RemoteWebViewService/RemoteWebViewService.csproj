@@ -76,12 +76,12 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.70.0" />
 	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0-preview.2.25164.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0-preview.2.25163.2" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0-preview.2.25164.1" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0-preview.2.25164.1" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0-preview.3.25172.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0-preview.3.25171.5" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0-preview.3.25172.1" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0-preview.3.25172.1" NoWarn="NU1605" />
 	  
-    <PackageReference Include="Microsoft.Graph.Beta" Version="5.86.0-preview" />
+    <PackageReference Include="Microsoft.Graph.Beta" Version="5.104.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
   
