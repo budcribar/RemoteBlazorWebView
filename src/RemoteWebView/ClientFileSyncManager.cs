@@ -61,7 +61,7 @@ namespace PeakSWC.RemoteWebView
                                 await HandleFileDataRequestAsync(request);
                                 break;
                             default:
-                                _logger.LogWarning($"Received unknown request type: {request.RequestType}");
+                                _logger.LogWarning("Received unknown request type: {RequestType}", request.RequestType);
                                 throw new Exception($"Received unknown request type: {request.RequestType}");
                         }
                     };
@@ -142,19 +142,19 @@ namespace PeakSWC.RemoteWebView
             }
             catch (FileNotFoundException)
             {
-                _logger.LogWarning($"File '{subPath}' not found in client's cache.");         
+                _logger.LogWarning("File '{SubPath}' not found in client's cache.", subPath);         
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogError($"Access denied to file '{subPath}'.");             
+                _logger.LogError("Access denied to file '{SubPath}'.", subPath);             
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, $"IO error reading file '{subPath}'.");              
+                _logger.LogError(ex, "IO error reading file '{SubPath}'.", subPath);              
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unexpected error reading file '{subPath}'.");               
+                _logger.LogError(ex, "Unexpected error reading file '{SubPath}'.", subPath);               
             }
             finally
             {
