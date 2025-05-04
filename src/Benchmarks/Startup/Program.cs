@@ -23,14 +23,14 @@ namespace ServerStartupTimer
                 throw new FileNotFoundException("File not found.", filePath);
             }
 
-            FileInfo fileInfo = new FileInfo(filePath);
+            FileInfo fileInfo = new(filePath);
             return fileInfo.Length;
         }
 
         public static async Task TestCreateWebView(string url,int numBuffers, int minSize, int maxSize)
         {
             Console.WriteLine($"Creating {numBuffers} clients");
-            List<Process> processList = new List<Process>();
+            List<Process> processList = [];
 
            
             var httpHandler = new HttpClientHandler();
@@ -251,7 +251,7 @@ namespace ServerStartupTimer
          
             using var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
             using var channel = GrpcChannel.ForAddress(grpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
-            ClientIPC.ClientIPCClient client = new ClientIPC.ClientIPCClient(channel);
+            ClientIPC.ClientIPCClient client = new(channel);
             var stopwatch = Stopwatch.StartNew();
             for (int i = 0; i < loops; i++)
             {

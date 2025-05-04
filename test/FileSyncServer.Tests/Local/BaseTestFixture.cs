@@ -126,7 +126,7 @@ namespace WebdriverTestProject
         }
 
         // Method to retrieve the WebSocket Debugger URL
-        private async Task<string?> GetBrowserWebSocketUrlAsync(int port, TimeSpan timeout)
+        private static async Task<string?> GetBrowserWebSocketUrlAsync(int port, TimeSpan timeout)
         {
             var httpClient = new HttpClient();
             var startTime = DateTime.Now;
