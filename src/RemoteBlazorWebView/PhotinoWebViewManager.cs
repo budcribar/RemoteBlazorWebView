@@ -57,7 +57,7 @@ namespace PeakSWC.RemoteWebView
             var hasFileExtension = url.LastIndexOf('.') > url.LastIndexOf('/');
 
             if (url.StartsWith(AppBaseUri, StringComparison.Ordinal)
-                && TryGetResponseContent(url, !hasFileExtension, out var statusCode, out var statusMessage, out var content, out var headers))
+                && TryGetResponseContent(url, !hasFileExtension, out var _, out var _, out var content, out var headers))
             {
                 if (headers.TryGetValue("Content-Type", out contentType))
                 {

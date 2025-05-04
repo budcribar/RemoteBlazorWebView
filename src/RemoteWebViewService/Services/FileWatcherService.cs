@@ -46,7 +46,7 @@ namespace PeakSWC.RemoteWebView
             }).ConfigureAwait(false);
 
             // Start watching for changes
-            FileSystemWatcher? watcher = new FileSystemWatcher(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
+            FileSystemWatcher? watcher = new(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
             };
@@ -127,7 +127,7 @@ namespace PeakSWC.RemoteWebView
 
             logger.LogInformation($"Streaming file: {filePath} in {chunkSize / 1024}KB chunks.");
 
-            using System.IO.FileStream fs = new System.IO.FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using System.IO.FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
             byte[] buffer = new byte[chunkSize];
             int bytesRead;

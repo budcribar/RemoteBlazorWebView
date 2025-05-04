@@ -26,9 +26,6 @@ namespace FileSyncServer.Tests
             _clientFixture = clientFixture;
             _clientId = clientFixture.ClientId.ToString();
 
-            // Determine the path to the client executable
-            var testDirectory = Directory.GetCurrentDirectory();
-
             // Ensure test files exist in the client's cache directory
             var clientCachePath = Path.Combine(Directory.GetCurrentDirectory(), "client_cache");
             Directory.CreateDirectory(clientCachePath);

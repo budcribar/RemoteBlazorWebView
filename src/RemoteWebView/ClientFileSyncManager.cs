@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     await SendInitResponse(_clientGuid, _htmlHostPath);
-                    _logger.LogDebug($"Sent Init response to server with clientGuid: {_clientGuid}");
+                    _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
 
                     await foreach (var request in _call.ResponseStream.ReadAllAsync(ct))                 
                     {
@@ -81,7 +81,7 @@ namespace PeakSWC.RemoteWebView
 
             //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
 
-            _logger.LogDebug($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
+            _logger.LogDebug("Received MetaData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
 
             // Retrieve file metadata
             FileMetadata metadata = GetFileMetadata(subPath);
@@ -96,7 +96,7 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
           
-            _logger.LogDebug($"Sent metadata for file: {subPath}, requestId: {requestId}");
+            _logger.LogDebug("Sent metadata for file: {SubPath}, requestId: {RequestId}", subPath, requestId);
         }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
@@ -104,7 +104,7 @@ namespace PeakSWC.RemoteWebView
             var requestId = request.RequestId;
             var subPath = request.Path.Replace("wwwroot/", "");
            
-            _logger.LogDebug($"Received FileData request (requestId: {requestId}) for file: {subPath}");
+            _logger.LogDebug("Received FileData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
 
             const int chunkSize = 8192; // 8 KB
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -170,7 +170,7 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(completionResponse).ConfigureAwait(false);
 
-            _logger.LogDebug($"Completed file data transfer for file: {relativeFilePath}, requestId: {requestId}");
+            _logger.LogDebug("Completed file data transfer for file: {RelativeFilePath}, requestId: {RequestId}", relativeFilePath, requestId);
         }
        
         private async Task SendInitResponse(string clientGuid, string htmlHostPath)
@@ -183,6 +183,8 @@ namespace PeakSWC.RemoteWebView
                 Init = new Init { HtmlHostPath = htmlHostPath }
             };
             await _call.RequestStream.WriteAsync(initResponse).ConfigureAwait(false);
+
+            _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
         }
 
         private FileMetadata GetFileMetadata(string localFilePath)
