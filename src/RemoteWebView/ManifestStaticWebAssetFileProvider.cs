@@ -247,30 +247,20 @@ namespace PeakSWC.RemoteWebView
 
 		public IChangeToken Watch(string filter) => NullChangeToken.Singleton;
 
-		private sealed class StaticWebAssetsDirectoryContents : IDirectoryContents
+		private sealed class StaticWebAssetsDirectoryContents(IEnumerable<IFileInfo> files) : IDirectoryContents
 		{
-			private readonly IEnumerable<IFileInfo> _files;
+            public bool Exists => true;
 
-			public StaticWebAssetsDirectoryContents(IEnumerable<IFileInfo> files) =>
-				_files = files;
-
-			public bool Exists => true;
-
-			public IEnumerator<IFileInfo> GetEnumerator() => _files.GetEnumerator();
+			public IEnumerator<IFileInfo> GetEnumerator() => files.GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 		}
 
-		private sealed class StaticWebAssetsDirectoryInfo : IFileInfo
+		private sealed class StaticWebAssetsDirectoryInfo(string name) : IFileInfo
 		{
 			private static readonly DateTimeOffset _lastModified = DateTimeOffset.FromUnixTimeSeconds(0);
 
-			public StaticWebAssetsDirectoryInfo(string name)
-			{
-				Name = name;
-			}
-
-			public bool Exists => true;
+            public bool Exists => true;
 
 			public long Length => 0;
 
@@ -280,33 +270,26 @@ namespace PeakSWC.RemoteWebView
 
 			public bool IsDirectory => true;
 
-			public string Name { get; }
+            public string Name { get; } = name;
 
-			public Stream CreateReadStream() => throw new InvalidOperationException("Can not create a stream for a directory.");
+            public Stream CreateReadStream() => throw new InvalidOperationException("Can not create a stream for a directory.");
 		}
 
-		private sealed class StaticWebAssetsFileInfo : IFileInfo
+		private sealed class StaticWebAssetsFileInfo(string name, IFileInfo source) : IFileInfo
 		{
-			private readonly IFileInfo _source;
+            public bool Exists => source.Exists;
 
-			public StaticWebAssetsFileInfo(string name, IFileInfo source)
-			{
-				Name = name;
-				_source = source;
-			}
-			public bool Exists => _source.Exists;
+			public long Length => source.Length;
 
-			public long Length => _source.Length;
+			public string PhysicalPath => source.PhysicalPath ?? "";
 
-			public string PhysicalPath => _source.PhysicalPath ?? "";
+			public DateTimeOffset LastModified => source.LastModified;
 
-			public DateTimeOffset LastModified => _source.LastModified;
+			public bool IsDirectory => source.IsDirectory;
 
-			public bool IsDirectory => _source.IsDirectory;
+            public string Name { get; } = name;
 
-			public string Name { get; }
-
-			public Stream CreateReadStream() => _source.CreateReadStream();
+            public Stream CreateReadStream() => source.CreateReadStream();
 		}
 
 		private sealed class FileNameComparer : IEqualityComparer<IFileInfo>

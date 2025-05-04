@@ -2,15 +2,9 @@
 
 namespace PeakSWC.RemoteWebView
 {
-	public class ReadyToConnectEventArgs : EventArgs
+	public class ReadyToConnectEventArgs(Guid id, Uri url) : EventArgs
 	{
-		public Guid Id { get; }
-		public Uri Url { get; }
-
-		public ReadyToConnectEventArgs(Guid id, Uri url)
-		{
-			Id = id;
-			Url = url;
-		}
-	}
+        public Guid Id { get; } = id;
+        public Uri Url { get; } = url;
+    }
 }

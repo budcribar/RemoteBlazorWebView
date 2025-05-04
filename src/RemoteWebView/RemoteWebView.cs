@@ -25,7 +25,7 @@ using System.Windows;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebView
+    public class RemoteWebView(IBlazorWebView blazorWebView, string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, ILogger logger)
     {
         public static IFileProvider CreateFileProvider(string contentRootDir, string hostPage, string manifestRoot = "embedded")
         {
@@ -68,20 +68,16 @@ namespace PeakSWC.RemoteWebView
             p.Start();
         }
 
-        private ILogger Logger { get; set; }
-
         #region private
 
         private bool disconnectedFired = false;
-        private IBlazorWebView BlazorWebView { get; init; }
         private readonly object bootLock = new();
         private WebViewIPC.WebViewIPCClient? client = null;
         private readonly CancellationTokenSource cts = new();
-        private IFileProvider FileProvider { get; }
         #endregion
 
-        public string HostHtmlPath { get; } = string.Empty;
-        public Dispatcher? Dispatcher { get; set; }
+        public string HostHtmlPath { get; } = hostHtmlPath;
+        public Dispatcher? Dispatcher { get; set; } = dispatcher;
 
         private uint PingIntervalSeconds {get;set;}
 
@@ -138,29 +134,29 @@ namespace PeakSWC.RemoteWebView
 
         private GrpcChannel? channel;
 
-        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource cancellationTokenSource = new();
         
         protected WebViewIPC.WebViewIPCClient? Client()
         {
             // TODO Pass cts to other requests
-            if (BlazorWebView.ServerUri == null) return null;
-            if (BlazorWebView.GrpcBaseUri == null) return null;
-            PingIntervalSeconds = BlazorWebView.PingIntervalSeconds;
+            if (blazorWebView.ServerUri == null) return null;
+            if (blazorWebView.GrpcBaseUri == null) return null;
+            PingIntervalSeconds = blazorWebView.PingIntervalSeconds;
 
             if (client == null)
             {
                 bool healthy = false; 
-                string url = new Uri(BlazorWebView.ServerUri, "health").ToString();
+                string url = new Uri(blazorWebView.ServerUri, "health").ToString();
                 Task.Run(async () => healthy = await HealthCheck.WaitAsync(url)).Wait();
                 if (!healthy)
                 {
-                    Exception exception1 = new Exception("Timeout waiting for server to start");
+                    Exception exception1 = new("Timeout waiting for server to start");
                     FireDisconnected(exception1);
                     throw exception1;
                 }
                 // Wait for server to start
 
-                channel = GrpcChannel.ForAddress(BlazorWebView.GrpcBaseUri,
+                channel = GrpcChannel.ForAddress(blazorWebView.GrpcBaseUri,
                     new GrpcChannelOptions
                     {
                         HttpHandler = new SocketsHttpHandler
@@ -174,19 +170,19 @@ namespace PeakSWC.RemoteWebView
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
-                Logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", BlazorWebView.Id, BlazorWebView.ServerUri, BlazorWebView.GrpcBaseUri, BlazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, this.BlazorWebView.Group, this.BlazorWebView.EnableMirrors);
-                var events = client.CreateWebView(new CreateWebViewRequest { Id = BlazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = BlazorWebView.Markup, Group = BlazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = BlazorWebView.EnableMirrors }, cancellationToken: cts.Token);
+                logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", blazorWebView.Id, blazorWebView.ServerUri, blazorWebView.GrpcBaseUri, blazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, blazorWebView.Group, blazorWebView.EnableMirrors);
+                var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors }, cancellationToken: cts.Token);
 
-                Exception? exception = ProcessBrowserMessages(BlazorWebView, events).Result;
+                Exception? exception = ProcessBrowserMessages(blazorWebView, events).Result;
 
                 if (exception != null) { 
                     FireDisconnected(exception);
                     throw exception;
                 }
-                var fileClient = new ClientFileSyncManager(client, BlazorWebView.Id, HostHtmlPath, FileProvider, FireDisconnected, Logger);
+                var fileClient = new ClientFileSyncManager(client, blazorWebView.Id, HostHtmlPath, fileProvider, FireDisconnected, logger);
                 fileClient.HandleServerRequests(cts.Token);
 
-                MonitorPingTask(BlazorWebView,client);
+                MonitorPingTask(blazorWebView,client);
             }
             return client;
         }
@@ -270,7 +266,7 @@ namespace PeakSWC.RemoteWebView
                         else if (commandSpan.Equals("createFailed", StringComparison.OrdinalIgnoreCase))
                         {
                             exception = new Exception("WebView Create failed - Id must be unique");
-                            Logger.LogError(exception, "WebView creation failed due to duplicate Id.");
+                            logger.LogError(exception, "WebView creation failed due to duplicate Id.");
                             completionSource.TrySetResult(false); // Signal failure
                             break; // Exit processing on failure
                         }
@@ -280,7 +276,7 @@ namespace PeakSWC.RemoteWebView
                             {
                                 Shutdown();
                                 FireRefreshed();
-                                Logger.LogDebug("Service refreshed. Connection shut down.");
+                                logger.LogDebug("Service refreshed. Connection shut down.");
                                 cts.Cancel();
                             }
                             break; // Exit processing after refresh
@@ -289,7 +285,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             var shutdownException = new Exception("Server shut down connection");
                             FireDisconnected(shutdownException);
-                            Logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
+                            logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
                             cts.Cancel();
                             break; // Exit processing on shutdown
                         }
@@ -313,7 +309,7 @@ namespace PeakSWC.RemoteWebView
                         FireDisconnected(ex);
 
                     if(ex is not TaskCanceledException)
-                        Logger.LogError(ex, "An unexpected error occurred while processing browser messages.");
+                        logger.LogError(ex, "An unexpected error occurred while processing browser messages.");
                     
                     await DisposeAsyncCore().ConfigureAwait(false);
                 }
@@ -364,21 +360,21 @@ namespace PeakSWC.RemoteWebView
                             }
                             catch (Exception ex)
                             {
-                                Logger.LogError(ex, "Error setting cookies in Blazor WebView.");
+                                logger.LogError(ex, "Error setting cookies in Blazor WebView.");
                                 connected = false;
                             }
                         });
                     }
                     else
                     {
-                        Logger.LogError("Dispatcher is null. Cannot set cookies on the UI thread.");
+                        logger.LogError("Dispatcher is null. Cannot set cookies on the UI thread.");
                         connected = false;
                     }
                 }
             }
             catch (Newtonsoft.Json.JsonException ex)
             {
-                Logger.LogError(ex, "Failed to deserialize cookies from 'connected' message.");
+                logger.LogError(ex, "Failed to deserialize cookies from 'connected' message.");
                 connected = false;
             }
 
@@ -392,7 +388,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error parsing 'connected' message payload.");
+                logger.LogError(ex, "Error parsing 'connected' message payload.");
                 connected = false;
             }
             return connected;
@@ -414,7 +410,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error shutting down channel.");
+                    logger.LogError(ex, "Error shutting down channel.");
                 }
             }
         }
@@ -424,29 +420,29 @@ namespace PeakSWC.RemoteWebView
 
         void Shutdown()
         {
-            Dispatcher?.InvokeAsync(() => Client()?.Shutdown(new IdMessageRequest { Id = BlazorWebView.Id.ToString() }));
+            Dispatcher?.InvokeAsync(() => Client()?.Shutdown(new IdMessageRequest { Id = blazorWebView.Id.ToString() }));
         }
 
         void FireReadyToConnect()
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri! )));
+            Dispatcher?.InvokeAsync(() => blazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(blazorWebView.Id, blazorWebView.ServerUri! )));
         }
 
         void FireConnected(string ip, string user)
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireConnected(new ConnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!, ip, user)));
+            Dispatcher?.InvokeAsync(() => blazorWebView.FireConnected(new ConnectedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!, ip, user)));
         }
 
         void FireDisconnected(Exception exception)
         {
             if (disconnectedFired) return;
             disconnectedFired = true;
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireDisconnected(new DisconnectedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!, exception)));
+            Dispatcher?.InvokeAsync(() => blazorWebView.FireDisconnected(new DisconnectedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!, exception)));
         }
 
         void FireRefreshed()
         {
-            Dispatcher?.InvokeAsync(() => BlazorWebView.FireRefreshed(new RefreshedEventArgs(BlazorWebView.Id, BlazorWebView.ServerUri!)));
+            Dispatcher?.InvokeAsync(() => blazorWebView.FireRefreshed(new RefreshedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!)));
         }
 
         public event EventHandler<string>? OnWebMessageReceived;
@@ -479,21 +475,11 @@ namespace PeakSWC.RemoteWebView
             return div;
         }
 
-        public RemoteWebView(IBlazorWebView blazorWebView,string hostHtmlPath, Dispatcher dispatcher, IFileProvider fileProvider, ILogger logger)
-        {
-            BlazorWebView = blazorWebView;
-            HostHtmlPath = hostHtmlPath;
-            Dispatcher = dispatcher;
-            FileProvider = fileProvider;
-            Logger = logger;
-
-        }
-
         public void NavigateToUrl(string _url) { _ = Client(); }
 
         public void SendMessage(string message)
         {
-            Client()?.SendMessage(new SendMessageRequest { Id = BlazorWebView.Id.ToString(), Message = message });
+            Client()?.SendMessage(new SendMessageRequest { Id = blazorWebView.Id.ToString(), Message = message });
         }
 
         public void Initialize()
@@ -513,7 +499,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error shutting down channel.");
+                    logger.LogError(ex, "Error shutting down channel.");
                 }
             }
           
