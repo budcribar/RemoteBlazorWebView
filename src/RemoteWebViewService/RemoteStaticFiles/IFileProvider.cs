@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using System.Threading.Tasks;
 
-namespace PeakSwc.StaticFiles
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public interface IFileProvider
     {

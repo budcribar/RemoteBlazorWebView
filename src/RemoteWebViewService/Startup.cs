@@ -9,9 +9,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
-using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Pages;
+using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
-using IFileProvider = PeakSwc.StaticFiles.IFileProvider;
 #if AUTHORIZATION
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Client;
