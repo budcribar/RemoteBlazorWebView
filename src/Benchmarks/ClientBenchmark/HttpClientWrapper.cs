@@ -1,5 +1,4 @@
-﻿
-namespace ClientBenchmark
+﻿namespace ClientBenchmark
 {
     using System;
     using System.Net;
@@ -10,7 +9,7 @@ namespace ClientBenchmark
     {
         private const int MaxRetries = 1;
         private const int RetryDelayMilliseconds = 1000;
-        private object lockObject = new object();
+        private readonly object lockObject = new object(); 
         private readonly HttpClient httpClient;
 
         public HttpClientWrapper(HttpClient httpClient)
@@ -32,7 +31,6 @@ namespace ClientBenchmark
                         lock (lockObject)
                         {
                             bytes += data.Length;
-                            //Console.WriteLine(data);
                             count++;
                         }
                         return data;
@@ -57,9 +55,7 @@ namespace ClientBenchmark
             throw new Exception($"Failed to get successful response after {MaxRetries} attempts");
         }
 
-        // Assuming these are class-level variables
         public int bytes;
         public int count;
     }
-   
 }
