@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using PeakSwc.StaticFiles;
 using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.Services;
 using System;
