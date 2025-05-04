@@ -46,7 +46,7 @@ namespace PeakSWC.RemoteWebView
         public DateTime StartTime { get; } = DateTime.UtcNow;
 
         private bool _disposed = false;
-        private readonly object _disposeLock = new object();
+        private readonly object _disposeLock = new();
 
         public void Cancel()
         {

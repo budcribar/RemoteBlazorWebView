@@ -6,21 +6,16 @@ using Microsoft.Playwright;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Local
 {
     /// <summary>
     /// Abstract base class containing shared test methods like TestClicks.
     /// Derived classes must supply the executable path via the fixture.
     /// </summary>
-    public abstract class BaseTestClicks<T> : IAsyncLifetime where T : BaseTestFixture, new()
+    public abstract class BaseTestClicks<T>(ITestOutputHelper output) : IAsyncLifetime where T : BaseTestFixture, new()
     {
         protected readonly T Fixture = new();
-        protected readonly ITestOutputHelper Output;
-
-        protected BaseTestClicks(ITestOutputHelper output)
-        {
-            Output = output;
-        }
+        protected readonly ITestOutputHelper Output = output;
 
         // Initialize and Dispose methods delegate to the fixture
         public virtual async Task InitializeAsync()
