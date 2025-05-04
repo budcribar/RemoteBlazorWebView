@@ -1,14 +1,9 @@
 ﻿// BaseTestFixture.cs
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Playwright;
-using Xunit;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Local
 {
     public abstract class BaseTestFixture : IAsyncLifetime
     {

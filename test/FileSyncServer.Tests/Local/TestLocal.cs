@@ -1,4 +1,5 @@
 ﻿
+using FileSyncServer.Tests.Local;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 
