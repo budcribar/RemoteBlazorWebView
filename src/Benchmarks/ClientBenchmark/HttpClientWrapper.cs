@@ -3,14 +3,17 @@
     using System;
     using System.Net;
     using System.Net.Http;
+    using System.Threading;
     using System.Threading.Tasks;
 
     public class HttpClientWrapper
     {
         private const int MaxRetries = 1;
         private const int RetryDelayMilliseconds = 1000;
-        private readonly object lockObject = new object(); 
         private readonly HttpClient httpClient;
+
+        public int bytes;
+        public int count;
 
         public HttpClientWrapper(HttpClient httpClient)
         {
@@ -28,11 +31,8 @@
                     if (response.IsSuccessStatusCode)
                     {
                         var data = await response.Content.ReadAsStringAsync();
-                        lock (lockObject)
-                        {
-                            bytes += data.Length;
-                            count++;
-                        }
+                        Interlocked.Add(ref bytes, data.Length);
+                        Interlocked.Increment(ref count);
                         return data;
                     }
                     else
@@ -54,8 +54,5 @@
 
             throw new Exception($"Failed to get successful response after {MaxRetries} attempts");
         }
-
-        public int bytes;
-        public int count;
     }
 }
