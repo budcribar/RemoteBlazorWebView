@@ -6,19 +6,12 @@
     using System.Threading;
     using System.Threading.Tasks;
 
-    public class HttpClientWrapper
+    public class HttpClientWrapper(HttpClient httpClient)
     {
         private const int MaxRetries = 1;
         private const int RetryDelayMilliseconds = 1000;
-        private readonly HttpClient httpClient;
-
         public int bytes;
         public int count;
-
-        public HttpClientWrapper(HttpClient httpClient)
-        {
-            this.httpClient = httpClient;
-        }
 
         public async Task<string> GetWithRetryAsync(string url)
         {

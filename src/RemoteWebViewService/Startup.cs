@@ -51,24 +51,15 @@ namespace PeakSWC.RemoteWebView
             (_totalCount, _successCount, _rejectedCount);
     }
 
-    public class RateLimitMonitoringService : BackgroundService
+    public class RateLimitMonitoringService(ILogger<RateLimitMonitoringService> logger, RateLimitStats stats) : BackgroundService
     {
-        private readonly ILogger<RateLimitMonitoringService> _logger;
-        private readonly RateLimitStats _stats;
-
-        public RateLimitMonitoringService(ILogger<RateLimitMonitoringService> logger, RateLimitStats stats)
-        {
-            _logger = logger;
-            _stats = stats;
-        }
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var (total, success, rejected) = _stats.GetStats();
+                var (total, success, rejected) = stats.GetStats();
                 //_logger.LogInformation("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
-                _logger.LogWarning("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
+                logger.LogWarning("Rate Limit Stats - Total: {Total}, Success: {Success}, Rejected: {Rejected}", total, success, rejected);
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken).ConfigureAwait(false);
             }
         }
@@ -84,7 +75,7 @@ namespace PeakSWC.RemoteWebView
         public bool Connected { get; set; }
     }
    
-    public class Startup
+    public class Startup(IConfiguration configuration)
     {
         private async Task<bool> IsStaticFileRequest(HttpContext context, IFileProvider fileProvider)
         {
@@ -100,22 +91,14 @@ namespace PeakSWC.RemoteWebView
 
         private ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> ServiceDictionary { get; } = new();
         private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
-
-
-        private readonly IConfiguration Configuration;
-
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
 #if AUTHORIZATION
         private async Task<ProtectedApiCallHelper> CreateApiHelper()
         {
             IConfidentialClientApplication confidentialClientApplication =
                ConfidentialClientApplicationBuilder
-               .Create(Configuration.GetValue<string>("AzureAdB2C:ClientId"))
-               .WithTenantId(Configuration.GetValue<string>("AzureAdB2C:DirectoryId")) 
-               .WithClientSecret(Configuration.GetValue<string>("Secret"))
+               .Create(configuration.GetValue<string>("AzureAdB2C:ClientId"))
+               .WithTenantId(configuration.GetValue<string>("AzureAdB2C:DirectoryId")) 
+               .WithClientSecret(configuration.GetValue<string>("Secret"))
                .Build();
 
             string[] scopes = new string[] { "https://graph.microsoft.com/.default" };
@@ -196,19 +179,19 @@ namespace PeakSWC.RemoteWebView
                 options.HandleSameSiteCookieCompatibility();
             });
             // Configuration to sign-in users with Azure AD B2C
-            services.AddMicrosoftIdentityWebAppAuthentication(Configuration, "AzureAdB2C");
+            services.AddMicrosoftIdentityWebAppAuthentication(configuration, "AzureAdB2C");
             services.AddControllersWithViews().AddMicrosoftIdentityUI();
             services.AddRazorPages();
 
             //Configuring appsettings section AzureAdB2C, into IOptions
             services.AddOptions();
-            services.Configure<OpenIdConnectOptions>(Configuration.GetSection("AzureAdB2C"));
+            services.Configure<OpenIdConnectOptions>(configuration.GetSection("AzureAdB2C"));
             services.AddAuthorization();
 #else
             services.AddTransient<IUserService, MockUserService>();
 #endif
             // Bind RemoteFilesOptions from configuration
-            services.Configure<RemoteFilesOptions>(Configuration.GetSection("RemoteFilesOptions"));
+            services.Configure<RemoteFilesOptions>(configuration.GetSection("RemoteFilesOptions"));
 
             // Register RemoteFilesOptions as a singleton for direct access if needed
             services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<RemoteFilesOptions>>().Value);

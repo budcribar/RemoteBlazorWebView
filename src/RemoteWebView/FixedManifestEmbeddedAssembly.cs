@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class FixedManifestEmbeddedAssembly : Assembly
+    public class FixedManifestEmbeddedAssembly(Assembly inner) : Assembly
     {
         // See:
         // - https://github.com/dotnet/aspnetcore/issues/29306
@@ -17,17 +17,13 @@ namespace PeakSWC.RemoteWebView
 
         private const string ManifestName = "Microsoft.Extensions.FileProviders.Embedded.Manifest.xml";
 
-        private readonly Assembly _inner;
+        public override string Location => inner.Location;
 
-        public FixedManifestEmbeddedAssembly(Assembly inner) => _inner = inner;
-
-        public override string Location => _inner.Location;
-
-        public override AssemblyName GetName() => _inner.GetName();
+        public override AssemblyName GetName() => inner.GetName();
 
         public override Stream? GetManifestResourceStream(string name)
         {
-            var stream = _inner.GetManifestResourceStream(name);
+            var stream = inner.GetManifestResourceStream(name);
 
             if (name != ManifestName || stream == null)
                 return stream;

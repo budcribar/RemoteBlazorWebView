@@ -2,21 +2,13 @@
 
 namespace PeakSWC.RemoteWebView
 {
-	public class ConnectedEventArgs : EventArgs
+	public class ConnectedEventArgs(Guid id, Uri url, string ipAddress, string user) : EventArgs
 	{
-		public Guid Id { get; }
-		public Uri Url { get; }
+        public Guid Id { get; } = id;
+        public Uri Url { get; } = url;
 
-		public string IpAddress { get; }
+        public string IpAddress { get; } = ipAddress;
 
-		public string User { get; }
-
-		public ConnectedEventArgs(Guid id, Uri url, string ipAddress, string user)
-		{
-			Id = id;
-			Url = url;
-			IpAddress = ipAddress;
-			User = user;
-		}
-	}
+        public string User { get; } = user;
+    }
 }
