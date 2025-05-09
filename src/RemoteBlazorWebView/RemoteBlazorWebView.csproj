@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
