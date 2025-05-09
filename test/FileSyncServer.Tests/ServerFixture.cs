@@ -11,13 +11,15 @@ public class ServerFixture : IDisposable
 
     public ServerFixture()
     {
+#if !PROFILED_SERVER
         Utilities.KillExistingProcesses("RemoteWebViewService");
+#endif
+
         // Determine the path to the server executable
         var testOutputPath = Directory.GetCurrentDirectory();
 
 #if DEBUG_SERVER
-        var relative = @"../../../../../src/RemoteWebViewService\bin\x64\Debug\net9";
-      
+        var relative = @"../../../../../../src/RemoteWebViewService\bin\x64\Debug\net9";
 #else
         var relative = "../../../../../src/RemoteWebViewService/bin/publishNoAuth";           
 #endif
@@ -66,12 +68,14 @@ public class ServerFixture : IDisposable
         };
 
         // Start the server process
+#if !PROFILED_SERVER
         ServerProcess.Start();
+#endif
         ServerProcess.BeginOutputReadLine();
         ServerProcess.BeginErrorReadLine();
 
         // Wait until the server is ready or timeout after 10 seconds
-        if (!_serverReady.Wait(10000))
+        //if (!_serverReady.Wait(10000))
         {
             //throw new TimeoutException("Server did not start listening on https://localhost:5001 within the expected time.");
         }

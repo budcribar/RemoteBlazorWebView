@@ -62,8 +62,9 @@ namespace WebdriverTestProject
         {
             Stopwatch sw = new();
             sw.Start();
-
+#if !PROFILED_SERVER
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
+#endif
 #if DEBUG_SERVER
             var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\x64\Debug\net9";
 #else
@@ -76,8 +77,9 @@ namespace WebdriverTestProject
             process.StartInfo.FileName = Path.GetFullPath(f);
             process.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative);
             process.StartInfo.UseShellExecute = true;
-
+#if !PROFILED_SERVER
             process.Start();
+#endif
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
         }
@@ -228,7 +230,7 @@ namespace WebdriverTestProject
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\x64\debug\net9.0";
+            var exePath = @"bin\x64\debug\net9.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
