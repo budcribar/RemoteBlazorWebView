@@ -22,7 +22,7 @@
     <Company>Peak Software Consulting, LLC</Company>
     <AssemblyName>PeakSWC.RemoteWebView</AssemblyName>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
+    <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>

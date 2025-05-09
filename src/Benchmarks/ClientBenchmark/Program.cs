@@ -30,7 +30,7 @@ namespace ClientBenchmark
         //private string URL = "https://127.0.0.1:5001";
         //private string URL = "https://localhost:5001";
         //private string URL = "https://remotewebviewserver.azurewebsites.net/";
-        private readonly bool _prodServer = true;// true;
+        private readonly bool _prodServer = false;// true;
         private readonly int fileSize = 102400;
         private readonly int messageSize = 256;
         private readonly int maxFiles = 100;//20000;

@@ -19,7 +19,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
 		<Nullable>annotations</Nullable>
-		<Configurations>Debug;Release;Embedded;NoAuthorization;Developer</Configurations>
+		<Configurations>Debug;Release;Embedded;Developer</Configurations>
 		<Platforms>x64</Platforms>
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
