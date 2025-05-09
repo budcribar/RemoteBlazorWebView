@@ -7,7 +7,7 @@
     <DefaultItemExcludes>${DefaultItemExcludes};node_modules\**</DefaultItemExcludes>
     <IsPackable>false</IsPackable>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <Configurations>Debug;Release;Embedded</Configurations>
+    <Configurations>Debug;Release</Configurations>
     <Platforms>x64</Platforms>
   </PropertyGroup>
 

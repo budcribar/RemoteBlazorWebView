@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
-		<DefineConstants>xDEBUG_SERVER</DefineConstants>
+		<DefineConstants>xDEBUG_SERVER;xPROFILED_SERVER</DefineConstants>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
