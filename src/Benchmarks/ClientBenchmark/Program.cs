@@ -33,7 +33,8 @@ namespace ClientBenchmark
         private readonly bool _prodServer = true;// true;
         private readonly int fileSize = 102400;
         private readonly int messageSize = 256;
-        private readonly int maxFiles = 100;//20000;
+        private readonly int maxMessages = 500;
+        private readonly int maxFiles = 500;//20000;
         private readonly bool useHttp3 = false;
 
 
@@ -440,7 +441,7 @@ namespace ClientBenchmark
         public async Task ReadFilesAndSendMessagesBenchmark()
         {
 
-            int maxMessages = 100;
+         
             ILogger<ClientBenchmarks> logger = NullLogger<ClientBenchmarks>.Instance;
             string id = Guid.NewGuid().ToString();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel

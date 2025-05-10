@@ -73,13 +73,19 @@ namespace PeakSWC.RemoteWebView
             });
         }
 
+        private static readonly string WwwRootPrefix = "wwwroot/";
+        private static readonly int WwwRootPrefixLength = WwwRootPrefix.Length;
+
+        public static string GetSubPath(string path)
+            => path.StartsWith(WwwRootPrefix, StringComparison.OrdinalIgnoreCase)
+               ? path[WwwRootPrefixLength..]
+               : path;
+
         private async Task HandleMetaDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            // TODO
-            var subPath = request.Path.Replace("wwwroot/", "");
-
-            //var subPath = request.Path[(request.Path.IndexOf('/') + 1)..]; 
+        
+            var subPath = GetSubPath(request.Path);
 
             _logger.LogDebug($"Received MetaData request (requestId: {requestId}) for file: {subPath}");
 
@@ -102,9 +108,9 @@ namespace PeakSWC.RemoteWebView
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
         {
             var requestId = request.RequestId;
-            var subPath = request.Path.Replace("wwwroot/", "");
-           
-            _logger.LogDebug($"Received FileData request (requestId: {requestId}) for file: {subPath}");
+            var subPath = GetSubPath(request.Path);
+
+            _logger.LogDebug("Received FileData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
 
             const int chunkSize = 8192; // 8 KB
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -116,7 +122,7 @@ namespace PeakSWC.RemoteWebView
                 // Send FileData messages
                 while (true)
                 {
-                    int bytesRead = await fileStream.ReadAsync(buffer, 0, chunkSize);
+                    int bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, chunkSize));
                     if (bytesRead == 0) break; // End of file
 
                     var response = new ClientFileReadResponse
