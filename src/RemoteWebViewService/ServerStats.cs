@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteWebView
         private ConcurrentBag<double> _responseTimes;
 
         // Error metrics
-        private ConcurrentDictionary<string, long> _errorTypes;
+        private readonly ConcurrentDictionary<string, long> _errorTypes;
 
         // Active connections
         private long _activeConnections;

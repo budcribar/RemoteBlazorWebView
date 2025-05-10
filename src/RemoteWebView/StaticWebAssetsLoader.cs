@@ -26,7 +26,7 @@ namespace PeakSWC.RemoteWebView
                 return UseStaticWebAssetsCore(systemProvider, manifest);
            
         }
-        private static Stream? GetManifestStream()
+        private static FileStream? GetManifestStream()
         {
             try
             {

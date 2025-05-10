@@ -2,6 +2,8 @@
 
 	<PropertyGroup>
 		<TargetFramework>net9-windows</TargetFramework>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<Configurations>Debug;Release</Configurations>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>

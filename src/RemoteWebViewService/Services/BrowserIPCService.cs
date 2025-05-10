@@ -21,14 +21,20 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false); 
-                using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
+
+                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary),linkedToken);
+
                 try
                 {
-                    while (!linkedToken.Token.IsCancellationRequested)
-                        await Task.Delay(30).ConfigureAwait(false);
-
+                    await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected exception when cancellation occurs, don't treat as error
+                    // Fall through to shutdown if primary
                 }
                 catch (Exception ex)
                 {
@@ -39,19 +45,21 @@ namespace PeakSWC.RemoteWebView
                     return;
                 }
 
+                // Only shutdown if this is the primary connection
                 if (request.IsPrimary)
                 {
                     await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 if (request.IsPrimary)
-                    await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+                {
+                    await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
+                }
             }
-
-            return;
         }
+  
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {

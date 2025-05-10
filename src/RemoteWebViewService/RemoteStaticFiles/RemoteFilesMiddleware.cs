@@ -334,15 +334,9 @@ namespace PeakSWC.RemoteWebView
             await next(context).ConfigureAwait(false);
             return;
         }
-
-        private string GetContentType(string fileName)
-        {
-            var provider = new FileExtensionContentTypeProvider();
-            if (!provider.TryGetContentType(fileName, out string? contentType))
-            {
-                contentType = "application/octet-stream";
-            }
-            return contentType;
-        }
+        private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+       
+        private string GetContentType(string fileName) => _contentTypeProvider.TryGetContentType(fileName, out var contentType) ? contentType : "application/octet-stream";
     }
+    
 }

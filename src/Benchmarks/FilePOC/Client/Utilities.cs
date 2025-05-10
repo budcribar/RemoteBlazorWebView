@@ -17,7 +17,7 @@ public static class Utilities
             throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
 
         if (string.IsNullOrWhiteSpace(user))
-            throw new ArgumentException("User cannot be null or empty.", nameof(user));
+            throw new ArgumentException("User cannot be null or empty.", user);
 
         FileInfo fileInfo = new FileInfo(filePath);
 
