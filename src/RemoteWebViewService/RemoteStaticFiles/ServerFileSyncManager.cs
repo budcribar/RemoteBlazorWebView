@@ -215,7 +215,22 @@ namespace PeakSWC.RemoteWebView
                 return Task.FromResult(new FileMetadata { Length = -1, StatusCode = (int)HttpStatusCode.InternalServerError });
             }
 
-            var writeRequest = new WriteRequest
+            // 1) timeout token instead of CleanupMetadataRequest
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(CacheTimeoutSeconds));
+            timeoutCts.Token.Register(() =>
+            {
+                if (tcs.TrySetException(new TimeoutException("Metadata request timed out.")))
+                {
+                    logger.LogDebug(
+                        "Metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid} timed out.",
+                        requestId, filePath, clientGuid);
+                    if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                        dict.TryRemove(requestId, out _);
+                }
+            }, useSynchronizationContext: false);
+
+            // 2) enqueue write
+            _writeChannel.Writer.TryWrite(new WriteRequest
             {
                 Operation = async () =>
                 {
@@ -228,20 +243,19 @@ namespace PeakSWC.RemoteWebView
                             Path = filePath,
                             RequestType = ServerFileReadRequest.Types.RequestType.MetaData
                         };
-
                         await responseStream.WriteAsync(request).ConfigureAwait(false);
                         _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
                     }
                     else
                     {
-                        _logger.LogWarning("Cannot send metadata request. Client GUID: {ClientGuid} is not associated with a response stream.", clientGuid);
-                        tcs.SetException(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
+                        tcs.TrySetException(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
                     }
                 }
-            };
+            });
 
-            _writeChannel.Writer.TryWrite(writeRequest);
-            CleanupMetadataRequest(clientGuid, requestId, tcs, filePath);
+            // 3) dispose the CTS when done
+            tcs.Task.ContinueWith(_ => timeoutCts.Dispose(), TaskScheduler.Default);
+
             return tcs.Task;
         }
 
@@ -286,36 +300,6 @@ namespace PeakSWC.RemoteWebView
 
             await _writeChannel.Writer.WriteAsync(writeRequest, dataRequest.CancellationToken).ConfigureAwait(false);
             return dataRequest;
-        }
-
-        /// <summary>
-        /// Cleanup metadata request after a timeout period.
-        /// </summary>
-        private void CleanupMetadataRequest(string clientGuid, string requestId, TaskCompletionSource<FileMetadata> tcs, string filePath)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(CacheTimeoutSeconds * 1000).ConfigureAwait(false);
-
-                    if (!tcs.Task.IsCompleted)
-                    {
-                        tcs.SetException(new TimeoutException("Metadata request timed out."));
-                        _logger.LogDebug("Metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid} timed out.", requestId, filePath, clientGuid);
-
-                        if (_metadataRequests.TryGetValue(clientGuid, out var clientMetadataRequests))
-                        {
-                            clientMetadataRequests.TryRemove(requestId, out _);
-                            _logger.LogDebug("Removed timed out metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid}.", requestId, filePath, clientGuid);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during cleanup of metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid}.", requestId, filePath, clientGuid);
-                }
-            });
         }
 
         /// <summary>
