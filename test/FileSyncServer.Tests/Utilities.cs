@@ -222,7 +222,7 @@ namespace WebdriverTestProject
                 if (ppn == "vstest.console")
                     return @"..\..\..\..\..\..\..\"; // visual studio
                 else
-                    return @"..\..\..\..\..\..\"; // // powershell
+                    return @"..\..\..\..\..\..\..\"; // // powershell
             }
         }
 

@@ -21,7 +21,7 @@ public class ServerFixture : IDisposable
 #if DEBUG_SERVER
         var relative = @"../../../../../../src/RemoteWebViewService\bin\x64\Debug\net9";
 #else
-        var relative = "../../../../../src/RemoteWebViewService/bin/publishNoAuth";           
+        var relative = "../../../../../../src/RemoteWebViewService/bin/publishNoAuth";           
 #endif
         _serverExePath = Path.Combine(testOutputPath, relative, "RemoteWebViewService.exe");
         if (!File.Exists(_serverExePath))
