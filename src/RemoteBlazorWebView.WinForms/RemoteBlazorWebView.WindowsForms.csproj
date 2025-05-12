@@ -22,7 +22,7 @@
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
-    <Configurations>Debug;Release;Embedded;NoAuthorization</Configurations>
+    <Configurations>Debug;Release;Embedded,Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReleaseNotes>Based on maui 10.0.0 preview3 </PackageReleaseNotes>
