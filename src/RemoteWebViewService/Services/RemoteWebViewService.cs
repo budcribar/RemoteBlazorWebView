@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {         
-            logger.LogDebug($"CreateWebView Id:{request.Id}");
+            logger.LogDebug("CreateWebView called for Id: {Id}", request.Id);
 
             ServiceState state= new(logger, request.EnableMirrors)
             {
@@ -42,7 +42,7 @@ namespace PeakSWC.RemoteWebView
 
             if (serviceStateTaskSource.Task.IsCompleted)
             {
-                logger.LogError($"CreateWebView Id:{request.Id} failed to add client");
+                logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }).ConfigureAwait(false);
                 return;
             }     
@@ -66,7 +66,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                logger.LogError($"CreateWebView Id:{request.Id} failed {ex.Message}");
+                logger.LogError(ex, "CreateWebView failed for Id: {Id}", request.Id);
                 await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
             }         
         }
@@ -89,7 +89,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             string clientGuid = initResponse.ClientId;
-            logger.LogDebug($"Client '{clientGuid}' connected and initialized.");
+            logger.LogDebug("Client '{ClientGuid}' connected and initialized.", clientGuid);
 
             // Register the client
             _fileSyncManager.RegisterClient(clientGuid, initResponse.Init.HtmlHostPath);
@@ -108,7 +108,6 @@ namespace PeakSWC.RemoteWebView
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                 var cancellationToken = linkedCts.Token;
 
-
                 // Continuously read messages from the client until cancellation
                 while (await requestStream.MoveNext(cancellationToken).ConfigureAwait(false))
                 {
@@ -116,19 +115,19 @@ namespace PeakSWC.RemoteWebView
                     await _fileSyncManager.HandleClientResponse(response).ConfigureAwait(false);
                 }
 
-                logger.LogDebug($"Client '{clientGuid}' has completed sending messages.");
+                logger.LogDebug("Client '{ClientGuid}' has completed sending messages.", clientGuid);
 
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Error handling client '{clientGuid}' responses.");
+                logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
             }
             finally
             {
                 // Clean up when the client disconnects
                 _fileSyncManager.RemoveClient(clientGuid);
-                logger.LogDebug($"Cleaned up resources for client '{clientGuid}'.");
+                logger.LogDebug("Cleaned up resources for client '{ClientGuid}'.", clientGuid);
                 await shutdownService.Shutdown(clientGuid);
             }
         }
@@ -148,7 +147,10 @@ namespace PeakSWC.RemoteWebView
                 await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
-            catch { }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "SendMessage failed for Id: {Id}", request.Id);
+            }
 
             return new SendMessageResponse { Id = request.Id, Success = false };
         }
@@ -177,7 +179,6 @@ namespace PeakSWC.RemoteWebView
                     {
                         serviceState.PingTask = Task.Run(async () =>
                         {
-                           
                             while (!linkedToken.Token.IsCancellationRequested)
                             {
                                 responseSent = DateTime.UtcNow;
@@ -186,10 +187,10 @@ namespace PeakSWC.RemoteWebView
                                 if (responseReceived < responseSent)
                                 {
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
+                                    logger.LogWarning("Ping timeout for Id: {Id}", id);
                                     await shutdownService.Shutdown(id).ConfigureAwait(false);
                                     break;
                                 }
-
                             }
                         }, linkedToken.Token);
                     }
@@ -205,10 +206,12 @@ namespace PeakSWC.RemoteWebView
             catch (OperationCanceledException)
             {
                 // No need to shutdown as we are in the process of shutting down
+                logger.LogInformation("Ping operation canceled for Id: {Id}", id);
                 await shutdownService.Shutdown(id).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Exception in Ping for Id: {Id}", id);
                 await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
             }
             linkedToken.Dispose();
