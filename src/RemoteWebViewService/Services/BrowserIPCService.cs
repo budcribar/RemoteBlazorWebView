@@ -10,7 +10,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace PeakSWC.RemoteWebView
 {
     public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService) : BrowserIPC.BrowserIPCBase
@@ -25,7 +24,7 @@ namespace PeakSWC.RemoteWebView
 
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
 
-                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary),linkedToken);
+                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
 
                 try
                 {
@@ -40,6 +39,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (request.IsPrimary)
                     {
+                        logger.LogError(ex, "Exception in ReceiveMessage for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                         await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                     }
                     return;
@@ -48,6 +48,7 @@ namespace PeakSWC.RemoteWebView
                 // Only shutdown if this is the primary connection
                 if (request.IsPrimary)
                 {
+                    logger.LogInformation("Primary connection closed, shutting down. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
                 }
             }
@@ -55,24 +56,23 @@ namespace PeakSWC.RemoteWebView
             {
                 if (request.IsPrimary)
                 {
+                    logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                 }
             }
         }
-  
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
             try
             {
-               
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                 // Skip messages from read only client
                 if (!request.IsPrimary)
                 {
-                    logger.LogDebug($"Skipped send message {request.Message} from connection {request.ClientId}");
+                    logger.LogDebug("Skipped send message '{Message}' from connection {ClientId}", request.Message, request.ClientId);
                     return new SendMessageResponse { Id = request.Id, Success = true };
                 }
 
@@ -90,10 +90,10 @@ namespace PeakSWC.RemoteWebView
                         {
                             request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
 #if AUTHORIZATION
-                string serializedCookies = string.Empty;
-                if (serviceState.Cookies != null)
-                    serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
-                request.Cookies = serializedCookies;
+                            string serializedCookies = string.Empty;
+                            if (serviceState.Cookies != null)
+                                serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
+                            request.Cookies = serializedCookies;
 #endif
                         }
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies }).ConfigureAwait(false);
@@ -126,10 +126,11 @@ namespace PeakSWC.RemoteWebView
 
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
-            catch {
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Exception in SendMessage for Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
-        
         }
     }
 }
