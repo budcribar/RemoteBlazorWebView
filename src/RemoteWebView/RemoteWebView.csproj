@@ -3,7 +3,7 @@
   <PropertyGroup>
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
     <Platforms>x64;AnyCPU</Platforms>
