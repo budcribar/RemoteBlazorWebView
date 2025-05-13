@@ -47,13 +47,11 @@ namespace WebdriverTestProject
 
         static int GetParentProcessId(int processId)
         {
-            using (var query = new ManagementObjectSearcher(
-                $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {processId}"))
+            using var query = new ManagementObjectSearcher(
+                $"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {processId}");
+            foreach (ManagementObject mo in query.Get().Cast<ManagementObject>())
             {
-                foreach (ManagementObject mo in query.Get().Cast<ManagementObject>())
-                {
-                    return Convert.ToInt32(mo["ParentProcessId"]);
-                }
+                return Convert.ToInt32(mo["ParentProcessId"]);
             }
             return 0;
         }
@@ -220,9 +218,9 @@ namespace WebdriverTestProject
             {
                 var ppn = GetParentProcessName();
                 if (ppn == "vstest.console")
-                    return @"..\..\..\..\..\..\..\"; // visual studio
+                    return @"..\..\..\..\..\..\..\..\"; // visual studio
                 else
-                    return @"..\..\..\..\..\..\"; // // powershell
+                    return @"..\..\..\..\..\..\..\"; // // powershell
             }
         }
 
@@ -230,7 +228,7 @@ namespace WebdriverTestProject
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\x64\debug\net10.0";
+            var exePath = @"bin\x64\debug\net10.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
@@ -273,6 +271,9 @@ namespace WebdriverTestProject
         #region Common
 
         public static string JavascriptFile => Path.Combine(RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js");
+
+        public static string BASEURL { get => base_URL; set => base_URL = value; }
+
         public static Process StartProcess(string executable, string directory, string url, string id)
         {
             Stopwatch sw = new();
@@ -333,7 +334,7 @@ namespace WebdriverTestProject
             try
             {
                 string[] jsFiles = Directory.GetFiles(directoryPath, "*.js");
-                Regex filePattern = new Regex(@"^script\d+\.js$", RegexOptions.IgnoreCase);
+                Regex filePattern = new(@"^script\d+\.js$", RegexOptions.IgnoreCase);
 
                 foreach (string file in jsFiles)
                 {
@@ -356,7 +357,7 @@ namespace WebdriverTestProject
             string basePath = @"wwwroot"; // Set your base path
             string indexPath = Path.Combine(basePath, "index.html");
 
-            StringBuilder indexFileContent = new StringBuilder(File.Exists(indexPath) ? File.ReadAllText(indexPath) : "<html><head></head><body></body></html>");
+            StringBuilder indexFileContent = new(File.Exists(indexPath) ? File.ReadAllText(indexPath) : "<html><head></head><body></body></html>");
 
             for (int i = 1; i <= numberOfFiles; i++)
             {
@@ -401,7 +402,7 @@ namespace WebdriverTestProject
         public static string GenerateRandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            Random random = new Random();
+            Random random = new();
             return new string([.. Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)])]);
         }
 
@@ -409,7 +410,7 @@ namespace WebdriverTestProject
         {
             using SHA256 sha256Hash = SHA256.Create();
             byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
-            StringBuilder sBuilder = new StringBuilder();
+            StringBuilder sBuilder = new();
             for (int i = 0; i < data.Length; i++)
             {
                 sBuilder.Append(data[i].ToString("x2"));
@@ -451,15 +452,15 @@ namespace WebdriverTestProject
             client.DefaultRequestVersion = HttpVersion.Version30;
             client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
 
-            string[] urls = new[]
-            {
+            string[] urls =
+            [
             "https://localhost:5001",
             "https://localhost:5002",
             "https://localhost:5003", // New HTTP/3-only endpoint
             "https://127.0.0.1:5001",
             "https://127.0.0.1:5002",
             "https://127.0.0.1:5003"  // New HTTP/3-only endpoint
-        };
+            ];
 
             foreach (var url in urls)
             {
@@ -540,7 +541,7 @@ namespace WebdriverTestProject
             var httpHandler = new HttpClientHandler();
 
             // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            using var channel = GrpcChannel.ForAddress(BASEURL, new GrpcChannelOptions { HttpHandler = httpHandler });
             var client = new WebViewIPC.WebViewIPCClient(channel);
             var ids = await client.GetIdsAsync(new Empty());
             return ids.Responses.ToList();
@@ -551,7 +552,7 @@ namespace WebdriverTestProject
             var httpHandler = new HttpClientHandler();
 
             // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            using var channel = GrpcChannel.ForAddress(BASEURL, new GrpcChannelOptions { HttpHandler = httpHandler });
 
             // Create the WebViewIPC client
             var grpcClient = new ClientIPC.ClientIPCClient(channel);
@@ -571,7 +572,7 @@ namespace WebdriverTestProject
             var httpHandler = new HttpClientHandler();
 
             // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            using var channel = GrpcChannel.ForAddress(BASEURL, new GrpcChannelOptions { HttpHandler = httpHandler });
 
             // Create the WebViewIPC client
             var grpcClient = new ClientIPC.ClientIPCClient(channel);
@@ -591,7 +592,7 @@ namespace WebdriverTestProject
             var httpHandler = new HttpClientHandler();
 
             // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            using var channel = GrpcChannel.ForAddress(BASEURL, new GrpcChannelOptions { HttpHandler = httpHandler });
 
             // Create the WebViewIPC client
             var grpcClient = new ClientIPC.ClientIPCClient(channel);
@@ -605,7 +606,7 @@ namespace WebdriverTestProject
             var httpHandler = new HttpClientHandler();
 
             // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
+            using var channel = GrpcChannel.ForAddress(BASEURL, new GrpcChannelOptions { HttpHandler = httpHandler });
 
             // Create the WebViewIPC client
             var grpcClient = new ClientIPC.ClientIPCClient(channel);
@@ -613,7 +614,7 @@ namespace WebdriverTestProject
             var response = await grpcClient.GetServerStatusAsync(new Empty());
             return response.ClientCacheEnabled;
         }
-        public static string BASE_URL = "https://localhost:5001";
+        private static string base_URL = "https://localhost:5001";
 
         public static async Task ShutdownAsync(string id, string url = "https://localhost:5001")
         {
@@ -636,7 +637,7 @@ namespace WebdriverTestProject
             var client = handler != null ? new HttpClient(handler) : new HttpClient();
 
             // Set the base address
-            client.BaseAddress = new Uri(BASE_URL);
+            client.BaseAddress = new Uri(BASEURL);
 
             // Set the timeout
             client.Timeout = TimeSpan.FromMinutes(5); // Adjust as necessary
@@ -673,7 +674,7 @@ namespace WebdriverTestProject
                     if (resourceName.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         // Determine the relative path by removing the prefix
-                        string relativePath = resourceName.Substring(resourcePrefix.Length);
+                        string relativePath = resourceName[resourcePrefix.Length..];
 
                         // Handle file names with multiple dots
                         // For example, 'subfolder.config.json' should map to 'subfolder\config.json'
@@ -709,20 +710,16 @@ namespace WebdriverTestProject
                         }
 
                         // Extract and write the resource to the destination path
-                        using (Stream? resourceStream = assembly.GetManifestResourceStream(resourceName))
+                        using Stream? resourceStream = assembly.GetManifestResourceStream(resourceName);
+                        if (resourceStream == null)
                         {
-                            if (resourceStream == null)
-                            {
-                                Console.WriteLine($"Failed to load resource: {resourceName}");
-                                continue;
-                            }
-
-                            using (FileStream fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write))
-                            {
-                                resourceStream.CopyTo(fileStream);
-                                Console.WriteLine($"Extracted resource: {resourceName} to {destinationPath}");
-                            }
+                            Console.WriteLine($"Failed to load resource: {resourceName}");
+                            continue;
                         }
+
+                        using FileStream fileStream = new(destinationPath, FileMode.Create, FileAccess.Write);
+                        resourceStream.CopyTo(fileStream);
+                        Console.WriteLine($"Extracted resource: {resourceName} to {destinationPath}");
                     }
                 }
 
@@ -775,7 +772,7 @@ namespace WebdriverTestProject
             if (string.IsNullOrWhiteSpace(user))
                 throw new ArgumentException("User cannot be null or empty.", nameof(user));
 
-            FileInfo fileInfo = new FileInfo(filePath);
+            FileInfo fileInfo = new(filePath);
 
             if (!fileInfo.Exists)
                 throw new FileNotFoundException("The specified file does not exist.", filePath);
@@ -788,7 +785,7 @@ namespace WebdriverTestProject
                 if (grantRead)
                 {
                     // Define the access rule to grant Read and Delete permissions
-                    FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                    FileSystemAccessRule allowReadDeleteRule = new(
                         user,
                         FileSystemRights.Read | FileSystemRights.Delete,
                         InheritanceFlags.None,
@@ -823,7 +820,7 @@ namespace WebdriverTestProject
                 else
                 {
                     // Define the access rule to remove Read and Delete permissions
-                    FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                    FileSystemAccessRule allowReadDeleteRule = new(
                         user,
                         FileSystemRights.Read | FileSystemRights.Delete,
                         InheritanceFlags.None,
@@ -906,33 +903,31 @@ namespace WebdriverTestProject
                 }
 
                 // Open the Local Machine's Trusted Root store
-                using (X509Store store = new X509Store(StoreName.Root, StoreLocation.LocalMachine))
+                using X509Store store = new(StoreName.Root, StoreLocation.LocalMachine);
+                store.Open(OpenFlags.ReadWrite);
+
+                // Check if the certificate already exists
+                bool exists = false;
+                foreach (var cert in store.Certificates)
                 {
-                    store.Open(OpenFlags.ReadWrite);
-
-                    // Check if the certificate already exists
-                    bool exists = false;
-                    foreach (var cert in store.Certificates)
+                    if (cert.Thumbprint.Equals(certificate.Thumbprint, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (cert.Thumbprint.Equals(certificate.Thumbprint, StringComparison.OrdinalIgnoreCase))
-                        {
-                            exists = true;
-                            break;
-                        }
+                        exists = true;
+                        break;
                     }
-
-                    if (!exists)
-                    {
-                        store.Add(certificate);
-                        Console.WriteLine("Certificate added to Local Machine's Trusted Root store.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Certificate already exists in Local Machine's Trusted Root store.");
-                    }
-
-                    store.Close();
                 }
+
+                if (!exists)
+                {
+                    store.Add(certificate);
+                    Console.WriteLine("Certificate added to Local Machine's Trusted Root store.");
+                }
+                else
+                {
+                    Console.WriteLine("Certificate already exists in Local Machine's Trusted Root store.");
+                }
+
+                store.Close();
             }
             catch (UnauthorizedAccessException)
             {
@@ -994,7 +989,7 @@ namespace WebdriverTestProject
         public static void CopyDirectory(string sourceDir, string destinationDir)
         {
             // Get the subdirectories for the specified directory.
-            DirectoryInfo dir = new DirectoryInfo(sourceDir);
+            DirectoryInfo dir = new(sourceDir);
 
             if (!dir.Exists)
             {

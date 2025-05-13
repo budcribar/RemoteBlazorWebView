@@ -50,7 +50,7 @@ namespace FileSyncServer.Tests
         {
             double nonlinearityThreshold = 1.5;
             int timeoutSeconds = 30;
-            string baseUrl = Utilities.BASE_URL;
+            string baseUrl = Utilities.BASEURL;
             string testUrl = $"{baseUrl}/{clientId}/maxconcurrenttest.txt";
 
             // Process checks (consider moving to fixtures)

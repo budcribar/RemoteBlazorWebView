@@ -166,7 +166,7 @@ namespace Server
                     tasks.Add(Task.Run(async () =>
                     {
                         var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}",new PageGotoOptions
+                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}",new PageGotoOptions
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });
@@ -214,7 +214,7 @@ namespace Server
                     tasks.Add(Task.Run(async () =>
                     {
                         var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}", new PageGotoOptions
+                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
                         {
                             WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
                         });

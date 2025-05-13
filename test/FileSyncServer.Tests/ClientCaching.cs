@@ -65,7 +65,7 @@ namespace FileSyncServer.Tests
             var page = await browser.NewPageAsync();
 
             // First request: Fetch file and check response
-            var firstResponse = await page.GotoAsync($"{Utilities.BASE_URL}/{_clientId}/{_fileName}", new PageGotoOptions
+            var firstResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
             });
@@ -84,7 +84,7 @@ namespace FileSyncServer.Tests
             // Revoke file read access
             Utilities.ModifyFilePermissions(_filePath, _currentUser, false);
 
-            var secondResponse = await page.GotoAsync($"{Utilities.BASE_URL}/{_clientId}/{_fileName}", new PageGotoOptions
+            var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle
             });
@@ -126,7 +126,7 @@ namespace FileSyncServer.Tests
             var page = await context.NewPageAsync();
 
             // Step 2: Make the first request and check the response status and headers
-            var firstResponse = await page.GotoAsync($"{Utilities.BASE_URL}/{_clientId}/{_fileName}", new PageGotoOptions
+            var firstResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
             });
@@ -142,7 +142,7 @@ namespace FileSyncServer.Tests
             Utilities.ModifyFilePermissions(_filePath, _currentUser, false);
 
             // Second request: should fail
-            var secondResponse = await page.GotoAsync($"{Utilities.BASE_URL}/{_clientId}/{_fileName}", new PageGotoOptions
+            var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
             });
