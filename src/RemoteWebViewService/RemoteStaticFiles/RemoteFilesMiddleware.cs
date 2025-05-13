@@ -134,7 +134,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            logger.LogDebug($"Received GET request for file '{subPath}' from client ID '{clientId}'.");
+            logger.LogDebug("Received GET request for file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
 
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientId.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
@@ -151,7 +151,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Error retrieving metadata for file '{subPath}' from client ID '{clientId}'.");
+                logger.LogError(ex, "Error retrieving metadata for file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Error retrieving file metadata from client.").ConfigureAwait(false);
                 return;
@@ -159,7 +159,7 @@ namespace PeakSWC.RemoteWebView
 
             if (clientMetadata.StatusCode != StatusCodes.Status200OK)
             {
-                logger.LogWarning($"Client ID '{clientId}' does not have the file '{subPath}'. Cannot serve.");
+                logger.LogWarning("Client ID '{ClientId}' does not have the file '{SubPath}'. Cannot serve.", clientId, subPath);
                 context.Response.StatusCode = clientMetadata.StatusCode;
                 await context.Response.WriteAsync($"File not found. {subPath}").ConfigureAwait(false);
                 return;
@@ -173,17 +173,17 @@ namespace PeakSWC.RemoteWebView
                 if (serverMetadata?.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
-                    logger.LogDebug($"File '{subPath}' needs update in server cache.");
+                    logger.LogDebug("File '{SubPath}' needs update in server cache.", subPath);
                 }
                 else
                 {
-                    logger.LogDebug($"File '{subPath}' is up-to-date in server cache.");
+                    logger.LogDebug("File '{SubPath}' is up-to-date in server cache.", subPath);
                 }
             }
             else
             {
                 needsUpdate = true;
-                logger.LogDebug($"File '{subPath}' not found in server cache or caching is disabled.");
+                logger.LogDebug("File '{SubPath}' not found in server cache or caching is disabled.", subPath);
             }
 
             // Step 3: Handle Conditional GETs (ETag and If-None-Match)
@@ -192,7 +192,7 @@ namespace PeakSWC.RemoteWebView
                 string eTag = clientMetadata.ETag;
                 if (ifNoneMatch.Contains(eTag))
                 {
-                    logger.LogDebug($"ETag matches for file '{subPath}'. Returning 304 Not Modified.");
+                    logger.LogDebug("ETag matches for file '{SubPath}'. Returning 304 Not Modified.", subPath);
                     context.Response.StatusCode = StatusCodes.Status304NotModified;
                     return;
                 }
@@ -204,7 +204,7 @@ namespace PeakSWC.RemoteWebView
             // Step 5: Serve the file
             if (needsUpdate)
             {
-                logger.LogDebug($"Fetching file '{subPath}' from client ID '{clientId}'.");
+                logger.LogDebug("Fetching file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
 
                 FileStream dataRequest;
                 try
@@ -213,7 +213,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client ID '{clientId}'.");
+                    logger.LogError(ex, "Failed to retrieve file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                     return;
@@ -247,20 +247,20 @@ namespace PeakSWC.RemoteWebView
                     await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
 
-                logger.LogDebug($"Successfully fetched and served file '{subPath}' from client ID '{clientId}'.");
+                logger.LogDebug("Successfully fetched and served file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
             }
             else
             {
                 // Serve from cache
                 if (memoryCache.TryGetValue($"{subPath}_data", out byte[]? cachedData))
                 {
-                    logger.LogDebug($"Serving file '{subPath}' from in-memory cache.");
+                    logger.LogDebug("Serving file '{SubPath}' from in-memory cache.", subPath);
                     context.Response.ContentLength = cachedData?.Length ?? 0;
                     await context.Response.Body.WriteAsync(cachedData.AsMemory()).ConfigureAwait(false);
                 }
                 else
                 {
-                    logger.LogWarning($"Data for file '{subPath}' not found in cache. Fetching from client.");
+                    logger.LogWarning("Data for file '{SubPath}' not found in cache. Fetching from client.", subPath);
 
                     // Fetch from client
                     FileStream dataRequest;
@@ -270,7 +270,7 @@ namespace PeakSWC.RemoteWebView
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, $"Failed to retrieve file '{subPath}' from client ID '{clientId}'.");
+                        logger.LogError(ex, "Failed to retrieve file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                         await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
                         return;
@@ -303,7 +303,7 @@ namespace PeakSWC.RemoteWebView
                         await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
 
-                    logger.LogDebug($"Successfully fetched and served file '{subPath}' from client ID '{clientId}'.");
+                    logger.LogDebug("Successfully fetched and served file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                 }
             }
         }
