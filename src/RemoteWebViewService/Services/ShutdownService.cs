@@ -12,22 +12,21 @@ namespace PeakSWC.RemoteWebView.Services
     {
         public async Task Shutdown(string id, Exception? exception = null)
         {
-           
             if (serviceDictionary.TryRemove(id, out var client))
             {
                 try
                 {
                     if (exception != null)
-                        logger.LogError($"Shutting down {id} Exception:{exception.Message}");
-                 
+                        logger.LogError(exception, "Shutting down client {Id} due to exception.", id);
+
                     var serviceState = await client.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                     await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
                     serviceState.InUse = false;
-                    await serviceState.DisposeAsync().ConfigureAwait(false);      
+                    await serviceState.DisposeAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"Failed shutdown {id} {ex.Message}.");
+                    logger.LogError(ex, "Failed shutdown for client {Id}.", id);
                 }
 
                 try
@@ -36,17 +35,15 @@ namespace PeakSWC.RemoteWebView.Services
                     {
                         if (!channel.Writer.TryWrite($"Shutdown:{id}"))
                         {
-                            logger.LogError($"Failed to write shutdown notification to channel for {id}.");
+                            logger.LogError("Failed to write shutdown notification to channel for client {Id}.", id);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"Failed shutdown {id} {ex.Message}.");
+                    logger.LogError(ex, "Failed shutdown for client {Id} during channel notification.", id);
                 }
-
             }
-            
         }
     }
 }
