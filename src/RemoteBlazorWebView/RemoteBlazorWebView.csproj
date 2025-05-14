@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Based on maui 10.0.0 preview3 </PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 10.0.0 preview4 </PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<Platforms>x64</Platforms>
@@ -38,11 +38,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0-preview.3.25172.1" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0-preview.3.25172.1" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.3.25171.5" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-preview.3.25171.5" />
-		<PackageReference Include="Microsoft.JSInterop" Version="10.0.0-preview.3.25172.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="Microsoft.JSInterop" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="Photino.Net" Version="4.0.16" />
 	</ItemGroup>

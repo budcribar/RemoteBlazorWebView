@@ -33,9 +33,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Playwright" Version="1.52.0" />
-		<PackageReference Include="System.Management" Version="10.0.0-preview.3.25171.5" />
+		<PackageReference Include="System.Management" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="FluentAssertions" Version="8.2.0" />
-		<PackageReference Include="System.Diagnostics.EventLog" Version="10.0.0-preview.3.25171.5" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="10.0.0-preview.4.25258.110" />
 		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.71.0" />
