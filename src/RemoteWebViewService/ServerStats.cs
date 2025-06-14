@@ -58,8 +58,13 @@ namespace PeakSWC.RemoteWebView
                 }
             }
 
-            // Thread-safe addition for total response time
-            Interlocked.Exchange(ref _totalResponseTime, _totalResponseTime + responseTime);
+            // Atomically add the response time using CompareExchange since Interlocked.Add doesn't support double
+            double initialTotal, newTotal;
+            do
+            {
+                initialTotal = _totalResponseTime;
+                newTotal = initialTotal + responseTime;
+            } while (initialTotal != Interlocked.CompareExchange(ref _totalResponseTime, newTotal, initialTotal));
 
             _responseTimes.Add(responseTime);
 
