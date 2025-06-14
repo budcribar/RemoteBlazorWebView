@@ -187,13 +187,12 @@ namespace EditWebView
                 using var repo = new Repository(repoPath);
                 var status = repo.RetrieveStatus();
 
-                return status.Modified
+                return [.. status.Modified
                     .Concat(status.Staged)
                     .Concat(status.Untracked)
                     .Concat(status.Missing)
                     .Select(entry => entry.FilePath)
-                    .Distinct()
-                    .ToList();
+                    .Distinct()];
             }
             catch (RepositoryNotFoundException)
             {

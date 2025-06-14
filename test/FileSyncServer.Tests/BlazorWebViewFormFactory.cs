@@ -15,8 +15,8 @@ namespace WebdriverTestProject
     public static class BlazorWebViewFormFactory
     {
         private static Thread? staThread;
-        private static AutoResetEvent threadInitialized = new AutoResetEvent(false);
-        private static readonly AutoResetEvent threadShutdown = new AutoResetEvent(false);
+        private static AutoResetEvent threadInitialized = new(false);
+        private static readonly AutoResetEvent threadShutdown = new(false);
         public static Form? MainForm { get; set; } = null;
 
         public static BlazorWebView? CreateBlazorComponent(RootComponent rootComponent)

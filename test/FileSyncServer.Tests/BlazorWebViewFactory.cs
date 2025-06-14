@@ -16,10 +16,10 @@ namespace WebdriverTestProject
     public static class BlazorWebViewFactory
     {
         private static Thread? staThread;
-        private static AutoResetEvent threadInitialized = new AutoResetEvent(false);
-        private static readonly AutoResetEvent threadShutdown = new AutoResetEvent(false);
+        private static AutoResetEvent threadInitialized = new(false);
+        private static readonly AutoResetEvent threadShutdown = new(false);
         public static Window? Window { get; set; } = null;
-        private static Grid? gridContainer = null;
+        private static readonly Grid? gridContainer = null;
 
         public static async Task<BlazorWebView?> CreateBlazorComponent(RootComponent rootComponent)
         {
