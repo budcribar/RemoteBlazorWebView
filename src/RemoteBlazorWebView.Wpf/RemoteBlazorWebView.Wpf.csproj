@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on maui 10.0.0 preview4 </PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 10.0.0 preview5 </PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
