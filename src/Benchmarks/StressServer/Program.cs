@@ -29,7 +29,7 @@ namespace StressServer
         public static partial IntPtr GetConsoleWindow();
 
         // Special window handle values
-        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private static readonly IntPtr HWND_TOPMOST = new(-1);
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
         private const uint SWP_SHOWWINDOW = 0x0040;
@@ -165,7 +165,7 @@ namespace StressServer
         {
             await WaitForServerToStart(url, httpClient);
 
-            List<Process> clients = new List<Process>();
+            List<Process> clients = [];
 
             // npx playwright install 
             IPlaywright PlaywrightInstance = await Playwright.CreateAsync();
@@ -175,9 +175,9 @@ namespace StressServer
                 Args = ["--no-sandbox", "--disable-setuid-sandbox"]
             });
 
-            List<IBrowserContext> BrowserContexts = new();
-            List<IPage> Pages = new();
-            Dictionary<string, Process> processDict = new Dictionary<string, Process>();
+            List<IBrowserContext> BrowserContexts = [];
+            List<IPage> Pages = [];
+            Dictionary<string, Process> processDict = new();
 
             int passCount = 0;
             int failCount = 0;
@@ -261,8 +261,8 @@ namespace StressServer
                 });
 
                 // Retrieve buttons and paragraphs
-                List<ILocator> buttons = new();
-                List<ILocator> paragraphs = new();
+                List<ILocator> buttons = [];
+                List<ILocator> paragraphs = [];
 
                 for (int i = 0; i< Pages.Count; i++)    
                 {
