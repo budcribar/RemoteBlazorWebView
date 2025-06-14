@@ -48,7 +48,10 @@ namespace PeakSWC.RemoteWebView
                 try
                 {
                     await SendInitResponse(_clientGuid, _htmlHostPath);
-                    _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
+                    }
 
                     await foreach (var request in _call.ResponseStream.ReadAllAsync(ct))                 
                     {
@@ -70,7 +73,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _errorCallback?.Invoke(ex);
                 }
-            });
+            }, ct);
         }
 
         private static readonly string WwwRootPrefix = "wwwroot/";
@@ -87,7 +90,10 @@ namespace PeakSWC.RemoteWebView
         
             var subPath = GetSubPath(request.Path);
 
-            _logger.LogDebug("Received MetaData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Received MetaData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
+            }
 
             // Retrieve file metadata
             FileMetadata metadata = GetFileMetadata(subPath);
@@ -102,7 +108,10 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
           
-            _logger.LogDebug("Sent metadata for file: {SubPath}, requestId: {RequestId}", subPath, requestId);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Sent metadata for file: {SubPath}, requestId: {RequestId}", subPath, requestId);
+            }
         }
 
         private async Task HandleFileDataRequestAsync(ServerFileReadRequest request)
@@ -110,7 +119,10 @@ namespace PeakSWC.RemoteWebView
             var requestId = request.RequestId;
             var subPath = GetSubPath(request.Path);
 
-            _logger.LogDebug("Received FileData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Received FileData request (requestId: {RequestId}) for file: {SubPath}", requestId, subPath);
+            }
 
             const int chunkSize = 8192; // 8 KB
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
@@ -142,19 +154,31 @@ namespace PeakSWC.RemoteWebView
             }
             catch (FileNotFoundException)
             {
-                _logger.LogWarning("File '{SubPath}' not found in client's cache.", subPath);         
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning("File '{SubPath}' not found in client's cache.", subPath);
+                }
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogError("Access denied to file '{SubPath}'.", subPath);             
+                if (_logger.IsEnabled(LogLevel.Error))
+                {
+                    _logger.LogError("Access denied to file '{SubPath}'.", subPath);
+                }
             }
             catch (IOException ex)
             {
-                _logger.LogError(ex, "IO error reading file '{SubPath}'.", subPath);              
+                if (_logger.IsEnabled(LogLevel.Error))
+                {
+                    _logger.LogError(ex, "IO error reading file '{SubPath}'.", subPath);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error reading file '{SubPath}'.", subPath);               
+                if (_logger.IsEnabled(LogLevel.Error))
+                {
+                    _logger.LogError(ex, "Unexpected error reading file '{SubPath}'.", subPath);
+                }
             }
             finally
             {
@@ -176,7 +200,10 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(completionResponse).ConfigureAwait(false);
 
-            _logger.LogDebug("Completed file data transfer for file: {RelativeFilePath}, requestId: {RequestId}", relativeFilePath, requestId);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Completed file data transfer for file: {RelativeFilePath}, requestId: {RequestId}", relativeFilePath, requestId);
+            }
         }
        
         private async Task SendInitResponse(string clientGuid, string htmlHostPath)
@@ -190,7 +217,10 @@ namespace PeakSWC.RemoteWebView
             };
             await _call.RequestStream.WriteAsync(initResponse).ConfigureAwait(false);
 
-            _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Sent Init response to server with clientGuid: {ClientGuid}", _clientGuid);
+            }
         }
 
         private FileMetadata GetFileMetadata(string localFilePath)
@@ -238,7 +268,10 @@ namespace PeakSWC.RemoteWebView
         public async Task CloseAsync()
         {
             await _call.RequestStream.CompleteAsync().ConfigureAwait(false);
-            _logger.LogDebug("Closed request stream.");
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Closed request stream.");
+            }
         }
     }
 }
