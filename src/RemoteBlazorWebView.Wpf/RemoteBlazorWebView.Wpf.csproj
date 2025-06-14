@@ -25,13 +25,8 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
 		<PackageReleaseNotes>Based on maui 9.0.70 </PackageReleaseNotes>
-        <DebugType>full</DebugType>
-        </PropertyGroup>
-
-        <PropertyGroup>
-                <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-                <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-        </PropertyGroup>
+		<DebugType>full</DebugType>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<Compile Include="..\SharedSource\**\*.cs" Link="SharedSource\%(Filename)%(Extension)" />
