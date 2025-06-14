@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
 using Microsoft.Playwright;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 using Xunit;
 
-namespace Server
+namespace FileSyncServer.Tests
 {
     [Collection("Server collection")]
     public class ConcurrentRequestsTests

@@ -13,7 +13,7 @@ using PeakSWC.RemoteWebView;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public class TestBlazorFormControlFixture : IAsyncLifetime
     {
@@ -75,6 +75,7 @@ namespace WebdriverTestProject
         {
             BlazorWebViewFormFactory.Shutdown();
             Process?.Kill();
+            GC.SuppressFinalize(this);
         }
 
         // Synchronous Dispose for IAsyncLifetime

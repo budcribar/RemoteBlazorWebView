@@ -1,6 +1,6 @@
 ﻿
 using Xunit.Abstractions;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 
 namespace FileSyncServer.Tests
 {

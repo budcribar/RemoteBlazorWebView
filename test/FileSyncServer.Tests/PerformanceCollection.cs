@@ -1,4 +1,6 @@
-﻿// PerformanceCollection.cs
+namespace FileSyncServer.Tests;
+
+// PerformanceCollection.cs
 [CollectionDefinition("Performance collection", DisableParallelization = true)]
 public class PerformanceCollection : ICollectionFixture<ServerFixture>
 {

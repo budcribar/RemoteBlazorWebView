@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Remote
 {
     [Collection("RemoteBlazorWpf Collection")]
     public abstract class BaseTestRemote<T>(ITestOutputHelper output) : IAsyncLifetime where T : BaseTestRemoteFixture, new()

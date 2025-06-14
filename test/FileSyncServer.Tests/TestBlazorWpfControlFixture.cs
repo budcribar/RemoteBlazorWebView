@@ -12,7 +12,7 @@ using PeakSWC.RemoteBlazorWebView.Wpf;
 using PeakSWC.RemoteWebView;
 using Xunit;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     // Fixture class for setup and teardown
     public class TestBlazorWpfControlFixture : IAsyncLifetime

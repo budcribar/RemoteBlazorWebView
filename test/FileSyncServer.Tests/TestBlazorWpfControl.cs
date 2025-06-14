@@ -11,7 +11,7 @@ using PeakSWC.RemoteWebView;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public class TestBlazorWpfControl : IClassFixture<TestBlazorWpfControlFixture>
     {

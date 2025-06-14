@@ -7,10 +7,10 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 using Xunit;
 
-namespace Server
+namespace FileSyncServer.Tests
 {
     [Collection("Performance collection")]
     public class PerformanceTests() : IAsyncLifetime

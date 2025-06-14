@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Components;
 using System.Threading.Tasks;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public partial class Home : ComponentBase
     {
