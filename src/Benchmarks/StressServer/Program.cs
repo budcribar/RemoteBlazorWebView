@@ -7,10 +7,10 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using WebdriverTestProject;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using FileSyncServer.Tests;
 
 namespace StressServer
 {
