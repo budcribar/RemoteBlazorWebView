@@ -18,7 +18,7 @@ using System.IO.Compression;
 
 namespace WebdriverTestProject
 {
-    public static class Utilities
+    public static partial class Utilities
     {
         #region Server
 
@@ -328,12 +328,15 @@ namespace WebdriverTestProject
 
         #region Javascript
 
+        [GeneratedRegex(@"^script\d+\.js$", RegexOptions.IgnoreCase)]
+        private static partial Regex JsFileRegex();
+
         public static void DeleteGeneratedJsFiles(string directoryPath)
         {
             try
             {
                 string[] jsFiles = Directory.GetFiles(directoryPath, "*.js");
-                Regex filePattern = new Regex(@"^script\d+\.js$", RegexOptions.IgnoreCase);
+                Regex filePattern = JsFileRegex();
 
                 foreach (string file in jsFiles)
                 {
@@ -407,9 +410,8 @@ namespace WebdriverTestProject
 
         static string CalculateChecksum(string input)
         {
-            using SHA256 sha256Hash = SHA256.Create();
-            byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
-            StringBuilder sBuilder = new StringBuilder();
+            byte[] data = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            StringBuilder sBuilder = new();
             for (int i = 0; i < data.Length; i++)
             {
                 sBuilder.Append(data[i].ToString("x2"));
@@ -543,7 +545,7 @@ namespace WebdriverTestProject
             using var channel = GrpcChannel.ForAddress(BASE_URL, new GrpcChannelOptions { HttpHandler = httpHandler });
             var client = new WebViewIPC.WebViewIPCClient(channel);
             var ids = await client.GetIdsAsync(new Empty());
-            return ids.Responses.ToList();
+            return [..ids.Responses];
         }
 
         public static async Task SetServerCache(bool isEnabled)
@@ -964,7 +966,7 @@ namespace WebdriverTestProject
 
             Console.WriteLine($"Killing {existingProcesses.Length} instance(s) of process: {processName}");
 
-            List<Task> killTasks = existingProcesses.Select(async process =>
+            List<Task> killTasks = [.. existingProcesses.Select(async process =>
             {
                 try
                 {
@@ -986,7 +988,7 @@ namespace WebdriverTestProject
                 {
                     Console.WriteLine($"Failed to kill process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
                 }
-            }).ToList();
+            })];
 
             await Task.WhenAll(killTasks);
         }

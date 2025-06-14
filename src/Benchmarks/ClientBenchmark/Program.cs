@@ -381,14 +381,14 @@ namespace ClientBenchmark
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors=false, HtmlHostPath="wwwroot/index.html" }, null,null, cts.Token);
 
-            var wrapper = new HttpClientWrapper(httpClient);
+            HttpClientWrapper wrapper = new(httpClient);
             try
             {
                 foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
                 {
                     if (message.Response == "created:")
                     {
-                        ClientFileSyncManager  clientFileSyncManager = new ClientFileSyncManager(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
+                        ClientFileSyncManager  clientFileSyncManager = new(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
                         clientFileSyncManager.HandleServerRequests(cts.Token);
                       
 
@@ -447,14 +447,14 @@ namespace ClientBenchmark
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30000));  // shutdown waiting 20 seconds for tasks to cancel
             var response = _client.CreateWebView(new CreateWebViewRequest { Id = id, EnableMirrors = false, HtmlHostPath = "wwwroot/index.html" }, null, null, cts.Token);
             var messageId = 0;
-            var wrapper = new HttpClientWrapper(httpClient);
+            HttpClientWrapper wrapper = new(httpClient);
             try
             {
                 foreach (var message in response.ResponseStream.ReadAllAsync(/*cts.Token*/).ToBlockingEnumerable())
                 {
                     if (message.Response == "created:")
                     {
-                        ClientFileSyncManager clientFileSyncManager = new ClientFileSyncManager(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
+                        ClientFileSyncManager clientFileSyncManager = new(_client, Guid.Parse(id), "index.html", new PhysicalFileProvider(_rootDirectory + "/wwwroot"), (x) => { }, logger);
                         clientFileSyncManager.HandleServerRequests(cts.Token);
 
 
@@ -535,14 +535,14 @@ namespace ClientBenchmark
         }
 
 #if DEBUG
-        public static  void Main(string[] args) { 
+        public static  void Main(string[] _) {
         //public static async Task Main(string[] args) { 
             BenchmarkSwitcher.FromAssembly(typeof(ClientBenchmarks).Assembly).Run(args, new DebugInProcessConfig());
         }
 #else
         // public static async Task Main(string[] args)
        
-        public static void Main(string[] args)
+        public static void Main(string[] _)
         {
             var config = ManualConfig.Create(DefaultConfig.Instance)
                .WithOptions(ConfigOptions.DisableOptimizationsValidator);
