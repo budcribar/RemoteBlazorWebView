@@ -11,7 +11,7 @@ namespace FileWatcherClient
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main(string[] _)
         {
             // Build configuration
             var configuration = new ConfigurationBuilder()
