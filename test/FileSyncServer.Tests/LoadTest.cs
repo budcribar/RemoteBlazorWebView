@@ -17,7 +17,7 @@ namespace FileSyncServer.Tests
         private readonly ServerFixture _serverFixture;
         private readonly ClientFixture _clientFixture;
         private readonly string clientCachePath;
-        private string filePath;
+        private readonly string filePath;
         private readonly string clientId;
 
         public LoadTest(ClientFixture clientFixture, ServerFixture serverFixture)
@@ -36,12 +36,10 @@ namespace FileSyncServer.Tests
 
         private void CreateTestFile(int numLines)
         {
-            using (StreamWriter writer = new StreamWriter(filePath))
+            using StreamWriter writer = new(filePath);
+            for (int i = 1; i <= numLines; i++)
             {
-                for (int i = 1; i <= numLines; i++)
-                {
-                    writer.WriteLine($"This is line {i} of test.txt for client {clientId}");
-                }
+                writer.WriteLine($"This is line {i} of test.txt for client {clientId}");
             }
         }
 
@@ -59,9 +57,9 @@ namespace FileSyncServer.Tests
 
             await Utilities.SetServerCache(true);
 
-            int minConcurrentRequests = 1;
+            int minConcurrentRequests;
             int maxConcurrentRequests = 1;
-            List<Tuple<int, double>> results = new List<Tuple<int, double>>();
+            var results = new List<Tuple<int, double>>();
 
             while (true)
             {
@@ -74,7 +72,7 @@ namespace FileSyncServer.Tests
                     break;
                 }
 
-                if (results.Count > 1 && averageTime > results[results.Count - 2].Item2 * nonlinearityThreshold)
+                if (results.Count > 1 && averageTime > results[^2].Item2 * nonlinearityThreshold)
                 {
                     Console.WriteLine($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
                     break;
@@ -90,7 +88,7 @@ namespace FileSyncServer.Tests
                 double midTime = await MeasureAverageResponseTime(testUrl, mid, timeoutSeconds);
                 results.Add(Tuple.Create(mid, midTime));
 
-                if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[results.Count - 2].Item2 * nonlinearityThreshold))
+                if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[^2].Item2 * nonlinearityThreshold))
                 {
                     maxConcurrentRequests = mid;
                 }
@@ -110,7 +108,7 @@ namespace FileSyncServer.Tests
         }
 
 
-        private async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
+        private static async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
         {
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -149,7 +147,7 @@ namespace FileSyncServer.Tests
             return tasks.Select(t => t.Result).Average();
         }
 
-        private string CreateHtmlReport(List<Tuple<int, double>> results)
+        private static string CreateHtmlReport(List<Tuple<int, double>> results)
         {
             var sb = new StringBuilder();
             sb.AppendLine("<html><head><title>Load Test Results</title></head><body>");
