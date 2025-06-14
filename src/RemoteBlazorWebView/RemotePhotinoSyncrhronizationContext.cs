@@ -24,13 +24,13 @@ namespace PeakSWC.RemoteWebView
 
     internal class PhotinoSynchronizationContext : SynchronizationContext
     {
-        private static readonly ContextCallback ExecutionContextThunk = (object state) =>
+        private static readonly ContextCallback ExecutionContextThunk = state =>
         {
             var item = (WorkItem)state;
             item.SynchronizationContext.ExecuteSynchronously(null, item.Callback, item.State);
         };
 
-        private static readonly Action<Task, object> BackgroundWorkThunk = (Task task, object state) =>
+        private static readonly Action<Task, object> BackgroundWorkThunk = (task, state) =>
         {
             var item = (WorkItem)state;
             item.SynchronizationContext.ExecuteBackground(item);
@@ -253,7 +253,7 @@ namespace PeakSWC.RemoteWebView
         {
             // Anything run on the sync context should actually be dispatched as far as Photino
             // is concerned, so that it's safe to interact with the native window/WebView.
-            _invokeMethodInfo.Invoke(_window, new Action[] { () =>
+            _invokeMethodInfo.Invoke(_window, new[] { (Action)(() =>
             {
                 var original = Current;
                 try
@@ -269,7 +269,7 @@ namespace PeakSWC.RemoteWebView
 
                     completion?.SetResult(null);
                 }
-            }});
+            }) });
         }
 
         private void ExecuteBackground(WorkItem item)
@@ -301,17 +301,13 @@ namespace PeakSWC.RemoteWebView
 
         private void DispatchException(Exception ex)
         {
-            var handler = UnhandledException;
-            if (handler != null)
-            {
-                handler(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
-            }
+            UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex, isTerminating: false));
         }
 
         private class State
         {
             public bool IsBusy; // Just for debugging
-            public object Lock = new object();
+            public object Lock = new();
             public Task Task = Task.CompletedTask;
 
             public override string ToString()
