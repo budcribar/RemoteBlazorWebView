@@ -3,7 +3,7 @@ using FileSyncServer.Tests.Local;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Local
 {
     #region Form
     [Collection("TestLocalBlazorForm")]

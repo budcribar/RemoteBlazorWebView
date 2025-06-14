@@ -16,7 +16,7 @@ using PeakSWC.RemoteWebView;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public class TestBlazorFormControl : IClassFixture<TestBlazorFormControlFixture>
     {

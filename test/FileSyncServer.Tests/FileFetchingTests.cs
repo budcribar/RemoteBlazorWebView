@@ -7,10 +7,10 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 using Xunit;
 
-namespace Server
+namespace FileSyncServer.Tests
 {
     [Collection("Server collection")]
     public class FileFetchingTests

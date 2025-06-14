@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteBlazorWebView;
 using PeakSWC.RemoteBlazorWebView.Wpf;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public static class BlazorWebViewFactory
     {

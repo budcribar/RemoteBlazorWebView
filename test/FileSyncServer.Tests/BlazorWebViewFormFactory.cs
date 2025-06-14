@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteBlazorWebView;
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public static class BlazorWebViewFormFactory
     {

@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
 
 using FileSyncServer;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 
+namespace FileSyncServer.Tests
+{
 public class ServerFixture : IDisposable
 {
     public Process ServerProcess { get; private set; }
@@ -92,5 +94,7 @@ public class ServerFixture : IDisposable
         }
         ServerProcess.Dispose();
         _serverReady.Dispose();
+        GC.SuppressFinalize(this);
     }
+}
 }

@@ -3,7 +3,7 @@ using FluentAssertions;
 using Microsoft.Playwright;
 using System.Net;
 using System.Security.Principal;
-using WebdriverTestProject;
+using FileSyncServer.Tests;
 
 namespace FileSyncServer.Tests
 {
@@ -167,6 +167,7 @@ namespace FileSyncServer.Tests
                     // Log the exception or handle accordingly
                 }
             }
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Remote
 {
     public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {

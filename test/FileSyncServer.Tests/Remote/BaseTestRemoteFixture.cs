@@ -13,7 +13,7 @@ using Xunit;
 using PeakSWC.RemoteWebView;
 using Grpc.Net.Client.Web;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests.Remote
 {
     public class BaseTestRemoteFixture : IAsyncLifetime, IDisposable
     {
@@ -94,6 +94,7 @@ namespace WebdriverTestProject
         {
             // Ensure cleanup is called
             Cleanup();
+            GC.SuppressFinalize(this);
         }
 
         public async Task Startup(int numClients)

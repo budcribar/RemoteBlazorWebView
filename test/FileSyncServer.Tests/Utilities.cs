@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.IO.Compression;
 
-namespace WebdriverTestProject
+namespace FileSyncServer.Tests
 {
     public static class Utilities
     {

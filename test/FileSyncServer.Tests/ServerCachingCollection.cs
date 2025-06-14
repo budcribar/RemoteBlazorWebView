@@ -1,4 +1,6 @@
-﻿[CollectionDefinition("Server caching collection", DisableParallelization = true)]
+namespace FileSyncServer.Tests;
+
+[CollectionDefinition("Server caching collection", DisableParallelization = true)]
 public class ServerCachingCollection : ICollectionFixture<ServerFixture>, ICollectionFixture<ClientFixture>
 {
     // This class has no code, and is never created. Its purpose is simply

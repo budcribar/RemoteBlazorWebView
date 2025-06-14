@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading;
 using Xunit;
 
+namespace FileSyncServer.Tests
+{
 public class ClientFixture : IDisposable
 {
     public Process ClientProcess { get; private set; }
@@ -93,5 +95,7 @@ public class ClientFixture : IDisposable
         }
         ClientProcess.Dispose();
         _clientReady.Dispose();
+        GC.SuppressFinalize(this);
     }
+}
 }
