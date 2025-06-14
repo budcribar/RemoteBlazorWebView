@@ -81,20 +81,23 @@ namespace PeakSWC.RemoteWebView
 
         public async Task WaitForInitializationComplete()
         {
-            while(true)
+            while (true)
             {
                 try
                 {
-                    var h = this.WindowHandle;
-                    await Task.Delay(5000);
-                    break;
+                    if (this.WindowHandle != IntPtr.Zero)
+                    {
+                        break;
+                    }
                 }
-                catch (Exception)
+                catch
                 {
-                    await Task.Delay(100);
+                    // Ignore and keep waiting until the handle is available
                 }
+
+                await Task.Delay(100);
             }
-           
+
         }
 
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)
