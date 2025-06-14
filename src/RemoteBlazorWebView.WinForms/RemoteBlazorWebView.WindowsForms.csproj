@@ -29,6 +29,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="WindowsFormsCoreWebView2AcceleratorKeyPressedEventArgsWrapper.cs" />
   </ItemGroup>
