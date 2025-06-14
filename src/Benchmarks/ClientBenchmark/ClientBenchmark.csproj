@@ -21,12 +21,12 @@
   </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.15.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.5.25277.114" />
 		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.71.0" />
 		<!--<PackageReference Include="PeakSWC.RemoteWebView" Version="10.0.0-preview3" />-->
-		<PackageReference Include="System.Management" Version="10.0.0-preview.4.25258.110" />
+		<PackageReference Include="System.Management" Version="10.0.0-preview.5.25277.114" />
 		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 	</ItemGroup>
