@@ -46,7 +46,6 @@ namespace PeakSWC.RemoteWebView
         public DateTime StartTime { get; } = DateTime.UtcNow;
 
         private int _disposed = 0; // 0 = not disposed, 1 = disposed
-        private readonly object _disposeLock = new();
 
         public void Cancel()
         {
@@ -136,15 +135,12 @@ namespace PeakSWC.RemoteWebView
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
 
-            lock (_disposeLock)
+            if (disposing)
             {
-                if (disposing)
-                {
 
-                }
-
-                // Free unmanaged resources here, if any...
             }
+
+            // Free unmanaged resources here, if any...
         }
 
         public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)
