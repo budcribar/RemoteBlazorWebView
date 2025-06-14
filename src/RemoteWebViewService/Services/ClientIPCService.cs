@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using PeakSWC.RemoteWebView.RemoteStaticFiles;
 
 namespace PeakSWC.RemoteWebView
 {

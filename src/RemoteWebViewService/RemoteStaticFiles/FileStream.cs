@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Net;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public class FileStream
     {

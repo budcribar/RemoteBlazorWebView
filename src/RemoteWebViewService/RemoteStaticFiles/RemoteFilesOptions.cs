@@ -1,4 +1,4 @@
-﻿namespace PeakSWC.RemoteWebView
+﻿namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public class RemoteFilesOptions
     {

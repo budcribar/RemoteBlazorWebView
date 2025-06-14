@@ -2,6 +2,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Services;
+using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
