@@ -5,7 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Net;
 
-namespace FileClientApp
+namespace Client
 {
     class Program
     {

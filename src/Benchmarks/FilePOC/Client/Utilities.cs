@@ -7,6 +7,8 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 
+namespace Client
+{
 public static class Utilities
 {
     public static void ModifyFilePermissions(string filePath, bool grantRead, bool disableInheritance = true)
@@ -19,7 +21,7 @@ public static class Utilities
         if (string.IsNullOrWhiteSpace(user))
             throw new ArgumentException("User cannot be null or empty.", user);
 
-        FileInfo fileInfo = new FileInfo(filePath);
+        FileInfo fileInfo = new(filePath);
 
         if (!fileInfo.Exists)
             throw new FileNotFoundException("The specified file does not exist.", filePath);
@@ -67,7 +69,7 @@ public static class Utilities
             else
             {
                 // Define the access rule to remove Read and Delete permissions
-                FileSystemAccessRule allowReadDeleteRule = new FileSystemAccessRule(
+                FileSystemAccessRule allowReadDeleteRule = new(
                     user,
                     FileSystemRights.Read | FileSystemRights.Delete,
                     InheritanceFlags.None,
@@ -114,17 +116,13 @@ public static class Utilities
     }
     private static byte[] CreateSimplePngIcon(int width, int height, Color color)
     {
-        using (Bitmap bmp = new(width, height))
-        using (Graphics gfx = Graphics.FromImage(bmp))
-        using (SolidBrush brush = new SolidBrush(color))
-        {
-            gfx.FillRectangle(brush, 0, 0, width, height);
-            using (MemoryStream ms = new())
-            {
-                bmp.Save(ms, ImageFormat.Png);
-                return ms.ToArray();
-            }
-        }
+        using Bitmap bmp = new(width, height);
+        using Graphics gfx = Graphics.FromImage(bmp);
+        using SolidBrush brush = new(color);
+        using MemoryStream ms = new();
+        gfx.FillRectangle(brush, 0, 0, width, height);
+        bmp.Save(ms, ImageFormat.Png);
+        return ms.ToArray();
     }
     public static string CreateTestEnvironment(string directoryPath, string title = "Test Page")
     {
@@ -197,7 +195,7 @@ function runArrayVerification() {
         File.WriteAllBytes(Path.Combine(directoryPath, "icon.png"), pngData);
 
         // Create large JavaScript file with array
-        var random = new Random();
+        Random random = new();
         var largeArray = new int[1000000]; // 1 million integers
         for (int i = 0; i < largeArray.Length; i++)
         {
@@ -238,7 +236,7 @@ function calculateSimpleHash(arr) {{
 
         // Create a large file to test streaming and buffering
         string largeTextFilePath = Path.Combine(directoryPath, "largeFile.txt");
-        using (var writer = new StreamWriter(largeTextFilePath))
+        using StreamWriter writer = new(largeTextFilePath);
         {
             for (int i = 0; i < 1000000; i++)
             {
@@ -437,4 +435,5 @@ function calculateSimpleHash(arr) {{
         }
         return sum;
     }
+}
 }

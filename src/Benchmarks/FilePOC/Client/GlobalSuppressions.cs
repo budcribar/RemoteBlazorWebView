@@ -5,5 +5,5 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Utilities.CreateSimplePngIcon(System.Int32,System.Int32,System.Drawing.Color)~System.Byte[]")]
-[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Utilities.ModifyFilePermissions(System.String,System.Boolean,System.Boolean)")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Client.Utilities.CreateSimplePngIcon(System.Int32,System.Int32,System.Drawing.Color)~System.Byte[]")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:Client.Utilities.ModifyFilePermissions(System.String,System.Boolean,System.Boolean)")]
