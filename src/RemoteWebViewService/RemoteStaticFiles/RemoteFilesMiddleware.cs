@@ -11,7 +11,7 @@ using System;
 using System.Linq;
 using System.Collections.Concurrent;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public class RemoteFilesMiddleware(
         RequestDelegate next,
@@ -225,21 +225,19 @@ namespace PeakSWC.RemoteWebView
                 if (options.UseServerCache)
                 {
                     // Optionally cache the data
-                    using (var memStream = new MemoryStream())
-                    {
-                        await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
-                        memStream.Position = 0;
+                    using MemoryStream memStream = new();
+                    await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
+                    memStream.Position = 0;
 
-                        // Update metadata in cache
-                        memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                    // Update metadata in cache
+                    memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
-                        // Cache the data
-                        memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                    // Cache the data
+                    memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
-                        // Write the data to the response
-                        memStream.Position = 0;
-                        await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
-                    }
+                    // Write the data to the response
+                    memStream.Position = 0;
+                    await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                 }
                 else
                 {
@@ -279,22 +277,20 @@ namespace PeakSWC.RemoteWebView
                     // Optionally cache the data
                     if (options.UseServerCache)
                     {
-                        using (var memStream = new MemoryStream())
-                        {
-                            await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
-                            memStream.Position = 0;
+                        using MemoryStream memStream = new();
+                        await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
+                        memStream.Position = 0;
 
-                            // Update metadata in cache
-                            memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                        // Update metadata in cache
+                        memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
-                            // Cache the data
-                            memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                        // Cache the data
+                        memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
-                            // Write the data to the response
-                            memStream.Position = 0;
-                            context.Response.ContentLength = memStream.Length;
-                            await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
-                        }
+                        // Write the data to the response
+                        memStream.Position = 0;
+                        context.Response.ContentLength = memStream.Length;
+                        await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                     }
                     else
                     {

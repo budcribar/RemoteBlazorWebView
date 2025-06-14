@@ -2,7 +2,7 @@
 using System;
 using System.Threading;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public class FileStats
     {

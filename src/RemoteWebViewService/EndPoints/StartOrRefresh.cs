@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.Services;
+using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
 using System.Collections.Concurrent;
 using System.IO;

@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public partial class RemoteFileResolver(ILogger<RemoteFileResolver> logger, ServerFileSyncManager manager)
     {

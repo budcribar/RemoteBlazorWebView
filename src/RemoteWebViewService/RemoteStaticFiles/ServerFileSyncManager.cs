@@ -11,7 +11,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Channel = System.Threading.Channels.Channel;
 
-namespace PeakSWC.RemoteWebView
+namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public class ServerFileSyncManager : IDisposable
     {
