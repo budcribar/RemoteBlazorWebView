@@ -43,13 +43,13 @@ namespace FileWatcherClient
                    
                 }
 
-                _logger.LogInformation($"Attempting to watch file: {_fileToWatch}");
+                _logger.LogInformation("Attempting to watch file: {File}", _fileToWatch);
 
                 var request = new WatchFileRequest { FilePath = _fileToWatch };
 
                 using var call = _client.WatchFile(request,null,null,cancellationToken);
 
-                _logger.LogInformation($"Started watching file: {_fileToWatch}");
+                _logger.LogInformation("Started watching file: {File}", _fileToWatch);
 
                 
 
@@ -78,7 +78,7 @@ namespace FileWatcherClient
                             if (!string.IsNullOrEmpty(response.Notification.RunArguments))
                             {
                                 currentRunArguments = response.Notification.RunArguments;
-                                _logger.LogInformation($"Run arguments updated to: {currentRunArguments}");
+                                _logger.LogInformation("Run arguments updated to: {Arguments}", currentRunArguments);
                             }
 
                             // Dispose previous FileStream if any
@@ -94,11 +94,11 @@ namespace FileWatcherClient
                             {
                                 fileStream = new FileStream(_tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
                                 isStreaming = true;
-                                _logger.LogInformation($"Created temp file at: {_tempFilePath}");
+                                _logger.LogInformation("Created temp file at: {Path}", _tempFilePath);
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, $"Failed to create temp file at {_tempFilePath}");
+                                _logger.LogError(ex, "Failed to create temp file at {Path}", _tempFilePath);
                             }
                             break;
 
@@ -135,7 +135,7 @@ namespace FileWatcherClient
                                     try
                                     {
                                         await fileStream.WriteAsync(response.Chunk.Content.Memory, cancellationToken);     
-                                        _logger.LogInformation($"Received and wrote a {bytes.Length / 1024}KB chunk.");
+                                        _logger.LogInformation("Received and wrote a {SizeKb}KB chunk.", bytes.Length / 1024);
                                     }
                                     catch (Exception ex)
                                     {
@@ -193,7 +193,7 @@ namespace FileWatcherClient
                 StopProcess(processName);
                 StopProcess("chromedriver");
 
-                _logger.LogInformation($"Executing file: {filePath} with arguments: {arguments}");
+                _logger.LogInformation("Executing file: {FilePath} with arguments: {Args}", filePath, arguments);
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -208,22 +208,22 @@ namespace FileWatcherClient
 
                 if (processStart != null)
                 {
-                    _logger.LogInformation($"Successfully started process ID: {processStart.Id}, Name: {processStart.ProcessName}");
+                    _logger.LogInformation("Successfully started process ID: {Id}, Name: {Name}", processStart.Id, processStart.ProcessName);
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to start the process for file: {filePath}");
+                    _logger.LogWarning("Failed to start the process for file: {File}", filePath);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to execute file: {filePath}");
+                _logger.LogError(ex, "Failed to execute file: {File}", filePath);
             }
         }
 
         private void StopProcess(string processName)
         {
-            _logger.LogInformation($"Checking for existing processes named: {processName}");
+            _logger.LogInformation("Checking for existing processes named: {Process}", processName);
 
             // Retrieve all running processes with the specified name
             var existingProcesses = Process.GetProcessesByName(processName);
@@ -232,7 +232,7 @@ namespace FileWatcherClient
             {
                 try
                 {
-                    _logger.LogInformation($"Attempting to close process ID: {process.Id}, Name: {process.ProcessName}");
+                    _logger.LogInformation("Attempting to close process ID: {Id}, Name: {Name}", process.Id, process.ProcessName);
 
                     // First, terminate child processes
                     var childProcesses = GetChildProcesses(process.Id);
@@ -247,27 +247,27 @@ namespace FileWatcherClient
                         // Wait for the process to exit gracefully within 5 seconds
                         if (!process.WaitForExit(5000))
                         {
-                            _logger.LogWarning($"Process ID: {process.Id} did not exit gracefully. Attempting to kill.");
+                            _logger.LogWarning("Process ID: {Id} did not exit gracefully. Attempting to kill.", process.Id);
                             process.Kill(); // Forcefully terminate the process
                             process.WaitForExit(); // Wait indefinitely for the process to exit
-                            _logger.LogInformation($"Process ID: {process.Id} has been forcefully terminated.");
+                            _logger.LogInformation("Process ID: {Id} has been forcefully terminated.", process.Id);
                         }
                         else
                         {
-                            _logger.LogInformation($"Process ID: {process.Id} has exited gracefully.");
+                            _logger.LogInformation("Process ID: {Id} has exited gracefully.", process.Id);
                         }
                     }
                     else
                     {
-                        _logger.LogWarning($"Process ID: {process.Id} does not have a main window or could not receive the close message. Attempting to kill.");
+                        _logger.LogWarning("Process ID: {Id} does not have a main window or could not receive the close message. Attempting to kill.", process.Id);
                         process.Kill(); // Forcefully terminate the process
                         process.WaitForExit(); // Wait indefinitely for the process to exit
-                        _logger.LogInformation($"Process ID: {process.Id} has been forcefully terminated.");
+                        _logger.LogInformation("Process ID: {Id} has been forcefully terminated.", process.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error while attempting to terminate process ID: {process.Id}");
+                    _logger.LogError(ex, "Error while attempting to terminate process ID: {Id}", process.Id);
                 }
             }
         }
@@ -289,7 +289,7 @@ namespace FileWatcherClient
                             int processId = Convert.ToInt32(mo["ProcessId"]);
                             var childProcess = Process.GetProcessById(processId);
                             childProcesses.Add(childProcess);
-                            _logger.LogInformation($"Found child process: ID={childProcess.Id}, Name={childProcess.ProcessName}");
+                            _logger.LogInformation("Found child process: ID={Id}, Name={Name}", childProcess.Id, childProcess.ProcessName);
 
                             // Recursively find grandchildren
                             childProcesses.AddRange(GetChildProcesses(childProcess.Id));
@@ -297,14 +297,14 @@ namespace FileWatcherClient
                         catch (ArgumentException)
                         {
                             // Process might have exited between the time we got the list and now
-                            _logger.LogWarning($"Process with ID {mo["ProcessId"]} no longer exists.");
+                            _logger.LogWarning("Process with ID {Id} no longer exists.", mo["ProcessId"]);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving child processes for parent ID: {parentId}");
+                _logger.LogError(ex, "Error retrieving child processes for parent ID: {ParentId}", parentId);
             }
 
             return childProcesses;
@@ -318,7 +318,7 @@ namespace FileWatcherClient
         {
             try
             {
-                _logger.LogInformation($"Attempting to terminate child process ID: {process.Id}, Name: {process.ProcessName}");
+                _logger.LogInformation("Attempting to terminate child process ID: {Id}, Name: {Name}", process.Id, process.ProcessName);
 
                 // First, terminate any child processes of this process
                 var childProcesses = GetChildProcesses(process.Id);
@@ -332,27 +332,27 @@ namespace FileWatcherClient
                 {
                     if (!process.WaitForExit(5000))
                     {
-                        _logger.LogWarning($"Child process ID: {process.Id} did not exit gracefully. Attempting to kill.");
+                        _logger.LogWarning("Child process ID: {Id} did not exit gracefully. Attempting to kill.", process.Id);
                         process.Kill();
                         process.WaitForExit();
-                        _logger.LogInformation($"Child process ID: {process.Id} has been forcefully terminated.");
+                        _logger.LogInformation("Child process ID: {Id} has been forcefully terminated.", process.Id);
                     }
                     else
                     {
-                        _logger.LogInformation($"Child process ID: {process.Id} has exited gracefully.");
+                        _logger.LogInformation("Child process ID: {Id} has exited gracefully.", process.Id);
                     }
                 }
                 else
                 {
-                    _logger.LogWarning($"Child process ID: {process.Id} does not have a main window or could not receive the close message. Attempting to kill.");
+                    _logger.LogWarning("Child process ID: {Id} does not have a main window or could not receive the close message. Attempting to kill.", process.Id);
                     process.Kill();
                     process.WaitForExit();
-                    _logger.LogInformation($"Child process ID: {process.Id} has been forcefully terminated.");
+                    _logger.LogInformation("Child process ID: {Id} has been forcefully terminated.", process.Id);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error while attempting to terminate child process ID: {process.Id}");
+                _logger.LogError(ex, "Error while attempting to terminate child process ID: {Id}", process.Id);
             }
         }
     }
