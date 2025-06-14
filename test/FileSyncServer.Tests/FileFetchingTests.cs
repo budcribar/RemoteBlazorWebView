@@ -51,7 +51,7 @@ namespace Server
         public async Task GetExistingFile_ReturnsFileContent(string fileName)
         {
             // Arrange
-            var client = Utilities.Client();
+            using var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
@@ -71,7 +71,7 @@ namespace Server
         public async Task GetNonExistingFile_ReturnsNotFound(string fileName)
         {
             // Arrange
-            var client = Utilities.Client();
+            using var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
@@ -96,7 +96,7 @@ namespace Server
             // Ensure the large file exists (e.g., 100MB)
             LargeFileSetup.EnsureLargeFileExists(largeFilePath, 100 * 1024 * 1024); // 100MB
 
-            var client = Utilities.Client();
+            using var client = Utilities.Client();
 
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
