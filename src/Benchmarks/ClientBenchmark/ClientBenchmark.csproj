@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
@@ -20,13 +20,13 @@
     <Compile Include="..\..\..\test\FileSyncServer.Tests\Utilities.cs" Link="Utilities.cs" />
   </ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
-		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
+		<PackageReference Include="BenchmarkDotNet" Version="0.15.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
+		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.71.0" />
-		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.4" />
-		<PackageReference Include="System.Management" Version="9.0.5" />
+		<PackageReference Include="PeakSWC.RemoteWebView" Version="9.0.5" />
+		<PackageReference Include="System.Management" Version="9.0.6" />
 		<!--<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />-->
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 	</ItemGroup>

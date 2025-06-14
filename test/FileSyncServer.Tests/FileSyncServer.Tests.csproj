@@ -27,21 +27,21 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="FluentAssertions" Version="8.2.0" />
-		<PackageReference Include="Google.Protobuf" Version="3.30.2" />
+		<PackageReference Include="FluentAssertions" Version="8.3.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.71.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.5" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.5" />
-		<PackageReference Include="System.Management" Version="9.0.5" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.6" />
+		<PackageReference Include="System.Management" Version="9.0.6" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
 		<PackageReference Include="Microsoft.Playwright" Version="1.52.0" />
-		<PackageReference Include="PeakSWC.RemoteBlazorWebView.Wpf" Version="9.0.4" />
+		<PackageReference Include="PeakSWC.RemoteBlazorWebView.Wpf" Version="9.0.5" />
 		<PackageReference Include="xunit" Version="2.9.3" />
 		<PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
 		<PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.0">
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
