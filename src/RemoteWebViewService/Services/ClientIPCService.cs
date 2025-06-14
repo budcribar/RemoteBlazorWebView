@@ -72,7 +72,7 @@ namespace PeakSWC.RemoteWebView
             if (request.EnableClientCache != null)
             {
                 filesOptions.UseClientCache = request.EnableClientCache.Value;
-                Console.WriteLine($"Server cache enabled = {request.EnableClientCache.Value}");
+                Console.WriteLine($"Client cache enabled = {request.EnableClientCache.Value}");
             }
             
             return Task.FromResult(new Empty());
