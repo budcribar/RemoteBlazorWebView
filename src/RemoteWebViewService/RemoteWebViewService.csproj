@@ -58,6 +58,15 @@
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'" />
+
+  <ItemGroup>
+    <Compile Remove="**\*.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
   
   <ItemGroup>
     <Compile Remove="GlobalSuppressions.cs" />
