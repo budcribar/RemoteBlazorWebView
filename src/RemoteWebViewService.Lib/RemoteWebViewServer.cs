@@ -9,7 +9,7 @@ using System.Net;
 using System.Threading;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Text; // Add this for WriteAsync extension
+using System.Text;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -67,42 +67,9 @@ namespace PeakSWC.RemoteWebView
     // Custom Startup to enforce maxNumClients
     public class StartupWithClientLimit : Startup
     {
-        private readonly int _maxNumClients;
         public StartupWithClientLimit(int maxNumClients) : base(new ConfigurationBuilder().Build())
         {
-            _maxNumClients = maxNumClients;
+            MaxClientsOptions = new MaxClientsOptions { MaxClients = maxNumClients };
         }
-
-        public new void ConfigureServices(IServiceCollection services)
-        {
-            base.ConfigureServices(services);
-            services.AddSingleton(new MaxClientsOptions { MaxClients = _maxNumClients });
-        }
-
-        public new void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-        {
-            // Middleware to enforce maxNumClients
-            var maxClientsOptions = app.ApplicationServices.GetService<MaxClientsOptions>();
-            var serviceDictionary = app.ApplicationServices.GetService(typeof(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>)) as ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>;
-            app.Use(async (context, next) =>
-            {
-                if (serviceDictionary != null && maxClientsOptions != null && serviceDictionary.Count >= maxClientsOptions.MaxClients)
-                {
-                    context.Response.StatusCode = 503;
-                    var message = "Server is at maximum client capacity.";
-                    var buffer = Encoding.UTF8.GetBytes(message);
-                    context.Response.ContentType = "text/plain";
-                    await context.Response.Body.WriteAsync(buffer, 0, buffer.Length);
-                    return;
-                }
-                await next();
-            });
-            base.Configure(app, env);
-        }
-    }
-
-    public class MaxClientsOptions
-    {
-        public int MaxClients { get; set; }
     }
 }

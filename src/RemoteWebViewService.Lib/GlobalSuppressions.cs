@@ -5,3 +5,4 @@
 
 using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Usage", "ASP0018:Unused route parameter", Justification = "<Pending>", Scope = "member", Target = "~M:PeakSWC.RemoteWebView.Startup.Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder,Microsoft.AspNetCore.Hosting.IWebHostEnvironment)")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:PeakSWC.RemoteWebView.Startup.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)")]

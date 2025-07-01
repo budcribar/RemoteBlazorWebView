@@ -4,6 +4,7 @@ using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.Pages;
 using System;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -27,6 +28,16 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
+                var maxClientsOptions = context.RequestServices.GetService<MaxClientsOptions>();
+                if (serviceDictionary != null && maxClientsOptions != null && serviceDictionary.Count > maxClientsOptions.MaxClients)
+                {
+                    context.Response.StatusCode = 503;
+                    var message = "Server is at maximum client capacity.";
+                    var buffer = Encoding.UTF8.GetBytes(message);
+                    context.Response.ContentType = "text/plain";
+                    await context.Response.Body.WriteAsync(buffer, 0, buffer.Length);
+                    return;
+                }            
 
                 try
                 {

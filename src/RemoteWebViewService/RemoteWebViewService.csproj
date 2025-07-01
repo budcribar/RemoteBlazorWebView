@@ -80,36 +80,12 @@
   </ItemGroup>
  
   <ItemGroup>
-    <!--<PackageReference Include="Azure.Identity" Version="1.14.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.71.0" />-->
-	  
-    <!--<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.6" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.6" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.6" NoWarn="NU1605" />-->
-	  
-    <!--<PackageReference Include="Microsoft.Graph.Beta" Version="5.86.0-preview" />
-    <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-   
-   
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.9.3" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.9.3" />-->
-  </ItemGroup>
-  <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">
 		  <PackagePath>
 		  </PackagePath>
 		  <Pack>True</Pack>
 	  </None>
-    <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico">
-      <PackagePath>
-      </PackagePath>
-      <Pack>True</Pack>
-    </EmbeddedResource>
-    <EmbeddedResource Include="GlobalSuppressions.cs" />
+   
     <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>

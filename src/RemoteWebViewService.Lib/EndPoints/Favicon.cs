@@ -10,7 +10,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
             return async context =>
             {
                 // Specify the resource name, typically it is namespace.filename
-                var resourceName = "PeakSWC.RemoteWebView.Resources.favicon.ico";
+                var resourceName = "PeakSWC.RemoteWebView.Lib.Resources.favicon.ico";
 
                 // Get the assembly where the resource is embedded
                 var assembly = Assembly.GetExecutingAssembly();

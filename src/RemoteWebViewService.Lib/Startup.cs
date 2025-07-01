@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -77,6 +76,8 @@ namespace PeakSWC.RemoteWebView
    
     public class Startup(IConfiguration configuration)
     {
+        public MaxClientsOptions MaxClientsOptions { get; set; } = new MaxClientsOptions { MaxClients = int.MaxValue };
+
         private async Task<bool> IsStaticFileRequest(HttpContext context, IFileProvider fileProvider)
         {
             var filePath = context.Request.Path.Value?.TrimStart('/');
@@ -205,6 +206,7 @@ namespace PeakSWC.RemoteWebView
             services.AddSingleton(ServiceDictionary);
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();
+            services.AddSingleton(MaxClientsOptions);
 
 #if STATS
             services.AddSingleton<ServerStats>();
@@ -326,5 +328,10 @@ namespace PeakSWC.RemoteWebView
         }
 
    
+    }
+
+    public class MaxClientsOptions
+    {
+        public int MaxClients { get; set; }
     }
 }
