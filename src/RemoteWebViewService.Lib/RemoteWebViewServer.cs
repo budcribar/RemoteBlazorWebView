@@ -9,7 +9,10 @@ using System.Net;
 using System.Threading;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Text;
+using System.Text; // Add this for WriteAsync extension
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -22,11 +25,11 @@ namespace PeakSWC.RemoteWebView
             CreateHostBuilder(args).Build().Run();
         }
 
-        public static void Run(int port, int maxNumClients = int.MaxValue)
+        public static void Run(int port, int maxNumClients = int.MaxValue, IEnumerable<string>? frameAncestors = null)
         {
             ThreadPool.SetMinThreads(workerThreads: 200, completionPortThreads: 200);
             Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
-            CreateHostBuilderWithLimits(port, maxNumClients).Build().Run();
+            CreateHostBuilderWithLimits(port, maxNumClients, frameAncestors).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
@@ -50,7 +53,7 @@ namespace PeakSWC.RemoteWebView
                 webBuilder.UseStartup<Startup>();
             });
 
-        public static IHostBuilder CreateHostBuilderWithLimits(int port, int maxNumClients) => Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
+        public static IHostBuilder CreateHostBuilderWithLimits(int port, int maxNumClients, IEnumerable<string>? frameAncestors) => Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
         {
             webBuilder.ConfigureKestrel(options =>
             {
@@ -60,16 +63,64 @@ namespace PeakSWC.RemoteWebView
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
             });
-            webBuilder.UseStartup(ctx => new StartupWithClientLimit(maxNumClients));
+            webBuilder.UseStartup(ctx => new StartupWithClientLimit(maxNumClients, frameAncestors));
         });
     }
 
     // Custom Startup to enforce maxNumClients
     public class StartupWithClientLimit : Startup
     {
-        public StartupWithClientLimit(int maxNumClients) : base(new ConfigurationBuilder().Build())
+        private readonly int _maxNumClients;
+        private readonly IEnumerable<string> _frameAncestors;
+        public StartupWithClientLimit(int maxNumClients, IEnumerable<string>? frameAncestors) : base(new ConfigurationBuilder().Build())
         {
-            MaxClientsOptions = new MaxClientsOptions { MaxClients = maxNumClients };
+            _maxNumClients = maxNumClients;
+            _frameAncestors = frameAncestors ?? Array.Empty<string>();
         }
+
+        public new void ConfigureServices(IServiceCollection services)
+        {
+            base.ConfigureServices(services);
+            services.AddSingleton(new MaxClientsOptions { MaxClients = _maxNumClients });
+        }
+
+        public new void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            // Middleware to enforce maxNumClients
+            var maxClientsOptions = app.ApplicationServices.GetService<MaxClientsOptions>();
+            var serviceDictionary = app.ApplicationServices.GetService(typeof(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>)) as ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>;
+            app.Use(async (context, next) =>
+            {
+                if (serviceDictionary != null && maxClientsOptions != null && serviceDictionary.Count >= maxClientsOptions.MaxClients)
+                {
+                    context.Response.StatusCode = 503;
+                    var message = "Server is at maximum client capacity.";
+                    var buffer = Encoding.UTF8.GetBytes(message);
+                    context.Response.ContentType = "text/plain";
+                    await context.Response.Body.WriteAsync(buffer, 0, buffer.Length);
+                    return;
+                }
+                await next();
+            });
+
+            app.Use(async (context, next) =>
+            {
+                await next();
+                if (_frameAncestors.Any() &&
+                    context.Response.ContentType != null &&
+                    context.Response.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+                {
+                    var policy = $"frame-ancestors {string.Join(' ', _frameAncestors)}";
+                    context.Response.Headers["Content-Security-Policy"] = policy;
+                }
+            });
+
+            base.Configure(app, env);
+        }
+    }
+
+    public class MaxClientsOptions
+    {
+        public int MaxClients { get; set; }
     }
 }
