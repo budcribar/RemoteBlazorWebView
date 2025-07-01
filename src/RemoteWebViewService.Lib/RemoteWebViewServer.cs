@@ -10,6 +10,9 @@ using System.Threading;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Text; // Add this for WriteAsync extension
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -22,11 +25,11 @@ namespace PeakSWC.RemoteWebView
             CreateHostBuilder(args).Build().Run();
         }
 
-        public static void Run(int port, int maxNumClients = int.MaxValue)
+        public static void Run(int port, int maxNumClients = int.MaxValue, IEnumerable<string>? frameAncestors = null)
         {
             ThreadPool.SetMinThreads(workerThreads: 200, completionPortThreads: 200);
             Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
-            CreateHostBuilderWithLimits(port, maxNumClients).Build().Run();
+            CreateHostBuilderWithLimits(port, maxNumClients, frameAncestors).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder =>
@@ -50,7 +53,7 @@ namespace PeakSWC.RemoteWebView
                 webBuilder.UseStartup<Startup>();
             });
 
-        public static IHostBuilder CreateHostBuilderWithLimits(int port, int maxNumClients) => Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
+        public static IHostBuilder CreateHostBuilderWithLimits(int port, int maxNumClients, IEnumerable<string>? frameAncestors) => Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
         {
             webBuilder.ConfigureKestrel(options =>
             {
@@ -60,7 +63,7 @@ namespace PeakSWC.RemoteWebView
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
             });
-            webBuilder.UseStartup(ctx => new StartupWithClientLimit(maxNumClients));
+            webBuilder.UseStartup(ctx => new StartupWithClientLimit(maxNumClients, frameAncestors));
         });
     }
 
@@ -68,9 +71,11 @@ namespace PeakSWC.RemoteWebView
     public class StartupWithClientLimit : Startup
     {
         private readonly int _maxNumClients;
-        public StartupWithClientLimit(int maxNumClients) : base(new ConfigurationBuilder().Build())
+        private readonly IEnumerable<string> _frameAncestors;
+        public StartupWithClientLimit(int maxNumClients, IEnumerable<string>? frameAncestors) : base(new ConfigurationBuilder().Build())
         {
             _maxNumClients = maxNumClients;
+            _frameAncestors = frameAncestors ?? Array.Empty<string>();
         }
 
         public new void ConfigureServices(IServiceCollection services)
@@ -97,6 +102,19 @@ namespace PeakSWC.RemoteWebView
                 }
                 await next();
             });
+
+            app.Use(async (context, next) =>
+            {
+                await next();
+                if (_frameAncestors.Any() &&
+                    context.Response.ContentType != null &&
+                    context.Response.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+                {
+                    var policy = $"frame-ancestors {string.Join(' ', _frameAncestors)}";
+                    context.Response.Headers["Content-Security-Policy"] = policy;
+                }
+            });
+
             base.Configure(app, env);
         }
     }
