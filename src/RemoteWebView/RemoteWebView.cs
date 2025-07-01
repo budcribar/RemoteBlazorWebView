@@ -170,7 +170,7 @@ namespace PeakSWC.RemoteWebView
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
-                logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", blazorWebView.Id, blazorWebView.ServerUri, blazorWebView.GrpcBaseUri, blazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, blazorWebView.Group, blazorWebView.EnableMirrors);
+                logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", blazorWebView.Id, blazorWebView.ServerUri, blazorWebView.GrpcBaseUri, blazorWebView.Markup?.Replace("\r\n", "").Replace(" ", "") ?? "", PingIntervalSeconds, blazorWebView.Group, blazorWebView.EnableMirrors);
                 var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors }, cancellationToken: cts.Token);
 
                 Exception? exception = ProcessBrowserMessages(blazorWebView, events).Result;
