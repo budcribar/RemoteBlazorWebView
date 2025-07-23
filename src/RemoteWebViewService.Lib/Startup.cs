@@ -299,13 +299,18 @@ namespace PeakSWC.RemoteWebView
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
-                endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
-                endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                if (app.ApplicationServices.GetService<MaxClientsOptions>()?.MaxClients > 1)
+                {
+                    endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
+                    endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                }
+             
+                endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).ConditionallyRequireAuthorization();
+                endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();     
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
 
                 endpoints.MapGet("/favicon.ico", Endpoints.Favicon()).AllowAnonymous();
-                endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).ConditionallyRequireAuthorization();
+               
                 endpoints.MapGet("/app/{id:guid}", Endpoints.Start()).ConditionallyRequireAuthorization();
 
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
@@ -316,6 +321,7 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/grpcbaseuri", Endpoints.GrpcBaseUri()).ConditionallyRequireAuthorization();           
                 endpoints.MapGet("/wait/{id:guid}", Endpoints.Wait()).ConditionallyRequireAuthorization();
+                endpoints.MapPost("/setmarkup/{id:guid}", Endpoints.SetMarkup()).ConditionallyRequireAuthorization();
 #if STATS
                 endpoints.MapGet("/stats", Endpoints.Stats()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).ConditionallyRequireAuthorization();

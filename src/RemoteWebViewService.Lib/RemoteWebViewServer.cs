@@ -1,18 +1,19 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using System.IO;
-using System.Net;
-using System.Threading;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-using System.Text; // Add this for WriteAsync extension
-using System.Collections.Generic;
-using System.Linq;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text; // Add this for WriteAsync extension
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -27,6 +28,14 @@ namespace PeakSWC.RemoteWebView
 
         public static void Run(int port, int maxNumClients = int.MaxValue, IEnumerable<string>? frameAncestors = null)
         {
+            foreach (var origin in frameAncestors ?? [])
+            {
+                if (origin != "'self'" && !Uri.IsWellFormedUriString(origin, UriKind.Absolute))
+                {
+                    throw new InvalidOperationException($"Invalid origin: {origin}");
+                }
+            }
+
             ThreadPool.SetMinThreads(workerThreads: 200, completionPortThreads: 200);
             Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
             CreateHostBuilderWithLimits(port, maxNumClients, frameAncestors).Build().Run();
@@ -36,7 +45,7 @@ namespace PeakSWC.RemoteWebView
             {
                 webBuilder.ConfigureKestrel(options =>
                 {
-                    options.Listen(IPAddress.Loopback, 5001, listenOptions =>
+                    options.Listen(IPAddress.Loopback, 5002, listenOptions =>
                     {
                         listenOptions.UseHttps();
                         listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
@@ -103,9 +112,21 @@ namespace PeakSWC.RemoteWebView
                 await next();
             });
 
+            if(_frameAncestors?.Count() > 0)    
             app.Use(async (context, next) =>
             {
+                // Check Origin header for iframe embedding
+                var origin = context.Request.Headers["Origin"].ToString();
+                if (!string.IsNullOrEmpty(origin) && !_frameAncestors.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = 403;
+                    await context.Response.WriteAsync("Forbidden: Origin not allowed");
+                    return;
+                }
+
                 await next();
+
+                // Only attach CSP header to HTML responses
                 if (_frameAncestors.Any() &&
                     context.Response.ContentType != null &&
                     context.Response.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
@@ -115,12 +136,8 @@ namespace PeakSWC.RemoteWebView
                 }
             });
 
+
             base.Configure(app, env);
         }
-    }
-
-    public class MaxClientsOptions
-    {
-        public int MaxClients { get; set; }
     }
 }

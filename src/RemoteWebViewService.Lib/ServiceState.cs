@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteWebView
         public ILogger<RemoteWebViewService> Logger;
         public CancellationToken Token { get; }
         public string HtmlHostPath { get; init; } = string.Empty;
-        public string Markup { get; init; } = string.Empty;
+        public string Markup { get; set; } = string.Empty;
         public string Url { get; init; } = string.Empty;
         public bool InUse { get; set; } = false;
         public bool Refresh { get; set; } = false;
