@@ -535,8 +535,7 @@ namespace ClientBenchmark
         }
 
 #if DEBUG
-        public static  void Main(string[] _) {
-        //public static async Task Main(string[] args) { 
+        public static  void Main(string[] args) {
             BenchmarkSwitcher.FromAssembly(typeof(ClientBenchmarks).Assembly).Run(args, new DebugInProcessConfig());
         }
 #else

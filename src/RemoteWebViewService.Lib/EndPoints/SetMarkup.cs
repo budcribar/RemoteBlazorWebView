@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
@@ -45,6 +46,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                 // Retrieve service dictionary and check if the service state exists
                 var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+                var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
                 
                 if (!serviceDictionary.TryGetValue(guid.ToString(), out var serviceStateTaskSource))
                 {
@@ -57,8 +59,15 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 {
                     // Wait for the service state to be available
                     var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-
+                    
+                    // Update the markup property
                     serviceState.Markup = markup;
+
+                    // Notify all channels about the markup change to regenerate ClientResponseList
+                    foreach (var channel in serviceStateChannel.Values)
+                    {
+                        await channel.Writer.WriteAsync($"MarkupChanged:{guid}").ConfigureAwait(false);
+                    }
 
                     context.Response.StatusCode = StatusCodes.Status200OK;
                     context.Response.ContentType = "text/plain";
