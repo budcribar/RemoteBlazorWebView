@@ -468,7 +468,7 @@ namespace PeakSWC.RemoteWebView
             string div = $@"
                 {style}
                 <div class='card{id}'>
-                    <h3><a href = '{url}' > {hostname} </a></h3>
+                    <h3><a href = '{url}' target='_blank' > {hostname} </a></h3>
                 </div>
                 ";
 

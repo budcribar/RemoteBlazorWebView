@@ -45,14 +45,14 @@ namespace PeakSWC.RemoteWebView
             {
                 webBuilder.ConfigureKestrel(options =>
                 {
-                    options.Listen(IPAddress.Loopback, 5002, listenOptions =>
+                    options.Listen(IPAddress.Loopback, 5001, listenOptions =>
                     {
                         listenOptions.UseHttps();
                         listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                     });
                     string certPath = "C:\\Certificates\\DevCertificate_192.168.1.35.pfx";
                     if (File.Exists(certPath))
-                        options.Listen(IPAddress.Parse("192.168.1.35"), 5002, listenOptions =>
+                        options.Listen(IPAddress.Parse("192.168.1.35"), 5001, listenOptions =>
                         {
                             listenOptions.UseHttps(certPath, "YourStrongPassword");
                             listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
