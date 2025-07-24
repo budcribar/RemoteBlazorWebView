@@ -56,8 +56,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="9.0.6" />
-	  <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.80" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="9.0.7" />
+	  <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.90" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
