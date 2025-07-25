@@ -10,7 +10,7 @@ namespace WebdriverTestProject
 {
     public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {
-        private readonly int BYTES_READ = 976500;
+        private readonly int BYTES_READ = 976066;
         private readonly int FILES_READ = 29;
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      

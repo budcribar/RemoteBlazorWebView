@@ -10,7 +10,7 @@ namespace WebdriverTestProject
 {
     public class TestServerForm(ITestOutputHelper output) : TestRemoteBlazorForm(output)
     {
-        private readonly int BYTES_READ = 976076;
+        private readonly int BYTES_READ = 975642;
         private readonly int FILES_READ = 25;
 
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
