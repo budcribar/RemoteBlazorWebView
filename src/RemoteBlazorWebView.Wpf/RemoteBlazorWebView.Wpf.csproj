@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on maui 9.0.71</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 9.0.120</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
+		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
 	</ItemGroup>
 
 	<ItemGroup>
