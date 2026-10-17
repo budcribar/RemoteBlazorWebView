@@ -1,12 +1,12 @@
-import { DotNet } from '../web.js/node_modules/@microsoft/dotnet-js-interop';
-import { Blazor } from '../web.js/src/GlobalExports';
-import { shouldAutoStart } from '../web.js/src/BootCommon';
-import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
-import { sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../web.js/src/Platform/WebView/WebViewIpcSender';
-import { fetchAndInvokeInitializers } from '../web.js/src/JSInitializers/JSInitializers.WebView';
+import { DotNet } from '../Web.JS/node_modules/@microsoft/dotnet-js-interop';
+import { Blazor } from '../Web.JS/src/GlobalExports';
+import { shouldAutoStart } from '../Web.JS/src/BootCommon';
+import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
+import { sendBeginInvokeDotNetFromJS, sendEndInvokeJSFromDotNet, sendByteArray, sendLocationChanged, sendLocationChanging } from '../Web.JS/src/Platform/WebView/WebViewIpcSender';
+import { fetchAndInvokeInitializers } from '../Web.JS/src/JSInitializers/JSInitializers.WebView';
 import { initializeRemoteWebView } from './RemoteWebView';
-import { receiveDotNetDataStream } from '../web.js/src/StreamingInterop';
-import { WebRendererId } from '../web.js/src/Rendering/WebRendererId';
+import { receiveDotNetDataStream } from '../Web.JS/src/StreamingInterop';
+import { WebRendererId } from '../Web.JS/src/Rendering/WebRendererId';
 
 
 let started = false;

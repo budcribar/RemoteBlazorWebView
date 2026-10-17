@@ -113,13 +113,17 @@ namespace EditWebView
                 "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
             Replace("public WebView2Control WebView => _webview!;",
                 "public WebView2Control WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
+            // .NET 11 WPF exposes the inner control as IWebView2 (WebView2 or WebView2CompositionControl).
+            Replace("public IWebView2 WebView => _webview!;",
+                "public IWebView2 WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
 
             Replace("new WebView2WebViewManager", "CreateWebViewManager");
+            var webViewParameterType = _fileName == "BlazorWebViewBase.cs" ? "IWebView2" : "WebView2Control";
             Replace("private void StartWebViewCoreIfPossible()",
-                @"public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
-		{
+                $@"public virtual WebView2WebViewManager CreateWebViewManager({webViewParameterType} webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
+		{{
 			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized,logger);
-		}
+		}}
 		protected void StartWebViewCoreIfPossible()");
 
             Replace("BlazorWebView", Path.GetFileNameWithoutExtension(_fileName));

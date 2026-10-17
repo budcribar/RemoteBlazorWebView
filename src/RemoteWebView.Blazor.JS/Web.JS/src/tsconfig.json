@@ -5,9 +5,11 @@
     "noEmitOnError": true,
     "removeComments": false,
     "sourceMap": true,
-    "target": "es2019",
+    "target": "es2021",
     "module": "es2020",
-    "lib": ["es2019", "dom"],
-    "strict": true
+    "lib": ["es2021", "dom"],
+    "strict": true,
+    "useDefineForClassFields": false,
+    "skipLibCheck": true
   }
 }

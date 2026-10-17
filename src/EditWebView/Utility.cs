@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,6 +16,10 @@ namespace EditWebView
         private const string AspNetCoreRepo = "dotnet/aspnetcore";
         private const string MauiRepo = "dotnet/maui";
 
+        private static readonly Regex ReleaseTagRegex = new(
+            @"^v?(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-(?<channel>rc|preview)\.(?<n>\d+))?(?:\.(?<build>\d+(?:\.\d+)*))?$",
+            RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
         public static async Task<string> GetLatestFrameworkVersionAsync(string framework, int majorVersion)
         {
             if (framework != AspNetCoreRepo && framework != MauiRepo)
@@ -22,135 +27,172 @@ namespace EditWebView
                 throw new ArgumentException($"Unsupported framework: {framework}. Use '{AspNetCoreRepo}' or '{MauiRepo}'.");
             }
 
-            string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
+            var tags = await ListRemoteTagsAsync(framework);
+            string latest = framework == MauiRepo
+                ? SelectLatestMauiTag(tags, majorVersion)
+                : SelectLatestAspNetTag(tags, majorVersion);
+            return $"https://github.com/{framework}/archive/refs/tags/{latest}.zip";
+        }
 
-            string githubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? string.Empty;
-
-            if (string.IsNullOrEmpty(githubToken))
-            {
-                Console.Error.WriteLine("Error: GITHUB_PAT environment variable is not set.");
-                Environment.Exit(1);
-            }
-
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", githubToken);
-
-            List<(string Name, DateTime Timestamp)> allTags = [];
-            string nextUrl = apiUrl;
-
-            while (!string.IsNullOrEmpty(nextUrl))
-            {
-                var response = await _httpClient.GetAsync(nextUrl);
-                response.EnsureSuccessStatusCode();
-                var content = await response.Content.ReadAsStringAsync();
-                var tags = JsonSerializer.Deserialize<JsonElement[]>(content);
-                if (tags != null)
-                {
-
-                    foreach (var tag in tags)
-                    {
-                        string name = tag.GetProperty("name").GetString() ?? string.Empty;
-                        string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString() ?? string.Empty;
-                        DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
-                        allTags.Add((name, timestamp));
-                    }
-                }
-
-                nextUrl = GetNextPageUrl(response);
-            }
-
-            var validTags = allTags
-                .Where(t => IsValidVersionTag(t.Name, majorVersion, framework))
-                .Where(t => !(framework == MauiRepo && t.Name.StartsWith("9.0.100-preview.1"))) // Skip 9.0.100-preview.1 for MAUI
-                .Select(t => (t.Name, t.Timestamp, VersionInfo: ParseVersion(t.Name, framework)))
-                .Where(t => t.VersionInfo.majorVersion == majorVersion)
-                .OrderByDescending(t => t.VersionInfo.version.Major)
-                .ThenByDescending(t => t.Timestamp)
-                .ThenByDescending(t => t.VersionInfo.version.Minor)
-                .ThenByDescending(t => t.VersionInfo.version.Build)
-                .ThenByDescending(t => t.VersionInfo.previewVersion)
-                .ThenByDescending(t => t.VersionInfo.version.Revision)
+        public static string SelectLatestMauiTag(IEnumerable<string> tags, int majorVersion)
+        {
+            var parsed = tags
+                .Select(ParseReleaseTag)
+                .Where(tag => tag != null && tag.Major == majorVersion)
+                .Select(tag => tag!)
+                .Where(tag => !(majorVersion == 9 && tag.Name.StartsWith("9.0.100-preview.1", StringComparison.Ordinal)))
                 .ToList();
 
-            if (validTags.Count == 0)
+            if (parsed.Count == 0)
+                throw new Exception($"No valid version {majorVersion} release found for {MauiRepo}.");
+
+            // .NET 11 MAUI moved prereleases to 11.0.100-rc/preview. Older majors use 9.0.0 / 10.0.0.
+            // Servicing GA tags use the patch number (10.0.110, 10.0.80, 9.0.120).
+            bool hasHundredBand = parsed.Any(tag => tag.Patch >= 100);
+            var candidates = hasHundredBand
+                ? parsed.Where(tag => tag.Patch >= 100)
+                : parsed.Where(tag => tag.Patch < 100);
+
+            return candidates.OrderByDescending(tag => tag, ReleaseTagComparer.Instance).First().Name;
+        }
+
+        public static string SelectLatestAspNetTag(IEnumerable<string> tags, int majorVersion)
+        {
+            var parsed = tags
+                .Where(name => name.StartsWith($"v{majorVersion}.", StringComparison.Ordinal))
+                .Select(ParseReleaseTag)
+                .Where(tag => tag != null && tag.Major == majorVersion)
+                .Select(tag => tag!)
+                .ToList();
+
+            if (parsed.Count == 0)
+                throw new Exception($"No valid version {majorVersion} release found for {AspNetCoreRepo}.");
+
+            return parsed.OrderByDescending(tag => tag, ReleaseTagComparer.Instance).First().Name;
+        }
+
+        private static async Task<IReadOnlyList<string>> ListRemoteTagsAsync(string framework)
+        {
+            var startInfo = new ProcessStartInfo
             {
-                throw new Exception($"No valid version {majorVersion} release found for {framework}.");
+                FileName = "git",
+                Arguments = $"ls-remote --tags https://github.com/{framework}.git",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+
+            using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start git ls-remote.");
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0)
+                throw new InvalidOperationException($"git ls-remote failed for {framework}: {error}");
+
+            var tags = new List<string>();
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var parts = line.Split('\t', 2);
+                if (parts.Length != 2 || !parts[1].StartsWith("refs/tags/", StringComparison.Ordinal))
+                    continue;
+                var name = parts[1]["refs/tags/".Length..];
+                if (name.EndsWith("^{}", StringComparison.Ordinal))
+                    continue;
+                tags.Add(name);
             }
 
-            var latestVersion = validTags.First().Name;
-            return $"https://github.com/{framework}/archive/refs/tags/{latestVersion}.zip";
+            return tags;
         }
 
-        private static async Task<DateTime> GetCommitTimestamp(string framework, string commitSha)
+        private static ReleaseTag? ParseReleaseTag(string name)
         {
-            string commitUrl = $"https://api.github.com/repos/{framework}/commits/{commitSha}";
-            var response = await _httpClient.GetAsync(commitUrl);
-            response.EnsureSuccessStatusCode();
-            var content = await response.Content.ReadAsStringAsync();
-            var commitData = JsonSerializer.Deserialize<JsonElement>(content);
-            string dateString = commitData.GetProperty("commit").GetProperty("committer").GetProperty("date").GetString() ?? string.Empty;
-            return DateTime.Parse(dateString);
-        }
+            var match = ReleaseTagRegex.Match(name);
+            if (!match.Success)
+                return null;
 
-        private static string GetNextPageUrl(HttpResponseMessage response)
-        {
-            var linkHeader = response.Headers.Contains("Link") ? response.Headers.GetValues("Link").FirstOrDefault() : null;
-            if (string.IsNullOrEmpty(linkHeader)) return string.Empty;
-
-            var links = linkHeader.Split(',');
-            foreach (var link in links)
+            var channel = match.Groups["channel"].Success ? match.Groups["channel"].Value : "ga";
+            int rank = channel switch
             {
-                var segments = link.Split(';');
-                if (segments.Length == 2 && segments[1].Trim().Equals("rel=\"next\"", StringComparison.OrdinalIgnoreCase))
+                "ga" => 2,
+                "rc" => 1,
+                _ => 0,
+            };
+            int prerelease = match.Groups["n"].Success ? int.Parse(match.Groups["n"].Value) : 0;
+            var build = match.Groups["build"].Success
+                ? match.Groups["build"].Value.Split('.').Select(int.Parse).ToArray()
+                : Array.Empty<int>();
+
+            return new ReleaseTag(
+                name,
+                int.Parse(match.Groups["major"].Value),
+                int.Parse(match.Groups["minor"].Value),
+                int.Parse(match.Groups["patch"].Value),
+                rank,
+                prerelease,
+                build);
+        }
+
+        private sealed record ReleaseTag(string Name, int Major, int Minor, int Patch, int ChannelRank, int Prerelease, int[] Build);
+
+        private sealed class ReleaseTagComparer : IComparer<ReleaseTag>
+        {
+            public static readonly ReleaseTagComparer Instance = new();
+
+            public int Compare(ReleaseTag? x, ReleaseTag? y)
+            {
+                if (x == null || y == null)
+                    return 0;
+
+                int channel = x.ChannelRank.CompareTo(y.ChannelRank);
+                if (channel != 0)
+                    return channel;
+                int prerelease = x.Prerelease.CompareTo(y.Prerelease);
+                if (prerelease != 0)
+                    return prerelease;
+                int build = CompareParts(x.Build, y.Build);
+                if (build != 0)
+                    return build;
+                int minor = x.Minor.CompareTo(y.Minor);
+                if (minor != 0)
+                    return minor;
+                return x.Patch.CompareTo(y.Patch);
+            }
+
+            private static int CompareParts(int[] left, int[] right)
+            {
+                int length = Math.Max(left.Length, right.Length);
+                for (int i = 0; i < length; i++)
                 {
-                    return segments[0].Trim(' ', '<', '>');
+                    int l = i < left.Length ? left[i] : 0;
+                    int r = i < right.Length ? right[i] : 0;
+                    if (l != r)
+                        return l.CompareTo(r);
                 }
+                return 0;
             }
-            return string.Empty;
-        }
-
-        private static bool IsValidVersionTag(string name, int majorVersion, string framework)
-        {
-            if (framework == AspNetCoreRepo)
-            {
-                return name.StartsWith($"v{majorVersion}.");
-            }
-            else // MauiRepo
-            {
-                return name.StartsWith($"{majorVersion}.");
-            }
-        }
-
-        private static (System.Version version, int majorVersion, int previewVersion) ParseVersion(string name, string framework)
-        {
-            string pattern;
-            if (framework == AspNetCoreRepo)
-            {
-                pattern = @"v(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
-            }
-            else // MauiRepo
-            {
-                pattern = @"(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
-            }
-
-            var match = Regex.Match(name, pattern);
-            if (match.Success)
-            {
-                int major = int.Parse(match.Groups[1].Value);
-                int minor = int.Parse(match.Groups[2].Value);
-                int patch = int.Parse(match.Groups[3].Value);
-                int previewVersion = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 0;
-                int buildNumber = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
-
-                return (new System.Version(major, minor, patch, buildNumber), major, previewVersion);
-            }
-
-            return (new System.Version(0, 0, 0), 0, 0);
         }
         static Utility()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             _windows1252Encoding = Encoding.GetEncoding(1252);
+        }
+
+        public static async Task<bool> ArchiveExistsAsync(string url)
+        {
+            if (_httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+                _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FrameworkVersionFinder");
+
+            using var head = new HttpRequestMessage(HttpMethod.Head, url);
+            using var headResponse = await _httpClient.SendAsync(head, HttpCompletionOption.ResponseHeadersRead);
+            if (headResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return false;
+            if (headResponse.IsSuccessStatusCode)
+                return true;
+
+            using var get = new HttpRequestMessage(HttpMethod.Get, url);
+            get.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 0);
+            using var getResponse = await _httpClient.SendAsync(get, HttpCompletionOption.ResponseHeadersRead);
+            return getResponse.IsSuccessStatusCode || getResponse.StatusCode == System.Net.HttpStatusCode.PartialContent;
         }
 
         public static async Task DownloadZipFileAsync(string url, string destinationPath)

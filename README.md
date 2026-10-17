@@ -28,5 +28,9 @@ dotnet run --project src/RemoteWebViewService
 
 # Samples
 
-Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial 
+Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial
+
+# Build notes
+
+StressServer embeds the tutorial's Windows publish output, `RemoteBlazorWebViewTutorial.WpfApp/bin/publishEmbedded/RemoteBlazorWebViewTutorial.WpfApp.exe`. That exe comes from a Windows publish, so StressServer cannot build on Linux. 
 

@@ -21,6 +21,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- Windows publish output from the tutorial. This file is not produced on Linux, so StressServer cannot build there. -->
 		<EmbeddedResource Include="..\..\..\..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe" Link="RemoteBlazorWebViewTutorial.WpfApp.exe" />
 	</ItemGroup>
 

@@ -213,7 +213,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 				(args) => BlazorWebViewInitialized?.Invoke(this, args),
 				logger);
 
-			StaticContentHotReloadManager.AttachToWebViewManagerIfEnabled(_webviewManager);
+			_ = StaticContentHotReloadManager.TryAttachToWebViewManager(_webviewManager);
 
 			foreach (var rootComponent in RootComponents)
 			{

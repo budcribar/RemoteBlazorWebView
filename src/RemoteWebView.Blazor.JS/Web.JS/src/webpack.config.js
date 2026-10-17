@@ -73,7 +73,6 @@ module.exports = (env, args) => ({
         }),
     ]),
     stats: {
-        //all: true,
         warnings: true,
         errors: true,
         performance: true,

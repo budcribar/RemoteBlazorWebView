@@ -2,9 +2,9 @@ import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest } from "./generated/webview_pb";
-import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
-import { showErrorNotification } from '../web.js/src/BootErrors';
-import { sendAttachPage } from '../web.js/src/Platform/WebView/WebViewIpcSender';
+import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
+import { showErrorNotification } from '../Web.JS/src/BootErrors';
+import { sendAttachPage } from '../Web.JS/src/Platform/WebView/WebViewIpcSender';
 
 interface RemoteBlazor {
     sequenceNum: number;

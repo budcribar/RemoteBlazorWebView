@@ -5,9 +5,9 @@ exports.initializeRemoteWebView = initializeRemoteWebView;
 var IPC_1 = require("./IPC");
 var WebviewServiceClientPb_1 = require("./generated/WebviewServiceClientPb");
 var webview_pb_1 = require("./generated/webview_pb");
-var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
-var BootErrors_1 = require("../web.js/src/BootErrors");
-var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
+var NavigationManager_1 = require("../Web.JS/src/Services/NavigationManager");
+var BootErrors_1 = require("../Web.JS/src/BootErrors");
+var WebViewIpcSender_1 = require("../Web.JS/src/Platform/WebView/WebViewIpcSender");
 if (!window.RemoteBlazor) {
     window.RemoteBlazor = {};
 }
