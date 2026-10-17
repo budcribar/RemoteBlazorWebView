@@ -117,9 +117,12 @@ namespace FileSyncServer.Tests
             Stopwatch sw = new();
             sw.Start();
 
+            var project = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, @"RemoteBlazorWebView\src\RemoteWebViewService\RemoteWebViewService.csproj"));
+
             Process process = new();
-            process.StartInfo.FileName = "RemoteWebViewService";
-            process.StartInfo.UseShellExecute = true;
+            process.StartInfo.FileName = "dotnet";
+            process.StartInfo.Arguments = $"run --project \"{project}\"";
+            process.StartInfo.UseShellExecute = false;
 
             process.Start();
             Console.WriteLine($"Started server in {sw.Elapsed}");

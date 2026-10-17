@@ -20,10 +20,10 @@ As a seamless replacement for the Microsoft.AspNetCore.Components.WebView.Window
 
 # Usage instructions
 
-You do not need to build this repo unless you want to customize the RemoteWebViewService. Run the following command to install the RemoteWebViewService
+Run RemoteWebViewService from this repo:
 
 ```console
-dotnet tool update -g PeakSWC.RemoteWebViewService --version 11.*-* 
+dotnet run --project src/RemoteWebViewService
 ```
 
 # Samples

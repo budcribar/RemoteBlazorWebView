@@ -161,24 +161,6 @@ if ($Rust -eq $true)
 	dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
 	dotnet build -c Release .\src\RemoteWebViewService
-	dotnet tool uninstall PeakSWC.RemoteWebViewService -g
-
-	if ($env:EnvBuildMode -eq 'Debug') {
-		# remove the cached version!!
-		$file = Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' 
-		if (Test-Path $file) {
-			Remove-Item $file
-		}
-
-		$file = Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' 
-		if (Test-Path $file) {
-			Remove-Item $file -Recurse
-		}
-		dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 11.*-* 
-	} else {
-		dotnet tool update -g  PeakSWC.RemoteWebViewService --version 11.*-* 
-	}
-
 }
 
 
