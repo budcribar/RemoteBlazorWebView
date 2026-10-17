@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net10.0-windows</TargetFramework>
+		<TargetFramework>net11.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -16,7 +16,7 @@
 		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.71.0" />
-		<PackageReference Include="System.Diagnostics.EventLog" Version="10.0.0-preview.5.25277.114" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-rc.2.26504.105" />
 		<ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj" />
 		<Protobuf Include="..\..\src\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 	</ItemGroup>

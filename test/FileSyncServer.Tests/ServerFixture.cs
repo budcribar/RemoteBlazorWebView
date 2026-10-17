@@ -21,7 +21,7 @@ public class ServerFixture : IDisposable
         var testOutputPath = Directory.GetCurrentDirectory();
 
 #if DEBUG_SERVER
-        var relative = @"../../../../../../src/RemoteWebViewService\bin\x64\Debug\net10.0";
+        var relative = @"../../../../../../src/RemoteWebViewService\bin\x64\Debug\net11.0";
       
 #else
         var relative = "../../../../../../src/RemoteWebViewService/bin/publishNoAuth";           

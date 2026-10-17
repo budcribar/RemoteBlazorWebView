@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Platforms>x64</Platforms>
@@ -11,21 +11,21 @@
 
 	<ItemGroup>
 		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0-preview.5.25277.114" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-preview.5.25277.114" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.5.25277.114" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0-rc.2.26504.105" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0-rc.2.26504.105" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-rc.2.26504.105" />
 		
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
 		<PackageReference Include="Grpc.Tools" Version="2.72.0">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="System.Management" Version="10.0.0-preview.5.25277.114" />
+		<PackageReference Include="System.Management" Version="11.0.0-rc.2.26504.105" />
 		
 	</ItemGroup>
 
 	<ItemGroup>
-		<Protobuf Include="Protos\filewatcher.proto" GrpcServices="Client" />
+		<Protobuf Include="protos/filewatcher.proto" GrpcServices="Client" />
 	</ItemGroup>
 
 	<ItemGroup>

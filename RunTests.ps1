@@ -174,9 +174,9 @@ if ($Rust -eq $true)
 		if (Test-Path $file) {
 			Remove-Item $file -Recurse
 		}
-		dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 8.*-* 
+		dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 11.*-* 
 	} else {
-		dotnet tool update -g  PeakSWC.RemoteWebViewService --version 8.*-* 
+		dotnet tool update -g  PeakSWC.RemoteWebViewService --version 11.*-* 
 	}
 
 }

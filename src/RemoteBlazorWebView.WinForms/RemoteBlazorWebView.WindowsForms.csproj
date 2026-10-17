@@ -4,7 +4,7 @@
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 	<DefineConstants>$(DefineConstants);WEBVIEW2_WINFORMS</DefineConstants>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net11.0-windows</TargetFramework>
     <Description>Build Remote Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>annotations</Nullable>
@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded,Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on maui 10.0.0 preview5 </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 11.0.0 rc2 </PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -50,9 +50,9 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.31.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-preview.5.25277.114" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.0-preview.5.25306.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.5.25277.114" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="11.0.0-rc.2.26504.105" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="11.0.0-rc.2.26505.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="11.0.0-rc.2.26504.105" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />

@@ -2,9 +2,9 @@ name: .NET
 
 on:
   push:
-    branches: [ net8 ]
+    branches: [ net11 ]
   pull_request:
-    branches: [ net8 ]
+    branches: [ net11 ]
 
 jobs:
   build:
@@ -12,14 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 11.0.x
+        dotnet-quality: preview
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore -p:EnableWindowsTargeting=true
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore -p:EnableWindowsTargeting=true
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal -p:EnableWindowsTargeting=true
