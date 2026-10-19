@@ -1,4 +1,4 @@
-﻿//using Microsoft.AspNetCore.Components;
+//using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 //using Microsoft.AspNetCore.Components.WebView.WebView2;
 using Microsoft.Extensions.FileProviders;
@@ -19,7 +19,7 @@ using Microsoft.AspNetCore.Components;
 #elif WEBVIEW2_WPF
 using Microsoft.Web.WebView2;
 using Microsoft.Web.WebView2.Core;
-using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2CompositionControl;
 using Microsoft.AspNetCore.Components;
 //using Microsoft.AspNetCore.Components.WebView;
 #endif 

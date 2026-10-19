@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -10,7 +10,7 @@ namespace FileSyncServer.Tests.Remote
 {
     public class TestServerForm(ITestOutputHelper output) : TestRemoteBlazorForm(output)
     {
-        private readonly int BYTES_READ = 976512;
+        private readonly int BYTES_READ = 980006;
         private readonly int FILES_READ = 25;
 
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }

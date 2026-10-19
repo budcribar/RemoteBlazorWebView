@@ -19,7 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2;
+using WebView2Control = Microsoft.Web.WebView2.Wpf.WebView2CompositionControl;
 
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
@@ -413,6 +413,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			{
 				return;
 			}
+
+			// Mark as disposing to prevent further message sending
+			_webviewManager?.MarkAsDisposing();
+
 			_isDisposed = true;
 
 			// Perform async cleanup.
