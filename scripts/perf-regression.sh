@@ -111,13 +111,16 @@ build_harness() {
   local tfm dll
   tfm=$(tfm_of "$root")
   dll="$root/src/Benchmarks/PerfRegression/bin/x64/Release/$tfm/PerfRegression.dll"
-  if ! dotnet build "$root/src/Benchmarks/PerfRegression/PerfRegression.csproj" \
+  # The host resolves global.json from the working directory. Building the
+  # net10 baseline from this net9 tree would keep the 9.0 SDK selected, and
+  # that SDK cannot target net10.0.
+  if ! ( cd "$root" && dotnet build "$root/src/Benchmarks/PerfRegression/PerfRegression.csproj" \
     -c Release \
     -p:Platform=x64 \
     -p:PerfTfm="$tfm" \
     -p:GeneratePackageOnBuild=false \
     -p:EnableWindowsTargeting=true \
-    --nologo >"$log" 2>&1; then
+    --nologo ) >"$log" 2>&1; then
     return 1
   fi
   if [[ ! -f $dll ]]; then
@@ -189,13 +192,17 @@ if [[ $current_status -ne 0 || $baseline_status -ne 0 ]]; then
   echo "Harness build failed (current=$current_status baseline=$baseline_status). See perf-results/build-*.log." | tee "$OUT/error.txt"
 fi
 
-if [[ $current_status -eq 0 && $baseline_status -eq 0 ]]; then
+if [[ $current_status -eq 0 || $baseline_status -eq 0 ]]; then
   for i in $(seq 1 "$REPEATS"); do
-    if ! dotnet "$baseline_dll" > "$OUT/baseline/$i.json" 2>>"$OUT/baseline/stderr.log"; then
-      echo "{\"error\":\"baseline $i failed\"}" > "$OUT/baseline/$i.json"
+    if [[ $baseline_status -eq 0 ]]; then
+      if ! dotnet "$baseline_dll" > "$OUT/baseline/$i.json" 2>>"$OUT/baseline/stderr.log"; then
+        echo "{\"error\":\"baseline $i failed\"}" > "$OUT/baseline/$i.json"
+      fi
     fi
-    if ! dotnet "$current_dll" > "$OUT/current/$i.json" 2>>"$OUT/current/stderr.log"; then
-      echo "{\"error\":\"current $i failed\"}" > "$OUT/current/$i.json"
+    if [[ $current_status -eq 0 ]]; then
+      if ! dotnet "$current_dll" > "$OUT/current/$i.json" 2>>"$OUT/current/stderr.log"; then
+        echo "{\"error\":\"current $i failed\"}" > "$OUT/current/$i.json"
+      fi
     fi
   done
 fi
