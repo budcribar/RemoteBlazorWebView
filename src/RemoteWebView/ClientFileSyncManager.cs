@@ -22,7 +22,9 @@ namespace PeakSWC.RemoteWebView
         private readonly IFileProvider _fileProvider;
         private readonly Action<Exception> _errorCallback;
        
-        public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, IFileProvider fileProvider, Action<Exception> onException, ILogger logger)
+        private readonly Func<BlazorWebViewStaticContentRequest, string?>? _staticContentCacheControlProvider;
+
+        public ClientFileSyncManager(WebViewIPC.WebViewIPCClient client, Guid clientId, string htmlHostPath, IFileProvider fileProvider, Action<Exception> onException, ILogger logger, Func<BlazorWebViewStaticContentRequest, string?>? staticContentCacheControlProvider = null)
         {
             _client = client;
             _logger = logger;
@@ -30,6 +32,7 @@ namespace PeakSWC.RemoteWebView
             _htmlHostPath = htmlHostPath;
             _fileProvider = fileProvider;
             _errorCallback = onException;
+            _staticContentCacheControlProvider = staticContentCacheControlProvider;
 
             // Initiate the duplex streaming call
             _call = _client.RequestClientFileRead();
@@ -96,7 +99,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             // Retrieve file metadata
-            FileMetadata metadata = GetFileMetadata(subPath);
+            FileMetadata metadata = GetFileMetadata(subPath, request.RequestUri, request.ContentType);
             
             // Create and send the metadata response
             var response = new ClientFileReadResponse
@@ -223,7 +226,7 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
-        private FileMetadata GetFileMetadata(string localFilePath)
+        private FileMetadata GetFileMetadata(string localFilePath, string requestUri, string contentType)
         {
             try
             {
@@ -240,13 +243,15 @@ namespace PeakSWC.RemoteWebView
                     };
                 }
                 var etag = ETagGenerator.GenerateETag(fileInfo);
-                return new FileMetadata
+                var metadata = new FileMetadata
                 {
                     Length = fileInfo.Length,
                     LastModified = fileInfo.LastModified.ToUnixTimeSeconds(),
                     StatusCode = (int)HttpStatusCode.OK,
                     ETag = etag
                 };
+                ApplyStaticContentCacheControl(metadata, _staticContentCacheControlProvider, string.IsNullOrWhiteSpace(requestUri) ? "/" + localFilePath : requestUri, contentType, _logger);
+                return metadata;
             }
             catch (UnauthorizedAccessException)
             {
@@ -260,6 +265,18 @@ namespace PeakSWC.RemoteWebView
                     StatusCode = (int)HttpStatusCode.InternalServerError
                 };
             }
+        }
+
+        public static void ApplyStaticContentCacheControl(
+            FileMetadata metadata,
+            Func<BlazorWebViewStaticContentRequest, string?>? provider,
+            string requestUri,
+            string contentType,
+            ILogger? logger)
+        {
+            var cacheControl = StaticContentCacheControl.ResolveForMetadata(provider, requestUri, contentType, logger);
+            if (cacheControl is not null)
+                metadata.CacheControl = cacheControl;
         }
 
         /// <summary>

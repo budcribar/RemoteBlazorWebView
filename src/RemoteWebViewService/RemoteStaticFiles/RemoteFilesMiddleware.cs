@@ -21,8 +21,14 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         ServerFileSyncManager fileSyncManager
     )
     {
+        public const string MauiDefaultCacheControl = "no-cache, max-age=0, must-revalidate, no-store";
+        public const int MaxCacheControlLength = 1024;
+
         public async Task InvokeAsync(HttpContext context)
         {
+            // GET is the only method that serves a remote static file and applies Cache-Control.
+            // HEAD, POST, and every other method are passed through with no Cache-Control from this middleware.
+            // A Range header on GET is not interpreted: the response stays 200 with the full body.
             if (HttpMethods.IsGet(context.Request.Method))
             {
                 await HandleGetAsync(context).ConfigureAwait(false);
@@ -33,7 +39,6 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             }
             else
             {
-                // Pass to the next middleware for other HTTP methods
                 await next(context).ConfigureAwait(false);
             }
         }
@@ -145,7 +150,9 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath).ConfigureAwait(false);
+                var contentType = GetContentType(subPath);
+                var requestUri = "/" + subPath.TrimStart('/') + context.Request.QueryString.Value;
+                clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath, requestUri, contentType).ConfigureAwait(false);
                 FileStats.Update(serviceState, clientId.ToString(), clientMetadata);
                 ILogger<RemoteWebViewService> serviceLogger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
             }
@@ -186,7 +193,10 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 logger.LogDebug("File '{SubPath}' not found in server cache or caching is disabled.", subPath);
             }
 
-            // Step 3: Handle Conditional GETs (ETag and If-None-Match)
+            // Step 3: Set response headers, then handle conditional GETs.
+            // Cache-Control is applied to 304 responses as well so the browser keeps the provider's policy.
+            SetResponseHeaders(context, clientMetadata, subPath, options.UseClientCache);
+
             if (options.UseClientCache && context.Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var ifNoneMatch))
             {
                 string eTag = clientMetadata.ETag;
@@ -197,9 +207,6 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     return;
                 }
             }
-
-            // Step 4: Set response headers
-            SetResponseHeaders(context, clientMetadata, subPath, options.UseClientCache);
 
             // Step 5: Serve the file
             if (needsUpdate)
@@ -309,6 +316,17 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             // Set the content type based on the file extension
             context.Response.ContentType = GetContentType(subPath);
 
+            var cacheControl = NormalizeCacheControl(clientMetadata.CacheControl);
+            if (cacheControl is not null)
+            {
+                context.Response.Headers[HeaderNames.CacheControl] = cacheControl;
+            }
+            else if (useClientCache)
+            {
+                // Existing remote opt-in, used only when the desktop client did not run a provider.
+                context.Response.Headers[HeaderNames.CacheControl] = "public,max-age=3600";
+            }
+
             // Set ETag and Last-Modified headers if client caching is enabled
             if (useClientCache)
             {
@@ -317,10 +335,20 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
                 // Ensure Last-Modified is set
                 context.Response.Headers[HeaderNames.LastModified] = DateTimeOffset.FromUnixTimeSeconds(clientMetadata.LastModified).ToString("r");
-
-                // Set Cache-Control as needed
-                context.Response.Headers[HeaderNames.CacheControl] = "public,max-age=3600";
             }
+        }
+
+        /// <summary>
+        /// Empty means the desktop client did not run a provider. Whitespace, CR/LF, and values longer than
+        /// <see cref="MaxCacheControlLength"/> are rejected and become <see cref="MauiDefaultCacheControl"/>.
+        /// </summary>
+        public static string? NormalizeCacheControl(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return null;
+            if (string.IsNullOrWhiteSpace(value) || value.Contains('\r') || value.Contains('\n') || value.Length > MaxCacheControlLength)
+                return MauiDefaultCacheControl;
+            return value;
         }
 
         private async Task HandlePostAsync(HttpContext context)

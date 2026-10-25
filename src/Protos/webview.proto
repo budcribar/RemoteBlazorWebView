@@ -85,7 +85,12 @@ message ServerFileReadRequest {
   string request_id = 2;
   string path = 3;
  
-  RequestType request_type = 4; 
+  RequestType request_type = 4;
+  // App-relative path plus query (for example /images/catalog/a.png?v=2).
+  // The desktop client turns this into the absolute URI passed to StaticContentCacheControlProvider.
+  string request_uri = 5;
+  // Content type the service will put on the HTTP response.
+  string content_type = 6;
 
   enum RequestType {
     MetaData = 0;
@@ -114,6 +119,9 @@ message FileMetadata {
   int64 lastModified = 2;
   int32 status_code = 3;
   string e_tag = 4;
+  // Cache-Control value chosen by StaticContentCacheControlProvider.
+  // Empty means the desktop client did not run a provider (older clients, or the property was not set).
+  string cache_control = 5;
 }
 
 message FileData {

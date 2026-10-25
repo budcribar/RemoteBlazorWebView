@@ -203,7 +203,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// <summary>
         /// Requests metadata for a specific file from a specific client.
         /// </summary>
-        public Task<FileMetadata> RequestFileMetadataAsync(string clientGuid, string filePath, ILogger<RemoteFileResolver> logger)
+        public Task<FileMetadata> RequestFileMetadataAsync(string clientGuid, string filePath, ILogger<RemoteFileResolver> logger, string? requestUri = null, string? contentType = null)
         {
             var requestId = Guid.NewGuid().ToString();
             var tcs = new TaskCompletionSource<FileMetadata>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -241,7 +241,9 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                             ClientId = clientGuid,
                             RequestId = requestId,
                             Path = filePath,
-                            RequestType = ServerFileReadRequest.Types.RequestType.MetaData
+                            RequestType = ServerFileReadRequest.Types.RequestType.MetaData,
+                            RequestUri = requestUri ?? string.Empty,
+                            ContentType = contentType ?? string.Empty
                         };
                         await responseStream.WriteAsync(request).ConfigureAwait(false);
                         _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);

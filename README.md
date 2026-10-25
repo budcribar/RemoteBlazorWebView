@@ -32,5 +32,26 @@ Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutori
 
 # Build notes
 
-StressServer embeds the tutorial's Windows publish output, `RemoteBlazorWebViewTutorial.WpfApp/bin/publishEmbedded/RemoteBlazorWebViewTutorial.WpfApp.exe`. That exe comes from a Windows publish, so StressServer cannot build on Linux. 
+StressServer embeds the tutorial's Windows publish output, `RemoteBlazorWebViewTutorial.WpfApp/bin/publishEmbedded/RemoteBlazorWebViewTutorial.WpfApp.exe`. That exe comes from a Windows publish, so StressServer cannot build on Linux.
+
+# Static content caching
+
+WPF, WinForms, and Photino `BlazorWebView` windows expose `StaticContentCacheControlProvider`. It is the remote counterpart of the .NET MAUI 11 opt-in (`BlazorWebView.StaticContentCacheControlProvider`, [dotnet/maui#35706](https://github.com/dotnet/maui/pull/35706)). Set it before the browser requests static files:
+
+```csharp
+blazorWebView.StaticContentCacheControlProvider = request =>
+    request.Uri.AbsolutePath.StartsWith("/images/catalog/", StringComparison.Ordinal) &&
+    request.ContentType.StartsWith("image/", StringComparison.Ordinal)
+        ? "public, max-age=86400"
+        : null;
+```
+
+The callback receives an absolute URI on the app host (`https://0.0.0.1/...`, or `https://0.0.0.0/...` when the `BlazorWebView.AppHostAddressAlways0000` switch is on) and the content type the service will send. The query string is included, so `image.png?v=2` is visible on `request.Uri`.
+
+- Property not set: remote responses keep the previous headers. There is no `Cache-Control` unless client caching is enabled, in which case the response is `public,max-age=3600` plus `ETag` and `Last-Modified`.
+- Returns null, empty, or whitespace: `no-cache, max-age=0, must-revalidate, no-store`.
+- Throws, returns a CR or LF, or returns more than 1024 characters: the same no-store default. MAUI does not cap the string; the cap is only on this remote path, because the value is copied into the HTTP response.
+- Any other return value becomes the response `Cache-Control`, including on a 304 when client caching is enabled. It replaces `public,max-age=3600`. `ETag` and `Last-Modified` are still sent only when client caching is enabled.
+
+Kestrel may reorder `Cache-Control` directives as it writes the response. Only GET serves the file. HEAD, POST, and other methods are not given this header. A `Range` header does not change the response: the server still returns 200 and the full body. This path does not implement MAUI's in-WebView response cache. 
 

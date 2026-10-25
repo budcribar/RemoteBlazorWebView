@@ -184,6 +184,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
                 Invalidate();
             }
         }
+
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; }
         private string _markup = "";
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";

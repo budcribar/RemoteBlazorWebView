@@ -21,6 +21,8 @@
 	<ItemGroup>
 	  <Compile Include="..\..\..\RemoteWebView\ClientFileSyncManager.cs" Link="ClientFileSyncManager.cs" />
 	  <Compile Include="..\..\..\RemoteWebView\EtagGenerator.cs" Link="EtagGenerator.cs" />
+	  <Compile Include="..\..\..\RemoteWebView\StaticContentCacheControl.cs" Link="StaticContentCacheControl.cs" />
+	  <Compile Include="..\..\..\SharedSource\HostAddressHelper.cs" Link="HostAddressHelper.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />

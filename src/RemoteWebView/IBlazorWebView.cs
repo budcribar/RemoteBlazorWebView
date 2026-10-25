@@ -27,6 +27,16 @@ namespace PeakSWC.RemoteWebView
         public uint PingIntervalSeconds { get; set; }
 
         public string Markup { get; set; }
+
+        /// <summary>
+        /// Same contract as MAUI <c>BlazorWebView.StaticContentCacheControlProvider</c>.
+        /// The callback receives the app-relative request URI and the content type the remote service will send.
+        /// A null provider leaves the existing remote cache headers unchanged. A provider that returns null,
+        /// empty, or whitespace selects <c>no-cache, max-age=0, must-revalidate, no-store</c>.
+        /// A value longer than 1024 characters, or one that contains a carriage return or line feed, also selects that default.
+        /// </summary>
+        Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; }
+
         public void Restart();
         
         public void NavigateToString(string htmlContent);
