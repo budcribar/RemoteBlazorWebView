@@ -141,7 +141,8 @@ public class RemoteStaticFileHeaderTests
         var psi = new ProcessStartInfo
         {
             FileName = "curl",
-            ArgumentList = { "-sD", "-", "-o", "/dev/null", $"{host.Url}/{host.ClientId}/images/catalog/a.png?v=2" },
+            // Windows curl cannot write the body to /dev/null (exit 23). NUL is the null device there.
+            ArgumentList = { "-sD", "-", "-o", OperatingSystem.IsWindows() ? "NUL" : "/dev/null", $"{host.Url}/{host.ClientId}/images/catalog/a.png?v=2" },
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
