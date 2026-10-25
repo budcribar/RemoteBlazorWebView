@@ -60,14 +60,23 @@ jobs:
 
       - name: Build remote.blazor.desktop.js
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           corepack enable
           corepack prepare yarn@4.3.1 --activate
           $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
           Push-Location src/RemoteWebView.Blazor.JS
           yarn install --immutable
+          # Web.JS is a nested package with no committed lockfile. Yarn 4 treats it
+          # as part of this project and refuses `yarn install` there. npm installs
+          # the same package.json dependencies into Web.JS/node_modules, which is
+          # what Boot.Desktop.ts and the Web.JS sources import.
           Push-Location Web.JS
-          yarn install
+          npm install --no-audit --no-fund
           Pop-Location
+          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
+            throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
+          }
           $dest = "Web.JS/node_modules/@microsoft/dotnet-runtime"
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
           Copy-Item -Path "dotnet-runtime/*" -Destination $dest -Recurse -Force
@@ -79,6 +88,8 @@ jobs:
       - name: Restore and build test projects
         id: build
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $common = @(
             '-c', 'Release',
             '-p:Platform=x64',
@@ -116,6 +127,8 @@ jobs:
       - name: Publish RemoteWebViewService (NoAuthorization)
         id: publish
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj `
             -c NoAuthorization `
             --self-contained true `
