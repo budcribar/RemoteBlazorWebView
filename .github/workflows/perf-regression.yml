@@ -10,7 +10,7 @@ name: Performance regression
 
 on:
   push:
-    branches: [net9-ci]
+    branches: [net9, net9-ci]
   workflow_dispatch:
     inputs:
       baseline:
