@@ -116,8 +116,11 @@ namespace FileSyncServer.Tests
             staThread.SetApartmentState(ApartmentState.STA);
             staThread.Start();
 
-            // Wait for the control to be initialized
-            threadInitialized.WaitOne();
+            // A hosted session may never raise Startup. Do not wait for the job timeout.
+            if (!threadInitialized.WaitOne(TimeSpan.FromSeconds(30)))
+            {
+                throw new TimeoutException("WPF application did not start within 30s.");
+            }
 
             return dummyWindow;
         }
@@ -130,8 +133,16 @@ namespace FileSyncServer.Tests
             // Wait for the thread to complete shutdown
             if (staThread != null)
             {
-                threadShutdown.WaitOne(); // Ensure shutdown signal is received
-                staThread.Join();
+                if (!threadShutdown.WaitOne(TimeSpan.FromSeconds(20)))
+                {
+                    Console.WriteLine("WPF STA thread did not exit within 20s.");
+                }
+
+                if (staThread.IsAlive && !staThread.Join(TimeSpan.FromSeconds(5)))
+                {
+                    Console.WriteLine("WPF STA thread is still alive after shutdown.");
+                }
+
                 staThread = null;
             }
         }

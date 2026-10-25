@@ -114,8 +114,16 @@ namespace FileSyncServer.Tests
             // Wait for the thread to complete shutdown
             if (staThread != null)
             {
-                threadShutdown.WaitOne(); // Ensure shutdown signal is received
-                staThread.Join();
+                if (!threadShutdown.WaitOne(TimeSpan.FromSeconds(20)))
+                {
+                    Console.WriteLine("WinForms STA thread did not exit within 20s.");
+                }
+
+                if (staThread.IsAlive && !staThread.Join(TimeSpan.FromSeconds(5)))
+                {
+                    Console.WriteLine("WinForms STA thread is still alive after shutdown.");
+                }
+
                 staThread = null;
             }
         }

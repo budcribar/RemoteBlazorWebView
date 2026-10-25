@@ -16,8 +16,10 @@
 #   D:\a\RemoteBlazorWebView\RemoteBlazorWebView, so the tutorial has to be the
 #   sibling D:\a\RemoteBlazorWebView\RemoteBlazorWebViewTutorial. actions/checkout
 #   only writes inside the workspace, so the workflow checks the tutorial out
-#   here and copies it to that sibling. The tutorial's default BuildMode is
-#   Developer, which project-references this repo. Its NuGet.config is not
+#   here and copies it to that sibling. The copy is outside this checkout, so
+#   it does not see this repo's global.json; CI writes the same pin into the
+#   copy (the tutorial repo is not modified). The tutorial's default BuildMode
+#   is Developer, which project-references this repo. Its NuGet.config is not
 #   modified. The desktop step stays continue-on-error when a hosted runner
 #   cannot host an interactive WebView2.
 
@@ -188,34 +190,72 @@ jobs:
 
       - name: Publish tutorial apps
         if: steps.build.outcome == 'success'
+        timeout-minutes: 40
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
+          # windows-latest also has a stable SDK. A preview SDK is ignored
+          # unless global.json sets allowPrerelease. The sibling tree has no
+          # global.json of its own.
+          $env:DOTNET_ROLL_FORWARD_TO_PRERELEASE = '1'
           $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
           if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
           Copy-Item -Path _ci-tutorial -Destination $dest -Recurse
+          Copy-Item -Path (Join-Path $env:GITHUB_WORKSPACE 'global.json') -Destination (Join-Path $dest 'global.json') -Force
+          Write-Host "dotnet $(dotnet --version)"
+          dotnet --list-sdks
           # The committed local source does not exist on the runner. Creating
           # the directory does not change NuGet.config and does not publish packages.
           New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
-          $common = @('-p:Platform=x64', '-p:GeneratePackageOnBuild=false')
+          $common = @('-p:Platform=x64', '-p:EnableWindowsTargeting=true', '-p:GeneratePackageOnBuild=false')
           $apps = @(
-            'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj',
-            'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj',
-            'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
+            @{
+              Project = 'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'
+              DebugTfm = 'net11.0-windows'
+            },
+            @{
+              Project = 'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'
+              DebugTfm = 'net11.0-windows10.0.17763.0'
+            },
+            @{
+              Project = 'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.exe'
+              DebugTfm = 'net11.0-windows'
+            }
           )
-          foreach ($relative in $apps) {
-            $project = Join-Path $dest $relative
+          foreach ($app in $apps) {
+            $project = Join-Path $dest $app.Project
             $dir = Split-Path $project
             $publish = Join-Path $dir 'bin\publish'
             $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
+            Write-Host "Publish Release $($app.Project)"
             dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
             Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
-            if (Test-Path (Join-Path $publish 'wwwroot')) {
-              Copy-Item (Join-Path $publish 'wwwroot') -Destination (Join-Path $dir 'embedded\wwwroot') -Recurse -Force
-            }
+            $www = Join-Path $publish 'wwwroot'
+            if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
+            $embeddedWww = Join-Path $dir 'embedded\wwwroot'
+            New-Item -ItemType Directory -Force -Path $embeddedWww | Out-Null
+            Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force
+            Write-Host "Publish Embedded $($app.Project)"
             dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
             Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            Write-Host "Build Debug $($app.Project)"
             dotnet build $project -c Debug @common
+            $expectedDir = Join-Path $dir "bin\x64\Debug\$($app.DebugTfm)"
+            $expectedExe = Join-Path $expectedDir $app.Exe
+            if (-not (Test-Path $expectedExe)) {
+              $debugRoot = Join-Path $dir 'bin\x64\Debug'
+              $found = Get-ChildItem $debugRoot -Recurse -Filter $app.Exe -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -notmatch '\\ref\\' } |
+                Select-Object -First 1
+              if ($found) {
+                Write-Host "Copying debug output from $($found.DirectoryName) to $expectedDir"
+                New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
+                Copy-Item (Join-Path $found.DirectoryName '*') $expectedDir -Recurse -Force
+              }
+            }
           }
           $expected = @(
             'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
@@ -291,11 +331,14 @@ jobs:
             --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
             --results-directory TestResults/FileSyncServer.Headless
 
-      # Tutorial executables are published above. continue-on-error stays until
-      # a run shows whether the hosted session can create WebView2. File-not-found
-      # for those executables is a workflow failure, not a test failure.
+      # Tutorial executables are published above. StartProcess gives up after
+      # 30s when a hosted session never creates a main window, so this step
+      # cannot sit in that loop until the job timeout. continue-on-error stays
+      # while those desktop launches still cannot complete on the runner.
+      # File-not-found for those executables fails the publish step above.
       - name: Test FileSyncServer desktop and tutorial (continue on error)
         if: always() && steps.publish.outcome == 'success'
+        timeout-minutes: 60
         continue-on-error: true
         run: |
           dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
