@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework Condition="'$(PerfTfm)' == ''">net11.0</TargetFramework>
+    <TargetFramework Condition="'$(PerfTfm)' != ''">$(PerfTfm)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj">
+      <Aliases>client</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\..\RemoteWebViewService\RemoteWebViewService.csproj" />
+  </ItemGroup>
+</Project>

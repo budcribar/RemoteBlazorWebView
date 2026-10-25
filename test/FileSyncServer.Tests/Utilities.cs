@@ -289,23 +289,47 @@ namespace FileSyncServer.Tests
 
         public static Process StartProcess(string executable, string directory, string url, string id)
         {
-            Stopwatch sw = new();
+            var sw = Stopwatch.StartNew();
+            var fullPath = Path.GetFullPath(executable);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException($"Application executable not found at path: {fullPath}", fullPath);
+            }
 
             Process p = new();
-            p.StartInfo.FileName = Path.GetFullPath(executable);
+            p.StartInfo.FileName = fullPath;
             p.StartInfo.UseShellExecute = false;
             p.StartInfo.Arguments = $"-u={url} -i={id}";
             p.StartInfo.WorkingDirectory = directory;
             p.Start();
 
-
-            // Try to prevent COMException 0x8007139F
+            // Touching the process before it has a window raises COMException 0x8007139F.
+            // A hosted runner can leave MainWindowHandle at zero for the life of the process.
+            var deadline = TimeSpan.FromSeconds(30);
             while (p.MainWindowHandle == IntPtr.Zero)
             {
-                // Refresh process property values
                 p.Refresh();
+                if (p.HasExited)
+                {
+                    throw new InvalidOperationException(
+                        $"{Path.GetFileName(fullPath)} exited with code {p.ExitCode} before creating a window.");
+                }
 
-                // Wait a bit before checking again
+                if (sw.Elapsed > deadline)
+                {
+                    try
+                    {
+                        p.Kill(entireProcessTree: true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to stop {Path.GetFileName(fullPath)} after it created no window: {ex.Message}");
+                    }
+
+                    throw new TimeoutException(
+                        $"{Path.GetFileName(fullPath)} did not create a main window within {deadline.TotalSeconds:0}s.");
+                }
+
                 Thread.Sleep(100);
             }
 
