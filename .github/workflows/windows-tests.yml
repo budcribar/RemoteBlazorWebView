@@ -144,8 +144,22 @@ jobs:
             throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
           }
 
+      # `dotnet dev-certs https --trust` waits on a certificate dialog on the
+      # hosted Windows image (run 40223312855 sat on this step). Headless
+      # HttpClient calls still need the dev cert in the trusted root store.
+      # Export it and import the public certificate without a prompt.
       - name: Trust the HTTPS development certificate
-        run: dotnet dev-certs https --trust
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $pfx = Join-Path $env:RUNNER_TEMP 'aspnet-devcert.pfx'
+          dotnet dev-certs https -ep $pfx -p placeholder
+          $password = ConvertTo-SecureString placeholder -Force -AsPlainText
+          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\My | Out-Null
+          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
+          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+          dotnet dev-certs https --check --trust
+          if ($LASTEXITCODE -ne 0) { throw 'The ASP.NET Core development certificate is not trusted' }
 
       - name: Install Playwright browsers
         run: |
