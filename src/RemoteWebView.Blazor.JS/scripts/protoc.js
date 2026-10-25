@@ -33,8 +33,8 @@ const protoc = firstExisting([
 ]) || 'protoc';
 
 const tsPlugin = firstExisting([
+    isWin ? path.join(root, 'node_modules', '.bin', 'protoc-gen-ts.cmd') : null,
     path.join(root, 'node_modules', 'ts-protoc-gen', 'bin', 'protoc-gen-ts'),
-    path.join(root, 'node_modules', '.bin', isWin ? 'protoc-gen-ts.cmd' : 'protoc-gen-ts'),
 ]);
 const grpcPlugin = firstExisting([
     path.join(root, 'node_modules', 'protoc-gen-grpc-web', 'bin', isWin ? 'protoc-gen-grpc-web.exe' : 'protoc-gen-grpc-web'),

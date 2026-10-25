@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.31.1" />
+		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="11.0.0-rc.2.26505.5" />
 	</ItemGroup>
 

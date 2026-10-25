@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -77,6 +77,19 @@ namespace FileSyncServer.Tests
             process.StartInfo.UseShellExecute = true;
 #if !PROFILED_SERVER
             process.Start();
+            using (var httpClient = new System.Net.Http.HttpClient())
+            {
+                for (int i = 0; i < 50; i++)
+                {
+                    try
+                    {
+                        var resp = httpClient.GetAsync("https://localhost:5001/health").GetAwaiter().GetResult();
+                        if (resp.IsSuccessStatusCode) break;
+                    }
+                    catch { }
+                    Thread.Sleep(100);
+                }
+            }
 #endif
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
@@ -178,7 +191,7 @@ namespace FileSyncServer.Tests
         public static string BlazorWpfDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net11.0-windows";
+            var exePath = @"bin\x64\debug\net11.0-windows10.0.17763.0";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
