@@ -1,6 +1,6 @@
 # Builds and runs every test project on a Windows runner.
 #
-# Push to net10-ci and workflow_dispatch only. Pull requests are omitted so this
+# Push to net10, net10-ci, and workflow_dispatch only. Pull requests are omitted so this
 # does not run for forks. StaticContentCache and lifecycle tests are net11-only
 # and are not on this line.
 #
@@ -28,7 +28,7 @@ name: Windows tests
 
 on:
   push:
-    branches: [net10-ci]
+    branches: [net10, net10-ci]
   workflow_dispatch:
 
 permissions:
