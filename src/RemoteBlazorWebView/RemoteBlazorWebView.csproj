@@ -8,7 +8,6 @@
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
 		<Description>.NET 11 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
-		<GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageDescription>.NET 11 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
 		<Copyright>Peak Software Consulting, LLC</Copyright>
@@ -25,12 +24,6 @@
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
-
-	<Target Name="SetPackageVersion" DependsOnTargets="Build">
-		<PropertyGroup>
-			<PackageVersion>$(Version)</PackageVersion>
-		</PropertyGroup>
-	</Target>
 
 	<ItemGroup>
 	  <Compile Include="..\SharedSource\HostAddressHelper.cs" Link="HostAddressHelper.cs" />
