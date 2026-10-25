@@ -50,14 +50,15 @@ jobs:
           fetch-tags: true
 
       # Current and the default baseline (origin/net10) both resolve
-      # global.json 10.0.0 rollForward latestMinor. ClientFileSyncManager on
-      # this line has no cache-control argument, so the provider scenario is
-      # skipped on both sides.
+      # global.json 10.0.0 rollForward latestMinor. setup-dotnet installs
+      # that version exactly, and SDK 10.0.0 was never published, so install
+      # the 10.0.x band instead. ClientFileSyncManager on this line has no
+      # cache-control argument, so the provider scenario is skipped on both sides.
       - name: Setup .NET 10
         continue-on-error: true
         uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
+          dotnet-version: 10.0.x
 
       - name: Setup Node
         continue-on-error: true

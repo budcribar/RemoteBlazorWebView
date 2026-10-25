@@ -24,7 +24,7 @@
     "@babel/preset-env": "^7.23.6",
     "@babel/preset-typescript": "^7.23.3",
     "@microsoft/dotnet-js-interop": "*",
-    "@microsoft/dotnet-runtime": "*",
+    "@microsoft/dotnet-runtime": "file:../dotnet-runtime",
     "@microsoft/signalr": "*",
     "@microsoft/signalr-protocol-msgpack": "*",
     "@types/jsdom": "^16.2.14",
