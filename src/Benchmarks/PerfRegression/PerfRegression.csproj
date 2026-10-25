@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework Condition="'$(PerfTfm)' == ''">net11.0</TargetFramework>
+    <TargetFramework Condition="'$(PerfTfm)' != ''">$(PerfTfm)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj">
+      <Aliases>client</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\..\RemoteWebViewService\RemoteWebViewService.csproj" />
+  </ItemGroup>
+
+  <!-- net9 RemoteWebView is net9.0-windows, so this exe's runtimeconfig asks for
+       Microsoft.WindowsDesktop.App. Ubuntu has no such shared framework. The
+       measured file-sync path does not host a window; drop the framework so
+       the process can start. -->
+  <UsingTask TaskName="RemoveWindowsDesktopFramework" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <FilePath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        if (!File.Exists(FilePath))
+          return true;
+        var text = File.ReadAllText(FilePath);
+        var updated = Regex.Replace(
+          text,
+          "\\s*\\{\\s*\"name\":\\s*\"Microsoft\\.WindowsDesktop\\.App\"[\\s\\S]*?\\},?",
+          "",
+          RegexOptions.Multiline);
+        updated = Regex.Replace(updated, ",(\\s*])", "$1");
+        if (!string.Equals(text, updated, StringComparison.Ordinal))
+          File.WriteAllText(FilePath, updated);
+        return true;
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="DropWindowsDesktopFrameworkForLinuxHost"
+          AfterTargets="GenerateBuildRuntimeConfigurationFiles"
+          Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <RemoveWindowsDesktopFramework FilePath="$(ProjectRuntimeConfigFilePath)" />
+  </Target>
+</Project>

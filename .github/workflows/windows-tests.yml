@@ -1,0 +1,324 @@
+# Builds and runs every test project on a Windows runner.
+#
+# Push to net9-ci and workflow_dispatch only. Pull requests are omitted so this
+# does not run for forks. StaticContentCache and lifecycle tests are net11-only
+# and are not on this line.
+#
+# RemoteBlazorWebView is built before the projects that reference it, and before
+# the tutorial. StressServer is not built: it embeds a tutorial executable.
+#
+# FileSyncServer.Tests splits in two:
+# - Headless tests (published Client.exe + RemoteWebViewService publishNoAuth,
+#   and the production JS size check) fail the job when they fail.
+# - The desktop step starts tutorial executables. dotnet test's parent is dotnet,
+#   so Utilities.RelativeRoot is seven levels up from
+#   test/FileSyncServer.Tests/bin/x64/Release/<tfm>, then
+#   RemoteBlazorWebViewTutorial\... A GitHub checkout of this repo is
+#   D:\a\RemoteBlazorWebView\RemoteBlazorWebView, so the tutorial has to be the
+#   sibling D:\a\RemoteBlazorWebView\RemoteBlazorWebViewTutorial. actions/checkout
+#   only writes inside the workspace, so the workflow checks the tutorial out
+#   here and copies it to that sibling. The copy is outside this checkout, so
+#   it does not see this repo's global.json; CI writes the same pin into the
+#   copy (the tutorial repo is not modified). The tutorial's default BuildMode
+#   is Developer, which project-references this repo. Its NuGet.config is not
+#   modified. The desktop step stays continue-on-error when a hosted runner
+#   cannot host an interactive WebView2.
+
+name: Windows tests
+
+on:
+  push:
+    branches: [net9-ci]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # global.json pins 9.0.0 with rollForward latestMinor. The MAUI workload
+      # is not required: these tests do not build MAUI apps.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      # RunTests.ps1 builds remote.blazor.desktop.js with Node 22.3.0, yarn, and
+      # webpack. protoc.exe is already in src/RemoteWebView.Blazor.JS/protoc/bin.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
+
+      - name: Build remote.blazor.desktop.js
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          corepack enable
+          corepack prepare yarn@4.3.1 --activate
+          $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
+          Push-Location src/RemoteWebView.Blazor.JS
+          yarn install --immutable
+          # Web.JS is a nested package with no committed lockfile. Yarn 4 treats it
+          # as part of this project and refuses `yarn install` there. npm installs
+          # the same package.json dependencies into Web.JS/node_modules, which is
+          # what Boot.Desktop.ts and the Web.JS sources import.
+          Push-Location Web.JS
+          npm install --no-audit --no-fund
+          Pop-Location
+          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
+            throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
+          }
+          npm run build:production
+          $js = Get-Item "dist/remote.blazor.desktop.js"
+          Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
+          Pop-Location
+
+      - name: Restore and build test projects
+        id: build
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $common = @(
+            '-c', 'Release',
+            '-p:Platform=x64',
+            '-p:EnableWindowsTargeting=true',
+            '-p:GeneratePackageOnBuild=false'
+          )
+          dotnet build src/RemoteBlazorWebView/RemoteBlazorWebView.csproj @common
+          $projects = @(
+            'src/RemoteWebView/RemoteWebView.csproj',
+            'src/RemoteWebViewService/RemoteWebViewService.csproj',
+            'src/EditWebView/EditWebView.csproj',
+            'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
+            'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
+            'src/Benchmarks/FilePOC/Client/Client.csproj',
+            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
+          )
+          foreach ($project in $projects) {
+            $args = $common
+            if ($project -like '*FileSyncServer.Tests*') {
+              # Keep the test output at bin/x64/Release/<tfm> so ServerFixture (six
+              # levels up to src/RemoteWebViewService/bin/publishNoAuth) and
+              # Utilities.RelativeRoot (seven levels up, then RemoteBlazorWebView\...)
+              # both resolve on the GitHub checkout layout.
+              $args += '-p:AppendRuntimeIdentifierToOutputPath=false'
+            }
+            dotnet build $project @args
+          }
+
+      # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
+      # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
+      - name: Publish RemoteWebViewService (NoAuthorization)
+        id: publish
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj `
+            -c NoAuthorization `
+            --self-contained true `
+            -r win-x64 `
+            -o src/RemoteWebViewService/bin/publishNoAuth `
+            -p:EnableWindowsTargeting=true `
+            -p:Platform=x64 `
+            -p:GeneratePackageOnBuild=false
+          New-Item -ItemType Directory -Force -Path src/RemoteWebViewService/bin/publishNoAuth/wwwroot | Out-Null
+          if (-not (Test-Path 'src/RemoteWebViewService/bin/publishNoAuth/RemoteWebViewService.exe')) {
+            throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
+          }
+
+      # `dotnet dev-certs https --trust` and Import-PfxCertificate into
+      # CurrentUser\Root both wait on a certificate dialog on the hosted
+      # Windows image (runs 40223312855 and 40227579699). HttpClient trusts
+      # LocalMachine\Root, which does not prompt for an elevated runner.
+      # --check --trust only looks at CurrentUser\Root, so it is not used.
+      - name: Trust the HTTPS development certificate
+        timeout-minutes: 2
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $pfx = Join-Path $env:RUNNER_TEMP 'aspnet-devcert.pfx'
+          dotnet dev-certs https -ep $pfx -p placeholder
+          $password = ConvertTo-SecureString placeholder -Force -AsPlainText
+          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\My | Out-Null
+          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+          $thumbprint = (Get-PfxData -FilePath $pfx -Password $password).EndEntityCertificates[0].Thumbprint
+          $trusted = Get-ChildItem Cert:\LocalMachine\Root | Where-Object Thumbprint -eq $thumbprint
+          if (-not $trusted) { throw "Dev cert $thumbprint is not in LocalMachine\Root" }
+
+      # Main build already succeeded (this step is skipped otherwise). The
+      # tutorial net9 apps default to Developer mode and reference
+      # ..\..\RemoteBlazorWebView\src\..., which is this checkout once the
+      # tutorial tree sits next to it. NuGet.config in the tutorial repo is
+      # left as committed, including its local PeakSWC source. That directory
+      # is created empty so restore can see it; Developer mode does not read
+      # packages from it.
+      - name: Checkout tutorial (net9)
+        if: steps.build.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          repository: budcribar/RemoteBlazorWebViewTutorial
+          ref: net9
+          path: _ci-tutorial
+          persist-credentials: false
+
+      - name: Publish tutorial apps
+        if: steps.build.outcome == 'success'
+        timeout-minutes: 40
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          # The sibling checkout does not walk into this repo's global.json.
+          # Copy that pin into the tutorial tree so publish uses this line's SDK.
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+          Copy-Item -Path _ci-tutorial -Destination $dest -Recurse
+          Copy-Item -Path (Join-Path $env:GITHUB_WORKSPACE 'global.json') -Destination (Join-Path $dest 'global.json') -Force
+          Write-Host "dotnet $(dotnet --version)"
+          dotnet --list-sdks
+          # The committed local source does not exist on the runner. Creating
+          # the directory does not change NuGet.config and does not publish packages.
+          New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
+          $common = @('-p:Platform=x64', '-p:EnableWindowsTargeting=true', '-p:GeneratePackageOnBuild=false')
+          $apps = @(
+            @{
+              Project = 'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'
+              DebugTfm = 'net9.0-windows'
+            },
+            @{
+              Project = 'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'
+              DebugTfm = 'net9.0-windows'
+            },
+            @{
+              Project = 'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
+              Exe = 'RemoteBlazorWebViewTutorial.exe'
+              DebugTfm = 'net9.0-windows'
+            }
+          )
+          foreach ($app in $apps) {
+            $project = Join-Path $dest $app.Project
+            $dir = Split-Path $project
+            $publish = Join-Path $dir 'bin\publish'
+            $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
+            Write-Host "Publish Release $($app.Project)"
+            dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
+            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            $www = Join-Path $publish 'wwwroot'
+            if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
+            $embeddedWww = Join-Path $dir 'embedded\wwwroot'
+            New-Item -ItemType Directory -Force -Path $embeddedWww | Out-Null
+            Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force
+            Write-Host "Publish Embedded $($app.Project)"
+            dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
+            Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            Write-Host "Build Debug $($app.Project)"
+            dotnet build $project -c Debug @common
+            $expectedDir = Join-Path $dir "bin\x64\Debug\$($app.DebugTfm)"
+            $expectedExe = Join-Path $expectedDir $app.Exe
+            if (-not (Test-Path $expectedExe)) {
+              $debugRoot = Join-Path $dir 'bin\x64\Debug'
+              $found = Get-ChildItem $debugRoot -Recurse -Filter $app.Exe -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -notmatch '\\ref\\' } |
+                Select-Object -First 1
+              if ($found) {
+                Write-Host "Copying debug output from $($found.DirectoryName) to $expectedDir"
+                New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
+                Copy-Item (Join-Path $found.DirectoryName '*') $expectedDir -Recurse -Force
+              }
+            }
+          }
+          $expected = @(
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\x64\Debug\net9.0-windows\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net9.0-windows\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial\bin\publish\RemoteBlazorWebViewTutorial.exe',
+            'RemoteBlazorWebViewTutorial\bin\publishEmbedded\RemoteBlazorWebViewTutorial.exe',
+            'RemoteBlazorWebViewTutorial\bin\x64\Debug\net9.0-windows\RemoteBlazorWebViewTutorial.exe'
+          )
+          $missing = @()
+          foreach ($relative in $expected) {
+            $path = Join-Path $dest $relative
+            if (Test-Path $path) {
+              Write-Host "ok $path"
+            } else {
+              Write-Host "MISSING $path"
+              $leaf = Split-Path $relative -Leaf
+              $root = Join-Path $dest (Split-Path (Split-Path $relative))
+              Get-ChildItem $root -Recurse -Filter $leaf -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "found $($_.FullName)" }
+              $missing += $path
+            }
+          }
+          if ($missing.Count -gt 0) { throw "Tutorial outputs the tests look for were not produced." }
+
+      - name: Install Playwright browsers
+        if: always() && steps.publish.outcome == 'success'
+        run: |
+          $script = Get-ChildItem -Path test/FileSyncServer.Tests/bin -Recurse -Filter playwright.ps1 | Select-Object -First 1
+          if (-not $script) { throw 'playwright.ps1 was not produced by the FileSyncServer.Tests build' }
+          & $script.FullName install
+
+      # Client.exe is copied into the test output by the FileSyncServer.Tests
+      # build. These classes drive that client and the
+      # publishNoAuth server, or only check the JS bundle size.
+      - name: Test FileSyncServer headless
+        if: always() && steps.publish.outcome == 'success'
+        run: |
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:AppendRuntimeIdentifierToOutputPath=false `
+            --filter "FullyQualifiedName~FileFetchingTests|FullyQualifiedName~ClientCachingTests|FullyQualifiedName~ServerCachingTests|FullyQualifiedName~ConcurrentRequestsTests|FullyQualifiedName~LoadTest|FullyQualifiedName~PerformanceTests|FullyQualifiedName~TestMisc" `
+            --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
+            --results-directory TestResults/FileSyncServer.Headless
+
+      # Tutorial executables are published above. StartProcess gives up after
+      # 30s when a hosted session never creates a main window, so this step
+      # cannot sit in that loop until the job timeout. continue-on-error stays
+      # while those desktop launches still cannot complete on the runner.
+      # File-not-found for those executables fails the publish step above.
+      - name: Test FileSyncServer desktop and tutorial (continue on error)
+        if: always() && steps.publish.outcome == 'success'
+        timeout-minutes: 60
+        continue-on-error: true
+        run: |
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:AppendRuntimeIdentifierToOutputPath=false `
+            --filter "FullyQualifiedName!~FileFetchingTests&FullyQualifiedName!~ClientCachingTests&FullyQualifiedName!~ServerCachingTests&FullyQualifiedName!~ConcurrentRequestsTests&FullyQualifiedName!~LoadTest&FullyQualifiedName!~PerformanceTests&FullyQualifiedName!~TestMisc" `
+            --logger "trx;LogFileName=FileSyncServer.Desktop.trx" `
+            --results-directory TestResults/FileSyncServer.Desktop
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14

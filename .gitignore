@@ -76,3 +76,6 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /Report20250505-0847.diagsession
 /src/RemoteBlazorWebView.Wpf/build/Microsoft.AspNetCore.Components.WebView.Wpf.props
 /src/RemoteBlazorWebView.Wpf/build/Microsoft.AspNetCore.Components.WebView.Wpf.targets
+
+/perf-results/
+/src/RemoteWebView.Blazor.JS/Web.JS/package-lock.json

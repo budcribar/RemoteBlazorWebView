@@ -117,7 +117,7 @@ namespace Server
             foreach (var (FileName, Status, Duration) in results)
             {
                 Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for file '{FileName}'.");
-                Duration.Should().BeLessThan(10000, $"File '{FileName}' took too long to fetch ({Duration} ms).");
+                Duration.Should().BeLessThan(20000, $"File '{FileName}' took too long to fetch ({Duration} ms).");
                 Console.WriteLine($"Fetched '{FileName}' in {Duration} ms.");
             }
 

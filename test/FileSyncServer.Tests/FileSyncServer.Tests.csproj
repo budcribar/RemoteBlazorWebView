@@ -71,4 +71,19 @@
 	  </Content>
 	</ItemGroup>
 
+
+	<PropertyGroup>
+		<FilePocClientProject>$(MSBuildThisFileDirectory)..\..\src\Benchmarks\FilePOC\Client\Client.csproj</FilePocClientProject>
+		<FilePocClientPublishDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Benchmarks\FilePOC\Client\publish'))\</FilePocClientPublishDir>
+	</PropertyGroup>
+
+	<Target Name="PublishFilePocClient"
+			BeforeTargets="GetCopyToOutputDirectoryItems"
+			Inputs="$(FilePocClientProject);$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\ClientFileSyncManager.cs;$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\EtagGenerator.cs;$(MSBuildThisFileDirectory)..\..\src\SharedSource\HostAddressHelper.cs;$(MSBuildThisFileDirectory)..\..\src\Protos\webview.proto"
+			Outputs="$(FilePocClientPublishDir)Client.exe">
+		<MSBuild Projects="$(FilePocClientProject)"
+				 Targets="Restore;Publish"
+				 Properties="Configuration=Release;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true;PublishDir=$(FilePocClientPublishDir);EnableWindowsTargeting=true;Platform=x64;GeneratePackageOnBuild=false" />
+	</Target>
+
 </Project>
