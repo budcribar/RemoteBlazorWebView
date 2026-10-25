@@ -48,12 +48,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins 9.0.0 with rollForward latestMinor. The MAUI workload
-      # is not required: these tests do not build MAUI apps.
+      # global.json pins 9.0.0 with rollForward latestMinor. setup-dotnet
+      # installs that version exactly, and SDK 9.0.0 was never published.
+      # 9.0.x is the latest 9.0 SDK, which satisfies the roll-forward.
+      # The MAUI workload is not required: these tests do not build MAUI apps.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
+          dotnet-version: 9.0.x
           cache: true
           cache-dependency-path: "**/*.csproj"
 
@@ -82,6 +84,9 @@ jobs:
           Pop-Location
           if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
             throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
+          }
+          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-runtime/package.json')) {
+            throw 'Web.JS is missing @microsoft/dotnet-runtime after npm install'
           }
           npm run build:production
           $js = Get-Item "dist/remote.blazor.desktop.js"

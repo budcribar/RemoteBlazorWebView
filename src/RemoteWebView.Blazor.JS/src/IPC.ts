@@ -1,11 +1,11 @@
-import { attachRootComponentToElement, renderBatch } from '../web.js/src/Rendering/Renderer';
-import { OutOfProcessRenderBatch } from '../web.js/src/Rendering/RenderBatch/OutOfProcessRenderBatch';
-import { sendRenderCompleted } from '../web.js/src/Platform/WebView/WebViewIpcSender';
-import { setApplicationIsTerminated, tryDeserializeMessage } from '../web.js/src/Platform/WebView/WebViewIpcCommon';
-import { showErrorNotification } from '../web.js/src/BootErrors';
-import { internalFunctions as navigationManagerFunctions } from '../web.js/src/Services/NavigationManager';
+import { attachRootComponentToElement, renderBatch } from '../Web.JS/src/Rendering/Renderer';
+import { OutOfProcessRenderBatch } from '../Web.JS/src/Rendering/RenderBatch/OutOfProcessRenderBatch';
+import { sendRenderCompleted } from '../Web.JS/src/Platform/WebView/WebViewIpcSender';
+import { setApplicationIsTerminated, tryDeserializeMessage } from '../Web.JS/src/Platform/WebView/WebViewIpcCommon';
+import { showErrorNotification } from '../Web.JS/src/BootErrors';
+import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
 import { dispatcher } from './Boot.Desktop'
-import { WebRendererId } from '../web.js/src/Rendering/WebRendererId';
+import { WebRendererId } from '../Web.JS/src/Rendering/WebRendererId';
 
 
 function receiveBase64ByteArray(id: number, base64Data: string) {

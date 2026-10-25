@@ -37,15 +37,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dispatcher = void 0;
-var dotnet_js_interop_1 = require("../web.js/node_modules/@microsoft/dotnet-js-interop");
-var GlobalExports_1 = require("../web.js/src/GlobalExports");
-var BootCommon_1 = require("../web.js/src/BootCommon");
-var NavigationManager_1 = require("../web.js/src/Services/NavigationManager");
-var WebViewIpcSender_1 = require("../web.js/src/Platform/WebView/WebViewIpcSender");
-var JSInitializers_WebView_1 = require("../web.js/src/JSInitializers/JSInitializers.WebView");
+var dotnet_js_interop_1 = require("../Web.JS/node_modules/@microsoft/dotnet-js-interop");
+var GlobalExports_1 = require("../Web.JS/src/GlobalExports");
+var BootCommon_1 = require("../Web.JS/src/BootCommon");
+var NavigationManager_1 = require("../Web.JS/src/Services/NavigationManager");
+var WebViewIpcSender_1 = require("../Web.JS/src/Platform/WebView/WebViewIpcSender");
+var JSInitializers_WebView_1 = require("../Web.JS/src/JSInitializers/JSInitializers.WebView");
 var RemoteWebView_1 = require("./RemoteWebView");
-var StreamingInterop_1 = require("../web.js/src/StreamingInterop");
-var WebRendererId_1 = require("../web.js/src/Rendering/WebRendererId");
+var StreamingInterop_1 = require("../Web.JS/src/StreamingInterop");
+var WebRendererId_1 = require("../Web.JS/src/Rendering/WebRendererId");
 var started = false;
 function boot() {
     return __awaiter(this, void 0, void 0, function () {

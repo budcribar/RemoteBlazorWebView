@@ -1,9 +1,9 @@
 {
-  "extends": "./web.js/src/tsconfig.json",
+  "extends": "./Web.JS/src/tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@browserjs/*": [ "./web.js/src/*" ]
+      "@browserjs/*": [ "./Web.JS/src/*" ]
     }
   },
   "include": [

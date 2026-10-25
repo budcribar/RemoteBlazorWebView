@@ -51,8 +51,10 @@ jobs:
 
       # Default baseline is origin/net10, so the 10.0 SDK and this line's 9.0
       # SDK both have to be installed. Each worktree's global.json selects
-      # the SDK that build uses. ClientFileSyncManager on net9 and net10 has
-      # no cache-control argument, so the provider scenario is skipped.
+      # the SDK that build uses. setup-dotnet would install 9.0.0 exactly,
+      # and that SDK was never published, so install the 9.0.x band instead.
+      # ClientFileSyncManager on net9 and net10 has no cache-control argument,
+      # so the provider scenario is skipped.
       - name: Setup .NET 10
         continue-on-error: true
         uses: actions/setup-dotnet@v4
@@ -63,7 +65,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
+          dotnet-version: 9.0.x
 
       - name: Setup Node
         continue-on-error: true
