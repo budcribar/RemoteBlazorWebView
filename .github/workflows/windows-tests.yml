@@ -144,11 +144,13 @@ jobs:
             throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
           }
 
-      # `dotnet dev-certs https --trust` waits on a certificate dialog on the
-      # hosted Windows image (run 40223312855 sat on this step). Headless
-      # HttpClient calls still need the dev cert in the trusted root store.
-      # Export it and import the public certificate without a prompt.
+      # `dotnet dev-certs https --trust` and Import-PfxCertificate into
+      # CurrentUser\Root both wait on a certificate dialog on the hosted
+      # Windows image (runs 40223312855 and 40227579699). HttpClient trusts
+      # LocalMachine\Root, which does not prompt for an elevated runner.
+      # --check --trust only looks at CurrentUser\Root, so it is not used.
       - name: Trust the HTTPS development certificate
+        timeout-minutes: 2
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
@@ -156,12 +158,13 @@ jobs:
           dotnet dev-certs https -ep $pfx -p placeholder
           $password = ConvertTo-SecureString placeholder -Force -AsPlainText
           Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\My | Out-Null
-          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
           Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
-          dotnet dev-certs https --check --trust
-          if ($LASTEXITCODE -ne 0) { throw 'The ASP.NET Core development certificate is not trusted' }
+          $thumbprint = (Get-PfxData -FilePath $pfx -Password $password).EndEntityCertificates[0].Thumbprint
+          $trusted = Get-ChildItem Cert:\LocalMachine\Root | Where-Object Thumbprint -eq $thumbprint
+          if (-not $trusted) { throw "Dev cert $thumbprint is not in LocalMachine\Root" }
 
       - name: Install Playwright browsers
+        if: always() && steps.publish.outcome == 'success'
         run: |
           $script = Get-ChildItem -Path test/FileSyncServer.Tests/bin -Recurse -Filter playwright.ps1 | Select-Object -First 1
           if (-not $script) { throw 'playwright.ps1 was not produced by the FileSyncServer.Tests build' }
