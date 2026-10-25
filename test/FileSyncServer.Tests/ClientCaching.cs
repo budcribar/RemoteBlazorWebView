@@ -45,7 +45,7 @@ namespace FileSyncServer.Tests
             Utilities.ModifyFilePermissions(_filePath, _currentUser, true);  
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task Client_Cache_Enabled_Should_Serve_File_After_Permission_Revoked()
         {
             // Enable client-side caching
@@ -106,7 +106,7 @@ namespace FileSyncServer.Tests
             await Utilities.SetClientCache(false);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task Client_Cache_Disabled_Should_Fail_After_Permission_Revoked()
         {
             await Utilities.SetClientCache(false);

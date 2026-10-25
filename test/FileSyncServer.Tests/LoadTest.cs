@@ -45,7 +45,7 @@ namespace FileSyncServer.Tests
             }
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task FindMaxConcurrentRequests()
         {
             double nonlinearityThreshold = 1.5;

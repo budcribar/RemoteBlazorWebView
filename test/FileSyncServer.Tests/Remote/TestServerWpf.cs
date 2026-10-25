@@ -14,7 +14,7 @@ namespace FileSyncServer.Tests.Remote
         private readonly int FILES_READ = 29;
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test1Client()
         {
             await _fixture.TestClient(1);
@@ -22,7 +22,7 @@ namespace FileSyncServer.Tests.Remote
             await _fixture.VerifyDisconnect(1, true);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test2Client()
         {
             await _fixture.TestClient(2);
@@ -30,7 +30,7 @@ namespace FileSyncServer.Tests.Remote
             await _fixture.VerifyDisconnect(2, true);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test5Client()
         {
             await _fixture.TestClient(5);
@@ -39,7 +39,7 @@ namespace FileSyncServer.Tests.Remote
 
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task Test10Client()
         {
             await _fixture.TestClient(10);

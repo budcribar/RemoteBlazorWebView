@@ -50,7 +50,7 @@ namespace FileSyncServer.Tests
             Utilities.ModifyFilePermissions(_filePath, _currentUser, true);  
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task Server_Cache_Enabled_Should_Serve_File_After_Permission_Revoked()
         {
             Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
@@ -82,7 +82,7 @@ namespace FileSyncServer.Tests
             await Utilities.SetServerCache(false);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task Server_Cache_Disabled_Should_Fail_After_Permission_Revoked()
         {
             await Utilities.SetServerCache(false);

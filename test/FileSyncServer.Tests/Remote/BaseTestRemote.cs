@@ -11,25 +11,25 @@ namespace FileSyncServer.Tests.Remote
         protected readonly T _fixture = new T();
         protected readonly ITestOutputHelper Output = output;
 
-        [Fact]
+        [WindowsOnlyFact]
         public async virtual Task Test2Client5Refresh()
         {
             await _fixture.TestRefresh(2, 5);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async virtual Task Test1Client()
         {
             await _fixture.TestClient(1);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async virtual Task Test2Client()
         {
             await _fixture.TestClient(2);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async virtual Task Test5Client()
         {
             await _fixture.TestClient(5);

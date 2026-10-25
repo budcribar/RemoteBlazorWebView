@@ -46,7 +46,7 @@ namespace FileSyncServer.Tests
             await Task.CompletedTask;
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task FetchLargeFiles_PerformanceMetrics()
         {
             // Arrange
@@ -125,7 +125,7 @@ namespace FileSyncServer.Tests
             Console.WriteLine($"Total time for fetching large files: {totalDuration.TotalSeconds} seconds.");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task MultipleClientsConcurrentFileRequests_ReturnsCorrectResponses()
         {
            

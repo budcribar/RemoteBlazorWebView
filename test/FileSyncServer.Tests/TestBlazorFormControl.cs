@@ -36,7 +36,7 @@ namespace FileSyncServer.Tests
             return new RootComponent("#app", typeof(Home), new Dictionary<string, object?>());
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestSetMirrorPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -58,7 +58,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestGroupLate()
         {
             var rootComponent = CreateRootComponent();
@@ -77,7 +77,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestMarkupLate()
         {
             var rootComponent = CreateRootComponent();
@@ -96,7 +96,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestSetPingIntervalLate()
         {
             var rootComponent = CreateRootComponent();
@@ -115,7 +115,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestSetIdPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -133,7 +133,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestGrpcBaseUriPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -152,7 +152,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestServerUriPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -170,7 +170,7 @@ namespace FileSyncServer.Tests
             });
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestMirrorPropertyOnTime()
         {
             var rootComponent = CreateRootComponent();
@@ -189,7 +189,7 @@ namespace FileSyncServer.Tests
             // If no exception is expected, the test will pass
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestPropertiesOnTime()
         {
             var rootComponent = CreateRootComponent();
@@ -211,7 +211,7 @@ namespace FileSyncServer.Tests
             // If no exception is expected, the test will pass
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public void TestConnectedEvent()
         {
             var rootComponent = CreateRootComponent();
@@ -247,7 +247,7 @@ namespace FileSyncServer.Tests
             Assert.True(threadInitialized.WaitOne(10000));
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestJsDownload()
         {
             var rootComponent = CreateRootComponent();

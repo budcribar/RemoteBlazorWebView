@@ -10,6 +10,9 @@
 		<IsPackable>false</IsPackable>
 		<DefineConstants>xDEBUG_SERVER;xPROFILED_SERVER</DefineConstants>
 		<Platforms>x64</Platforms>
+		<!-- Same publish as RunTests.ps1. Output is gitignored; do not commit Client.exe. -->
+		<FilePocClientProject>$(MSBuildThisFileDirectory)..\..\src\Benchmarks\FilePOC\Client\Client.csproj</FilePocClientProject>
+		<FilePocClientPublishDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Benchmarks\FilePOC\Client\publish'))\</FilePocClientPublishDir>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -48,7 +51,8 @@
 		</PackageReference>
 
 		<Using Include="Xunit" />
-		<None Include="..\..\src\Benchmarks\FilePOC\Client\publish\Client.exe">
+		<Using Include="FileSyncServer.Tests" />
+		<None Include="$(FilePocClientPublishDir)Client.exe">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<Folder Include="Protos\" />
@@ -71,5 +75,47 @@
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
 	</ItemGroup>
+
+	<!-- Linux can compile this Windows desktop test project, but it cannot host Microsoft.WindowsDesktop.App.
+	     Drop that framework from the test runtimeconfig so dotnet test can discover and skip the Windows-only tests. -->
+	<UsingTask TaskName="RemoveWindowsDesktopFramework" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<FilePath ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.IO" />
+			<Using Namespace="System.Text.RegularExpressions" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+				if (!File.Exists(FilePath))
+					return true;
+				var text = File.ReadAllText(FilePath);
+				var updated = Regex.Replace(
+					text,
+					"\\s*\\{\\s*\"name\":\\s*\"Microsoft\\.WindowsDesktop\\.App\"[\\s\\S]*?\\},?",
+					"",
+					RegexOptions.Multiline);
+				updated = Regex.Replace(updated, ",(\\s*])", "$1");
+				if (!string.Equals(text, updated, StringComparison.Ordinal))
+					File.WriteAllText(FilePath, updated);
+				return true;
+			]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="DropWindowsDesktopFrameworkForLinuxHost"
+			AfterTargets="GenerateBuildRuntimeConfigurationFiles"
+			Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+		<RemoveWindowsDesktopFramework FilePath="$(ProjectRuntimeConfigFilePath)" />
+	</Target>
+
+	<!-- Publish the win-x64 single-file client before the output copy. A clean tree has no Client.exe. -->
+	<Target Name="PublishFilePocClient"
+			BeforeTargets="GetCopyToOutputDirectoryItems"
+			Inputs="$(FilePocClientProject);$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\ClientFileSyncManager.cs;$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\EtagGenerator.cs;$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\StaticContentCacheControl.cs;$(MSBuildThisFileDirectory)..\..\src\SharedSource\HostAddressHelper.cs;$(MSBuildThisFileDirectory)..\..\src\Protos\webview.proto"
+			Outputs="$(FilePocClientPublishDir)Client.exe">
+		<MSBuild Projects="$(FilePocClientProject)"
+				 Targets="Restore;Publish"
+				 Properties="Configuration=Release;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true;PublishDir=$(FilePocClientPublishDir);EnableWindowsTargeting=true;Platform=x64;GeneratePackageOnBuild=false" />
+	</Target>
 
 </Project>

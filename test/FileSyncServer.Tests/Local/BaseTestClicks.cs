@@ -34,7 +34,7 @@ namespace FileSyncServer.Tests.Local
         /// Shared TestClicks method that can be used across different test classes.
         /// </summary>
         /// <param name="numClicks">Number of clicks to perform.</param>
-        [Theory]
+        [WindowsOnlyTheory]
         //[InlineData(10)]
         [InlineData(100)]
         public virtual async Task TestClicks(int numClicks)

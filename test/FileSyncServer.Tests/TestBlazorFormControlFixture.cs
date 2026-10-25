@@ -22,6 +22,9 @@ namespace FileSyncServer.Tests
 
         public async Task InitializeAsync()
         {
+            if (!OperatingSystem.IsWindows())
+                return;
+
             string grpcUrl = @"https://localhost:5001/";
             GrpcChannel? channel;
             string? envVarValue = Environment.GetEnvironmentVariable(variable: "Rust");
@@ -73,6 +76,9 @@ namespace FileSyncServer.Tests
 
         public void Dispose()
         {
+            if (!OperatingSystem.IsWindows())
+                return;
+
             BlazorWebViewFormFactory.Shutdown();
             Process?.Kill();
             GC.SuppressFinalize(this);

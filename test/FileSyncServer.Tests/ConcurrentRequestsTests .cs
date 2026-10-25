@@ -47,7 +47,7 @@ namespace FileSyncServer.Tests
             Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequests_ReturnsCorrectResponses()
         {
             // Arrange
@@ -94,7 +94,7 @@ namespace FileSyncServer.Tests
             }
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_ReturnsCorrectResponses()
         {
             // Arrange
@@ -138,7 +138,7 @@ namespace FileSyncServer.Tests
             }
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndNoClientCaching()
         {
             // Enable client-side caching
@@ -186,7 +186,7 @@ namespace FileSyncServer.Tests
             await Utilities.SetClientCache(false);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndClientCaching()
         {
             // Enable client-side caching

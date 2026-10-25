@@ -13,6 +13,13 @@ public class ServerFixture : IDisposable
 
     public ServerFixture()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            // RemoteWebViewService.exe is a Windows publish. The tests that use this fixture are skipped.
+            ServerProcess = null!;
+            return;
+        }
+
 #if !PROFILED_SERVER
         Utilities.KillExistingProcesses("RemoteWebViewService");
 #endif
@@ -87,12 +94,15 @@ public class ServerFixture : IDisposable
 
     public void Dispose()
     {
-        if (!ServerProcess.HasExited)
+        if (OperatingSystem.IsWindows() && ServerProcess is not null)
         {
-            ServerProcess.Kill();
-            ServerProcess.WaitForExit();
+            if (!ServerProcess.HasExited)
+            {
+                ServerProcess.Kill();
+                ServerProcess.WaitForExit();
+            }
+            ServerProcess.Dispose();
         }
-        ServerProcess.Dispose();
         _serverReady.Dispose();
         GC.SuppressFinalize(this);
     }

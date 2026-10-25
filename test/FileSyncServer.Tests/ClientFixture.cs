@@ -16,6 +16,13 @@ public class ClientFixture : IDisposable
 
     public ClientFixture()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            // win-x64 Client.exe cannot be started here. The tests that use this fixture are skipped.
+            ClientProcess = null!;
+            return;
+        }
+
         // Kill any existing Client processes to ensure a clean start
         // Utilities.KillExistingProcesses("Client");
 
@@ -88,12 +95,15 @@ public class ClientFixture : IDisposable
 
     public void Dispose()
     {
-        if (!ClientProcess.HasExited)
+        if (OperatingSystem.IsWindows() && ClientProcess is not null)
         {
-            ClientProcess.Kill();
-            ClientProcess.WaitForExit();
+            if (!ClientProcess.HasExited)
+            {
+                ClientProcess.Kill();
+                ClientProcess.WaitForExit();
+            }
+            ClientProcess.Dispose();
         }
-        ClientProcess.Dispose();
         _clientReady.Dispose();
         GC.SuppressFinalize(this);
     }

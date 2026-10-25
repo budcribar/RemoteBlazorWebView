@@ -9,7 +9,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
+		<Protobuf Include="..\..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
 		<PackageReference Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
 		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
@@ -21,7 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\RemoteWebViewService\RemoteWebViewService.csproj" />
+		<ProjectReference Include="..\..\RemoteWebViewService\RemoteWebViewService.csproj" />
 	</ItemGroup>
 
 </Project>

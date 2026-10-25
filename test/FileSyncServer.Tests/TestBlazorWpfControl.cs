@@ -35,7 +35,7 @@ namespace FileSyncServer.Tests
             };
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestSetMirrorPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -58,7 +58,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestGroupLate()
         {
             var rootComponent = CreateRootComponent();
@@ -79,7 +79,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestMarkupLate()
         {
             var rootComponent = CreateRootComponent();
@@ -100,7 +100,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestSetPingIntervalLate()
         {
             var rootComponent = CreateRootComponent();
@@ -121,7 +121,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestSetIdPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -141,7 +141,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestGrpcBaseUriPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -162,7 +162,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestServerUriPropertyLate()
         {
             var rootComponent = CreateRootComponent();
@@ -182,7 +182,7 @@ namespace FileSyncServer.Tests
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestMirrorPropertyOnTime()
         {
             var rootComponent = CreateRootComponent();
@@ -201,7 +201,7 @@ namespace FileSyncServer.Tests
             // If no exception is expected, the test will pass
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task TestPropertiesOnTime()
         {
             var rootComponent = CreateRootComponent();

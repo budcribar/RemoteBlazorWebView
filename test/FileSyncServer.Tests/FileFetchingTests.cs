@@ -44,7 +44,7 @@ namespace FileSyncServer.Tests
             Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
         }
 
-        [Theory]
+        [WindowsOnlyTheory]
         [InlineData("test1.txt")]
         [InlineData("test2.txt")]
         [InlineData("test3.txt")]
@@ -64,7 +64,7 @@ namespace FileSyncServer.Tests
             content.Should().Contain($"This is {fileName}", $"File content for '{fileName}' should match the expected content.");
         }
 
-        [Theory]
+        [WindowsOnlyTheory]
         [InlineData("nonexistent1.txt")]
         [InlineData("nonexistent2.txt")]
         [InlineData("unknownfile.txt")]
@@ -84,7 +84,7 @@ namespace FileSyncServer.Tests
             content.Should().Contain("File not found.", $"Response content for '{fileName}' should indicate that the file was not found.");
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public async Task GetLargeFile_ReturnsFileContent()
         {
             // Arrange

@@ -15,7 +15,7 @@ namespace FileSyncServer.Tests.Remote
 
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test1Client()
         {
             await _fixture.TestClient(1);
@@ -23,7 +23,7 @@ namespace FileSyncServer.Tests.Remote
             await _fixture.VerifyDisconnect(1, false);
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test2Client()
         {
             await _fixture.TestClient(2);
@@ -32,7 +32,7 @@ namespace FileSyncServer.Tests.Remote
 
         }
 
-        [Fact]
+        [WindowsOnlyFact]
         public override async Task Test5Client()
         {
             await _fixture.TestClient(5);
