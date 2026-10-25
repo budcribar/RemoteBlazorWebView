@@ -197,7 +197,10 @@ jobs:
           dotnet --list-sdks
           # The committed local source does not exist on the runner. Creating
           # the directory does not change NuGet.config and does not publish packages.
+          # net10's NuGet.config points at ...\budcribar\RemoteBlazorWebView\artifacts.
+          # A missing source fails restore with NU1301 even when nuget.org is listed.
           New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
+          New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\budcribar\RemoteBlazorWebView\artifacts' | Out-Null
           # WinForms and Photino default BuildMode to Release, which restores
           # PeakSWC.RemoteBlazorWebView.* 10.0.13. Those packages are not in
           # the empty local feed. Developer uses the project references.
