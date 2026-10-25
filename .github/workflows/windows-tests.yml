@@ -3,16 +3,23 @@
 # Push to net11 and workflow_dispatch only. Pull requests are omitted so this
 # does not run for forks.
 #
-# RemoteBlazorWebView is built before the projects that reference it. The
-# tutorial repo is not checked out and is not built. StressServer is not built:
-# it embeds a tutorial executable that is not in this repo.
+# RemoteBlazorWebView is built before the projects that reference it, and before
+# the tutorial. StressServer is not built: it embeds a tutorial executable.
 #
 # FileSyncServer.Tests splits in two:
 # - Headless tests (published Client.exe + RemoteWebViewService publishNoAuth,
 #   and the production JS size check) fail the job when they fail.
-# - WPF/WinForms WebView2 and tutorial-process tests need an interactive desktop
-#   and the tutorial publish from RunTests.ps1. They still run, in a separate
-#   step marked continue-on-error, because that session is not available here.
+# - The desktop step starts tutorial executables. dotnet test's parent is dotnet,
+#   so Utilities.RelativeRoot is seven levels up from
+#   test/FileSyncServer.Tests/bin/x64/Release/<tfm>, then
+#   RemoteBlazorWebViewTutorial\... A GitHub checkout of this repo is
+#   D:\a\RemoteBlazorWebView\RemoteBlazorWebView, so the tutorial has to be the
+#   sibling D:\a\RemoteBlazorWebView\RemoteBlazorWebViewTutorial. actions/checkout
+#   only writes inside the workspace, so the workflow checks the tutorial out
+#   here and copies it to that sibling. The tutorial's default BuildMode is
+#   Developer, which project-references this repo. Its NuGet.config is not
+#   modified. The desktop step stays continue-on-error when a hosted runner
+#   cannot host an interactive WebView2.
 
 name: Windows tests
 
@@ -163,6 +170,79 @@ jobs:
           $trusted = Get-ChildItem Cert:\LocalMachine\Root | Where-Object Thumbprint -eq $thumbprint
           if (-not $trusted) { throw "Dev cert $thumbprint is not in LocalMachine\Root" }
 
+      # Main build already succeeded (this step is skipped otherwise). The
+      # tutorial net11 apps default to Developer mode and reference
+      # ..\..\RemoteBlazorWebView\src\..., which is this checkout once the
+      # tutorial tree sits next to it. NuGet.config in the tutorial repo is
+      # left as committed, including its local PeakSWC source. That directory
+      # is created empty so restore can see it; Developer mode does not read
+      # packages from it.
+      - name: Checkout tutorial (net11)
+        if: steps.build.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          repository: budcribar/RemoteBlazorWebViewTutorial
+          ref: net11
+          path: _ci-tutorial
+          persist-credentials: false
+
+      - name: Publish tutorial apps
+        if: steps.build.outcome == 'success'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+          Copy-Item -Path _ci-tutorial -Destination $dest -Recurse
+          # The committed local source does not exist on the runner. Creating
+          # the directory does not change NuGet.config and does not publish packages.
+          New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
+          $common = @('-p:Platform=x64', '-p:GeneratePackageOnBuild=false')
+          $apps = @(
+            'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj',
+            'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj',
+            'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
+          )
+          foreach ($relative in $apps) {
+            $project = Join-Path $dest $relative
+            $dir = Split-Path $project
+            $publish = Join-Path $dir 'bin\publish'
+            $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
+            dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
+            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            if (Test-Path (Join-Path $publish 'wwwroot')) {
+              Copy-Item (Join-Path $publish 'wwwroot') -Destination (Join-Path $dir 'embedded\wwwroot') -Recurse -Force
+            }
+            dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
+            Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            dotnet build $project -c Debug @common
+          }
+          $expected = @(
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\x64\Debug\net11.0-windows\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net11.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe',
+            'RemoteBlazorWebViewTutorial\bin\publish\RemoteBlazorWebViewTutorial.exe',
+            'RemoteBlazorWebViewTutorial\bin\publishEmbedded\RemoteBlazorWebViewTutorial.exe',
+            'RemoteBlazorWebViewTutorial\bin\x64\Debug\net11.0-windows\RemoteBlazorWebViewTutorial.exe'
+          )
+          $missing = @()
+          foreach ($relative in $expected) {
+            $path = Join-Path $dest $relative
+            if (Test-Path $path) {
+              Write-Host "ok $path"
+            } else {
+              Write-Host "MISSING $path"
+              $leaf = Split-Path $relative -Leaf
+              $root = Join-Path $dest (Split-Path (Split-Path $relative))
+              Get-ChildItem $root -Recurse -Filter $leaf -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "found $($_.FullName)" }
+              $missing += $path
+            }
+          }
+          if ($missing.Count -gt 0) { throw "Tutorial outputs the tests look for were not produced." }
+
       - name: Install Playwright browsers
         if: always() && steps.publish.outcome == 'success'
         run: |
@@ -211,10 +291,9 @@ jobs:
             --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
             --results-directory TestResults/FileSyncServer.Headless
 
-      # Interactive WebView2 controls and tests that start tutorial executables.
-      # Kept in the workflow so they execute on Windows; continue-on-error
-      # because a headless runner has no interactive desktop and this repo does
-      # not publish the tutorial.
+      # Tutorial executables are published above. continue-on-error stays until
+      # a run shows whether the hosted session can create WebView2. File-not-found
+      # for those executables is a workflow failure, not a test failure.
       - name: Test FileSyncServer desktop and tutorial (continue on error)
         if: always() && steps.publish.outcome == 'success'
         continue-on-error: true
