@@ -288,6 +288,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 				{
 					throw new InvalidOperationException($"Template child '{WebViewTemplateChildName}' was not found or does not implement {nameof(IWebView2)}. Ensure the control template contains a WebView2 or WebView2CompositionControl element named '{WebViewTemplateChildName}'.");
 				}
+				webView.AllowExternalDrop = false;
 				_webview = webView;
 				StartWebViewCoreIfPossible();
 			}

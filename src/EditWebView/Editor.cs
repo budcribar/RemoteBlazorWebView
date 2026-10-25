@@ -106,8 +106,18 @@ namespace EditWebView
             Comment("#pragma warning restore CA1816");
 
             Replace("Dock = DockStyle.Fill,", "Dock = DockStyle.Fill, AllowExternalDrop = false");
+            // Pre-#34869 WPF assigned the template child with a WebView2Control cast. That cast no longer
+            // matches, so the replacement below is what still disables file drops.
             Replace("_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);",
                 "_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);\n\t\t\t\t_webview.AllowExternalDrop = false;");
+            // MAUI #34869: OnApplyTemplate binds `GetTemplateChild(...) is not IWebView2 webView`.
+            // UseCompositionControl defaults to true, so the child is a WebView2CompositionControl and the
+            // WebView2Control cast above does not match. IWebView2.AllowExternalDrop exists in the pinned
+            // Microsoft.Web.WebView2 1.0.4258.31 package and maps to CoreWebView2Controller.AllowExternalDrop
+            // (default true). Set it on the interface so both concrete controls reject external drops.
+            Replace(
+                "if (GetTemplateChild(WebViewTemplateChildName) is not IWebView2 webView)\n\t\t\t\t{\n\t\t\t\t\tthrow new InvalidOperationException($\"Template child '{WebViewTemplateChildName}' was not found or does not implement {nameof(IWebView2)}. Ensure the control template contains a WebView2 or WebView2CompositionControl element named '{WebViewTemplateChildName}'.\");\n\t\t\t\t}\n\t\t\t\t_webview = webView;",
+                "if (GetTemplateChild(WebViewTemplateChildName) is not IWebView2 webView)\n\t\t\t\t{\n\t\t\t\t\tthrow new InvalidOperationException($\"Template child '{WebViewTemplateChildName}' was not found or does not implement {nameof(IWebView2)}. Ensure the control template contains a WebView2 or WebView2CompositionControl element named '{WebViewTemplateChildName}'.\");\n\t\t\t\t}\n\t\t\t\twebView.AllowExternalDrop = false;\n\t\t\t\t_webview = webView;");
 
             Replace("public WebView2Control WebView => _webview;",
                 "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");

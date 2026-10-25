@@ -34,6 +34,8 @@ Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutori
 
 StressServer embeds the tutorial's Windows publish output, `RemoteBlazorWebViewTutorial.WpfApp/bin/publishEmbedded/RemoteBlazorWebViewTutorial.WpfApp.exe`. That exe comes from a Windows publish, so StressServer cannot build on Linux.
 
+`src/EditWebView` turns the MAUI WPF `OnApplyTemplate` path into `BlazorWebViewBase`. After MAUI [#34869](https://github.com/dotnet/maui/pull/34869) that path binds the template child as `IWebView2` (`UseCompositionControl` defaults to true, so the control is a `WebView2CompositionControl`). The converter sets `webView.AllowExternalDrop = false` on that interface. `IWebView2.AllowExternalDrop` is in the pinned WebView2 package `1.0.4258.31` and maps to `CoreWebView2Controller.AllowExternalDrop`. WinForms still sets `AllowExternalDrop = false` on the `WebView2` constructed in `BlazorWebViewFormBase`.
+
 # Static content caching
 
 WPF, WinForms, and Photino `BlazorWebView` windows expose `StaticContentCacheControlProvider`. It is the remote counterpart of the .NET MAUI 11 opt-in (`BlazorWebView.StaticContentCacheControlProvider`, [dotnet/maui#35706](https://github.com/dotnet/maui/pull/35706)). Set it before the browser requests static files:
