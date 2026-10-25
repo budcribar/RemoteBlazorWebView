@@ -53,6 +53,34 @@ resolve_baseline() {
   printf '%s\n' HEAD~1
 }
 
+# npm's protoc shim and some plugin bins ship a CRLF shebang. Linux refuses
+# to exec them (`/usr/bin/env: ‘node\r’`). The repo only vendors protoc.exe,
+# so Linux has to use those shims.
+fix_crlf_shebangs() {
+  local root=$1
+  [[ -d $root ]] || return 0
+  python3 - "$root" <<'PY'
+import os, sys
+root = sys.argv[1]
+for dirpath, _dirnames, filenames in os.walk(root):
+    for name in filenames:
+        path = os.path.join(dirpath, name)
+        try:
+            with open(path, "rb") as handle:
+                first = handle.readline(256)
+                if not first.startswith(b"#!") or b"\r" not in first or b"\0" in first:
+                    continue
+                rest = handle.read()
+        except OSError:
+            continue
+        data = first + rest
+        if b"\0" in data[:512]:
+            continue
+        with open(path, "wb") as handle:
+            handle.write(data.replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+PY
+}
+
 build_js() {
   local js=src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js
   if [[ -f $js ]]; then
@@ -62,11 +90,13 @@ build_js() {
   corepack prepare yarn@4.3.1 --activate
   export PATH="$ROOT/src/RemoteWebView.Blazor.JS/protoc/bin:$PATH"
   pushd src/RemoteWebView.Blazor.JS >/dev/null
-  yarn install --immutable
+  yarn install --immutable || { popd >/dev/null; return 1; }
   pushd Web.JS >/dev/null
-  npm install --no-audit --no-fund
+  npm install --no-audit --no-fund || { popd >/dev/null; popd >/dev/null; return 1; }
   popd >/dev/null
-  npm run build:production
+  fix_crlf_shebangs node_modules
+  fix_crlf_shebangs Web.JS/node_modules
+  npm run build:production || { popd >/dev/null; return 1; }
   popd >/dev/null
 }
 
