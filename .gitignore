@@ -70,3 +70,4 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /test/FileSyncServer.Tests/TestResults/FileSyncServerTestLog_2024-10-05_042424.html
 /Report20241109-1011.diagsession
 /Report20241109-1437.diagsession
+/perf-results/

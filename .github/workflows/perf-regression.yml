@@ -1,0 +1,95 @@
+# Baseline versus current, on one runner, for the in-process PerfRegression
+# harness. Counts and payload sizes are the stable signal. Elapsed time and
+# allocations are medians of interleaved repeats, reported as current/baseline.
+#
+# The job does not fail the push. The script exits 0, and every step is
+# continue-on-error, so a noisy runner or a broken baseline checkout still
+# leaves the check green. WARN rows are in the step summary and the artifact.
+
+name: Performance regression
+
+on:
+  push:
+    branches: [net11]
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Git ref for the baseline (tag, branch, or SHA). Empty picks the newest net10 or net11 tag that contains this harness's file client, otherwise origin/net10.
+        required: false
+        default: ""
+      repeats:
+        description: Interleaved repetitions of each side on this runner (1-20)
+        required: false
+        default: "5"
+      time_tolerance:
+        description: Warn when elapsedMs or allocatedBytes is slower than this fraction (0.20 = 20%)
+        required: false
+        default: "0.20"
+      count_tolerance:
+        description: Warn when a count or byte metric grows by more than this fraction (0.05 = 5%)
+        required: false
+        default: "0.05"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  perf:
+    name: perf
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # The default baseline is origin/net10 (net10.0). The current tree is
+      # net11. Both SDKs have to be present so each worktree's global.json
+      # resolves. Ubuntu's existing dotnet.yml build is not used here: it
+      # invokes Yarn 1 against a Yarn 4 packageManager field.
+      - name: Setup .NET 10
+        continue-on-error: true
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup .NET 11
+        continue-on-error: true
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup Node
+        continue-on-error: true
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
+
+      - name: Compare baseline and current
+        continue-on-error: true
+        env:
+          BASELINE: ${{ inputs.baseline }}
+          REPEATS: ${{ inputs.repeats || '5' }}
+          TIME_TOLERANCE: ${{ inputs.time_tolerance || '0.20' }}
+          COUNT_TOLERANCE: ${{ inputs.count_tolerance || '0.05' }}
+        run: bash scripts/perf-regression.sh
+
+      - name: Upload results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-regression
+          path: |
+            perf-results/**/*.json
+            perf-results/**/*.md
+            perf-results/**/*.txt
+            perf-results/**/*.log
+          if-no-files-found: warn
+          retention-days: 14
