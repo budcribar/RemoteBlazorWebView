@@ -77,9 +77,11 @@ jobs:
           if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
             throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
           }
-          $dest = "Web.JS/node_modules/@microsoft/dotnet-runtime"
-          New-Item -ItemType Directory -Force -Path $dest | Out-Null
-          Copy-Item -Path "dotnet-runtime/*" -Destination $dest -Recurse -Force
+          # npm file:../dotnet-runtime already links that package. Copying it
+          # again overwrites the junction with itself on Windows.
+          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-runtime/package.json')) {
+            throw 'Web.JS is missing @microsoft/dotnet-runtime after npm install'
+          }
           npm run build:production
           $js = Get-Item "dist/remote.blazor.desktop.js"
           Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
