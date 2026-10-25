@@ -1,0 +1,208 @@
+# Builds and runs every test project on a Windows runner.
+#
+# Push to net11 and workflow_dispatch only. Pull requests are omitted so this
+# does not run for forks.
+#
+# RemoteBlazorWebView is built before the projects that reference it. The
+# tutorial repo is not checked out and is not built. StressServer is not built:
+# it embeds a tutorial executable that is not in this repo.
+#
+# FileSyncServer.Tests splits in two:
+# - Headless tests (published Client.exe + RemoteWebViewService publishNoAuth,
+#   and the production JS size check) fail the job when they fail.
+# - WPF/WinForms WebView2 and tutorial-process tests need an interactive desktop
+#   and the tutorial publish from RunTests.ps1. They still run, in a separate
+#   step marked continue-on-error, because that session is not available here.
+
+name: Windows tests
+
+on:
+  push:
+    branches: [net11]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # global.json pins 11.0.100-rc.2.26504.105 (allowPrerelease, rollForward
+      # latestMinor). The fully qualified RC 2 SDK is installed from the preview
+      # channel; dotnet-quality cannot be combined with that exact version.
+      # No project targets net10.0. The MAUI workload is not required: tests do
+      # not build MAUI apps (ASP.NET Core packages are 11.0.0-rc.2.26504.105;
+      # EditWebView vendors MAUI 11.0.100-rc.2.26513.2 sources when it runs).
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      # RunTests.ps1 builds remote.blazor.desktop.js with Node 22.3.0, yarn, and
+      # webpack. protoc.exe is already in src/RemoteWebView.Blazor.JS/protoc/bin.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
+
+      - name: Build remote.blazor.desktop.js
+        run: |
+          corepack enable
+          corepack prepare yarn@4.3.1 --activate
+          $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
+          Push-Location src/RemoteWebView.Blazor.JS
+          yarn install --immutable
+          Push-Location Web.JS
+          yarn install
+          Pop-Location
+          $dest = "Web.JS/node_modules/@microsoft/dotnet-runtime"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Path "dotnet-runtime/*" -Destination $dest -Recurse -Force
+          npm run build:production
+          $js = Get-Item "dist/remote.blazor.desktop.js"
+          Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
+          Pop-Location
+
+      - name: Restore and build test projects
+        id: build
+        run: |
+          $common = @(
+            '-c', 'Release',
+            '-p:Platform=x64',
+            '-p:EnableWindowsTargeting=true',
+            '-p:GeneratePackageOnBuild=false'
+          )
+          dotnet build src/RemoteBlazorWebView/RemoteBlazorWebView.csproj @common
+          $projects = @(
+            'src/RemoteWebView/RemoteWebView.csproj',
+            'src/RemoteWebViewService/RemoteWebViewService.csproj',
+            'src/EditWebView/EditWebView.csproj',
+            'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
+            'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
+            'src/Benchmarks/FilePOC/Client/Client.csproj',
+            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
+            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj',
+            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
+          )
+          foreach ($project in $projects) {
+            $args = $common
+            if ($project -like '*FileSyncServer.Tests*') {
+              # Keep the test output at bin/x64/Release/<tfm> so ServerFixture (six
+              # levels up to src/RemoteWebViewService/bin/publishNoAuth) and
+              # Utilities.RelativeRoot (seven levels up, then RemoteBlazorWebView\...)
+              # both resolve on the GitHub checkout layout.
+              $args += '-p:AppendRuntimeIdentifierToOutputPath=false'
+            }
+            dotnet build $project @args
+          }
+
+      # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
+      # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
+      - name: Publish RemoteWebViewService (NoAuthorization)
+        id: publish
+        run: |
+          dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj `
+            -c NoAuthorization `
+            --self-contained true `
+            -r win-x64 `
+            -o src/RemoteWebViewService/bin/publishNoAuth `
+            -p:EnableWindowsTargeting=true `
+            -p:Platform=x64 `
+            -p:GeneratePackageOnBuild=false
+          New-Item -ItemType Directory -Force -Path src/RemoteWebViewService/bin/publishNoAuth/wwwroot | Out-Null
+          if (-not (Test-Path 'src/RemoteWebViewService/bin/publishNoAuth/RemoteWebViewService.exe')) {
+            throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
+          }
+
+      - name: Trust the HTTPS development certificate
+        run: dotnet dev-certs https --trust
+
+      - name: Install Playwright browsers
+        run: |
+          $script = Get-ChildItem -Path test/FileSyncServer.Tests/bin -Recurse -Filter playwright.ps1 | Select-Object -First 1
+          if (-not $script) { throw 'playwright.ps1 was not produced by the FileSyncServer.Tests build' }
+          & $script.FullName install
+
+      - name: Test StaticContentCache and lifecycle
+        if: always() && steps.publish.outcome == 'success'
+        run: |
+          $projects = @(
+            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
+            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj'
+          )
+          $failed = $false
+          foreach ($project in $projects) {
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
+            dotnet test $project `
+              -c Release `
+              --no-build `
+              -p:Platform=x64 `
+              -p:EnableWindowsTargeting=true `
+              -p:GeneratePackageOnBuild=false `
+              --logger "trx;LogFileName=$name.trx" `
+              --results-directory "TestResults/$name"
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          if ($failed) { exit 1 }
+
+      # Client.exe is copied into the test output by the FileSyncServer.Tests
+      # build (commit 36f28cf). These classes drive that client and the
+      # publishNoAuth server, or only check the JS bundle size.
+      - name: Test FileSyncServer headless
+        if: always() && steps.publish.outcome == 'success'
+        run: |
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:AppendRuntimeIdentifierToOutputPath=false `
+            --filter "FullyQualifiedName~FileFetchingTests|FullyQualifiedName~ClientCachingTests|FullyQualifiedName~ServerCachingTests|FullyQualifiedName~ConcurrentRequestsTests|FullyQualifiedName~LoadTest|FullyQualifiedName~PerformanceTests|FullyQualifiedName~TestMisc" `
+            --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
+            --results-directory TestResults/FileSyncServer.Headless
+
+      # Interactive WebView2 controls and tests that start tutorial executables.
+      # Kept in the workflow so they execute on Windows; continue-on-error
+      # because a headless runner has no interactive desktop and this repo does
+      # not publish the tutorial.
+      - name: Test FileSyncServer desktop and tutorial (continue on error)
+        if: always() && steps.publish.outcome == 'success'
+        continue-on-error: true
+        run: |
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:AppendRuntimeIdentifierToOutputPath=false `
+            --filter "FullyQualifiedName!~FileFetchingTests&FullyQualifiedName!~ClientCachingTests&FullyQualifiedName!~ServerCachingTests&FullyQualifiedName!~ConcurrentRequestsTests&FullyQualifiedName!~LoadTest&FullyQualifiedName!~PerformanceTests&FullyQualifiedName!~TestMisc" `
+            --logger "trx;LogFileName=FileSyncServer.Desktop.trx" `
+            --results-directory TestResults/FileSyncServer.Desktop
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14
