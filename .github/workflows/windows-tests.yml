@@ -198,6 +198,10 @@ jobs:
           # The committed local source does not exist on the runner. Creating
           # the directory does not change NuGet.config and does not publish packages.
           New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
+          # WinForms and Photino default BuildMode to Release, which restores
+          # PeakSWC.RemoteBlazorWebView.* 10.0.13. Those packages are not in
+          # the empty local feed. Developer uses the project references.
+          $env:EnvBuildMode = 'Developer'
           $common = @('-p:Platform=x64', '-p:EnableWindowsTargeting=true', '-p:GeneratePackageOnBuild=false')
           $apps = @(
             @{
