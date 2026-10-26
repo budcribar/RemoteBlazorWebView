@@ -235,7 +235,7 @@ namespace FileSyncServer.Tests
         // --disable-features switch replaces Playwright 1.63's switch, so this
         // list is that version's set plus TcpPortRandomizationWin. All 300
         // pages are still opened together.
-        private static BrowserTypeLaunchOptions HeadlessChromiumOptions() => new()
+        internal static BrowserTypeLaunchOptions HeadlessChromiumOptions() => new()
         {
             Headless = true,
             Args =
