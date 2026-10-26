@@ -283,6 +283,164 @@ jobs:
           }
           if ($missing.Count -gt 0) { throw "Tutorial outputs the tests look for were not produced." }
 
+      # The desktop tests only report the process exit code. The tutorial WPF
+      # app shows that exception in a MessageBox, so this step writes it to a
+      # file (startup hook) and checks Compositor / WebView2 / composition
+      # separately. It does not change product code and does not fail the job.
+      - name: Diagnose WPF tutorial startup
+        if: steps.build.outcome == 'success'
+        timeout-minutes: 15
+        continue-on-error: true
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'wpf-crash-diag'
+          New-Item -ItemType Directory -Force -Path $diag | Out-Null
+          $started = Get-Date
+          $probeRoot = Join-Path $env:GITHUB_WORKSPACE '.github/workflows/wpf-startup-probe'
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+
+          @(
+            "SESSIONNAME=$env:SESSIONNAME",
+            "USERNAME=$env:USERNAME",
+            "USERINTERACTIVE=$([Environment]::UserInteractive)",
+            "started=$($started.ToString('o'))"
+          ) | Out-File (Join-Path $diag 'environment.txt') -Encoding utf8
+          query.exe session 2>&1 | Out-File (Join-Path $diag 'sessions.txt') -Encoding utf8
+          query.exe user 2>&1 | Out-File (Join-Path $diag 'users.txt') -Encoding utf8
+
+          $runtimeLog = Join-Path $diag 'webview2-runtime.txt'
+          $guids = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          foreach ($root in @(
+              "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$guids",
+              "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$guids",
+              "HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$guids")) {
+            "---- $root ----" | Out-File $runtimeLog -Append -Encoding utf8
+            if (Test-Path $root) {
+              Get-ItemProperty $root | Out-File $runtimeLog -Append -Encoding utf8
+            } else {
+              'missing' | Out-File $runtimeLog -Append -Encoding utf8
+            }
+          }
+          foreach ($dir in @(
+              "$env:ProgramFiles\Microsoft\EdgeWebView\Application",
+              "${env:ProgramFiles(x86)}\Microsoft\EdgeWebView\Application")) {
+            "---- $dir ----" | Out-File $runtimeLog -Append -Encoding utf8
+            if (Test-Path $dir) { Get-ChildItem $dir | Out-File $runtimeLog -Append -Encoding utf8 }
+            else { 'missing' | Out-File $runtimeLog -Append -Encoding utf8 }
+          }
+
+          $hookOut = Join-Path $diag 'hook'
+          dotnet build (Join-Path $probeRoot 'StartupHook.csproj') -c Release -o $hookOut -p:GeneratePackageOnBuild=false --nologo *> (Join-Path $diag 'hook-build.txt')
+          "hook-build-exit=$LASTEXITCODE" | Out-File (Join-Path $diag 'hook-build.txt') -Append -Encoding utf8
+          $hookDll = Join-Path $hookOut 'StartupHook.dll'
+
+          $probeOut = Join-Path $diag 'probe'
+          dotnet build (Join-Path $probeRoot 'WpfStartupProbe.csproj') -c Release -o $probeOut -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false --nologo *> (Join-Path $diag 'probe-build.txt')
+          "probe-build-exit=$LASTEXITCODE" | Out-File (Join-Path $diag 'probe-build.txt') -Append -Encoding utf8
+          $probeExe = Join-Path $probeOut 'WpfStartupProbe.exe'
+
+          function Invoke-Captured([string]$name, [string]$exe, [string[]]$argList, [switch]$UseHook) {
+            $meta = Join-Path $diag "$name.meta.txt"
+            $previousHooks = $env:DOTNET_STARTUP_HOOKS
+            $previousLog = $env:WPF_CRASH_LOG
+            try {
+              if (-not (Test-Path $exe)) {
+                "MISSING $exe" | Out-File $meta -Encoding utf8
+                return
+              }
+              $stdout = Join-Path $diag "$name.stdout.txt"
+              $stderr = Join-Path $diag "$name.stderr.txt"
+              $dump = Join-Path $diag "$name.dmp"
+              $env:DOTNET_DbgEnableMiniDump = '1'
+              $env:DOTNET_DbgMiniDumpType = '1'
+              $env:DOTNET_DbgMiniDumpName = $dump
+              $env:DOTNET_CreateDumpDiagnostics = '1'
+              if ($UseHook -and (Test-Path $hookDll)) {
+                $env:DOTNET_STARTUP_HOOKS = $hookDll
+                $env:WPF_CRASH_LOG = Join-Path $diag "$name.unhandled.txt"
+              } else {
+                Remove-Item Env:DOTNET_STARTUP_HOOKS -ErrorAction SilentlyContinue
+                Remove-Item Env:WPF_CRASH_LOG -ErrorAction SilentlyContinue
+              }
+              $sw = [Diagnostics.Stopwatch]::StartNew()
+              $p = Start-Process -FilePath $exe -ArgumentList $argList -WorkingDirectory (Split-Path $exe) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+              $seen = ''
+              while (-not $p.HasExited -and $sw.Elapsed.TotalSeconds -lt 15) {
+                try { $p.Refresh() } catch {}
+                if (-not $seen -and $p.MainWindowHandle -ne [IntPtr]::Zero) { $seen = $sw.Elapsed.ToString() }
+                Start-Sleep -Milliseconds 200
+              }
+              $killed = $false
+              if (-not $p.HasExited) {
+                $killed = $true
+                & taskkill.exe /PID $p.Id /T /F *> (Join-Path $diag "$name.taskkill.txt")
+                try { $p.WaitForExit(5000) } catch {}
+              }
+              try { $p.Refresh() } catch {}
+              @(
+                "exe=$exe",
+                "args=$($argList -join ' ')",
+                "elapsed=$($sw.Elapsed)",
+                "windowAt=$seen",
+                "killed=$killed",
+                "exit=$($p.ExitCode)",
+                "dump=$(Test-Path $dump)"
+              ) | Out-File $meta -Encoding utf8
+            } catch {
+              "LAUNCH ERROR $($_.Exception)" | Out-File $meta -Encoding utf8
+            } finally {
+              if ($null -eq $previousHooks) { Remove-Item Env:DOTNET_STARTUP_HOOKS -ErrorAction SilentlyContinue }
+              else { $env:DOTNET_STARTUP_HOOKS = $previousHooks }
+              if ($null -eq $previousLog) { Remove-Item Env:WPF_CRASH_LOG -ErrorAction SilentlyContinue }
+              else { $env:WPF_CRASH_LOG = $previousLog }
+            }
+          }
+
+          if (Test-Path $probeExe) {
+            foreach ($mode in @('compositor', 'composition', 'composition-nodrop', 'webview2', 'webview2-nodrop')) {
+              Invoke-Captured "probe-$mode" $probeExe @($mode, (Join-Path $diag "probe-$mode.log"))
+            }
+          }
+
+          $launches = @(
+            @{ Name = 'wpf-publish'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
+            @{ Name = 'wpf-publish-nohook'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $false },
+            @{ Name = 'wpf-debug'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net11.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
+            @{ Name = 'winforms-publish'; Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe'; Hook = $true }
+          )
+          foreach ($launch in $launches) {
+            if ($launch.Hook) {
+              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=diag') -UseHook
+            } else {
+              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=diag')
+            }
+          }
+
+          Start-Sleep -Seconds 3
+          $events = Join-Path $diag 'application-events.txt'
+          try {
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $started.AddMinutes(-1) } -ErrorAction Stop |
+              Where-Object { $_.Id -in 1000, 1001, 1023, 1026 -or $_.ProviderName -match 'Runtime|Application Error|Windows Error Reporting' } |
+              Select-Object -First 30 |
+              ForEach-Object { "==== $($_.TimeCreated.ToString('o')) $($_.ProviderName) Id=$($_.Id) ===="; $_.Message; '' } |
+              Out-File $events -Encoding utf8
+          } catch {
+            "Get-WinEvent failed: $($_.Exception.Message)" | Out-File $events -Encoding utf8
+          }
+          if (-not (Test-Path $events) -or (Get-Item $events).Length -lt 20) {
+            wevtutil.exe qe Application /c:20 /rd:true /f:text *> (Join-Path $diag 'application-events-raw.txt')
+          }
+          exit 0
+
+      - name: Upload WPF startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wpf-startup-diag
+          path: wpf-crash-diag/**
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Install Playwright browsers
         if: always() && steps.publish.outcome == 'success'
         run: |
