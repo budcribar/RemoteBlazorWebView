@@ -93,15 +93,28 @@ namespace FileSyncServer.Tests.Local
 
         private async Task ClickNavAsync(string text)
         {
-            var report = await DescribePageAsync(text);
-            Output.WriteLine(report);
-            Console.WriteLine(report);
+            var early = await DescribePageAsync(text);
+            Output.WriteLine("before-click " + text);
+            Output.WriteLine(early);
+            Console.WriteLine("before-click " + text);
+            Console.WriteLine(early);
 
             var link = Fixture.Page.Locator("a.nav-link", new PageLocatorOptions { HasText = text });
-            if (!await link.IsVisibleAsync())
-                Assert.Fail($"'{text}' link is not visible.{Environment.NewLine}{report}");
-
-            await link.ClickAsync();
+            try
+            {
+                await link.ClickAsync();
+            }
+            catch (Exception ex)
+            {
+                var after = await DescribePageAsync(text);
+                Output.WriteLine("click-failed " + text + " " + ex.GetType().Name);
+                Output.WriteLine(after);
+                Console.WriteLine("click-failed " + text);
+                Console.WriteLine(after);
+                throw new InvalidOperationException(
+                    $"'{text}' link click failed.{Environment.NewLine}{after}",
+                    ex);
+            }
         }
 
         private async Task<string> DescribePageAsync(string linkText)
