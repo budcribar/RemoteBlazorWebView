@@ -10,7 +10,6 @@ namespace FileSyncServer.Tests.Remote
 {
     public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {
-        private readonly int BYTES_READ = 1000380;
         private readonly int FILES_READ = 29;
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
@@ -18,7 +17,7 @@ namespace FileSyncServer.Tests.Remote
         public override async Task Test1Client()
         {
             await _fixture.TestClient(1);
-            await _fixture.VerifyServerStats(1, FILES_READ, BYTES_READ);
+            await _fixture.VerifyServerStats(1, FILES_READ, isWpf: true);
             await _fixture.VerifyDisconnect(1, true);
         }
 
@@ -26,7 +25,7 @@ namespace FileSyncServer.Tests.Remote
         public override async Task Test2Client()
         {
             await _fixture.TestClient(2);
-            await _fixture.VerifyServerStats(2, FILES_READ, BYTES_READ);
+            await _fixture.VerifyServerStats(2, FILES_READ, isWpf: true);
             await _fixture.VerifyDisconnect(2, true);
         }
 
@@ -34,7 +33,7 @@ namespace FileSyncServer.Tests.Remote
         public override async Task Test5Client()
         {
             await _fixture.TestClient(5);
-            await _fixture.VerifyServerStats(5,FILES_READ, BYTES_READ);
+            await _fixture.VerifyServerStats(5, FILES_READ, isWpf: true);
             await _fixture.VerifyDisconnect(5, true);
 
         }
@@ -43,7 +42,7 @@ namespace FileSyncServer.Tests.Remote
         public async Task Test10Client()
         {
             await _fixture.TestClient(10);
-            await _fixture.VerifyServerStats(10, FILES_READ, BYTES_READ);
+            await _fixture.VerifyServerStats(10, FILES_READ, isWpf: true);
             await _fixture.VerifyDisconnect(10, true);
 
         }
