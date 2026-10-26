@@ -35,6 +35,10 @@ namespace PeakSWC.RemoteWebView
                 MainWindow.BrowserControlInitParameters = browserArguments;
             MainWindow.SetTitle("Photino.Blazor App");
             MainWindow.SetUseOsDefaultLocation(false);
+            // UseOsDefaultSize defaults to true and Photino.Native then replaces
+            // Width and Height with CW_USEDEFAULT. Set it false before the size
+            // so 1000x900 is what CreateWindowEx receives.
+            MainWindow.SetUseOsDefaultSize(false);
             MainWindow.SetWidth(1000);
             MainWindow.SetHeight(900);
             MainWindow.SetLeft(450);

@@ -1,6 +1,9 @@
 ﻿// BaseTestClicks.cs
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Playwright;
 using Xunit;
@@ -93,17 +96,180 @@ namespace FileSyncServer.Tests.Local
 
         private async Task ClickNavAsync(string text)
         {
+            // Diagnostics only. The click sequence below is unchanged.
+            var before = await DescribePageAsync(text);
+            Output.WriteLine("before-click " + text);
+            Output.WriteLine(before);
+            Console.WriteLine("before-click " + text);
+            Console.WriteLine(before);
+
             var link = Fixture.Page.Locator("a.nav-link", new PageLocatorOptions { HasText = text });
             if (!await link.IsVisibleAsync())
             {
                 var toggler = Fixture.Page.Locator(".navbar-toggler");
-                if (await toggler.IsVisibleAsync())
+                var togglerVisible = await toggler.IsVisibleAsync();
+                Output.WriteLine($"navbar-toggler visible={togglerVisible} before clicking '{text}'.");
+                if (togglerVisible)
                 {
                     await toggler.ClickAsync();
                     Output.WriteLine($"Opened the navbar before clicking '{text}'.");
                 }
             }
-            await link.ClickAsync();
+            try
+            {
+                await link.ClickAsync();
+            }
+            catch (Exception ex)
+            {
+                var after = await DescribePageAsync(text);
+                Output.WriteLine("click-failed " + text + " " + ex.GetType().Name);
+                Output.WriteLine(after);
+                Console.WriteLine("click-failed " + text);
+                Console.WriteLine(after);
+                throw;
+            }
+        }
+
+        private async Task<string> DescribePageAsync(string linkText)
+        {
+            var native = NativeWindowProbe.Describe(Fixture.AppProcess);
+            string page;
+            try
+            {
+                page = await Fixture.Page.EvaluateAsync<string>(
+                    @"(linkText) => {
+                        const line = (label, el) => {
+                            if (!el) return label + ': missing';
+                            const s = getComputedStyle(el);
+                            const r = el.getBoundingClientRect();
+                            const cls = el.className && el.className.toString ? el.className.toString() : '';
+                            return label + ': display=' + s.display
+                                + ' visibility=' + s.visibility
+                                + ' opacity=' + s.opacity
+                                + ' rect=' + r.x.toFixed(1) + ',' + r.y.toFixed(1) + ' ' + r.width.toFixed(1) + 'x' + r.height.toFixed(1)
+                                + ' class=' + cls;
+                        };
+                        const link = [...document.querySelectorAll('a')].find(a => (a.textContent || '').trim() === linkText) || null;
+                        const narrow = window.matchMedia('(max-width: 640.98px)').matches;
+                        const wide = window.matchMedia('(min-width: 641px)').matches;
+                        const rows = [
+                            'url=' + location.href,
+                            'title=' + document.title,
+                            'readyState=' + document.readyState,
+                            'inner=' + window.innerWidth + 'x' + window.innerHeight,
+                            'outer=' + window.outerWidth + 'x' + window.outerHeight,
+                            'devicePixelRatio=' + window.devicePixelRatio,
+                            'documentElement.client=' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight,
+                            'screen=' + screen.width + 'x' + screen.height,
+                            'screen.avail=' + screen.availWidth + 'x' + screen.availHeight,
+                            'matchMedia max-width 640.98px=' + narrow,
+                            'matchMedia min-width 641px=' + wide,
+                            line('link', link),
+                            line('navbar-toggler', document.querySelector('.navbar-toggler')),
+                            line('blazor-error-ui', document.querySelector('#blazor-error-ui'))
+                        ];
+                        const wanted = ['nav-scrollable', 'navbar-collapse', 'top-row', 'collapse', 'sidebar'];
+                        for (const name of wanted) {
+                            const el = link ? link.closest('.' + name) : document.querySelector('.' + name);
+                            rows.push(line(name, el));
+                        }
+                        const text = (document.body && document.body.innerText) ? document.body.innerText.replace(/\s+/g, ' ').slice(0, 400) : '';
+                        rows.push('body=' + text);
+                        return rows.join('\n');
+                    }",
+                    linkText);
+            }
+            catch (Exception ex)
+            {
+                page = "page-eval-failed: " + ex.Message;
+            }
+
+            var exe = Fixture.AppProcess?.StartInfo.FileName ?? "";
+            return $"exe={exe}{Environment.NewLine}{native}{Environment.NewLine}{page}";
+        }
+    }
+
+    internal static class NativeWindowProbe
+    {
+        internal static string Describe(Process? process)
+        {
+            if (process == null)
+                return "native-window: process=null";
+            if (!OperatingSystem.IsWindows())
+                return "native-window: not-windows";
+
+            try
+            {
+                process.Refresh();
+            }
+            catch (Exception ex)
+            {
+                return "native-window: refresh-failed " + ex.Message;
+            }
+
+            var rows = new List<string>();
+            var pid = (uint)process.Id;
+            EnumWindowsProc callback = (hwnd, _) =>
+            {
+                GetWindowThreadProcessId(hwnd, out var windowPid);
+                if (windowPid != pid || !IsWindowVisible(hwnd))
+                    return true;
+
+                GetWindowRect(hwnd, out var window);
+                GetClientRect(hwnd, out var client);
+                var title = new StringBuilder(512);
+                GetWindowText(hwnd, title, title.Capacity);
+                rows.Add(
+                    $"hwnd=0x{hwnd.ToInt64():X} title='{title}' iconic={IsIconic(hwnd)} zoomed={IsZoomed(hwnd)} " +
+                    $"window={window.Right - window.Left}x{window.Bottom - window.Top}@({window.Left},{window.Top}) " +
+                    $"client={client.Right}x{client.Bottom} dpi={GetDpiForWindow(hwnd)}");
+                return true;
+            };
+            EnumWindows(callback, IntPtr.Zero);
+            GC.KeepAlive(callback);
+
+            if (rows.Count == 0)
+                return $"native-window: pid={pid} main=0x{process.MainWindowHandle.ToInt64():X} visible=none";
+
+            return "native-window: " + string.Join(" | ", rows);
+        }
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsZoomed(IntPtr hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
         }
     }
 }
