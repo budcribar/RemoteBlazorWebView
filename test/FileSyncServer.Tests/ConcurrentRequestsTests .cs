@@ -5,7 +5,6 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
@@ -152,21 +151,25 @@ namespace FileSyncServer.Tests
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
             using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = true // Run in headless mode
-            });
+            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
 
             var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-            using var gate = new SemaphoreSlim(8);
 
             // Act
-            for (int i = 0; i < 100; i++) // 300 requests; the runner cannot hold 300 pages open at once
+            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
             {
                 foreach (var fileName in fileNames)
                 {
-                    var url = $"{Utilities.BASEURL}/{clientId}/{fileName}";
-                    tasks.Add(ReadFileInBrowser(browser, gate, url, fileName));
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        var page = await browser.NewPageAsync();
+                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                        });
+                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                        return (fileName, response?.Status ?? -1, content);
+                    }));
                 }
             }
 
@@ -193,21 +196,25 @@ namespace FileSyncServer.Tests
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
             using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = true // Run in headless mode
-            });
+            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
 
             var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-            using var gate = new SemaphoreSlim(8);
 
             // Act
-            for (int i = 0; i < 100; i++) // 300 requests; the runner cannot hold 300 pages open at once
+            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
             {
                 foreach (var fileName in fileNames)
                 {
-                    var url = $"{Utilities.BASEURL}/{clientId}/{fileName}";
-                    tasks.Add(ReadFileInBrowser(browser, gate, url, fileName));
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        var page = await browser.NewPageAsync();
+                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                        });
+                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                        return (fileName, response?.Status ?? -1, content);
+                    }));
                 }
             }
 
@@ -221,38 +228,20 @@ namespace FileSyncServer.Tests
             await Utilities.SetClientCache(false);
         }
 
-        // Opening every request's page at once exhausts the hosted runner's socket buffers
-        // (net::ERR_NO_BUFFER_SPACE). Keep the request count and cap how many pages exist.
-        private static async Task<(string FileName, int Status, string Content)> ReadFileInBrowser(IBrowser browser, SemaphoreSlim gate, string url, string fileName)
+        // Chromium's Windows TCP port randomization fails connect() with WSAENOBUFS
+        // (net::ERR_NO_BUFFER_SPACE) even when ephemeral ports are still free.
+        // Playwright disables TcpPortRandomizationWin for that reason
+        // (https://github.com/microsoft/playwright/pull/43605). A later
+        // --disable-features switch replaces Playwright 1.63's switch, so this
+        // list is that version's set plus TcpPortRandomizationWin. All 300
+        // pages are still opened together.
+        internal static BrowserTypeLaunchOptions HeadlessChromiumOptions() => new()
         {
-            await gate.WaitAsync();
-            try
-            {
-                for (var attempt = 0; ; attempt++)
-                {
-                    var page = await browser.NewPageAsync();
-                    try
-                    {
-                        var response = await page.GotoAsync(url, new PageGotoOptions
-                        {
-                            WaitUntil = WaitUntilState.NetworkIdle
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult(string.Empty));
-                        return (fileName, response?.Status ?? -1, content);
-                    }
-                    catch (PlaywrightException ex) when (attempt == 0 && ex.Message.Contains("ERR_NO_BUFFER_SPACE", StringComparison.Ordinal))
-                    {
-                    }
-                    finally
-                    {
-                        await page.CloseAsync();
-                    }
-                }
-            }
-            finally
-            {
-                gate.Release();
-            }
-        }
+            Headless = true,
+            Args =
+            [
+                "--disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion,TcpPortRandomizationWin"
+            ]
+        };
     }
 }
