@@ -212,24 +212,48 @@ namespace FileSyncServer.Tests.Remote
             }
         }
 
-        public async Task VerifyServerStats(int num, int expectedFiles, int expectedBytes)
+        public async Task VerifyServerStats(int num, int expectedFiles, bool isWpf)
         {
             using var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
 
             using var channel = GrpcChannel.ForAddress(GrpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
             var client = new ClientIPC.ClientIPCClient(channel);
             var response = await client!.GetServerStatusAsync(new Empty { });
-            var totalReadTime = response.ConnectionResponses.Sum(x => x.TotalReadTime);
-            var maxFileReadTime = response.ConnectionResponses.Sum(x => x.MaxFileReadTime);
             var totalFilesRead = response.ConnectionResponses.Sum(x => x.TotalFilesRead);
             var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
 
-            Assert.Equal(expectedFiles * num, totalFilesRead);
-            Assert.Equal(expectedBytes * num, totalBytesRead); // This will vary depending on the size of the Javascript  
+            // metadata.Length, not the response on the wire. Cache-Control headers are not included.
+            // The boot script is read twice per client; every other served file is stable across
+            // net9, net10, and net11. Read the script from disk so a webpack rebuild does not
+            // require a new snapshot.
+            var scriptBytes = BootScriptLength();
+            var perClient = StaticBytesWithoutBootScript(isWpf) + (BootScriptCopies * scriptBytes);
 
+            Assert.Equal(expectedFiles * num, totalFilesRead);
+            Assert.Equal(perClient * num, totalBytesRead);
 
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
             Console.WriteLine($"TotalFilesRead {totalFilesRead}");
+            Console.WriteLine($"Boot script {scriptBytes} bytes x {BootScriptCopies}, expected per client {perClient}");
+        }
+
+        // remote.blazor.desktop.js is served twice per client. Measured from Windows CI:
+        // per-client bytes == this constant + 2 * dist/remote.blazor.desktop.js.Length
+        // on net9 (253836), net10 (257385), and net11 (278555). WPF adds 424 bytes of
+        // app-specific static files. File counts stay 25 (WinForms) and 29 (WPF).
+        private const int BootScriptCopies = 2;
+        private const long WinFormsBytesWithoutBootScript = 468392;
+        private const long WpfExtraStaticBytes = 424;
+
+        private static long StaticBytesWithoutBootScript(bool isWpf)
+            => WinFormsBytesWithoutBootScript + (isWpf ? WpfExtraStaticBytes : 0);
+
+        private static long BootScriptLength()
+        {
+            var path = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), Utilities.JavascriptFile));
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Boot script was not built at {path}. Build remote.blazor.desktop.js before the desktop tests.", path);
+            return new FileInfo(path).Length;
         }
         public void Cleanup()
         {
