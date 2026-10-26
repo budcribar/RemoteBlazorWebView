@@ -172,18 +172,23 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 return;
             }
 
-            bool needsUpdate = false;
+            bool needsUpdate = true;
+            CachedRemoteFile? cached = null;
 
-            // Step 2: Check if server cache is enabled and retrieve server metadata
-            if (options.UseServerCache && memoryCache.TryGetValue(subPath, out FileMetadata? serverMetadata))
+            // The cache is per desktop client. The host page is rewritten with that client's id
+            // after the etag is hashed, so a path-only key can serve one client another's bytes.
+            var cacheKey = ServerCacheKey(clientId, subPath);
+            if (options.UseServerCache && memoryCache.TryGetValue(cacheKey, out CachedRemoteFile? cachedFile) && cachedFile is not null)
             {
-                if (serverMetadata?.ETag != clientMetadata.ETag)
+                cached = cachedFile;
+                if (cachedFile.Metadata.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
                     logger.LogDebug("File '{SubPath}' needs update in server cache.", subPath);
                 }
                 else
                 {
+                    needsUpdate = false;
                     logger.LogDebug("File '{SubPath}' is up-to-date in server cache.", subPath);
                 }
             }
@@ -236,11 +241,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
                     memStream.Position = 0;
 
-                    // Update metadata in cache
-                    memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
-
-                    // Cache the data
-                    memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                    memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                     // Write the data to the response
                     memStream.Position = 0;
@@ -257,11 +258,11 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             else
             {
                 // Serve from cache
-                if (memoryCache.TryGetValue($"{subPath}_data", out byte[]? cachedData))
+                if (cached is not null)
                 {
                     logger.LogDebug("Serving file '{SubPath}' from in-memory cache.", subPath);
-                    context.Response.ContentLength = cachedData?.Length ?? 0;
-                    await context.Response.Body.WriteAsync(cachedData.AsMemory()).ConfigureAwait(false);
+                    context.Response.ContentLength = cached.Data.Length;
+                    await context.Response.Body.WriteAsync(cached.Data.AsMemory()).ConfigureAwait(false);
                 }
                 else
                 {
@@ -288,11 +289,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                         await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
                         memStream.Position = 0;
 
-                        // Update metadata in cache
-                        memoryCache.Set(subPath, clientMetadata, TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
-
-                        // Cache the data
-                        memoryCache.Set($"{subPath}_data", memStream.ToArray(), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
+                        memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                         // Write the data to the response
                         memStream.Position = 0;
@@ -361,6 +358,11 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
        
         private string GetContentType(string fileName) => _contentTypeProvider.TryGetContentType(fileName, out var contentType) ? contentType : "application/octet-stream";
+
+        private static string ServerCacheKey(Guid clientId, string subPath)
+            => clientId.ToString("N") + "/" + subPath;
+
+        private sealed record CachedRemoteFile(FileMetadata Metadata, byte[] Data);
     }
     
 }
