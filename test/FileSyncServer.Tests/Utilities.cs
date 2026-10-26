@@ -185,7 +185,7 @@ namespace FileSyncServer.Tests
 
         #region Wpf
 
-        public static Process StartRemoteBlazorWpfDebugApp(string url, string id) => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfPath(), url, id);
+        public static Process StartRemoteBlazorWpfDebugApp(string url, string id) => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfDebugPath(), url, id);
         public static string BlazorWpfDebugAppExe() => Path.Combine(BlazorWpfDebugPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
 
         public static string BlazorWpfDebugPath()
@@ -302,9 +302,19 @@ namespace FileSyncServer.Tests
             Process p = new();
             p.StartInfo.FileName = fullPath;
             p.StartInfo.UseShellExecute = false;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.RedirectStandardError = true;
             p.StartInfo.Arguments = $"-u={url} -i={id}";
             p.StartInfo.WorkingDirectory = directory;
+            var stderr = new StringBuilder();
+            p.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    stderr.AppendLine(e.Data);
+            };
             p.Start();
+            p.BeginOutputReadLine();
+            p.BeginErrorReadLine();
 
             // Touching the process before it has a window raises COMException 0x8007139F.
             // A hosted runner can leave MainWindowHandle at zero for the life of the process.
@@ -314,8 +324,12 @@ namespace FileSyncServer.Tests
                 p.Refresh();
                 if (p.HasExited)
                 {
+                    try { p.WaitForExit(); } catch (Exception) { }
+                    var detail = stderr.ToString().Trim();
+                    if (detail.Length > 1800)
+                        detail = detail[^1800..];
                     throw new InvalidOperationException(
-                        $"{Path.GetFileName(fullPath)} exited with code {p.ExitCode} before creating a window.");
+                        $"{Path.GetFileName(fullPath)} exited with code {p.ExitCode} before creating a window. {detail}");
                 }
 
                 if (sw.Elapsed > deadline)

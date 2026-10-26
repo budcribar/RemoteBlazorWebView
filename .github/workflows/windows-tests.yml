@@ -419,9 +419,9 @@ jobs:
           )
           foreach ($launch in $launches) {
             if ($launch.Hook) {
-              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=diag') -UseHook
+              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=11111111-1111-1111-1111-111111111111') -UseHook
             } else {
-              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=diag')
+              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=11111111-1111-1111-1111-111111111111')
             }
           }
 
