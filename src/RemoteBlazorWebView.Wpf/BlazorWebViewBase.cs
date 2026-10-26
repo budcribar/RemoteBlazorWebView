@@ -97,7 +97,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			name: nameof(UseCompositionControl),
 			propertyType: typeof(bool),
 			ownerType: typeof(BlazorWebViewBase),
-			typeMetadata: new PropertyMetadata(true, OnUseCompositionControlPropertyChanged));
+			// Composition is opt-in. WebView2CompositionControl.TryInitializeD3DImage requires
+			// Microsoft.Windows.SDK.NET, which a normal WPF publish does not deploy, so the
+			// default HWND WebView2 is what actually starts.
+			typeMetadata: new PropertyMetadata(false, OnUseCompositionControlPropertyChanged));
 
 		#endregion
 
@@ -127,8 +130,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			SetValue(RootComponentsProperty, new RootComponentsCollection());
 			RootComponents.CollectionChanged += HandleRootComponentsCollectionChanged;
 
-			// Default to the composition control; OnUseCompositionControlPropertyChanged will
-			// update this if UseCompositionControl is set to false before the control is initialized.
+			// Use the HWND WebView2 unless UseCompositionControl was set before this constructor.
 			Template = CreateWebViewTemplate(useComposition: UseCompositionControl);
 
 			ApplyTabNavigation(IsTabStop);
@@ -136,8 +138,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
 		/// <summary>
 		/// Returns the inner <see cref="IWebView2"/> used by this control.
-		/// When <see cref="UseCompositionControl"/> is <see langword="true"/> (the default), this is a
-		/// <see cref="WebView2CompositionControl"/>; otherwise it is a <see cref="WebView2Control"/>.
+		/// When <see cref="UseCompositionControl"/> is <see langword="true"/>, this is a
+		/// <see cref="WebView2CompositionControl"/>; otherwise (the default) it is a <see cref="WebView2Control"/>.
 		/// </summary>
 		/// <remarks>
 		/// Directly using some functionality of the inner web view can cause unexpected results because its behavior
@@ -216,7 +218,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 		/// Gets or sets a value indicating whether to use the composition-based <see cref="WebView2CompositionControl"/>,
 		/// which resolves WPF airspace issues at the cost of additional rendering overhead, or the standard
 		/// <see cref="WebView2Control"/> for better performance in scenarios where airspace layering is not required.
-		/// Defaults to <see langword="true"/>.
+		/// Defaults to <see langword="false"/>. Set this to <see langword="true"/> only when the
+		/// application also deploys Microsoft.Windows.SDK.NET, which the composition control loads
+		/// while creating its D3D image.
 		/// </summary>
 		/// <remarks>
 		/// This property must be set before the control is initialized (e.g., in XAML or before adding the control to

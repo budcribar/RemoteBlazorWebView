@@ -53,6 +53,21 @@ public class AllowExternalDropTests
         Assert.True(check >= 0 && assignment > check && store > assignment);
 
         Assert.Contains("AllowExternalDrop = false", winforms, StringComparison.Ordinal);
+        Assert.Contains("new PropertyMetadata(false, OnUseCompositionControlPropertyChanged)", wpf, StringComparison.Ordinal);
+        Assert.DoesNotContain("new PropertyMetadata(true, OnUseCompositionControlPropertyChanged)", wpf, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Editor_keeps_the_hwnd_webview_as_the_wpf_default()
+    {
+        var output = RunEditor(
+            inputRelativeDirectory: "",
+            inputFileName: "BlazorWebView.cs",
+            outputFileName: "BlazorWebViewBase.cs",
+            source: "using System;\nnew PropertyMetadata(true, OnUseCompositionControlPropertyChanged);\n");
+
+        Assert.Contains("new PropertyMetadata(false, OnUseCompositionControlPropertyChanged)", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("new PropertyMetadata(true, OnUseCompositionControlPropertyChanged)", output, StringComparison.Ordinal);
     }
 
     private static string RunEditor(string inputRelativeDirectory, string inputFileName, string outputFileName, string source)

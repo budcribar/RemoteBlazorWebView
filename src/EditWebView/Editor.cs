@@ -111,7 +111,14 @@ namespace EditWebView
             Replace("_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);",
                 "_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);\n\t\t\t\t_webview.AllowExternalDrop = false;");
             // MAUI #34869: OnApplyTemplate binds `GetTemplateChild(...) is not IWebView2 webView`.
-            // UseCompositionControl defaults to true, so the child is a WebView2CompositionControl and the
+            // MAUI defaults UseCompositionControl to true. That selects WebView2CompositionControl,
+            // whose D3D path loads Microsoft.Windows.SDK.NET. A normal WPF publish does not ship
+            // that assembly, so Show() throws FileNotFoundException. Keep the HWND WebView2 unless
+            // the app opts in.
+            Replace(
+                "new PropertyMetadata(true, OnUseCompositionControlPropertyChanged)",
+                "new PropertyMetadata(false, OnUseCompositionControlPropertyChanged)");
+            // UseCompositionControl defaults to true in the MAUI source, so the child is a WebView2CompositionControl and the
             // WebView2Control cast above does not match. IWebView2.AllowExternalDrop exists in the pinned
             // Microsoft.Web.WebView2 1.0.4258.31 package and maps to CoreWebView2Controller.AllowExternalDrop
             // (default true). Set it on the interface so both concrete controls reject external drops.
