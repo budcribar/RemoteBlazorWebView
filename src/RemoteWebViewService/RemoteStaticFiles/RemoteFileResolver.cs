@@ -10,7 +10,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
     public partial class RemoteFileResolver(ILogger<RemoteFileResolver> logger, ServerFileSyncManager manager)
     {
-        public Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
+        public virtual Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
         {
             if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
             {
@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             }
             return manager.RequestFileMetadataAsync(clientId, subpath, logger);
         }
-        public async Task<FileStream> GetFileStreamAsync(string clientId, string subpath)
+        public virtual async Task<FileStream> GetFileStreamAsync(string clientId, string subpath)
         {
             if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
             {
