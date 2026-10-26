@@ -279,6 +279,7 @@ namespace PeakSWC.RemoteBlazorWebView
 			var developerTools = _blazorWebViewHandler.DeveloperTools;
 #elif WEBVIEW2_WINFORMS || WEBVIEW2_WPF
 			_blazorWebViewInitializing?.Invoke(args);
+			ApplyAdditionalBrowserArguments(args);
 			var userDataFolder = args.UserDataFolder ?? GetWebView2UserDataFolder();
 			_coreWebView2Environment = await CoreWebView2Environment.CreateAsync(
 				browserExecutableFolder: args.BrowserExecutableFolder,
@@ -452,6 +453,23 @@ namespace PeakSWC.RemoteBlazorWebView
 		}
 
 #if WEBVIEW2_WINFORMS || WEBVIEW2_WPF
+		// The DevTools port is supplied as an environment variable by the tests.
+		// Put the same arguments on the environment options so they are part of the
+		// browser command line even when that variable is only appended by the runtime.
+		private static void ApplyAdditionalBrowserArguments(BlazorWebViewInitializingEventArgs args)
+		{
+			var fromEnvironment = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
+			if (string.IsNullOrWhiteSpace(fromEnvironment))
+				return;
+
+			args.EnvironmentOptions ??= new CoreWebView2EnvironmentOptions();
+			var existing = args.EnvironmentOptions.AdditionalBrowserArguments;
+			if (string.IsNullOrWhiteSpace(existing))
+				args.EnvironmentOptions.AdditionalBrowserArguments = fromEnvironment;
+			else if (existing.IndexOf(fromEnvironment, StringComparison.Ordinal) < 0)
+				args.EnvironmentOptions.AdditionalBrowserArguments = existing + " " + fromEnvironment;
+		}
+
 		private static string? GetWebView2UserDataFolder()
 		{
 			if (Assembly.GetEntryAssembly() is { } mainAssembly)

@@ -315,6 +315,12 @@ jobs:
         timeout-minutes: 60
         continue-on-error: true
         run: |
+          # The startup diagnostic launches the tutorial exes. A surviving
+          # WebView2 browser keeps the user-data folder and then ignores
+          # --remote-debugging-port for TestClicks.
+          foreach ($name in 'RemoteBlazorWebViewTutorial.WpfApp', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial', 'msedgewebview2') {
+            Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          }
           dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
             -c Release `
             --no-build `

@@ -30,6 +30,9 @@ namespace PeakSWC.RemoteWebView
             Services = services;
            
             MainWindow = new RemoteBlazorWebViewWindow();
+            var browserArguments = Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS");
+            if (PhotinoWindow.IsWindowsPlatform && !string.IsNullOrWhiteSpace(browserArguments))
+                MainWindow.BrowserControlInitParameters = browserArguments;
             MainWindow.SetTitle("Photino.Blazor App");
             MainWindow.SetUseOsDefaultLocation(false);
             MainWindow.SetWidth(1000);
