@@ -76,6 +76,7 @@ namespace FileSyncServer.Tests.Remote
 
         public async Task DisposeAsync()
         {
+            PeakSWC.RemoteWebView.RaceLog.Flush();
             // Cleanup Playwright resources
             if (Browser != null)
             {
@@ -92,6 +93,7 @@ namespace FileSyncServer.Tests.Remote
 
         public void Dispose()
         {
+            PeakSWC.RemoteWebView.RaceLog.Flush();
             // Ensure cleanup is called
             Cleanup();
             GC.SuppressFinalize(this);

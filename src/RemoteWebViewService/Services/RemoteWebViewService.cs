@@ -24,7 +24,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {
-            RaceLog.Write($"create-webview-enter id={request.Id} pid={request.Pid} proc={request.ProcessName}");
+            RaceLog.Mark(RaceLog.Ev.CreateEnter, request.Id, request.Pid);
             logger.LogDebug("CreateWebView called for Id: {Id}", request.Id);
 
             ServiceState state= new(logger, request.EnableMirrors)
@@ -44,7 +44,7 @@ namespace PeakSWC.RemoteWebView
 
             if (serviceStateTaskSource.Task.IsCompleted)
             {
-                RaceLog.Write($"create-webview-createFailed id={request.Id} pid={request.Pid}");
+                RaceLog.Mark(RaceLog.Ev.CreateFailed, request.Id, request.Pid);
                 logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }).ConfigureAwait(false);
                 return;
@@ -65,7 +65,7 @@ namespace PeakSWC.RemoteWebView
             }
             catch (TaskCanceledException)
             {
-                RaceLog.Write($"create-webview-cancelled id={request.Id} stillRegistered={serviceDictionary.ContainsKey(request.Id)}");
+                RaceLog.Mark(RaceLog.Ev.CreateCancelled, request.Id, serviceDictionary.ContainsKey(request.Id) ? 1 : 0);
             }
             catch (Exception ex)
             {

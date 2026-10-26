@@ -65,9 +65,9 @@ namespace PeakSWC.RemoteWebView
             {
                 StartInfo = psi
             };
-            RaceLog.Write($"restart-before-start id={blazorWebView.Id} exe={psi.FileName}");
+            RaceLog.Mark(RaceLog.Ev.RestartBefore, blazorWebView.Id);
             p.Start();
-            RaceLog.Write($"restart-after-start id={blazorWebView.Id} newPid={p.Id}");
+            RaceLog.Mark(RaceLog.Ev.RestartAfter, blazorWebView.Id, p.Id);
         }
 
         #region private
@@ -267,7 +267,7 @@ namespace PeakSWC.RemoteWebView
                         }
                         else if (commandSpan.Equals("createFailed", StringComparison.OrdinalIgnoreCase))
                         {
-                            RaceLog.Write($"createFailed-received id={blazorWebView.Id}");
+                            RaceLog.Mark(RaceLog.Ev.CreateFailedReceived, blazorWebView.Id);
                             exception = new Exception("WebView Create failed - Id must be unique");
                             logger.LogError(exception, "WebView creation failed due to duplicate Id.");
                             completionSource.TrySetResult(false); // Signal failure
@@ -275,22 +275,22 @@ namespace PeakSWC.RemoteWebView
                         }
                         else if (commandSpan.Equals("refreshed", StringComparison.OrdinalIgnoreCase))
                         {
-                            RaceLog.Write($"refreshed-branch-enter id={blazorWebView.Id}");
+                            RaceLog.Mark(RaceLog.Ev.RefreshedBranch, blazorWebView.Id);
                             lock (bootLock)
                             {
                                 Shutdown();
-                                RaceLog.Write($"shutdown-post-returned id={blazorWebView.Id}");
+                                RaceLog.Mark(RaceLog.Ev.ShutdownPostReturned, blazorWebView.Id);
                                 FireRefreshed();
-                                RaceLog.Write($"firerefreshed-post-returned id={blazorWebView.Id}");
+                                RaceLog.Mark(RaceLog.Ev.FirePostReturned, blazorWebView.Id);
                                 logger.LogDebug("Service refreshed. Connection shut down.");
                                 cts.Cancel();
-                                RaceLog.Write($"cts-cancelled-after-refresh id={blazorWebView.Id}");
+                                RaceLog.Mark(RaceLog.Ev.CtsCancelled, blazorWebView.Id);
                             }
                             break; // Exit processing after refresh
                         }
                         else if (commandSpan.Equals("shutdown", StringComparison.OrdinalIgnoreCase))
                         {
-                            RaceLog.Write($"shutdown-command-received id={blazorWebView.Id}");
+                            RaceLog.Mark(RaceLog.Ev.ShutdownCommand, blazorWebView.Id);
                             var shutdownException = new Exception("Server shut down connection");
                             FireDisconnected(shutdownException);
                             logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
@@ -312,7 +312,7 @@ namespace PeakSWC.RemoteWebView
                 catch (Exception ex)
                 {
                     exception = ex;
-                    RaceLog.Write($"browser-messages-catch id={blazorWebView.Id} ex={ex.GetType().Name} msg={ex.Message}");
+                    RaceLog.Mark(RaceLog.Ev.BrowserCatch, blazorWebView.Id, ex.HResult);
 
                     if (connected)
                         FireDisconnected(ex);
@@ -324,7 +324,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 finally
                 {
-                    RaceLog.Write($"browser-messages-finally id={blazorWebView.Id}");
+                    RaceLog.Mark(RaceLog.Ev.BrowserFinally, blazorWebView.Id);
                     completionSource.TrySetResult(true); // Ensure the task completes even in case of an error
                 }
             }, TaskCreationOptions.LongRunning);
@@ -431,20 +431,31 @@ namespace PeakSWC.RemoteWebView
         void Shutdown()
         {
             var id = blazorWebView.Id.ToString();
-            bool? onUi = null;
-            try { onUi = Dispatcher?.CheckAccess(); } catch { }
-            RaceLog.Write($"shutdown-post id={id} dispatcherNull={Dispatcher == null} checkAccess={onUi}");
+            int access = -1;
+            try
+            {
+                if (Dispatcher != null)
+                    access = Dispatcher.CheckAccess() ? 1 : 0;
+            }
+            catch { }
+            RaceLog.Mark(RaceLog.Ev.ShutdownPost, blazorWebView.Id, access, Dispatcher == null ? 1 : 0);
             Dispatcher?.InvokeAsync(() =>
             {
-                RaceLog.Write($"shutdown-rpc-enter id={id} apt={Thread.CurrentThread.GetApartmentState()}");
+                int apt = Thread.CurrentThread.GetApartmentState() switch
+                {
+                    ApartmentState.STA => 1,
+                    ApartmentState.MTA => 2,
+                    _ => 3,
+                };
+                RaceLog.Mark(RaceLog.Ev.RpcEnter, blazorWebView.Id, apt);
                 try
                 {
                     Client()?.Shutdown(new IdMessageRequest { Id = id });
-                    RaceLog.Write($"shutdown-rpc-return id={id}");
+                    RaceLog.Mark(RaceLog.Ev.RpcReturn, blazorWebView.Id);
                 }
                 catch (Exception ex)
                 {
-                    RaceLog.Write($"shutdown-rpc-throw id={id} ex={ex.GetType().Name} msg={ex.Message}");
+                    RaceLog.Mark(RaceLog.Ev.RpcThrow, blazorWebView.Id, ex.HResult);
                     throw;
                 }
             });
@@ -470,12 +481,12 @@ namespace PeakSWC.RemoteWebView
         void FireRefreshed()
         {
             var id = blazorWebView.Id;
-            RaceLog.Write($"firerefreshed-post id={id}");
+            RaceLog.Mark(RaceLog.Ev.FirePost, id);
             Dispatcher?.InvokeAsync(() =>
             {
-                RaceLog.Write($"firerefreshed-ui-enter id={id}");
+                RaceLog.Mark(RaceLog.Ev.FireUiEnter, id);
                 blazorWebView.FireRefreshed(new RefreshedEventArgs(id, blazorWebView.ServerUri!));
-                RaceLog.Write($"firerefreshed-ui-return id={id}");
+                RaceLog.Mark(RaceLog.Ev.FireUiReturn, id);
             });
         }
 
@@ -523,7 +534,7 @@ namespace PeakSWC.RemoteWebView
 
         public async ValueTask DisposeAsyncCore()
         {
-            RaceLog.Write($"dispose-async-core-enter id={blazorWebView.Id}");
+            RaceLog.Mark(RaceLog.Ev.DisposeEnter, blazorWebView.Id);
             cts.Cancel();
        
             if (channel != null)

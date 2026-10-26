@@ -10,6 +10,7 @@
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <!--<TargetFramework>net8</TargetFramework>-->
 	<TargetFramework>net10.0</TargetFramework>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <OutputType>Exe</OutputType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <UserSecretsId>8957b802-74dd-4356-b829-9db91aa87089</UserSecretsId>
