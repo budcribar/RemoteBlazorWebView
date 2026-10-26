@@ -43,8 +43,10 @@ namespace FileSyncServer.Tests.Local
 
             try
             {
-                // Navigate to the Counter component
-                await Fixture.Page.ClickAsync("text=Counter");
+                // Photino's WebView viewport on the hosted runner stays under the Blazor
+                // sidebar breakpoint, so the link is in the DOM and display:none until
+                // the navbar toggler opens it.
+                await ClickNavAsync("Counter");
                 Output.WriteLine("Clicked on the 'Counter' link.");
             }
             catch (Exception ex)
@@ -79,7 +81,7 @@ namespace FileSyncServer.Tests.Local
             // Navigate back to the Home page
             try
             {
-                await Fixture.Page.ClickAsync("text=Home");
+                await ClickNavAsync("Home");
                 Output.WriteLine("Navigated back to the 'Home' page.");
             }
             catch (Exception ex)
@@ -89,6 +91,19 @@ namespace FileSyncServer.Tests.Local
             }
         }
 
-        // Additional shared test methods can be added here
+        private async Task ClickNavAsync(string text)
+        {
+            var link = Fixture.Page.Locator("a.nav-link", new PageLocatorOptions { HasText = text });
+            if (!await link.IsVisibleAsync())
+            {
+                var toggler = Fixture.Page.Locator(".navbar-toggler");
+                if (await toggler.IsVisibleAsync())
+                {
+                    await toggler.ClickAsync();
+                    Output.WriteLine($"Opened the navbar before clicking '{text}'.");
+                }
+            }
+            await link.ClickAsync();
+        }
     }
 }
