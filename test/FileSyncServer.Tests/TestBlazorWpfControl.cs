@@ -1,10 +1,13 @@
 ﻿// TestBlazorWpfControl.cs
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using PeakSWC.RemoteBlazorWebView;
 using PeakSWC.RemoteBlazorWebView.Wpf;
 using PeakSWC.RemoteWebView;
@@ -221,6 +224,201 @@ namespace FileSyncServer.Tests
             });
 
             // If no exception is expected, the test will pass
+        }
+
+        // WebView2's default is true. These tests fail if OnApplyTemplate stops assigning
+        // AllowExternalDrop = false on the IWebView2 template child (commit 517f85c).
+        [WindowsOnlyFact]
+        public Task AllowExternalDrop_hwnd_controller_is_false_after_startup()
+            => RunOnUiAsync(() => AssertPathAsync(useComposition: false));
+
+        [WindowsOnlyFact]
+        public Task AllowExternalDrop_composition_controller_is_false_after_startup()
+            => RunOnUiAsync(() => AssertPathAsync(useComposition: true));
+
+        private async Task RunOnUiAsync(Func<Task> action)
+        {
+            Assert.NotNull(Application.Current);
+            await Application.Current.Dispatcher.InvokeAsync(action).Task.Unwrap();
+        }
+
+        private async Task AssertPathAsync(bool useComposition)
+        {
+            var label = useComposition ? "composition" : "hwnd";
+            IWebView2 bare = useComposition ? new WebView2CompositionControl() : new WebView2();
+            if (!useComposition)
+            {
+                // The HWND control can start on the runner. Its default stays true through controller creation,
+                // so a BlazorWebView that skipped the assignment cannot hide behind a false default.
+                await ShowAndAssertAsync(bare, expected: true, label + " default");
+            }
+            else
+            {
+                try
+                {
+                    Assert.True(bare.AllowExternalDrop);
+                    Report(label + " default before initialization", bare.AllowExternalDrop, controller: null, expected: true);
+                }
+                finally
+                {
+                    (bare as IDisposable)?.Dispose();
+                }
+            }
+
+            var blazor = new BlazorWebView { UseCompositionControl = useComposition };
+            var window = CreateWindow(label + " BlazorWebView");
+            var folder = CreateUserDataFolder();
+            try
+            {
+                window.Content = blazor;
+                blazor.ApplyTemplate();
+                var inner = blazor.WebView;
+                Assert.NotNull(inner);
+                if (useComposition)
+                    Assert.IsType<WebView2CompositionControl>(inner);
+                else
+                    Assert.IsType<WebView2>(inner);
+
+                // Set before the controller exists. Initialization copies this value onto the controller.
+                Assert.False(inner.AllowExternalDrop);
+                inner.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = folder };
+
+                window.Show();
+                window.UpdateLayout();
+                try
+                {
+                    await InitializeAndAssertAsync(inner, expected: false, label + " BlazorWebView");
+                }
+                catch (Exception ex) when (useComposition && IsMissingCompositionSupport(ex))
+                {
+                    // The composition control loads Microsoft.Windows.SDK.NET while creating its D3D image.
+                    // The test project does not reference that package. The assignment above still ran.
+                    Report(label + " controller not reachable: " + ex.GetType().Name + ": " + ex.Message, inner.AllowExternalDrop, controller: null, expected: false);
+                }
+            }
+            finally
+            {
+                window.Content = null;
+                await blazor.DisposeAsync();
+                window.Close();
+                TryDelete(folder);
+            }
+        }
+
+        private async Task ShowAndAssertAsync(IWebView2 webView, bool expected, string label)
+        {
+            var folder = CreateUserDataFolder();
+            var window = CreateWindow(label);
+            try
+            {
+                webView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = folder };
+                window.Content = (UIElement)(object)webView;
+                window.Show();
+                window.UpdateLayout();
+                await InitializeAndAssertAsync(webView, expected, label);
+            }
+            finally
+            {
+                window.Content = null;
+                (webView as IDisposable)?.Dispose();
+                window.Close();
+                TryDelete(folder);
+            }
+        }
+
+        private async Task InitializeAndAssertAsync(IWebView2 webView, bool expected, string label)
+        {
+            var completed = new TaskCompletionSource<CoreWebView2InitializationCompletedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+            webView.CoreWebView2InitializationCompleted += (_, args) => completed.TrySetResult(args);
+            await webView.EnsureCoreWebView2Async().WaitAsync(TimeSpan.FromSeconds(60));
+            var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            if (!result.IsSuccess)
+            {
+                throw result.InitializationException ?? new InvalidOperationException(label + " WebView2 initialization failed.");
+            }
+
+            var controlValue = webView.AllowExternalDrop;
+            var controllerValue = ReadControllerAllowExternalDrop(webView);
+            Report(label, controlValue, controllerValue, expected);
+            Assert.Equal(expected, controlValue);
+            Assert.Equal(expected, controllerValue);
+        }
+
+        private void Report(string label, bool controlValue, bool? controller, bool expected)
+        {
+            var controllerText = controller.HasValue ? controller.Value.ToString() : "not reachable";
+            var message = $"{label}: AllowExternalDrop control={controlValue} controller={controllerText} expected={expected}";
+            _output.WriteLine(message);
+            Console.WriteLine(message);
+        }
+
+        private static bool ReadControllerAllowExternalDrop(IWebView2 webView)
+        {
+            object? controller = null;
+            for (var type = webView.GetType(); type != null; type = type.BaseType)
+            {
+                var property = type.GetProperty(
+                    "CoreWebView2Controller",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                if (property == null)
+                    continue;
+                controller = property.GetValue(webView);
+                break;
+            }
+
+            Assert.True(controller != null, "CoreWebView2Controller was not reachable on " + webView.GetType().FullName + " after initialization.");
+            var allow = controller.GetType().GetProperty(
+                "AllowExternalDrop",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.True(allow != null, "AllowExternalDrop was not found on " + controller.GetType().FullName + ".");
+            return (bool)allow.GetValue(controller)!;
+        }
+
+        private static bool IsMissingCompositionSupport(Exception exception)
+        {
+            for (Exception? current = exception; current != null; current = current.InnerException)
+            {
+                if (current is not (FileNotFoundException or DllNotFoundException or TypeLoadException or InvalidOperationException))
+                    continue;
+                var text = current.ToString();
+                if (text.Contains("Windows.SDK.NET", StringComparison.Ordinal)
+                    || text.Contains("Windows.UI.Composition", StringComparison.Ordinal)
+                    || text.Contains("D3D", StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static Window CreateWindow(string title) => new()
+        {
+            Title = title,
+            Width = 640,
+            Height = 480,
+            Left = 20,
+            Top = 20,
+            ShowInTaskbar = false,
+            WindowStyle = WindowStyle.ToolWindow,
+        };
+
+        private static string CreateUserDataFolder()
+        {
+            var folder = Path.Combine(Path.GetTempPath(), "rbw-allow-external-drop", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            return folder;
+        }
+
+        private static void TryDelete(string folder)
+        {
+            try
+            {
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Could not delete " + folder + ": " + ex.Message);
+            }
         }
     }
 }
