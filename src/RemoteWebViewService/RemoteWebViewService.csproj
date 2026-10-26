@@ -107,6 +107,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\RemoteWebView\RaceLog.cs" Link="RaceLog.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

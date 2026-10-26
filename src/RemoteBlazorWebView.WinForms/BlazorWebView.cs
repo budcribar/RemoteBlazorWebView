@@ -111,8 +111,15 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
+            PeakSWC.RemoteWebView.RaceLog.Write($"winforms-firerefreshed-enter id={Id}");
             IsRefreshing = true;
-            Invoke(() => Refreshed?.Invoke(this, args));
+            Invoke(() =>
+            {
+                PeakSWC.RemoteWebView.RaceLog.Write($"winforms-refreshed-handler-enter id={Id}");
+                Refreshed?.Invoke(this, args);
+                PeakSWC.RemoteWebView.RaceLog.Write($"winforms-refreshed-handler-return id={Id}");
+            });
+            PeakSWC.RemoteWebView.RaceLog.Write($"winforms-firerefreshed-return id={Id}");
         }
 
         public void FireReadyToConnect(ReadyToConnectEventArgs args)

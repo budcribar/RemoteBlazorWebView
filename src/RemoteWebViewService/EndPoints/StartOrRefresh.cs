@@ -64,15 +64,21 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     else
                     {
                         // Handle the refresh logic
+                        var id = guid.ToString();
+                        PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-enter id={id} storedPid={serviceState.Pid} proc={serviceState.ProcessName}");
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
+                        PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-refreshed-written id={id}");
 
                         // Wait for the client to shut down, with a timeout of 30 seconds
-                        bool clientShutdown = await WaitForClientShutdown(serviceDictionary, guid.ToString(), TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        var waitStart = DateTime.UtcNow;
+                        bool clientShutdown = await WaitForClientShutdown(serviceDictionary, id, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-wait-end id={id} shutdown={clientShutdown} elapsedMs={(DateTime.UtcNow - waitStart).TotalMilliseconds:0} stillRegistered={serviceDictionary.ContainsKey(id)}");
 
                         if (clientShutdown)
                         {
                             // The client has shut down, serve the restart page
                             context.Response.ContentType = "text/html";
+                            PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-restart-page id={id}");
                             await context.Response.WriteAsync(RestartPage.Html(guid.ToString(), serviceState?.ProcessName ?? "", serviceState?.HostName ?? "")).ConfigureAwait(false);
                         }
                         else
@@ -81,15 +87,19 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                             context.Response.ContentType = "text/html";
 
+                            PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-failure-page id={id} storedPid={serviceState.Pid} proc={serviceState.ProcessName}");
                             await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName)).ConfigureAwait(false);
 
                             // Shutdown since the client did not respond to the restart request
+                            PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-fallback-shutdown id={id}");
                             await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid.ToString()).ConfigureAwait(false);
+                            PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-fallback-shutdown-return id={id}");
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    PeakSWC.RemoteWebView.RaceLog.Write($"refresh-http-catch id={guid} ex={ex.GetType().Name} msg={ex.Message}");
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(RestartFailedPage.Html(guid.ToString(), true)).ConfigureAwait(false);

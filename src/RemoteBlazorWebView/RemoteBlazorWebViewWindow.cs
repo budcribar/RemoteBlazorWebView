@@ -60,7 +60,14 @@ namespace PeakSWC.RemoteWebView
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
-            Invoke(() => Refreshed?.Invoke(this, args));
+            RaceLog.Write($"photino-firerefreshed-enter id={Id}");
+            Invoke(() =>
+            {
+                RaceLog.Write($"photino-refreshed-handler-enter id={Id}");
+                Refreshed?.Invoke(this, args);
+                RaceLog.Write($"photino-refreshed-handler-return id={Id}");
+            });
+            RaceLog.Write($"photino-firerefreshed-return id={Id}");
         }
 
         public void FireReadyToConnect(ReadyToConnectEventArgs args)

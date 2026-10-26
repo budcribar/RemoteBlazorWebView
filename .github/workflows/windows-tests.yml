@@ -28,7 +28,7 @@ name: Windows tests
 
 on:
   push:
-    branches: [net10, net10-ci]
+    branches: [net10, net10-ci, net10-race-debug]
   workflow_dispatch:
 
 permissions:
@@ -332,11 +332,27 @@ jobs:
             --logger "trx;LogFileName=FileSyncServer.Desktop.trx" `
             --results-directory TestResults/FileSyncServer.Desktop
 
+      - name: Collect race logs
+        if: always()
+        run: |
+          $dest = 'TestResults/race'
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          $src = Join-Path ([System.IO.Path]::GetTempPath()) 'rbw-race'
+          Write-Host "Race log dir: $src"
+          if (Test-Path $src) {
+            Copy-Item "$src\*" $dest -Force
+            Get-ChildItem $dest | ForEach-Object { Write-Host "$($_.Name) $($_.Length)" }
+          } else {
+            Write-Host "No race log directory"
+          }
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-test-results
-          path: TestResults/**/*.trx
+          path: |
+            TestResults/**/*.trx
+            TestResults/race/**
           if-no-files-found: warn
           retention-days: 14

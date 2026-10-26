@@ -364,6 +364,7 @@ namespace FileSyncServer.Tests
             p.StartInfo.Arguments = $"-u={url} -i={id}";
             p.StartInfo.WorkingDirectory = directory;
             p.Start();
+            PeakSWC.RemoteWebView.RaceLog.Write($"test-client-started pid={p.Id} id={id} exe={Path.GetFileName(fullPath)}");
 
             // Touching the process before it has a window raises COMException 0x8007139F.
             // A hosted runner can leave MainWindowHandle at zero for the life of the process.
@@ -409,6 +410,7 @@ namespace FileSyncServer.Tests
             {
                 try
                 {
+                    PeakSWC.RemoteWebView.RaceLog.Write($"test-kill name={process.ProcessName} pid={process.Id}");
                     // Attempt to kill the process
                     process.Kill();
 
