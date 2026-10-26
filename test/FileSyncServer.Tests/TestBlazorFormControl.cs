@@ -255,6 +255,8 @@ namespace WebdriverTestProject
             Assert.NotNull(webView);
 
             AutoResetEvent threadInitialized = new AutoResetEvent(false);
+            string? browserLaunch = null;
+            var browserLaunchGate = new object();
 
             BlazorWebViewFormFactory.MainForm?.Invoke(() =>
             {
@@ -273,7 +275,9 @@ namespace WebdriverTestProject
                 webView.ReadyToConnect += (sender, e) =>
                 {
                     webView.NavigateToString($"<a href='{e.Url}app/{e.Id}' target='_blank'> {e.Url}app/{e.Id}</a>");
-                    Utilities.OpenUrlInBrowserWithDevTools($"{e.Url}app/{e.Id}");
+                    var launched = Utilities.OpenUrlInBrowserWithDevTools($"{e.Url}app/{e.Id}");
+                    lock (browserLaunchGate)
+                        browserLaunch = launched;
                 };
 
                 // 800 x 1k bytes passes
@@ -287,7 +291,12 @@ namespace WebdriverTestProject
                 webView.HostPage = @"wwwroot\index.html";
             });
 
-            Assert.True(threadInitialized.WaitOne(30000));
+            var connected = threadInitialized.WaitOne(30000);
+            string? launchNote;
+            lock (browserLaunchGate)
+                launchNote = browserLaunch;
+            _output.WriteLine(launchNote ?? "ReadyToConnect did not run.");
+            Assert.True(connected, launchNote ?? "ReadyToConnect did not run, so no browser was opened.");
             // Javascript is still running need a sync mechanism
             await Task.Delay(TimeSpan.FromSeconds(10));
         }

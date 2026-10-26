@@ -58,12 +58,86 @@ namespace WebdriverTestProject
             return 0;
         }
 
+        /// <summary>
+        /// Kill() returns before the process releases its socket. Navigating before the new
+        /// server is listening fails the next test with ERR_CONNECTION_REFUSED in under a second.
+        /// Wait until the previous process and its port are gone, then wait for /health.
+        /// </summary>
+        private static void StopNamedProcesses(string processName)
+        {
+            foreach (var existing in Process.GetProcessesByName(processName))
+            {
+                try
+                {
+                    existing.Kill(entireProcessTree: true);
+                    if (!existing.WaitForExit(10000))
+                        Console.WriteLine($"Timed out waiting for {processName} pid {existing.Id} to exit.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error stopping {processName} pid {existing.Id}: {ex.Message}");
+                }
+            }
+        }
+
+        private static void WaitUntilServerPortClosed()
+        {
+            using var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            for (int i = 0; i < 50; i++)
+            {
+                try
+                {
+                    using var resp = httpClient.GetAsync("https://localhost:5001/health").GetAwaiter().GetResult();
+                    if (!resp.IsSuccessStatusCode)
+                        return;
+                }
+                catch
+                {
+                    return;
+                }
+                Thread.Sleep(100);
+            }
+        }
+
+        private static void WaitForServerHealth(Process process)
+        {
+            using var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            for (int i = 0; i < 200; i++)
+            {
+                try
+                {
+                    if (process.HasExited)
+                        throw new InvalidOperationException($"RemoteWebViewService exited with code {process.ExitCode} before https://localhost:5001/health responded.");
+                }
+                catch (InvalidOperationException ex) when (ex.Message.StartsWith("RemoteWebViewService exited", StringComparison.Ordinal))
+                {
+                    throw;
+                }
+                catch
+                {
+                    // UseShellExecute can refuse HasExited until the process handle is available.
+                }
+
+                try
+                {
+                    using var resp = httpClient.GetAsync("https://localhost:5001/health").GetAwaiter().GetResult();
+                    if (resp.IsSuccessStatusCode)
+                        return;
+                }
+                catch { }
+                Thread.Sleep(100);
+            }
+
+            throw new TimeoutException("RemoteWebViewService did not answer https://localhost:5001/health within 20s after the previous server exited.");
+        }
+
         public static Process StartCsharpServer()
         {
             Stopwatch sw = new();
             sw.Start();
 #if !PROFILED_SERVER
-            Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "RemoteWebViewService")?.Kill();
+            StopNamedProcesses("RemoteWebViewService");
+            WaitUntilServerPortClosed();
 #endif
 #if DEBUG_SERVER
             var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\x64\Debug\net9";
@@ -79,6 +153,7 @@ namespace WebdriverTestProject
             process.StartInfo.UseShellExecute = true;
 #if !PROFILED_SERVER
             process.Start();
+            WaitForServerHealth(process);
 #endif
             Console.WriteLine($"Started server in {sw.Elapsed}");
             return process;
@@ -537,25 +612,49 @@ namespace WebdriverTestProject
             }
         }
 
-        public static void OpenUrlInBrowserWithDevTools(string url)
+        public static string OpenUrlInBrowserWithDevTools(string url)
         {
+            // The previous launch swallowed every failure and started a fixed Chrome path with
+            // ShellExecute. Connected never fired on the runner, while TestConnectedEvent reached
+            // Connected through the default browser. Start a real process, give it a fresh profile
+            // so an existing Chrome does not drop the URL, and accept the runner's localhost cert.
+            // Edge is the fallback when chrome.exe is not there.
+            string[] candidates =
+            [
+                @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                @"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            ];
+            var browser = candidates.FirstOrDefault(File.Exists);
+            if (browser == null)
+            {
+                OpenUrlInBrowser(url);
+                var missing = $"ReadyToConnect ran. No Chrome or Edge executable found; opened {url} with the default browser.";
+                Console.WriteLine(missing);
+                return missing;
+            }
+
+            var profile = Path.Combine(Path.GetTempPath(), "rbw-devtools-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(profile);
             try
             {
-                // Specify the path to the Chrome executable
-                string chromePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
-
-                // Use the --auto-open-devtools-for-tabs command line switch to open dev tools
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = chromePath,
-                    Arguments = $"--new-window --auto-open-devtools-for-tabs {url}",
-                    UseShellExecute = true
+                    FileName = browser,
+                    Arguments = $"--new-window --user-data-dir=\"{profile}\" --ignore-certificate-errors --allow-insecure-localhost --auto-open-devtools-for-tabs \"{url}\"",
+                    UseShellExecute = false
                 });
-                Console.WriteLine($"Opened {url} in Chrome with developer tools.");
+                var opened = $"ReadyToConnect ran. Opened {url} in {browser}.";
+                Console.WriteLine(opened);
+                return opened;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to open URL in Chrome with developer tools: {ex.Message}");
+                OpenUrlInBrowser(url);
+                var failed = $"ReadyToConnect ran. {browser} failed ({ex.Message}); opened {url} with the default browser.";
+                Console.WriteLine(failed);
+                return failed;
             }
         }
 
