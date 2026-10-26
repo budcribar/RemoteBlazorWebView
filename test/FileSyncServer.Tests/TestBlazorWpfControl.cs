@@ -297,7 +297,20 @@ namespace WebdriverTestProject
                 throw result.InitializationException ?? new InvalidOperationException(label + " WebView2 initialization failed.");
 
             var controlValue = webView.AllowExternalDrop;
-            var controllerValue = ReadControllerAllowExternalDrop(webView);
+            bool controllerValue;
+            try
+            {
+                controllerValue = ReadControllerAllowExternalDrop(webView);
+            }
+            catch (Exception ex)
+            {
+                var failed = $"{label}: AllowExternalDrop control={controlValue} controller=not reachable expected={expected}";
+                _output.WriteLine(failed);
+                Console.WriteLine(failed);
+                Console.WriteLine(label + " controller read failed: " + ex.Message);
+                throw;
+            }
+
             var message = $"{label}: AllowExternalDrop control={controlValue} controller={controllerValue} expected={expected}";
             _output.WriteLine(message);
             Console.WriteLine(message);
@@ -305,26 +318,48 @@ namespace WebdriverTestProject
             Assert.Equal(expected, controllerValue);
         }
 
-        private static bool ReadControllerAllowExternalDrop(WebView2 webView)
+        // WebView2 does not expose CoreWebView2Controller. It keeps an internal WebView2Base
+        // in m_webview2Base, and that object owns the controller created by EnsureCoreWebView2Async.
+        private static bool ReadControllerAllowExternalDrop(object webView)
         {
-            object? controller = null;
-            for (var type = webView.GetType(); type != null; type = type.BaseType)
+            var webview2Base = RequireMember(webView, "m_webview2Base");
+            var controller = RequireMember(webview2Base, "CoreWebView2Controller");
+            if (controller is CoreWebView2Controller core)
+                return core.AllowExternalDrop;
+
+            throw new InvalidOperationException(
+                "CoreWebView2Controller on " + webView.GetType().FullName + " was " + controller.GetType().FullName + ".");
+        }
+
+        private static object RequireMember(object instance, string name)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var type = instance.GetType(); type != null; type = type.BaseType)
             {
-                var property = type.GetProperty(
-                    "CoreWebView2Controller",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (property == null)
-                    continue;
-                controller = property.GetValue(webView);
-                break;
+                foreach (var field in type.GetFields(flags))
+                {
+                    if (field.Name == name)
+                    {
+                        var value = field.GetValue(instance);
+                        if (value == null)
+                            throw new InvalidOperationException(name + " was null on " + instance.GetType().FullName + " after initialization.");
+                        return value;
+                    }
+                }
+
+                foreach (var property in type.GetProperties(flags))
+                {
+                    if (property.Name == name && property.GetIndexParameters().Length == 0)
+                    {
+                        var value = property.GetValue(instance);
+                        if (value == null)
+                            throw new InvalidOperationException(name + " was null on " + instance.GetType().FullName + " after initialization.");
+                        return value;
+                    }
+                }
             }
 
-            Assert.True(controller != null, "CoreWebView2Controller was not reachable on " + webView.GetType().FullName + " after initialization.");
-            var allow = controller!.GetType().GetProperty(
-                "AllowExternalDrop",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            Assert.True(allow != null, "AllowExternalDrop was not found on " + controller.GetType().FullName + ".");
-            return (bool)allow!.GetValue(controller)!;
+            throw new InvalidOperationException(name + " was not found on " + instance.GetType().FullName + ".");
         }
 
         private static Window CreateWindow(string title) => new()
