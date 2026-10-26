@@ -134,6 +134,8 @@ namespace FileSyncServer.Tests.Local
                             'documentElement.client=' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight,
                             'screen=' + screen.width + 'x' + screen.height,
                             'screen.avail=' + screen.availWidth + 'x' + screen.availHeight,
+                            'matchMedia max-width 640.98px=' + window.matchMedia('(max-width: 640.98px)').matches,
+                            'matchMedia min-width 641px=' + window.matchMedia('(min-width: 641px)').matches,
                             line('link', link),
                             line('navbar-toggler', document.querySelector('.navbar-toggler')),
                             line('blazor-error-ui', document.querySelector('#blazor-error-ui'))
