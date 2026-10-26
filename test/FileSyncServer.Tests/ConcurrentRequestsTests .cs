@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using FileSyncServer;
 using FluentAssertions;
@@ -157,22 +158,15 @@ namespace Server
             });
 
             var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+            using var gate = new SemaphoreSlim(8);
 
             // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            for (int i = 0; i < 100; i++) // 300 requests; the runner cannot hold 300 pages open at once
             {
                 foreach (var fileName in fileNames)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}",new PageGotoOptions
-                        {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
+                    var url = $"{Utilities.BASE_URL}/{clientId}/{fileName}";
+                    tasks.Add(ReadFileInBrowser(browser, gate, url, fileName));
                 }
             }
 
@@ -205,22 +199,15 @@ namespace Server
             });
 
             var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+            using var gate = new SemaphoreSlim(8);
 
             // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            for (int i = 0; i < 100; i++) // 300 requests; the runner cannot hold 300 pages open at once
             {
                 foreach (var fileName in fileNames)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASE_URL}/{clientId}/{fileName}", new PageGotoOptions
-                        {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
+                    var url = $"{Utilities.BASE_URL}/{clientId}/{fileName}";
+                    tasks.Add(ReadFileInBrowser(browser, gate, url, fileName));
                 }
             }
 
@@ -232,6 +219,40 @@ namespace Server
                 Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
             }
             await Utilities.SetClientCache(false);
+        }
+
+        // Opening every request's page at once exhausts the hosted runner's socket buffers
+        // (net::ERR_NO_BUFFER_SPACE). Keep the request count and cap how many pages exist.
+        private static async Task<(string FileName, int Status, string Content)> ReadFileInBrowser(IBrowser browser, SemaphoreSlim gate, string url, string fileName)
+        {
+            await gate.WaitAsync();
+            try
+            {
+                for (var attempt = 0; ; attempt++)
+                {
+                    var page = await browser.NewPageAsync();
+                    try
+                    {
+                        var response = await page.GotoAsync(url, new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.NetworkIdle
+                        });
+                        var content = await (response?.TextAsync() ?? Task.FromResult(string.Empty));
+                        return (fileName, response?.Status ?? -1, content);
+                    }
+                    catch (PlaywrightException ex) when (attempt == 0 && ex.Message.Contains("ERR_NO_BUFFER_SPACE", StringComparison.Ordinal))
+                    {
+                    }
+                    finally
+                    {
+                        await page.CloseAsync();
+                    }
+                }
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
     }
 }
