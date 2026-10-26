@@ -7,8 +7,10 @@
     <UseWPF>true</UseWPF>
     <StartupObject>WpfStartupProbe.Program</StartupObject>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Program.cs" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
 </Project>

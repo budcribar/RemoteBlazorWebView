@@ -5,5 +5,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <RootNamespace></RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="StartupHook.cs" />
+  </ItemGroup>
 </Project>

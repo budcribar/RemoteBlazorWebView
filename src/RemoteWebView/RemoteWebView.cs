@@ -32,11 +32,19 @@ namespace PeakSWC.RemoteWebView
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
             var entryAssembly = Assembly.GetEntryAssembly()!;
 
-            try
+            // Embedded publishes have no on-disk wwwroot. Through .NET 10, PhysicalFileProvider
+            // threw DirectoryNotFoundException and the catch below selected the embedded manifest.
+            // .NET 11 constructs a PhysicalFileProvider for a missing directory and reports every
+            // file as not found, which skips the manifest. Only use the physical provider when
+            // the directory is actually present.
+            if (Directory.Exists(contentRootDir))
             {
-                return new PhysicalFileProvider(contentRootDir);
+                try
+                {
+                    return new PhysicalFileProvider(contentRootDir);
+                }
+                catch (Exception) { }
             }
-            catch (Exception) { }
 
             try
             {

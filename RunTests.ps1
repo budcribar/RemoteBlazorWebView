@@ -191,8 +191,9 @@ dotnet build -c Debug ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial
 Write-Host -ForegroundColor GREEN "Publish WpfApp"
 dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish
 
-# Delete all files except the executable and wwwroot
-Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\* -Exclude *.exe, wwwroot 
+# Delete all files except the executable, wwwroot, and the .NET 11 mixed-mode
+# WPF assemblies that cannot be loaded from a single-file bundle.
+Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\* -Exclude *.exe, wwwroot, DirectWriteForwarder.dll, System.Printing.dll, ijwhost.dll 
 
 # created the embedded files
 Copy-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\wwwroot -Recurse ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\embedded\wwwroot
@@ -200,8 +201,8 @@ Copy-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\
 # Publish using the embedded files generated from the previous publish step
 dotnet publish -c Embedded --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded
 
-# Delete all files except the executable
-Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\* -Exclude *.exe -Recurse
+# Delete all files except the executable and the mixed-mode WPF assemblies.
+Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\* -Exclude *.exe, DirectWriteForwarder.dll, System.Printing.dll, ijwhost.dll -Recurse
 
 # Same for WebView app
 Write-Host -ForegroundColor GREEN "Publish WebView App"

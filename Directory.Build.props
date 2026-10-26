@@ -5,4 +5,20 @@
     <VersionPrefix>11.0.0</VersionPrefix>
 	<VersionSuffix>rc2</VersionSuffix>
   </PropertyGroup>
+
+  <!-- .NET 11 built DirectWriteForwarder.dll and System.Printing.dll as mixed-mode
+       assemblies. The single-file bundler still treats them as managed and loads
+       them from memory, which throws BadImageFormatException in
+       System.Windows.Application's initializer. Leave them, and ijwhost.dll, next
+       to the published exe. The tutorial imports this file. -->
+  <Target Name="ExcludeWpfMixedModeAssembliesFromSingleFile"
+          BeforeTargets="_ComputeFilesToBundle"
+          Condition="'$(PublishSingleFile)' == 'true' and '$(UseWPF)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)"
+                             Condition="$([System.String]::Copy('%(Identity)').EndsWith('DirectWriteForwarder.dll')) or $([System.String]::Copy('%(Identity)').EndsWith('System.Printing.dll')) or $([System.String]::Copy('%(Identity)').EndsWith('ijwhost.dll'))">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>

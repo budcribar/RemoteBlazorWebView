@@ -232,7 +232,11 @@ jobs:
             $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
             Write-Host "Publish Release $($app.Project)"
             dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
-            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            # .NET 11 WPF single-file publish must keep DirectWriteForwarder.dll,
+            # System.Printing.dll, and ijwhost.dll beside the exe. They are mixed-mode
+            # and cannot be loaded from inside the bundle.
+            $keepBesideExe = @('DirectWriteForwarder.dll', 'System.Printing.dll', 'ijwhost.dll')
+            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' -and $keepBesideExe -notcontains $_.Name } | Remove-Item -Recurse -Force
             $www = Join-Path $publish 'wwwroot'
             if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
             $embeddedWww = Join-Path $dir 'embedded\wwwroot'
@@ -240,7 +244,7 @@ jobs:
             Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force
             Write-Host "Publish Embedded $($app.Project)"
             dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
-            Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' -and $keepBesideExe -notcontains $_.Name } | Remove-Item -Recurse -Force
             Write-Host "Build Debug $($app.Project)"
             dotnet build $project -c Debug @common
             $expectedDir = Join-Path $dir "bin\x64\Debug\$($app.DebugTfm)"
@@ -298,6 +302,10 @@ jobs:
           $started = Get-Date
           $probeRoot = Join-Path $env:GITHUB_WORKSPACE '.github/workflows/wpf-startup-probe'
           $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+          Get-ChildItem (Join-Path $dest 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish') -ErrorAction SilentlyContinue |
+            Select-Object Name, Length | Out-File (Join-Path $diag 'wpf-publish-files.txt') -Encoding utf8
+          Get-ChildItem (Join-Path $dest 'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded') -ErrorAction SilentlyContinue |
+            Select-Object Name, Length | Out-File (Join-Path $diag 'wpf-embedded-files.txt') -Encoding utf8
 
           @(
             "SESSIONNAME=$env:SESSIONNAME",
@@ -405,6 +413,7 @@ jobs:
           $launches = @(
             @{ Name = 'wpf-publish'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
             @{ Name = 'wpf-publish-nohook'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $false },
+            @{ Name = 'wpf-embedded'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $false },
             @{ Name = 'wpf-debug'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net11.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
             @{ Name = 'winforms-publish'; Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe'; Hook = $true }
           )
