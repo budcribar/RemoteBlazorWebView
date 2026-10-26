@@ -131,7 +131,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnServerUriPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("ServerUri must be set before HostPage");
-            Logger.LogInformation("ServerUriPropertyChanged {e}", e.NewValue.ToString());
+            Logger.LogInformation("ServerUriPropertyChanged {e}", e.NewValue);
         }
 
         private static void OnGrpcBaseUriPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGrpcBaseUriPropertyChanged(e);
@@ -141,25 +141,25 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnPingIntervalSecondsPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("PingIntervalSeconds must be set before HostPage");
-            Logger.LogInformation("PingIntervalSecondsPropertyChanged {e}", e.NewValue.ToString()); 
+            Logger.LogInformation("PingIntervalSecondsPropertyChanged {e}", e.NewValue); 
         }
 
         private void OnGrpcBaseUriPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("GrpcBaseUri must be set before HostPage");
-            Logger.LogInformation("GrpcBaseUriPropertyChanged {e}", e.NewValue.ToString()); 
+            Logger.LogInformation("GrpcBaseUriPropertyChanged {e}", e.NewValue); 
         }
 
         private static void OnIdPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnIdPropertyChanged(e);
 
-        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) { Logger.LogInformation("IdPropertyChanged {e}", e.NewValue.ToString()); }
+        private void OnIdPropertyChanged(DependencyPropertyChangedEventArgs e) { Logger.LogInformation("IdPropertyChanged {e}", e.NewValue); }
 
         private static void OnGroupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnGroupPropertyChanged(e);
 
         private void OnGroupPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("Group must be set before HostPage");
-            Logger.LogInformation("GroupPropertyChanged {e}", e.NewValue.ToString());
+            Logger.LogInformation("GroupPropertyChanged {e}", e.NewValue);
         }
 
         private static void OnMarkupPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnMarkupPropertyChanged(e);
@@ -167,7 +167,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnMarkupPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("Markup must be set before HostPage");
-            Logger.LogInformation("MarkupPropertyChanged {e}", e.NewValue.ToString().Replace("\r\n", "").Replace(" ", "")); 
+            Logger.LogInformation("MarkupPropertyChanged {e}", e.NewValue?.ToString()?.Replace("\r\n", "").Replace(" ", "")); 
         }
 
         private static void OnEnableMirrorsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((BlazorWebView)d).OnEnableMirrorsPropertyChanged(e);
@@ -175,7 +175,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         private void OnEnableMirrorsPropertyChanged(DependencyPropertyChangedEventArgs e) {
             if (RequiredStartupPropertiesSet)
                 throw new ArgumentException("EnableMirrors must be set before HostPage");
-            Logger.LogInformation("EnableMirrorsPropertyChanged {e}", e.NewValue.ToString());
+            Logger.LogInformation("EnableMirrorsPropertyChanged {e}", e.NewValue);
         }
 
         private Guid id = Guid.Empty;
