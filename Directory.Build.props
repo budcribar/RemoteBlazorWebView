@@ -7,18 +7,43 @@
   </PropertyGroup>
 
   <!-- .NET 11 built DirectWriteForwarder.dll and System.Printing.dll as mixed-mode
-       assemblies. The single-file bundler still treats them as managed and loads
-       them from memory, which throws BadImageFormatException in
-       System.Windows.Application's initializer. Leave them, and ijwhost.dll, next
-       to the published exe. The tutorial imports this file. -->
-  <Target Name="ExcludeWpfMixedModeAssembliesFromSingleFile"
+       assemblies (/clr:netcore). The single-file bundler still classifies them as
+       managed (they have a CorHeader) and loads them from memory, which throws
+       BadImageFormatException. IncludeAllContentForSelfExtract is the supported
+       workaround: the host extracts the bundle, including those assemblies and
+       ijwhost.dll, to %TEMP%\.net and loads them with LoadLibrary. That property
+       is also the .NET Core 3.1 compatibility mode, so AppContext.BaseDirectory
+       becomes the extraction directory. wwwroot is therefore bundled (so the
+       running app can see it) and copied back beside the exe, because the
+       non-embedded publish is what the embedded configuration is prepared from.
+       IncludeNativeLibrariesForSelfExtract is required by the SDK whenever
+       IncludeAllContentForSelfExtract is set. WinForms does not set UseWPF, so
+       this does not apply to it. The tutorial imports this file before it sets
+       PublishSingleFile, so the properties are applied from a target. -->
+  <Target Name="BundleWpfSingleFileForSelfExtract"
           BeforeTargets="_ComputeFilesToBundle"
           Condition="'$(PublishSingleFile)' == 'true' and '$(UseWPF)' == 'true'">
+    <PropertyGroup>
+      <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+      <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    </PropertyGroup>
     <ItemGroup>
+      <_WpfWwwrootToRepublish Include="@(ResolvedFileToPublish)"
+                              Condition="$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('wwwroot/'))" />
       <ResolvedFileToPublish Update="@(ResolvedFileToPublish)"
-                             Condition="$([System.String]::Copy('%(Identity)').EndsWith('DirectWriteForwarder.dll')) or $([System.String]::Copy('%(Identity)').EndsWith('System.Printing.dll')) or $([System.String]::Copy('%(Identity)').EndsWith('ijwhost.dll'))">
-        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+                             Condition="$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('wwwroot/'))">
+        <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
     </ItemGroup>
+    <Message Importance="high" Text="WPF single-file publish extracts bundled files (including mixed-mode assemblies) on startup." />
+  </Target>
+
+  <Target Name="RestoreWpfWwwrootBesideSingleFile"
+          AfterTargets="CopyFilesToPublishDirectory"
+          Condition="'$(PublishSingleFile)' == 'true' and '$(UseWPF)' == 'true' and '@(_WpfWwwrootToRepublish)' != ''">
+    <Copy SourceFiles="@(_WpfWwwrootToRepublish)"
+          DestinationFiles="@(_WpfWwwrootToRepublish->'$(PublishDir)%(RelativePath)')"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
   </Target>
 </Project>
