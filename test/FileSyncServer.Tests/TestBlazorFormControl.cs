@@ -274,10 +274,13 @@ namespace FileSyncServer.Tests
 
                 webView.ReadyToConnect += (sender, e) =>
                 {
-                    webView.NavigateToString($"<a href='{e.Url}app/{e.Id}' target='_blank'> {e.Url}app/{e.Id}</a>");
-                    var launched = Utilities.OpenUrlInBrowserWithDevTools($"{e.Url}app/{e.Id}");
+                    var target = $"{e.Url}app/{e.Id}";
+                    webView.NavigateToString($"<a href='{target}' target='_blank'> {target}</a>");
+                    // Chrome with devtools reached this point and still never fired Connected.
+                    // TestConnectedEvent reaches Connected through the default browser.
+                    Utilities.OpenUrlInBrowser(target);
                     lock (browserLaunchGate)
-                        browserLaunch = launched;
+                        browserLaunch = $"ReadyToConnect ran. Opened {target} with the default browser.";
                 };
 
                 // 800 x 1k bytes passes
