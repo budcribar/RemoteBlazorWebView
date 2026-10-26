@@ -285,16 +285,7 @@ namespace FileSyncServer.Tests
 
                 window.Show();
                 window.UpdateLayout();
-                try
-                {
-                    await InitializeAndAssertAsync(inner, expected: false, label + " BlazorWebView");
-                }
-                catch (Exception ex) when (useComposition && IsMissingCompositionSupport(ex))
-                {
-                    // The composition control loads Microsoft.Windows.SDK.NET while creating its D3D image.
-                    // The test project does not reference that package. The assignment above still ran.
-                    Report(label + " controller not reachable: " + ex.GetType().Name + ": " + ex.Message, inner.AllowExternalDrop, controller: null, expected: false);
-                }
+                await InitializeAndAssertAsync(inner, expected: false, label + " BlazorWebView");
             }
             finally
             {
@@ -338,7 +329,18 @@ namespace FileSyncServer.Tests
             }
 
             var controlValue = webView.AllowExternalDrop;
-            var controllerValue = ReadControllerAllowExternalDrop(webView);
+            bool controllerValue;
+            try
+            {
+                controllerValue = ReadControllerAllowExternalDrop(webView);
+            }
+            catch (Exception ex)
+            {
+                Report(label, controlValue, controller: null, expected);
+                Console.WriteLine(label + " controller read failed: " + ex.Message);
+                throw;
+            }
+
             Report(label, controlValue, controllerValue, expected);
             Assert.Equal(expected, controlValue);
             Assert.Equal(expected, controllerValue);
@@ -352,42 +354,49 @@ namespace FileSyncServer.Tests
             Console.WriteLine(message);
         }
 
-        private static bool ReadControllerAllowExternalDrop(IWebView2 webView)
+        // WebView2 and WebView2CompositionControl do not inherit CoreWebView2Controller.
+        // Each holds an internal WebView2Base in m_webview2Base, and that object owns the controller.
+        // The composition control stores a CoreWebView2CompositionController in the same property.
+        private static bool ReadControllerAllowExternalDrop(object webView)
         {
-            object? controller = null;
-            for (var type = webView.GetType(); type != null; type = type.BaseType)
-            {
-                var property = type.GetProperty(
-                    "CoreWebView2Controller",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (property == null)
-                    continue;
-                controller = property.GetValue(webView);
-                break;
-            }
+            var webview2Base = RequireMember(webView, "m_webview2Base");
+            var controller = RequireMember(webview2Base, "CoreWebView2Controller");
+            if (controller is CoreWebView2Controller core)
+                return core.AllowExternalDrop;
 
-            Assert.True(controller != null, "CoreWebView2Controller was not reachable on " + webView.GetType().FullName + " after initialization.");
-            var allow = controller.GetType().GetProperty(
-                "AllowExternalDrop",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            Assert.True(allow != null, "AllowExternalDrop was not found on " + controller.GetType().FullName + ".");
-            return (bool)allow.GetValue(controller)!;
+            throw new InvalidOperationException(
+                "CoreWebView2Controller on " + webView.GetType().FullName + " was " + controller.GetType().FullName + ".");
         }
 
-        private static bool IsMissingCompositionSupport(Exception exception)
+        private static object RequireMember(object instance, string name)
         {
-            for (Exception? current = exception; current != null; current = current.InnerException)
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var type = instance.GetType(); type != null; type = type.BaseType)
             {
-                if (current is not (FileNotFoundException or DllNotFoundException or TypeLoadException or InvalidOperationException))
-                    continue;
-                var text = current.ToString();
-                if (text.Contains("Windows.SDK.NET", StringComparison.Ordinal)
-                    || text.Contains("Windows.UI.Composition", StringComparison.Ordinal)
-                    || text.Contains("D3D", StringComparison.Ordinal))
-                    return true;
+                foreach (var field in type.GetFields(flags))
+                {
+                    if (field.Name == name)
+                    {
+                        var value = field.GetValue(instance);
+                        if (value == null)
+                            throw new InvalidOperationException(name + " was null on " + instance.GetType().FullName + " after initialization.");
+                        return value;
+                    }
+                }
+
+                foreach (var property in type.GetProperties(flags))
+                {
+                    if (property.Name == name && property.GetIndexParameters().Length == 0)
+                    {
+                        var value = property.GetValue(instance);
+                        if (value == null)
+                            throw new InvalidOperationException(name + " was null on " + instance.GetType().FullName + " after initialization.");
+                        return value;
+                    }
+                }
             }
 
-            return false;
+            throw new InvalidOperationException(name + " was not found on " + instance.GetType().FullName + ".");
         }
 
         private static Window CreateWindow(string title) => new()
