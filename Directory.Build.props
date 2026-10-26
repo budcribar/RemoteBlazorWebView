@@ -6,44 +6,27 @@
 	<VersionSuffix>rc2</VersionSuffix>
   </PropertyGroup>
 
-  <!-- .NET 11 built DirectWriteForwarder.dll and System.Printing.dll as mixed-mode
-       assemblies (/clr:netcore). The single-file bundler still classifies them as
-       managed (they have a CorHeader) and loads them from memory, which throws
-       BadImageFormatException. IncludeAllContentForSelfExtract is the supported
-       workaround: the host extracts the bundle, including those assemblies and
-       ijwhost.dll, to %TEMP%\.net and loads them with LoadLibrary. That property
-       is also the .NET Core 3.1 compatibility mode, so AppContext.BaseDirectory
-       becomes the extraction directory. wwwroot is therefore bundled (so the
-       running app can see it) and copied back beside the exe, because the
-       non-embedded publish is what the embedded configuration is prepared from.
-       IncludeNativeLibrariesForSelfExtract is required by the SDK whenever
-       IncludeAllContentForSelfExtract is set. WinForms does not set UseWPF, so
-       this does not apply to it. The tutorial imports this file before it sets
-       PublishSingleFile, so the properties are applied from a target. -->
-  <Target Name="BundleWpfSingleFileForSelfExtract"
-          BeforeTargets="_ComputeFilesToBundle"
-          Condition="'$(PublishSingleFile)' == 'true' and '$(UseWPF)' == 'true'">
-    <PropertyGroup>
+  <!-- .NET 11 builds DirectWriteForwarder.dll and System.Printing.dll as mixed-mode
+       assemblies (/clr:netcore). A single-file bundle loads them from memory and
+       throws BadImageFormatException. Only the embedded WPF publish is a single
+       file, and it opts into IncludeAllContentForSelfExtract so the host extracts
+       those assemblies and ijwhost.dll to %TEMP%\.net and LoadLibrary can open them.
+       Non-embedded WPF publishes as a normal multi-file app: wwwroot and the
+       mixed-mode assemblies stay beside the exe, with no extraction directory.
+       The tutorial sets PublishSingleFile in the project after importing this
+       file, so the override is applied from a target. WinForms does not set
+       UseWPF, so this target does not change it. -->
+  <Target Name="ConfigureWpfPublishLayout"
+          BeforeTargets="PrepareForPublish;_ComputeFilesToBundle">
+    <PropertyGroup Condition="'$(UseWPF)' == 'true' and '$(Configuration)' != 'Embedded'">
+      <PublishSingleFile>false</PublishSingleFile>
+      <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(UseWPF)' == 'true' and '$(Configuration)' == 'Embedded' and '$(PublishSingleFile)' == 'true'">
       <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
       <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     </PropertyGroup>
-    <ItemGroup>
-      <_WpfWwwrootToRepublish Include="@(ResolvedFileToPublish)"
-                              Condition="$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('wwwroot/'))" />
-      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)"
-                             Condition="$([System.String]::Copy('%(RelativePath)').Replace('\','/').StartsWith('wwwroot/'))">
-        <ExcludeFromSingleFile>false</ExcludeFromSingleFile>
-      </ResolvedFileToPublish>
-    </ItemGroup>
-    <Message Importance="high" Text="WPF single-file publish extracts bundled files (including mixed-mode assemblies) on startup." />
-  </Target>
-
-  <Target Name="RestoreWpfWwwrootBesideSingleFile"
-          AfterTargets="CopyFilesToPublishDirectory"
-          Condition="'$(PublishSingleFile)' == 'true' and '$(UseWPF)' == 'true' and '@(_WpfWwwrootToRepublish)' != ''">
-    <Copy SourceFiles="@(_WpfWwwrootToRepublish)"
-          DestinationFiles="@(_WpfWwwrootToRepublish->'$(PublishDir)%(RelativePath)')"
-          SkipUnchangedFiles="true"
-          OverwriteReadOnlyFiles="true" />
+    <Message Importance="high" Condition="'$(UseWPF)' == 'true' and '$(Configuration)' != 'Embedded'" Text="WPF $(Configuration) publish is multi-file (PublishSingleFile=false)." />
+    <Message Importance="high" Condition="'$(UseWPF)' == 'true' and '$(Configuration)' == 'Embedded' and '$(PublishSingleFile)' == 'true'" Text="Embedded WPF single-file publish extracts bundled files (including mixed-mode assemblies) on startup." />
   </Target>
 </Project>

@@ -26,7 +26,12 @@ public class CreateFileProviderTests
         try
         {
             var provider = ClientRemote.RemoteWebView.CreateFileProvider(dir, @"wwwroot\index.html");
-            Assert.IsType<PhysicalFileProvider>(provider);
+            var physical = Assert.IsType<PhysicalFileProvider>(provider);
+            // The supplied directory is used even when it does not contain the host page.
+            // CreateFileProvider does not search beside the process executable.
+            Assert.Equal(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir)),
+                Path.TrimEndingDirectorySeparator(physical.Root));
         }
         finally
         {

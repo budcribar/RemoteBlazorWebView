@@ -32,13 +32,8 @@ namespace PeakSWC.RemoteWebView
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
             var entryAssembly = Assembly.GetEntryAssembly()!;
 
-            // IncludeAllContentForSelfExtract makes Assembly.Location and AppContext.BaseDirectory
-            // the extraction directory under %TEMP%\.net. wwwroot is copied back beside the
-            // original exe because that is the directory the publish layout and the embedded
-            // prep use. If the extraction directory has no host page, serve that copy.
-            contentRootDir = PreferContentRootWithHostPage(contentRootDir, hostPage);
-
-            // Embedded publishes have no on-disk wwwroot. Through .NET 10, PhysicalFileProvider
+            // Non-embedded apps pass the wwwroot directory beside the exe. Embedded
+            // publishes have no on-disk wwwroot. Through .NET 10, PhysicalFileProvider
             // threw DirectoryNotFoundException and the catch below selected the embedded manifest.
             // .NET 11 constructs a PhysicalFileProvider for a missing directory and reports every
             // file as not found, which skips the manifest. Only use the physical provider when
@@ -66,24 +61,6 @@ namespace PeakSWC.RemoteWebView
 
             return new NullFileProvider();
 
-        }
-
-        private static string PreferContentRootWithHostPage(string contentRootDir, string hostPage)
-        {
-            var hostFile = Path.GetFileName(hostPage);
-            if (File.Exists(Path.Combine(contentRootDir, hostFile)))
-                return contentRootDir;
-
-            var exeDir = Path.GetDirectoryName(Environment.ProcessPath);
-            var hostDir = Path.GetDirectoryName(hostPage);
-            if (string.IsNullOrEmpty(exeDir) || string.IsNullOrEmpty(hostDir))
-                return contentRootDir;
-
-            var besideExe = Path.GetFullPath(Path.Combine(exeDir, hostDir));
-            if (File.Exists(Path.Combine(besideExe, hostFile)))
-                return besideExe;
-
-            return contentRootDir;
         }
 
         public static void Restart(IBlazorWebView blazorWebView)

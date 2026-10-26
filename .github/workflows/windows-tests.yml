@@ -230,16 +230,30 @@ jobs:
             $dir = Split-Path $project
             $publish = Join-Path $dir 'bin\publish'
             $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
+            $isWpf = $app.Project -like '*WpfApp*'
             Write-Host "Publish Release $($app.Project)"
-            dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
-            # WPF mixed-mode assemblies are extracted from the exe on startup, so
-            # the publish folder is the exe plus wwwroot. WinForms and Photino
-            # already published that way.
-            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            if ($isWpf) {
+              # Non-embedded WPF is a normal multi-file publish. wwwroot and the
+              # mixed-mode assemblies stay beside the exe. No PublishSingleFile
+              # and no extraction to %TEMP%\.net.
+              dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish -p:PublishSingleFile=false @common
+            } else {
+              dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
+              # WinForms and Photino stay single-file: exe plus wwwroot.
+              Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+            }
             $www = Join-Path $publish 'wwwroot'
             if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
-            $publishLeftover = @(Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' })
-            if ($publishLeftover.Count -gt 0) { throw "Publish folder is not exe + wwwroot ($($app.Exe)): $($publishLeftover.Name -join ', ')" }
+            if ($isWpf) {
+              foreach ($dll in 'DirectWriteForwarder.dll', 'System.Printing.dll', 'ijwhost.dll') {
+                $dllPath = Join-Path $publish $dll
+                if (-not (Test-Path $dllPath)) { throw "Non-embedded WPF publish is missing $dll beside the exe" }
+              }
+              Write-Host "Non-embedded WPF publish has $((Get-ChildItem $publish -Filter '*.dll' -File).Count) assemblies beside the exe"
+            } else {
+              $publishLeftover = @(Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' })
+              if ($publishLeftover.Count -gt 0) { throw "Publish folder is not exe + wwwroot ($($app.Exe)): $($publishLeftover.Name -join ', ')" }
+            }
             $embeddedWww = Join-Path $dir 'embedded\wwwroot'
             New-Item -ItemType Directory -Force -Path $embeddedWww | Out-Null
             Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force

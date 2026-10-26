@@ -189,11 +189,9 @@ dotnet build -c Debug ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial
 ## Same for the wpf app
 
 Write-Host -ForegroundColor GREEN "Publish WpfApp"
-dotnet publish -c Release --self-contained true -r win-x64 ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish
-
-# Delete all files except the executable and wwwroot. Mixed-mode WPF assemblies
-# are inside the exe and extracted on startup.
-Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\* -Exclude *.exe, wwwroot
+# Non-embedded WPF is multi-file. wwwroot and the mixed-mode assemblies stay
+# beside the exe. PublishSingleFile is only used for the Embedded configuration below.
+dotnet publish -c Release --self-contained true -r win-x64 -p:PublishSingleFile=false ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp -o ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish
 
 # created the embedded files
 Copy-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish\wwwroot -Recurse ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\embedded\wwwroot
