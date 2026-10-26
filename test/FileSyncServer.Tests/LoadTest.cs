@@ -9,6 +9,7 @@ using System.Linq;
 using System;
 using FileSyncServer;
 using WebdriverTestProject;
+using Xunit.Abstractions;
 namespace FileSyncServer.Tests
 {
     [Collection("Server collection")]
@@ -16,14 +17,16 @@ namespace FileSyncServer.Tests
     {
         private readonly ServerFixture _serverFixture;
         private readonly ClientFixture _clientFixture;
+        private readonly ITestOutputHelper _output;
         private readonly string clientCachePath;
         private readonly string filePath;
         private readonly string clientId;
 
-        public LoadTest(ClientFixture clientFixture, ServerFixture serverFixture)
+        public LoadTest(ClientFixture clientFixture, ServerFixture serverFixture, ITestOutputHelper output)
         {
             _serverFixture = serverFixture;
             _clientFixture = clientFixture;
+            _output = output;
             clientId = _clientFixture.ClientId.ToString();
 
             var testDirectory = Directory.GetCurrentDirectory();
@@ -63,18 +66,20 @@ namespace FileSyncServer.Tests
 
             while (true)
             {
+                Log($"Measuring {maxConcurrentRequests} concurrent requests.");
                 double averageTime = await MeasureAverageResponseTime(testUrl, maxConcurrentRequests, timeoutSeconds);
                 results.Add(Tuple.Create(maxConcurrentRequests, averageTime));
+                Log($"Measured {maxConcurrentRequests} concurrent requests in {averageTime:F0} ms.");
 
                 if (averageTime > timeoutSeconds * 1000)
                 {
-                    Console.WriteLine($"Timeout detected at {maxConcurrentRequests} requests.");
+                    Log($"Timeout detected at {maxConcurrentRequests} requests.");
                     break;
                 }
 
                 if (results.Count > 1 && averageTime > results[^2].Item2 * nonlinearityThreshold)
                 {
-                    Console.WriteLine($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
+                    Log($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
                     break;
                 }
 
@@ -82,11 +87,14 @@ namespace FileSyncServer.Tests
             }
 
             minConcurrentRequests = maxConcurrentRequests / 2;
+            Log($"Binary search between {minConcurrentRequests} and {maxConcurrentRequests} concurrent requests.");
             while (maxConcurrentRequests - minConcurrentRequests > 1)
             {
                 int mid = (minConcurrentRequests + maxConcurrentRequests) / 2;
+                Log($"Measuring {mid} concurrent requests.");
                 double midTime = await MeasureAverageResponseTime(testUrl, mid, timeoutSeconds);
                 results.Add(Tuple.Create(mid, midTime));
+                Log($"Measured {mid} concurrent requests in {midTime:F0} ms.");
 
                 if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[^2].Item2 * nonlinearityThreshold))
                 {
@@ -101,7 +109,7 @@ namespace FileSyncServer.Tests
             string html = CreateHtmlReport(results);
             string reportPath = Path.Combine(clientCachePath, "report.html");
             File.WriteAllText(reportPath, html);
-            Console.WriteLine($"Load test report saved to {reportPath}");
+            Log($"Load test report saved to {reportPath}. Ceiling search ended at {maxConcurrentRequests} concurrent requests.");
 
             // Your assertions about maxConcurrentRequests here.
             // Example: maxConcurrentRequests.Should().BeLessThan(someValue);
@@ -111,10 +119,12 @@ namespace FileSyncServer.Tests
         private static async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
         {
             using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = true
-            });
+            // Same Chromium launch as the 300-page test. Playwright 1.63's default
+            // --disable-features list does not include TcpPortRandomizationWin, and that
+            // Windows feature fails connect() with WSAENOBUFS (net::ERR_NO_BUFFER_SPACE)
+            // while ephemeral ports are still free. Each measurement still opens every
+            // page together; this browser is disposed before the next concurrency step.
+            await using var browser = await playwright.Chromium.LaunchAsync(Server.ConcurrentRequestsTests.HeadlessChromiumOptions());
 
             var tasks = new List<Task<double>>();
             var stopwatch = new Stopwatch();
@@ -145,6 +155,12 @@ namespace FileSyncServer.Tests
             }
 
             return tasks.Select(t => t.Result).Average();
+        }
+
+        private void Log(string message)
+        {
+            _output.WriteLine(message);
+            Console.WriteLine(message);
         }
 
         private static string CreateHtmlReport(List<Tuple<int, double>> results)
