@@ -36,7 +36,7 @@ namespace WebdriverTestProject
     public class LocalBlazorWpfFixture : BaseTestFixture { public LocalBlazorWpfFixture() { ClientExecutablePath = Utilities.BlazorWpfAppExe(); } }
 
     [Collection("TestLocalEmbeddedBlazorWpf")]
-    public class TestLocalEmbeddedBlazorWpf : BaseTestClicks<LocalBlazorWpfFixture> { public TestLocalEmbeddedBlazorWpf(ITestOutputHelper output) : base(output) { } }
+    public class TestLocalEmbeddedBlazorWpf : BaseTestClicks<LocalEmbeddedBlazorWpfFixture> { public TestLocalEmbeddedBlazorWpf(ITestOutputHelper output) : base(output) { } }
     public class LocalEmbeddedBlazorWpfFixture : BaseTestFixture { public LocalEmbeddedBlazorWpfFixture() { ClientExecutablePath = Utilities.BlazorWpfAppEmbeddedExe(); } }
     #endregion
 }
