@@ -37,7 +37,6 @@ namespace PeakSWC.RemoteWebView
         };
 
         private readonly PhotinoWindow _window;
-        private readonly int _uiThreadId;
         private readonly MethodInfo _invokeMethodInfo;
 
         public PhotinoSynchronizationContext(PhotinoWindow window)
@@ -50,10 +49,6 @@ namespace PeakSWC.RemoteWebView
             _state = state;
 
             _window = window ?? throw new ArgumentNullException(nameof(window));
-
-            //PhotinoWindow x;
-            _uiThreadId = (int)typeof(PhotinoWindow).GetField("_managedThreadId", BindingFlags.NonPublic | BindingFlags.Instance)!
-                .GetValue(_window)!;
 
             _invokeMethodInfo = typeof(PhotinoWindow).GetMethod("Invoke", BindingFlags.Public | BindingFlags.Instance)!;
         }
@@ -307,7 +302,7 @@ namespace PeakSWC.RemoteWebView
         private class State
         {
             public bool IsBusy; // Just for debugging
-            public object Lock = new();
+            public readonly object Lock = new();
             public Task Task = Task.CompletedTask;
 
             public override string ToString()

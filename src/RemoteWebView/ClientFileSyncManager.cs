@@ -214,7 +214,7 @@ namespace PeakSWC.RemoteWebView
             var initResponse = new ClientFileReadResponse
             {
                 ClientId = clientGuid,
-                RequestId = new Guid().ToString(),
+                RequestId = Guid.Empty.ToString(),
                 Path = string.Empty,
                 Init = new Init { HtmlHostPath = htmlHostPath }
             };
