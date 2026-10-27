@@ -81,7 +81,7 @@ namespace Server
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NotFound, $"Expected status code 404 for non-existing file '{fileName}'.");
             var content = await response.Content.ReadAsStringAsync();
-            content.Should().Contain("File not found.", $"Response content for '{fileName}' should indicate that the file was not found.");
+            content.Should().Be($"There is no content at {fileName}", $"Response content for '{fileName}' should match the local missing-file body.");
         }
 
         [Fact]
