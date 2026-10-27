@@ -1,0 +1,201 @@
+# SonarQube Cloud analysis for the .NET solution on net11.
+#
+# The .NET scanner (dotnet-sonarscanner begin / build / end) is used because
+# C# issues come from the Roslyn analyzers injected into the build.
+# SonarSource/sonarcloud-github-action does not wrap MSBuild, so it is not used.
+#
+# There is no sonar-project.properties. The organization key is budcribar and
+# the project key is budcribar_RemoteBlazorWebView. That project is the Free
+# plan's single main branch, and this workflow analyzes net11 as that main
+# branch. sonar.branch.name is not passed.
+#
+# actions/setup-dotnet reads global.json. On net11 that pins the 11.0 RC.
+
+name: SonarCloud
+
+on:
+  push:
+    branches: [net11]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      # RemoteWebView embeds dist/remote.blazor.desktop.js, which is not
+      # committed. The Blazor.JS project itself is not passed to dotnet build:
+      # its webpack target would run a second install, and the bundle is the
+      # only output the other projects need.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
+
+      - name: Build remote.blazor.desktop.js
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          corepack enable
+          corepack prepare yarn@4.3.1 --activate
+          $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
+          Push-Location src/RemoteWebView.Blazor.JS
+          yarn install --immutable
+          Push-Location Web.JS
+          npm install --no-audit --no-fund
+          Pop-Location
+          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
+            throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
+          }
+          npm run build:production
+          if (-not (Test-Path 'dist/remote.blazor.desktop.js')) {
+            throw 'dist/remote.blazor.desktop.js was not produced'
+          }
+          Pop-Location
+
+      - name: Install SonarScanner for .NET
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = Join-Path $env:GITHUB_WORKSPACE '.sonar/scanner'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          dotnet tool install dotnet-sonarscanner --tool-path $dir
+
+      - name: Begin SonarQube Cloud analysis
+        id: begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:SONAR_TOKEN)) {
+            throw 'GitHub Actions secret SONAR_TOKEN is empty.'
+          }
+          $scanner = Join-Path $env:GITHUB_WORKSPACE '.sonar/scanner/dotnet-sonarscanner.exe'
+          $exclusions = @(
+            'src/RemoteWebView.Blazor.JS/Web.JS/**',
+            'src/RemoteWebView.Blazor.JS/node_modules/**',
+            'src/RemoteWebView.Blazor.JS/dist/**',
+            'src/RemoteWebView.Blazor.JS/src/generated/**',
+            'src/RemoteWebView.Blazor.JS/protoc/**',
+            '**/remote.blazor.desktop.js',
+            '**/wwwroot/**/*.js',
+            '**/wwwroot/js/**',
+            '**/bin/**',
+            '**/obj/**'
+          ) -join ','
+          $coverageExclusions = @(
+            'test/**',
+            'src/Benchmarks/**',
+            'src/RemoteWebView.Blazor.JS/Web.JS/**',
+            'src/RemoteWebView.Blazor.JS/dist/**',
+            'src/RemoteWebView.Blazor.JS/src/generated/**',
+            'src/RemoteWebView.Blazor.JS/protoc/**',
+            '**/remote.blazor.desktop.js',
+            '**/wwwroot/**/*.js',
+            '**/wwwroot/js/**'
+          ) -join ','
+          & $scanner begin `
+            /k:budcribar_RemoteBlazorWebView `
+            /o:budcribar `
+            /d:sonar.host.url=https://sonarcloud.io `
+            "/d:sonar.token=$env:SONAR_TOKEN" `
+            "/d:sonar.exclusions=$exclusions" `
+            "/d:sonar.coverage.exclusions=$coverageExclusions" `
+            "/d:sonar.cpd.exclusions=$coverageExclusions" `
+            '/d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # StressServer is omitted: it embeds a tutorial executable. The Blazor.JS
+      # project is omitted because the bundle was already built above.
+      - name: Build
+        id: build
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $common = @(
+            '-c', 'Release',
+            '-p:Platform=x64',
+            '-p:EnableWindowsTargeting=true',
+            '-p:GeneratePackageOnBuild=false'
+          )
+          $projects = @(
+            'src/RemoteBlazorWebView/RemoteBlazorWebView.csproj',
+            'src/RemoteWebView/RemoteWebView.csproj',
+            'src/RemoteWebViewService/RemoteWebViewService.csproj',
+            'src/EditWebView/EditWebView.csproj',
+            'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
+            'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
+            'src/Benchmarks/FilePOC/Client/Client.csproj',
+            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
+            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj',
+            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet build $project @common
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      # These four projects run without the tutorial publish. They do not
+      # reference coverlet.collector, so this step currently produces no
+      # coverage file. FileSyncServer.Tests is built above and not run here.
+      - name: Test
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $projects = @(
+            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
+            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj'
+          )
+          $failed = $false
+          foreach ($project in $projects) {
+            $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
+            dotnet test $project `
+              -c Release `
+              --no-build `
+              -p:Platform=x64 `
+              -p:EnableWindowsTargeting=true `
+              -p:GeneratePackageOnBuild=false `
+              --collect:"XPlat Code Coverage;Format=opencover" `
+              --results-directory "TestResults/$name"
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          if ($failed) { exit 1 }
+
+      - name: End SonarQube Cloud analysis
+        if: always() && steps.begin.outcome == 'success' && steps.build.outcome == 'success'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scanner = Join-Path $env:GITHUB_WORKSPACE '.sonar/scanner/dotnet-sonarscanner.exe'
+          & $scanner end "/d:sonar.token=$env:SONAR_TOKEN"
+          exit $LASTEXITCODE
