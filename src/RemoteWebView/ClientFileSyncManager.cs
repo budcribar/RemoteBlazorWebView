@@ -19,6 +19,7 @@ namespace PeakSWC.RemoteWebView
         private readonly string _clientGuid;
         private readonly string _htmlHostPath;
         private readonly AsyncDuplexStreamingCall<ClientFileReadResponse, ServerFileReadRequest> _call;
+        private readonly IClientStreamWriter<ClientFileReadResponse> _requestStream;
         private readonly IFileProvider _fileProvider;
         private readonly Action<Exception> _errorCallback;
        
@@ -33,8 +34,23 @@ namespace PeakSWC.RemoteWebView
 
             // Initiate the duplex streaming call
             _call = _client.RequestClientFileRead();
-           
+            _requestStream = _call.RequestStream;
         }
+
+        // Test seam. Production construction opens the duplex call above.
+        internal ClientFileSyncManager(string clientId, IFileProvider fileProvider, IClientStreamWriter<ClientFileReadResponse> requestStream, ILogger logger)
+        {
+            _client = null!;
+            _logger = logger;
+            _clientGuid = clientId;
+            _htmlHostPath = string.Empty;
+            _call = null!;
+            _requestStream = requestStream;
+            _fileProvider = fileProvider;
+            _errorCallback = static _ => { };
+        }
+
+        internal Task HandleFileDataRequestForTests(ServerFileReadRequest request) => HandleFileDataRequestAsync(request);
 
         /// <summary>
         /// Starts handling requests from the server.
@@ -147,7 +163,7 @@ namespace PeakSWC.RemoteWebView
                             FileChunk = ByteString.CopyFrom(buffer, 0, bytesRead),
                         }
                     };
-                    await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
+                    await _requestStream.WriteAsync(response).ConfigureAwait(false);
                 }
 
                 await SendCompletionResponse(requestId, subPath);
@@ -158,6 +174,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogWarning("File '{SubPath}' not found in client's cache.", subPath);
                 }
+                await SendCompletionAfterFailure(requestId, subPath).ConfigureAwait(false);
             }
             catch (UnauthorizedAccessException)
             {
@@ -165,6 +182,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogError("Access denied to file '{SubPath}'.", subPath);
                 }
+                await SendCompletionAfterFailure(requestId, subPath).ConfigureAwait(false);
             }
             catch (IOException ex)
             {
@@ -172,6 +190,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogError(ex, "IO error reading file '{SubPath}'.", subPath);
                 }
+                await SendCompletionAfterFailure(requestId, subPath).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -179,6 +198,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     _logger.LogError(ex, "Unexpected error reading file '{SubPath}'.", subPath);
                 }
+                await SendCompletionAfterFailure(requestId, subPath).ConfigureAwait(false);
             }
             finally
             {
@@ -198,7 +218,7 @@ namespace PeakSWC.RemoteWebView
                     FileChunk = ByteString.Empty,
                 }
             };
-            await _call.RequestStream.WriteAsync(completionResponse).ConfigureAwait(false);
+            await _requestStream.WriteAsync(completionResponse).ConfigureAwait(false);
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -215,7 +235,7 @@ namespace PeakSWC.RemoteWebView
                 Path = string.Empty,
                 Init = new Init { HtmlHostPath = htmlHostPath }
             };
-            await _call.RequestStream.WriteAsync(initResponse).ConfigureAwait(false);
+            await _requestStream.WriteAsync(initResponse).ConfigureAwait(false);
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -259,6 +279,18 @@ namespace PeakSWC.RemoteWebView
                     Length = -1,
                     StatusCode = (int)HttpStatusCode.InternalServerError
                 };
+            }
+        }
+
+        private async Task SendCompletionAfterFailure(string requestId, string relativeFilePath)
+        {
+            try
+            {
+                await SendCompletionResponse(requestId, relativeFilePath).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
+            {
+                // The request stream, or the server pipe it feeds, is already completed.
             }
         }
 
