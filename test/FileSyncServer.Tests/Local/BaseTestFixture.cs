@@ -24,6 +24,8 @@ namespace FileSyncServer.Tests.Local
         private int _remoteDebuggingPort;
         private string? _userDataFolder;
         private DateTime _processStartedUtc;
+        private string _listAtVersion = "";
+        private int _versionPolls;
         private readonly StringBuilder _stdout = new();
         private readonly StringBuilder _stderr = new();
 
@@ -77,12 +79,13 @@ namespace FileSyncServer.Tests.Local
                     }
 
                     var detail = "No pages found in the first browser context. atConnect=" + atConnect
+                        + " versionPolls=" + _versionPolls + " listAtVersion=" + _listAtVersion
                         + " pagePoll=" + poll + " jsonList=" + Tail(listText);
                     Note(detail);
                     throw new InvalidOperationException(DescribeFailure(detail));
                 }
 
-                Note($"pagesAtConnect context0={pages.Count} {atConnect} devtoolsMs={(DateTime.UtcNow - _processStartedUtc).TotalMilliseconds:0}");
+                Note($"pagesAtConnect context0={pages.Count} {atConnect} devtoolsMs={(DateTime.UtcNow - _processStartedUtc).TotalMilliseconds:0} versionPolls={_versionPolls} listAtVersion={_listAtVersion}");
                 Page = pages[0];
             }
             catch
@@ -194,6 +197,7 @@ namespace FileSyncServer.Tests.Local
 
             while (DateTime.UtcNow - startTime < timeout)
             {
+                _versionPolls++;
                 if (AppProcess != null && AppProcess.HasExited)
                 {
                     throw new InvalidOperationException(DescribeFailure($"Process exited with code {AppProcess.ExitCode} before the DevTools endpoint was ready."));
@@ -208,6 +212,7 @@ namespace FileSyncServer.Tests.Local
                         using var doc = JsonDocument.Parse(json);
                         if (doc.RootElement.TryGetProperty("webSocketDebuggerUrl", out var wsUrlElement))
                         {
+                            _listAtVersion = await ReadJsonListAsync();
                             return wsUrlElement.GetString();
                         }
                     }
@@ -221,9 +226,9 @@ namespace FileSyncServer.Tests.Local
                     // The browser process has not bound the port yet.
                 }
 
-                // Repro branch only. 200ms steps can step over the gap between the
-                // debugging port opening and the first page target. 20ms samples that gap.
-                await Task.Delay(20);
+                // Repro branch only. Sample the port as soon as it accepts so a
+                // page-less DevTools response is not skipped by a 200ms backoff.
+                await Task.Delay(5);
             }
 
             return null;

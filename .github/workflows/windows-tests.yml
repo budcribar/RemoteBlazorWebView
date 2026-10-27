@@ -28,7 +28,7 @@ name: Windows tests
 
 on:
   push:
-    branches: [net9, net9-ci, net9-nopages-repro]
+    branches: [net9, net9-ci]
   workflow_dispatch:
 
 permissions:
@@ -337,7 +337,13 @@ jobs:
           $env:NOPAGES_LOG = Join-Path $env:GITHUB_WORKSPACE 'TestResults\nopages-timing.txt'
           New-Item -ItemType Directory -Force -Path (Split-Path $env:NOPAGES_LOG) | Out-Null
           if (Test-Path $env:NOPAGES_LOG) { Remove-Item $env:NOPAGES_LOG -Force }
-          foreach ($n in 1..20) {
+          # Two busy loops stretch WebView2 startup toward the 18s cold start of run 40472336701.
+          $burn = @()
+          foreach ($cpu in 1..2) {
+            $burn += Start-Process -FilePath powershell -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile','-Command','while ($true) { [Math]::Sqrt(12345.678) | Out-Null }'
+          }
+          try {
+          foreach ($n in 1..30) {
             foreach ($name in 'RemoteBlazorWebViewTutorial.WpfApp', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial', 'msedgewebview2') {
               Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             }
@@ -353,9 +359,13 @@ jobs:
               --results-directory "TestResults/clicks-$n"
             if ($LASTEXITCODE -eq 0) { $passes++ } else { $fails++ }
             Write-Host "iteration $n exit=$LASTEXITCODE running total pass=$passes fail=$fails"
-            if (Test-Path $env:NOPAGES_LOG) { Get-Content $env:NOPAGES_LOG }
+            if (Test-Path $env:NOPAGES_LOG) { Get-Content $env:NOPAGES_LOG -Tail 1 }
           }
           Write-Host "TestClicks loop finished pass=$passes fail=$fails"
+          }
+          finally {
+            foreach ($proc in $burn) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+          }
 
       - name: Upload test results
         if: always()
