@@ -85,6 +85,6 @@ function receiveWebViewDotNetDataStream(streamId, data, bytesRead, errorMessage)
 GlobalExports_1.Blazor.start = boot;
 window['DotNet'] = dotnet_js_interop_1.DotNet;
 if ((0, BootCommon_1.shouldAutoStart)()) {
-    boot();
+    void boot();
 }
 //# sourceMappingURL=Boot.Desktop.js.map

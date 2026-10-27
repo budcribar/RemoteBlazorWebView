@@ -62,7 +62,7 @@ export function sendMessage(message: string) {
 
 function makePageReadOnly() {
     // Create the overlay element
-    var overlay = document.createElement('div');
+    const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.top = '0px';
     overlay.style.left = '0px';
