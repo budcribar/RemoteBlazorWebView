@@ -63,7 +63,23 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            // A new primary page starts at sequence 1 and may arrive before CreateWebView.
+            // Later messages, including a dying WebView after deregister, must not create an entry.
+            TaskCompletionSource<ServiceState> serviceStateTaskSource;
+            if (request.IsPrimary && request.Sequence == 1)
+            {
+                serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            }
+            else if (!serviceDictionary.TryGetValue(request.Id, out var existing) || existing == null)
+            {
+                logger.LogDebug("Dropped browser SendMessage for client {Id} at sequence {Sequence}.", request.Id, request.Sequence);
+                return new SendMessageResponse { Id = request.Id, Success = false };
+            }
+            else
+            {
+                serviceStateTaskSource = existing;
+            }
+
             try
             {
                

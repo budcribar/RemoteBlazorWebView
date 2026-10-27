@@ -122,6 +122,10 @@
    
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="StaticContentCache.ServiceTests" />
+  </ItemGroup>
+
   <ProjectExtensions>
     <VisualStudio><UserProperties /></VisualStudio>
   </ProjectExtensions>
