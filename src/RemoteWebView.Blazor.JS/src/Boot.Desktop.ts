@@ -46,5 +46,5 @@ window['DotNet'] = DotNet;
 
 
 if (shouldAutoStart()) {
-    boot();
+    void boot();
 }
