@@ -8,6 +8,8 @@ public class ServerFixture : IDisposable
     public Process ServerProcess { get; private set; }
     private readonly string _serverExePath = "";
     private readonly ManualResetEventSlim _serverReady = new(false);
+    private readonly string? _kestrelLog = Environment.GetEnvironmentVariable("KESTREL_LOG");
+    internal static readonly object KestrelLogGate = new();
 
     public ServerFixture()
     {
@@ -51,7 +53,7 @@ public class ServerFixture : IDisposable
         {
             if (!string.IsNullOrEmpty(args.Data))
             {
-                Console.WriteLine($"Server Output: {args.Data}");
+                NoteServerLine(args.Data);
                 if (args.Data.Contains("https://localhost"))
                 {
                     _serverReady.Set();
@@ -63,7 +65,7 @@ public class ServerFixture : IDisposable
         {
             if (!string.IsNullOrEmpty(args.Data))
             {
-                Console.WriteLine($"Server Error: {args.Data}");
+                NoteServerLine(args.Data);
             }
         };
 
@@ -80,6 +82,20 @@ public class ServerFixture : IDisposable
             //throw new TimeoutException("Server did not start listening on https://localhost:5001 within the expected time.");
         }
         Console.WriteLine("Server started...");
+    }
+
+    private void NoteServerLine(string line)
+    {
+        if (string.IsNullOrEmpty(_kestrelLog))
+        {
+            Console.WriteLine($"Server Output: {line}");
+            return;
+        }
+
+        lock (KestrelLogGate)
+        {
+            File.AppendAllText(_kestrelLog, line + Environment.NewLine);
+        }
     }
 
     public void Dispose()

@@ -218,14 +218,115 @@ namespace Server
                 }
             }
 
-            var results = await Task.WhenAll(tasks);
-
-            // Assert
-            foreach (var (FileName, Status, Content) in results)
+            Task<(string FileName, int Status, string Content)[]> pending = Task.WhenAll(tasks);
+            try
             {
-                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
+                var results = await pending;
+
+                // Assert
+                foreach (var (FileName, Status, Content) in results)
+                {
+                    Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
+                }
+            }
+            catch (Exception ex) when (IsSocketBurst(ex))
+            {
+                throw new InvalidOperationException(
+                    ex.GetBaseException().Message + Environment.NewLine + KestrelExcerpt(ex),
+                    ex);
             }
             await Utilities.SetClientCache(false);
+        }
+
+        private static bool IsSocketBurst(Exception ex)
+        {
+            if (ex is AggregateException aggregate)
+                return aggregate.InnerExceptions.Any(IsSocketBurst);
+            if (ex.InnerException != null && IsSocketBurst(ex.InnerException))
+                return true;
+            var message = ex.Message;
+            return message.Contains("ERR_SOCKET_NOT_CONNECTED", StringComparison.Ordinal)
+                || message.Contains("ERR_NO_BUFFER_SPACE", StringComparison.Ordinal);
+        }
+
+        // Connection logs name a connection id. Request logs name the URL. Keep both for the URL that failed.
+        private static string KestrelExcerpt(Exception ex)
+        {
+            var path = Environment.GetEnvironmentVariable("KESTREL_LOG");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return "Kestrel log was not captured. Set KESTREL_LOG and the Kestrel connection log levels.";
+
+            string text;
+            lock (ServerFixture.KestrelLogGate)
+            {
+                text = File.ReadAllText(path);
+            }
+            var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var url = "";
+            var message = ex.ToString();
+            var marker = "https://localhost:5001/";
+            var at = message.IndexOf(marker, StringComparison.Ordinal);
+            if (at >= 0)
+            {
+                var end = at + marker.Length;
+                while (end < message.Length && !char.IsWhiteSpace(message[end]))
+                    end++;
+                url = message[at..end];
+            }
+
+            var pathOnly = url.Length > marker.Length ? url[marker.Length..] : "";
+            var matched = new List<string>();
+            var connectionIds = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                if (pathOnly.Length > 0 && lines[i].Contains(pathOnly, StringComparison.Ordinal))
+                {
+                    matched.Add(lines[i]);
+                    var id = ConnectionId(lines[i]);
+                    if (id.Length > 0)
+                        connectionIds.Add(id);
+                    if (i + 1 < lines.Length)
+                    {
+                        var next = ConnectionId(lines[i + 1]);
+                        if (next.Length > 0)
+                            connectionIds.Add(next);
+                    }
+                }
+            }
+
+            if (connectionIds.Count > 0)
+            {
+                foreach (var line in lines)
+                {
+                    if (line.Contains("Connection", StringComparison.Ordinal) && connectionIds.Any(id => line.Contains(id, StringComparison.Ordinal)))
+                        matched.Add(line);
+                }
+            }
+
+            if (matched.Count == 0)
+            {
+                matched.AddRange(lines.Where(line =>
+                    line.Contains("Connection", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("HTTP/2", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("reset", StringComparison.OrdinalIgnoreCase)).TakeLast(40));
+            }
+
+            if (matched.Count == 0)
+                matched.AddRange(lines.TakeLast(40));
+
+            return "Kestrel excerpt for " + (url.Length > 0 ? url : "the failed navigation") + Environment.NewLine
+                + string.Join(Environment.NewLine, matched.Distinct());
+        }
+
+        private static string ConnectionId(string line)
+        {
+            const string token = "Connection id \"";
+            var start = line.IndexOf(token, StringComparison.Ordinal);
+            if (start < 0)
+                return "";
+            start += token.Length;
+            var end = line.IndexOf('"', start);
+            return end > start ? line[start..end] : "";
         }
 
         // Chromium's Windows TCP port randomization fails connect() with WSAENOBUFS
