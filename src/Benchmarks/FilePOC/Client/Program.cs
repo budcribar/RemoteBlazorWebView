@@ -49,14 +49,8 @@ namespace FileClientApp
                 return 1; // Exit with error code
             }
 
-            // Create a handler to bypass certificate validation (development only)
-            var httpHandler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            };
-
-            // Create the gRPC channel with the custom handler
-            using var channel = GrpcChannel.ForAddress(ServerAddress, new GrpcChannelOptions { HttpHandler = httpHandler });
+            // Default certificate validation. The health check above already required a trusted certificate.
+            using var channel = GrpcChannel.ForAddress(ServerAddress);
 
             // Create the WebViewIPC client
             var grpcClient = new WebViewIPC.WebViewIPCClient(channel);
