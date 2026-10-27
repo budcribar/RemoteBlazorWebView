@@ -270,6 +270,7 @@ namespace PeakSWC.RemoteWebView
             if (!_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests) || !clientFileDataRequests.TryAdd(requestId, dataRequest))
             {
                 logger.LogCritical("A file data request with requestId: {RequestId} for client GUID: {ClientGuid} could not be created.", requestId, clientGuid);
+                dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' is not registered for file data."));
                 return dataRequest;
             }
 
@@ -313,13 +314,29 @@ namespace PeakSWC.RemoteWebView
                 _logger.LogDebug("Removed response stream association for client GUID: {ClientGuid}", clientGuid);
             }
 
-            if (_metadataRequests.TryRemove(clientGuid, out _))
+            if (_metadataRequests.TryRemove(clientGuid, out var metadataRequests))
             {
+                foreach (var tcs in metadataRequests.Values)
+                {
+                    if (!tcs.Task.IsCompleted)
+                        tcs.TrySetException(new InvalidOperationException($"Client GUID '{clientGuid}' was removed."));
+                }
                 _logger.LogDebug("Removed all metadata requests for client GUID: {ClientGuid}", clientGuid);
             }
 
-            if (_fileDataRequests.TryRemove(clientGuid, out _))
+            if (_fileDataRequests.TryRemove(clientGuid, out var fileDataRequests))
             {
+                foreach (var dataRequest in fileDataRequests.Values)
+                {
+                    try
+                    {
+                        dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' was removed."));
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // The transfer already completed.
+                    }
+                }
                 _logger.LogDebug("Removed all file data requests for client GUID: {ClientGuid}", clientGuid);
             }
 
