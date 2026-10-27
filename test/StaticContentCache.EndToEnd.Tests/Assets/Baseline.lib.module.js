@@ -1,11 +1,9 @@
-// Baseline JS initializer for remote blazor.modules.json parity.
-// beforeStart and afterStarted record that they ran. Keep this file deterministic.
 export function beforeStart() {
-  window.__moduleInitBaseline = window.__moduleInitBaseline || {};
-  window.__moduleInitBaseline.beforeStart = true;
+  window.__moduleInitBaseline = window.__moduleInitBaseline || { beforeStart: 0, afterStarted: 0 };
+  window.__moduleInitBaseline.beforeStart += 1;
 }
 
 export function afterStarted() {
-  window.__moduleInitBaseline = window.__moduleInitBaseline || {};
-  window.__moduleInitBaseline.afterStarted = true;
+  window.__moduleInitBaseline = window.__moduleInitBaseline || { beforeStart: 0, afterStarted: 0 };
+  window.__moduleInitBaseline.afterStarted += 1;
 }
