@@ -74,7 +74,7 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
             [OtherId] = Page(index, probe, webView, Manifest("Other.lib.module.js"),
                 ("Other.lib.module.js", ModuleInitializerFiles.Read("Other.lib.module.js"))),
             [ObjectManifestId] = Page(index, probe, webView, ModuleInitializerFiles.Read("object-blazor.modules.json"),
-                ("Baseline.lib.module.js", ModuleInitializerFiles.Read("Baseline.lib.module.js")))
+                ("Baseline.lib.module.js", ModuleInitializerFiles.ReadShared("Baseline.lib.module.js")))
         };
         Page(ChangedFiles, index, probe, webView, Manifest("Changed.lib.module.js"),
             ("Changed.lib.module.js", ModuleInitializerFiles.Read("Changed.lib.module.js")));
@@ -82,7 +82,8 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
 
         var ids = clients.Keys.ToArray();
         _host = await DuplexHost.StartAsync(ids);
-        (Http1Url, var http2) = await IdentifyAsync(_host.Urls);
+        Http1Url = _host.BrowserUrl;
+        var http2 = _host.GrpcUrl;
         _channel = GrpcChannel.ForAddress(http2, new GrpcChannelOptions
         {
             HttpHandler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true, UseCookies = false }
@@ -161,40 +162,19 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
 
     private static byte[] Manifest(params string[] names) => JsonSerializer.SerializeToUtf8Bytes(names);
 
-    private static async Task<(string Http1, string Http2)> IdentifyAsync(IEnumerable<string> urls)
-    {
-        string? http1 = null;
-        string? http2 = null;
-        foreach (var url in urls)
-        {
-            using var client = new HttpClient(new SocketsHttpHandler()) { Timeout = TimeSpan.FromSeconds(3) };
-            try
-            {
-                using var response = await client.GetAsync(url);
-                http1 ??= url;
-            }
-            catch (Exception)
-            {
-                http2 ??= url;
-            }
-        }
-
-        if (http1 is null || http2 is null)
-            throw new InvalidOperationException("Expected one HTTP/1 and one HTTP/2 listener. Urls: " + string.Join(", ", urls));
-        return (http1, http2);
-    }
-
     private sealed class DuplexHost : IAsyncDisposable
     {
         private readonly WebApplication _app;
         private readonly TaskCompletionSource<bool>[] _ready;
-        public IReadOnlyList<string> Urls { get; }
+        public string GrpcUrl { get; }
+        public string BrowserUrl { get; }
 
-        private DuplexHost(WebApplication app, TaskCompletionSource<bool>[] ready)
+        private DuplexHost(WebApplication app, string grpcUrl, string browserUrl, TaskCompletionSource<bool>[] ready)
         {
             _app = app;
+            GrpcUrl = grpcUrl;
+            BrowserUrl = browserUrl;
             _ready = ready;
-            Urls = app.Urls.ToArray();
         }
 
         public static async Task<DuplexHost> StartAsync(IReadOnlyCollection<Guid> clients)
@@ -204,14 +184,16 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
             var index = 0;
             foreach (var id in clients)
                 states[id.ToString()] = Seed(ready[index++]);
+            var grpcPort = FreePort();
+            var browserPort = FreePort();
 
             var builder = WebApplication.CreateBuilder();
             builder.Logging.SetMinimumLevel(LogLevel.Warning);
             builder.WebHost.UseUrls();
             builder.WebHost.ConfigureKestrel(options =>
             {
-                options.Listen(IPAddress.Loopback, 0, listen => listen.Protocols = HttpProtocols.Http1);
-                options.Listen(IPAddress.Loopback, 0, listen => listen.Protocols = HttpProtocols.Http2);
+                options.Listen(IPAddress.Loopback, grpcPort, listen => listen.Protocols = HttpProtocols.Http2);
+                options.Listen(IPAddress.Loopback, browserPort, listen => listen.Protocols = HttpProtocols.Http1);
             });
             builder.Services.AddGrpc();
             builder.Services.AddLogging();
@@ -227,7 +209,16 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
             app.UseMiddleware<RemoteFilesMiddleware>();
             app.MapGrpcService<RemoteWebViewService>();
             await app.StartAsync();
-            return new DuplexHost(app, ready);
+            return new DuplexHost(app, $"http://127.0.0.1:{grpcPort}", $"http://127.0.0.1:{browserPort}", ready);
+        }
+
+        private static int FreePort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
         }
 
         public async Task WaitUntilReady()
