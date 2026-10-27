@@ -5,7 +5,9 @@ namespace PeakSWC.RemoteWebView.Pages
     {
         public static string Html(string guid, string processName, string hostName)
         {
-            string restart = string.IsNullOrEmpty(processName) || string.IsNullOrEmpty(hostName) ? "Restarting" : $"Restarting <b>{processName}</b> on host <b>{hostName}</b>";
+            var safeProcess = System.Net.WebUtility.HtmlEncode(processName);
+            var safeHost = System.Net.WebUtility.HtmlEncode(hostName);
+            string restart = string.IsNullOrEmpty(processName) || string.IsNullOrEmpty(hostName) ? "Restarting" : $"Restarting <b>{safeProcess}</b> on host <b>{safeHost}</b>";
 
             string html = $$"""
                 <!DOCTYPE html>
