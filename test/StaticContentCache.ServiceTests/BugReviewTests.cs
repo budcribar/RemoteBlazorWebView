@@ -138,17 +138,94 @@ public class BugReviewTests
     }
 
     [Fact]
+    public async Task Modules_manifest_is_read_from_the_client()
+    {
+        var clientBytes = Encoding.UTF8.GetBytes("[{\"name\":\"App\"}]");
+        var (metadata, served) = await ReadModulesManifestFromClient(clientBytes, lastModified: 1_725_000_000);
+
+        Assert.Equal(clientBytes.Length, metadata.Length);
+        Assert.Equal(clientBytes, served);
+        Assert.NotEqual(Encoding.ASCII.GetBytes("[]"), served);
+    }
+
+    // An app can publish its own _framework/blazor.modules.json. The server must
+    // return that file's length and bytes, not the two-byte empty array.
+    [Fact]
+    public async Task Custom_modules_manifest_is_served_as_is()
+    {
+        var clientBytes = Encoding.UTF8.GetBytes(
+            "[{\"name\":\"ModuleA.lib.module.js\"},{\"name\":\"ModuleB.lib.module.js\"},{\"name\":\"ModuleC.lib.module.js\"}]");
+        var (metadata, served) = await ReadModulesManifestFromClient(clientBytes, lastModified: 1_725_000_000);
+
+        Assert.Equal(clientBytes.Length, metadata.Length);
+        Assert.Equal(clientBytes, served);
+        Assert.NotEqual(Encoding.ASCII.GetBytes("[]"), served);
+    }
+
+    // The resolver used to skip the client and return LastModified = DateTimeOffset.MinValue.Ticks.
+    // The timestamp is now the unix seconds the client sent.
+    [Fact]
     public async Task Modules_manifest_timestamp_is_unix_seconds()
+    {
+        const long clientTimestamp = 1_725_000_000;
+        var (metadata, _) = await ReadModulesManifestFromClient(Encoding.UTF8.GetBytes("[]\r\n"), clientTimestamp);
+
+        Assert.Equal(clientTimestamp, metadata.LastModified);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(clientTimestamp), DateTimeOffset.FromUnixTimeSeconds(metadata.LastModified));
+    }
+
+    private static async Task<(FileMetadata Metadata, byte[] Served)> ReadModulesManifestFromClient(byte[] clientBytes, long lastModified)
     {
         var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
         try
         {
+            var id = Guid.NewGuid().ToString();
+            var writer = new FakeFileWriter();
+            manager.RegisterClient(id, "wwwroot/index.html");
+            manager.AssociateResponseStream(id, writer);
             var resolver = new RemoteFileResolver(NullLogger<RemoteFileResolver>.Instance, manager);
-            var metadata = await resolver.GetFileMetaDataAsync("client", "_framework/blazor.modules.json");
+            const string path = "_framework/blazor.modules.json";
 
-            Assert.Equal(200, metadata.StatusCode);
-            var stamp = DateTimeOffset.FromUnixTimeSeconds(metadata.LastModified);
-            Assert.InRange(stamp, DateTimeOffset.UnixEpoch, DateTimeOffset.UtcNow.AddDays(1));
+            var metadataTask = resolver.GetFileMetaDataAsync(id, path);
+            var metadataRequest = await WaitForRequest(writer);
+            Assert.Equal(path, metadataRequest.Path);
+            Assert.Equal(ServerFileReadRequest.Types.RequestType.MetaData, metadataRequest.RequestType);
+            await manager.HandleClientResponse(new ClientFileReadResponse
+            {
+                ClientId = id,
+                RequestId = metadataRequest.RequestId,
+                Metadata = new FileMetadata
+                {
+                    Length = clientBytes.Length,
+                    StatusCode = 200,
+                    ETag = "client-etag",
+                    LastModified = lastModified
+                }
+            });
+            var metadata = await metadataTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+            writer.Requests.Clear();
+            var streamTask = resolver.GetFileStreamAsync(id, path);
+            var dataRequest = await WaitForRequest(writer);
+            Assert.Equal(path, dataRequest.Path);
+            Assert.Equal(ServerFileReadRequest.Types.RequestType.FileData, dataRequest.RequestType);
+            await manager.HandleClientResponse(new ClientFileReadResponse
+            {
+                ClientId = id,
+                RequestId = dataRequest.RequestId,
+                FileData = new FileData { FileChunk = ByteString.CopyFrom(clientBytes) }
+            });
+            await manager.HandleClientResponse(new ClientFileReadResponse
+            {
+                ClientId = id,
+                RequestId = dataRequest.RequestId,
+                FileData = new FileData { FileChunk = ByteString.Empty }
+            });
+
+            var file = await streamTask.WaitAsync(TimeSpan.FromSeconds(2));
+            using var copy = new MemoryStream();
+            await file.Stream.CopyToAsync(copy);
+            return (metadata, copy.ToArray());
         }
         finally
         {

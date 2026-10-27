@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
-using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -12,19 +11,10 @@ namespace PeakSWC.RemoteWebView
     {
         public virtual Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
         {
-            if (IsBlazorModulesManifest(subpath))
-            {
-                return Task.FromResult(new FileMetadata { ETag = "etag", LastModified = DateTimeOffset.MinValue.Ticks, Length=2, StatusCode=(int)HttpStatusCode.OK });
-            }
             return manager.RequestFileMetadataAsync(clientId, subpath, logger);
         }
         public virtual async Task<FileStream> GetFileStreamAsync(string clientId, string subpath)
         {
-            if (IsBlazorModulesManifest(subpath))
-            {
-                return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes("[]")) };
-            }
-
             DataRequest dataRequest = await manager.RequestFileDataAsync(clientId, subpath,logger).ConfigureAwait(false);
 
             var htmlHostPath = manager.GetHtmlHostPath(clientId);
@@ -47,10 +37,5 @@ namespace PeakSWC.RemoteWebView
         // Stay inside the base tag. A greedy match ate later quoted attributes on the same line.
         [GeneratedRegex("<base([^>]*href\\s*=\\s*)([\"'])[^\"']*\\2", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex HrefRegEx();
-
-        // Path.GetFileName drops the directory, so comparing it with the full relative path never matched.
-        private static bool IsBlazorModulesManifest(string subpath)
-            => subpath.EndsWith("_framework/blazor.modules.json", StringComparison.OrdinalIgnoreCase)
-               || string.Equals(subpath, "blazor.modules.json", StringComparison.OrdinalIgnoreCase);
     }
 }
