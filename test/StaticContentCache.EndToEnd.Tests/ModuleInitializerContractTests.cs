@@ -39,7 +39,7 @@ public class ModuleInitializerContractTests
     private static readonly string[] BlazorKeys = ["_internal", "navigateTo", "registerCustomEventType", "rootComponents", "runtime"];
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Two_initializers_each_run_once_in_listed_manifest_order()
     {
         var id = Guid.NewGuid();
@@ -60,7 +60,7 @@ public class ModuleInitializerContractTests
             names.Select(name => $"/{id}/{name}").ToArray());
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Hooks_receive_webview_arguments_and_async_beforeStart_finishes_before_afterStarted()
     {
         var id = Guid.NewGuid();
@@ -93,7 +93,7 @@ public class ModuleInitializerContractTests
         Assert.Equal("", hook.CacheControl);
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Throwing_hook_leaves_the_other_beforeStart_and_stops_before_afterStarted()
     {
         var id = Guid.NewGuid();
@@ -110,7 +110,7 @@ public class ModuleInitializerContractTests
         Assert.DoesNotContain(log, entry => entry.Hook == "afterStarted");
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Missing_module_leaves_the_other_beforeStart_and_stops_before_afterStarted()
     {
         var id = Guid.NewGuid();
@@ -135,14 +135,15 @@ public class ModuleInitializerContractTests
         var body = await response.Content.ReadAsStringAsync();
         var type = response.Content.Headers.ContentType?.MediaType ?? "";
         var cache = response.Headers.TryGetValues("Cache-Control", out var values) ? string.Join(", ", values) : "";
-        var actual = $"status={(int)response.StatusCode}; type={type}; cache={cache}; body={body}";
-        // Local StaticContentProvider, and the net11 response after 6471391: text/plain,
-        // the default cache header, and this body. The remote response on this branch differs.
-        var expected = $"status=404; type=text/plain; cache={RemoteFilesMiddleware.MauiDefaultCacheControl}; body=There is no content at Missing.lib.module.js";
-        Assert.Equal(expected, actual);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("text/plain", type);
+        Assert.Equal("There is no content at Missing.lib.module.js", body);
+        // Kestrel's typed Cache-Control header rewrites directive order. Membership is exact.
+        Assert.Equal(CacheDirectives(RemoteFilesMiddleware.MauiDefaultCacheControl), CacheDirectives(cache));
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Second_client_gets_its_own_manifest_and_initializer()
     {
         var first = Guid.NewGuid();
@@ -168,7 +169,7 @@ public class ModuleInitializerContractTests
         Assert.Contains(duringSecond, request => request.Path == $"/{second}/B.lib.module.js");
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Refresh_runs_hooks_once_per_page_load()
     {
         var id = Guid.NewGuid();
@@ -185,7 +186,7 @@ public class ModuleInitializerContractTests
         Assert.Equal(2, session.Requests.Count(request => request.Path == $"/{id}/Record.lib.module.js"));
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Reconnect_runs_hooks_once_on_the_new_page_load()
     {
         var id = Guid.NewGuid();
@@ -201,7 +202,7 @@ public class ModuleInitializerContractTests
         Assert.Equal("1", second.Load);
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Changed_initializer_has_a_new_hash_and_304_requires_the_current_etag()
     {
         var id = Guid.NewGuid();
@@ -234,7 +235,7 @@ public class ModuleInitializerContractTests
         await AssertStatus(session, id, moduleName, v2.ETag, HttpStatusCode.NotModified, "");
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Empty_manifest_runs_no_hooks()
     {
         var id = Guid.NewGuid();
@@ -248,7 +249,7 @@ public class ModuleInitializerContractTests
         Assert.DoesNotContain(session.Requests, request => request.Path.EndsWith(".lib.module.js", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Nested_content_path_resolves_against_the_rewritten_base_href()
     {
         var id = Guid.NewGuid();
@@ -409,7 +410,6 @@ public class ModuleInitializerContractTests
         public async Task<ContractReport[]> LoadManyAsync(Guid id, string query, int reports, Func<ContractReport, Task>? afterFirst = null)
         {
             var chrome = FindChrome();
-            Assert.False(string.IsNullOrEmpty(chrome));
             var seen = Reports().Count;
             var process = StartChrome(chrome!, $"{BrowserUrl}/{id}/{HostPageName}{query}");
             try
