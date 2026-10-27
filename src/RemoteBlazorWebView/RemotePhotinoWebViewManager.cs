@@ -15,7 +15,6 @@ namespace PeakSWC.RemoteWebView
     public class RemotePhotinoWebViewManager : PhotinoWebViewManager
     {
         Uri url;
-        private readonly PhotinoWindow _window;
 
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
@@ -23,7 +22,7 @@ namespace PeakSWC.RemoteWebView
         public RemotePhotinoWebViewManager(RemoteBlazorWebViewWindow window, IServiceProvider provider, Dispatcher dispatcher, Uri appBaseUri, IFileProvider fileProvider, JSComponentConfigurationStore jsComponents, string hostPageRelativePath, ILogger logger)
             : base(window, provider, dispatcher, appBaseUri, fileProvider, jsComponents, hostPageRelativePath)
         {
-            _window = window ?? throw new ArgumentNullException(nameof(window));
+            ArgumentNullException.ThrowIfNull(window);
             BlazorWebView = window;
             RemoteWebView = new RemoteWebView(
                 window,
