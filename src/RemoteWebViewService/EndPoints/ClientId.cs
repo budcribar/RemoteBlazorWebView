@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
@@ -14,7 +15,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
             if (!context.Request.RouteValues.TryGetValue("id", out var idValue) || idValue == null || !Guid.TryParse(idValue.ToString(), out var guid))
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync($"Invalid or missing GUID {idValue}").ConfigureAwait(false);
+                // The 400 write should complete as before, so pass None rather than RequestAborted.
+                await context.Response.WriteAsync($"Invalid or missing GUID {idValue}", CancellationToken.None).ConfigureAwait(false);
                 return null;
             }
 
