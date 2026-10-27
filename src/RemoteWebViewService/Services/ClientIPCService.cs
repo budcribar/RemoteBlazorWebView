@@ -132,27 +132,31 @@ namespace PeakSWC.RemoteWebView
         private static async Task<List<ConnectionResponse>> GetConnectionResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary)
         {
             var snapshotTasks = serviceDictionary.Values.ToList();
-
-            try
+            var results = new List<ServiceState>();
+            foreach (var pending in snapshotTasks)
             {
-                var tasks = snapshotTasks.Select( x =>  x.Task.WaitAsync(TimeSpan.FromSeconds(60)));
-
-                var results = await Task.WhenAll(tasks).ConfigureAwait(false); 
-                return results.Select(x => new ConnectionResponse
+                try
                 {
-                    HostName = x.HostName,
-                    Id = x.Id,
-                    InUse = x.InUse,
-                    UserName = x.User,
-                    TotalFilesRead = x.TotalFilesRead,
-                    TotalReadTime = x.TotalFileReadTime.TotalSeconds,
-                    TotalBytesRead = x.TotalBytesRead,
-                    MaxFileReadTime = x.MaxFileReadTime.TotalSeconds,
-                    TimeConnected = (DateTime.UtcNow - x.StartTime).TotalSeconds
-                }).ToList();
+                    results.Add(await pending.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false));
+                }
+                catch
+                {
+                    // A faulted or timed-out registration must not drop every other client.
+                }
             }
-            catch { }
-            return [];
+
+            return results.Select(x => new ConnectionResponse
+            {
+                HostName = x.HostName,
+                Id = x.Id,
+                InUse = x.InUse,
+                UserName = x.User,
+                TotalFilesRead = x.TotalFilesRead,
+                TotalReadTime = x.TotalFileReadTime.TotalSeconds,
+                TotalBytesRead = x.TotalBytesRead,
+                MaxFileReadTime = x.MaxFileReadTime.TotalSeconds,
+                TimeConnected = (DateTime.UtcNow - x.StartTime).TotalSeconds
+            }).ToList();
         }
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
