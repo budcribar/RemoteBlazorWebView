@@ -10,7 +10,7 @@ namespace EditWebView
     public static partial class Utility
     {
         private static readonly HttpClient _httpClient = new();
-        private static readonly Encoding _windows1252Encoding;
+        private static readonly Encoding _windows1252Encoding = CreateWindows1252Encoding();
 
         private const string AspNetCoreRepo = "dotnet/aspnetcore";
         private const string MauiRepo = "dotnet/maui";
@@ -74,7 +74,7 @@ namespace EditWebView
 
             if (validTags.Count == 0)
             {
-                throw new Exception($"No valid version {majorVersion} release found for {framework}.");
+                throw new InvalidOperationException($"No valid version {majorVersion} release found for {framework}.");
             }
 
             var latestVersion = validTags.First().Name;
@@ -133,7 +133,7 @@ namespace EditWebView
                 pattern = @"(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?(?:\.(\d+))?";
             }
 
-            var match = Regex.Match(name, pattern);
+            var match = Regex.Match(name, pattern, RegexOptions.None, TimeSpan.FromMilliseconds(1000));
             if (match.Success)
             {
                 int major = int.Parse(match.Groups[1].Value);
@@ -147,10 +147,10 @@ namespace EditWebView
 
             return (new System.Version(0, 0, 0), 0, 0);
         }
-        static Utility()
+        private static Encoding CreateWindows1252Encoding()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _windows1252Encoding = Encoding.GetEncoding(1252);
+            return Encoding.GetEncoding(1252);
         }
 
         public static async Task DownloadZipFileAsync(string url, string destinationPath)
@@ -259,7 +259,6 @@ namespace EditWebView
             {
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 File.WriteAllText(filePath, content, _windows1252Encoding);
-                //Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
             }
             catch (Exception ex)
             {
@@ -291,7 +290,6 @@ namespace EditWebView
                 {
                     content = content.Replace("\n", "\r\n");
                     File.WriteAllText(filePath, content, Encoding.UTF8);
-                    //Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
                 }
             }
             catch (Exception ex)

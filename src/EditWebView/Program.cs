@@ -1,11 +1,9 @@
-using EditWebView;
 using System.IO;
 
-class Program
+namespace EditWebView
 {
-    //private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
-   // private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
-
+static class Program
+{
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";
     private const int TargetMajorVersion = 10;
@@ -165,4 +163,5 @@ class Program
 
         Console.WriteLine($"Local file update complete. Files updated: {updated.Count}");
     }
+}
 }
