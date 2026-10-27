@@ -108,13 +108,28 @@ public class BaselineModuleRunTests : IAsyncLifetime
 
     private static string? FindChrome()
     {
-        foreach (var name in new[] { "google-chrome", "google-chrome-stable", "chromium", "chromium-browser" })
+        foreach (var name in new[] { "google-chrome-stable", "chromium", "chromium-browser", "google-chrome" })
         {
             var path = Which(name);
-            if (path is not null)
+            if (path is not null && !IsSharedDebugPortWrapper(path))
                 return path;
         }
         return null;
+    }
+
+    private static bool IsSharedDebugPortWrapper(string path)
+    {
+        var info = new System.IO.FileInfo(path);
+        if (info.Length > 64 * 1024)
+            return false;
+        try
+        {
+            return File.ReadAllText(path).Contains("remote-debugging-port=9222", StringComparison.Ordinal);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 
     private static string? Which(string name)
