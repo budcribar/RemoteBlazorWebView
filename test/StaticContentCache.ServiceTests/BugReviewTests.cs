@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading.Channels;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -85,6 +87,67 @@ public class BugReviewTests
             var finished = await Task.WhenAny(read, Task.Delay(TimeSpan.FromMilliseconds(500)));
             Assert.Same(read, finished);
             await Assert.ThrowsAnyAsync<Exception>(async () => await read);
+        }
+        finally
+        {
+            manager.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Host_page_keeps_characters_outside_ascii()
+    {
+        var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        try
+        {
+            var id = Guid.NewGuid().ToString();
+            var writer = new FakeFileWriter();
+            manager.RegisterClient(id, "wwwroot/index.html");
+            manager.AssociateResponseStream(id, writer);
+            var resolver = new RemoteFileResolver(NullLogger<RemoteFileResolver>.Instance, manager);
+
+            var reading = resolver.GetFileStreamAsync(id, "wwwroot/index.html");
+            var request = await WaitForRequest(writer);
+            var html = "<html><head><base href=\"/\" /> café</head></html>";
+            await manager.HandleClientResponse(new ClientFileReadResponse
+            {
+                ClientId = id,
+                RequestId = request.RequestId,
+                FileData = new FileData { FileChunk = ByteString.CopyFrom(Encoding.UTF8.GetBytes(html)) }
+            });
+            await manager.HandleClientResponse(new ClientFileReadResponse
+            {
+                ClientId = id,
+                RequestId = request.RequestId,
+                FileData = new FileData { FileChunk = ByteString.Empty }
+            });
+
+            var file = await reading.WaitAsync(TimeSpan.FromSeconds(2));
+            using var copy = new MemoryStream();
+            await file.Stream.CopyToAsync(copy);
+            var text = Encoding.UTF8.GetString(copy.ToArray());
+
+            Assert.Contains("café", text);
+            Assert.Contains($"/{id}/", text);
+        }
+        finally
+        {
+            manager.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Modules_manifest_timestamp_is_unix_seconds()
+    {
+        var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        try
+        {
+            var resolver = new RemoteFileResolver(NullLogger<RemoteFileResolver>.Instance, manager);
+            var metadata = await resolver.GetFileMetaDataAsync("client", "_framework/blazor.modules.json");
+
+            Assert.Equal(200, metadata.StatusCode);
+            var stamp = DateTimeOffset.FromUnixTimeSeconds(metadata.LastModified);
+            Assert.InRange(stamp, DateTimeOffset.UnixEpoch, DateTimeOffset.UtcNow.AddDays(1));
         }
         finally
         {
