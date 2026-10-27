@@ -86,7 +86,9 @@ namespace PeakSWC.RemoteWebView
             {
                 var responses = new List<TaskResponse>();
 
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                if (!serviceDictionary.TryGetValue(id, out var serviceStateTaskSource) || serviceStateTaskSource == null)
+                    return responses;
+
                 try
                 {
                     var ss = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
@@ -123,7 +125,8 @@ namespace PeakSWC.RemoteWebView
             var responses = await GetConnectionResponses(serviceDictionary).ConfigureAwait(false);
             response.ConnectionResponses.AddRange(responses);
 
-            responses.ForEach(async x => x.TaskResponses.AddRange(await GetTaskResponses(x.Id).ConfigureAwait(false)));
+            foreach (var connection in responses)
+                connection.TaskResponses.AddRange(await GetTaskResponses(connection.Id).ConfigureAwait(false));
 
             return response;
         }
