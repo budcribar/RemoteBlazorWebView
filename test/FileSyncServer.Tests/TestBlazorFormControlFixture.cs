@@ -75,7 +75,6 @@ namespace FileSyncServer.Tests
         {
             BlazorWebViewFormFactory.Shutdown();
             Process?.Kill();
-            GC.SuppressFinalize(this);
         }
 
         // Synchronous Dispose for IAsyncLifetime

@@ -17,6 +17,7 @@ namespace FileSyncServer.Tests.Remote
 {
     public class BaseTestRemoteFixture : IAsyncLifetime, IDisposable
     {
+        private static readonly string[] ChromiumSandboxArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
         public IPlaywright PlaywrightInstance { get; private set; } = default!;
         public IBrowser Browser { get; private set; } = default!;
         public List<IPage> Pages { get; private set; } = new();
@@ -61,7 +62,7 @@ namespace FileSyncServer.Tests.Remote
             Browser = await PlaywrightInstance.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = false, // Set to true for headless mode
-                Args = new[] { "--no-sandbox", "--disable-setuid-sandbox" }
+                Args = ChromiumSandboxArgs
             });
 
             // Initialize gRPC channel

@@ -11,7 +11,7 @@ public class ClientFixture : IDisposable
 {
     public Process ClientProcess { get; private set; }
     public Guid ClientId { get; private set; } // Exposed ClientId
-    private readonly string _clientExePath;
+    private readonly string _clientExePath = "";
     private readonly ManualResetEventSlim _clientReady = new(false);
 
     public ClientFixture()
