@@ -84,6 +84,7 @@ namespace PeakSWC.RemoteWebView
         private readonly object bootLock = new();
         private WebViewIPC.WebViewIPCClient? client = null;
         private readonly CancellationTokenSource cts = new();
+        private int _disposed;
         #endregion
 
         public string HostHtmlPath { get; } = hostHtmlPath;
@@ -144,8 +145,6 @@ namespace PeakSWC.RemoteWebView
 
         private GrpcChannel? channel;
 
-        private readonly CancellationTokenSource cancellationTokenSource = new();
-        
         protected WebViewIPC.WebViewIPCClient? Client()
         {
             // TODO Pass cts to other requests
@@ -157,7 +156,7 @@ namespace PeakSWC.RemoteWebView
             {
                 bool healthy = false; 
                 string url = new Uri(blazorWebView.ServerUri, "health").ToString();
-                Task.Run(async () => healthy = await HealthCheck.WaitAsync(url)).Wait();
+                Task.Run(async () => healthy = await HealthCheck.WaitAsync(url).ConfigureAwait(false), CancellationToken.None).Wait(CancellationToken.None);
                 if (!healthy)
                 {
                     Exception exception1 = new("Timeout waiting for server to start");
@@ -201,7 +200,7 @@ namespace PeakSWC.RemoteWebView
         {
             _ = Task.Factory.StartNew(async () =>
             {
-                var pings = client.Ping();
+                var pings = client.Ping(cancellationToken: cts.Token);
              
                 try
                 {
@@ -211,7 +210,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         if (message.Cancelled) throw new Exception("Ping timeout exceeded");
 
-                        await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false }).ConfigureAwait(false);
+                        await pings.RequestStream.WriteAsync(new PingMessageRequest { Id = message.Id, Initialize = false }, cts.Token).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -432,7 +431,7 @@ namespace PeakSWC.RemoteWebView
 
         void Shutdown()
         {
-            Dispatcher?.InvokeAsync(() => Client()?.Shutdown(new IdMessageRequest { Id = blazorWebView.Id.ToString() }));
+            Dispatcher?.InvokeAsync(() => Client()?.Shutdown(new IdMessageRequest { Id = blazorWebView.Id.ToString() }, cancellationToken: CancellationToken.None));
         }
 
         void FireReadyToConnect()
@@ -491,7 +490,7 @@ namespace PeakSWC.RemoteWebView
 
         public void SendMessage(string message)
         {
-            Client()?.SendMessage(new SendMessageRequest { Id = blazorWebView.Id.ToString(), Message = message });
+            Client()?.SendMessage(new SendMessageRequest { Id = blazorWebView.Id.ToString(), Message = message }, cancellationToken: CancellationToken.None);
         }
 
         public void Initialize()
@@ -501,7 +500,11 @@ namespace PeakSWC.RemoteWebView
 
         public async ValueTask DisposeAsyncCore()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+                return;
+
             cts.Cancel();
+            cts.Dispose();
             await ShutdownChannelAsync().ConfigureAwait(false);
         }
     }
