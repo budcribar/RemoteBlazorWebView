@@ -110,7 +110,7 @@ public class SonarCancellationTests
         Assert.Same(writer.WriteStopped.Task, stopped);
     }
 
-    [Fact]
+    [WindowsOnlyFact]
     public async Task Wasm_and_octet_stream_responses_are_gzip_compressed()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
