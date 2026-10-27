@@ -35,7 +35,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 using StreamReader sr = new(dataRequest.Pipe.Reader.AsStream());
                 var contents = await sr.ReadToEndAsync().ConfigureAwait(false);
                 var initialLength = contents.Length;
-                contents = HrefRegEx().Replace(contents, $"<base href=\"/{clientId}/\"");
+                contents = HrefRegEx().Replace(contents, $"<base$1$2/{clientId}/$2");
                 if (contents.Length == initialLength) logger.LogError("Unable to find base.href in the home page");
                 dataRequest.Dispose();
 
@@ -44,7 +44,8 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
             return new FileStream { Stream = dataRequest.Pipe.Reader.AsStream() };
         }
-        [GeneratedRegex("<base.*href.*=.*(\"|').*/.*(\"|')", RegexOptions.Multiline)]
+        // Stay inside the base tag. A greedy match ate later quoted attributes on the same line.
+        [GeneratedRegex("<base([^>]*href\\s*=\\s*)([\"'])[^\"']*\\2", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex HrefRegEx();
 
         // Path.GetFileName drops the directory, so comparing it with the full relative path never matched.
