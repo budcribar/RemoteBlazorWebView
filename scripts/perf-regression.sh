@@ -43,6 +43,8 @@ resolve_baseline() {
           printf '%s\n' "$tag"
           return
           ;;
+        *)
+          ;;
       esac
     fi
   done < <(git tag --list --sort=-v:refname)
@@ -131,14 +133,15 @@ build_harness() {
 }
 
 copy_harness() {
-  local dest=$1/src/Benchmarks/PerfRegression
+  local root=$1
+  local dest=$root/src/Benchmarks/PerfRegression
   rm -rf "$dest"
-  mkdir -p "$dest" "$1/src/RemoteWebView.Blazor.JS/dist"
+  mkdir -p "$dest" "$root/src/RemoteWebView.Blazor.JS/dist"
   cp src/Benchmarks/PerfRegression/PerfRegression.csproj \
     src/Benchmarks/PerfRegression/Program.cs \
     "$dest/"
   cp -f src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js \
-    "$1/src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js"
+    "$root/src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js"
 }
 
 cleanup() {
