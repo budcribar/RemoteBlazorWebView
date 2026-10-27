@@ -30,7 +30,7 @@ namespace PeakSWC.RemoteWebView
             }
      
             observers.TryAdd(brn, channel);
-            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, linkedToken.Token));
+            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, linkedToken.Token), linkedToken.Token);
         }
 
         public Task ClientTask { get; }
@@ -38,18 +38,18 @@ namespace PeakSWC.RemoteWebView
 
         public Task? ProcessMessagesTask { get; set; }
 
-        private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror)
+        private async Task WriteMessage(IServerStreamWriter<StringRequest> serverStreamWriter, StringRequest message, bool isMirror, CancellationToken cancellationToken)
         {
             try
             {
-                await serverStreamWriter.WriteAsync(message).ConfigureAwait(false);
+                await serverStreamWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
                 if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
                 {
                     if (isMirror)
-                        await Task.Delay(1000).ConfigureAwait(false);
+                        await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError($"Exception on Write Message {ex.Message}");
             }
@@ -57,7 +57,7 @@ namespace PeakSWC.RemoteWebView
 
         public async ValueTask SendMessage(string message)
         {
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }).ConfigureAwait(false);
+            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }, cancellationToken).ConfigureAwait(false);
         }
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
@@ -115,7 +115,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet", StringComparison.Ordinal))
                     {
-                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary).ConfigureAwait(false);
+                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary, cancellationToken).ConfigureAwait(false);
                         if (logger.IsEnabled(LogLevel.Information))
                             logger.LogDebug($"WebView -> Browser {request.Id} {request.Request}");
                     }
@@ -130,11 +130,11 @@ namespace PeakSWC.RemoteWebView
 
         public Task LocationChanged(Point point)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }, cancellationToken) ?? Task.CompletedTask);
         }
         public Task SizeChanged(Size size)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }) ?? Task.CompletedTask);
+            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }, cancellationToken) ?? Task.CompletedTask);
         }
 
         public void Shutdown()
