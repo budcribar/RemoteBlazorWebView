@@ -12,7 +12,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
     {
         public virtual Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
         {
-            if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
+            if (IsBlazorModulesManifest(subpath))
             {
                 return Task.FromResult(new FileMetadata { ETag = "etag", LastModified = DateTimeOffset.MinValue.Ticks, Length=2, StatusCode=(int)HttpStatusCode.OK });
             }
@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         }
         public virtual async Task<FileStream> GetFileStreamAsync(string clientId, string subpath)
         {
-            if (Path.GetFileName(subpath) == "_framework/blazor.modules.json")
+            if (IsBlazorModulesManifest(subpath))
             {
                 return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes("[]")) };
             }
@@ -39,12 +39,17 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 if (contents.Length == initialLength) logger.LogError("Unable to find base.href in the home page");
                 dataRequest.Dispose();
 
-                return new FileStream { Stream = new MemoryStream(Encoding.ASCII.GetBytes(contents)) };
+                return new FileStream { Stream = new MemoryStream(Encoding.UTF8.GetBytes(contents)) };
             }
 
             return new FileStream { Stream = dataRequest.Pipe.Reader.AsStream() };
         }
         [GeneratedRegex("<base.*href.*=.*(\"|').*/.*(\"|')", RegexOptions.Multiline)]
         private static partial Regex HrefRegEx();
+
+        // Path.GetFileName drops the directory, so comparing it with the full relative path never matched.
+        private static bool IsBlazorModulesManifest(string subpath)
+            => subpath.EndsWith("_framework/blazor.modules.json", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(subpath, "blazor.modules.json", StringComparison.OrdinalIgnoreCase);
     }
 }
