@@ -7,16 +7,14 @@ using System.Net;
 
 namespace FileClientApp
 {
-    class Program
+    static class Program
     {
         // Define the server address. Use 'https' for secure connection.
         private const string ServerAddress = "https://localhost:5001"; // Use HTTPS
-        //private const string ServerAddress = "https://192.168.1.35:5002";
-       
 
         static async Task<int> Main(string[] args)
         {
-            CancellationTokenSource cts = new();
+            using CancellationTokenSource cts = new();
             Console.WriteLine("Starting FileClient...");
 
             Console.CancelKeyPress += (sender, eventArgs) =>
@@ -71,17 +69,15 @@ namespace FileClientApp
                 builder.AddConsole();
             });
             ILogger<ClientFileSyncManager> logger = loggerFactory.CreateLogger<ClientFileSyncManager>();
-            string appRootDir = AppContext.BaseDirectory;
 
             var client = new WebViewIPC.WebViewIPCClient(channel);
-            var events = client.CreateWebView(new CreateWebViewRequest { Id = clientGuid.ToString(), HtmlHostPath = "index.html", Markup = "", Group = "group", HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = true }, cancellationToken: cts.Token);
-
+            client.CreateWebView(new CreateWebViewRequest { Id = clientGuid.ToString(), HtmlHostPath = "index.html", Markup = "", Group = "group", HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = true }, cancellationToken: cts.Token);
 
             // Instantiate the FileClient with the provided client GUID
             var fileClient = new ClientFileSyncManager(grpcClient, clientGuid,"index.html", new PhysicalFileProvider(tempDirectory),(e)=> Console.Write(e.Message),  logger);
 
             // Define the list of files to synchronize by creating them in a temp directory
-            var filesToSync = Utilities.CreateTestFiles(tempDirectory);
+            Utilities.CreateTestFiles(tempDirectory);
             Utilities.CreateTestEnvironment(tempDirectory);
           
             try
