@@ -75,6 +75,18 @@ namespace PeakSWC.RemoteWebView
             public const int RegBrowserReceive = 59;
             public const int RegBrowserSend = 60;
             public const int RegClientStatus = 61;
+            // Insert codes are the hit code plus 11. RegistryLog relies on that.
+            public const int RegCreateWebViewInsert = 62;
+            public const int RegFileReadInsert = 63;
+            public const int RegClientSendMessageInsert = 64;
+            public const int RegPingInsert = 65;
+            public const int RegStartOrRefreshInsert = 66;
+            public const int RegRemoteFileInsert = 67;
+            public const int RegMirrorInsert = 68;
+            public const int RegStartInsert = 69;
+            public const int RegBrowserReceiveInsert = 70;
+            public const int RegBrowserSendInsert = 71;
+            public const int RegClientStatusInsert = 72;
         }
 
         private static readonly string[] Names =
@@ -130,17 +142,28 @@ namespace PeakSWC.RemoteWebView
             "test-client-started",
             "test-kill",
             "createFailed-received",
-            "reg-create-webview",
-            "reg-file-read",
-            "reg-client-send-message",
-            "reg-ping",
-            "reg-start-or-refresh",
-            "reg-remote-file",
-            "reg-mirror",
-            "reg-start",
-            "reg-browser-receive",
-            "reg-browser-send",
-            "reg-client-status",
+            "reg-create-webview-hit",
+            "reg-file-read-hit",
+            "reg-client-send-message-hit",
+            "reg-ping-hit",
+            "reg-start-or-refresh-hit",
+            "reg-remote-file-hit",
+            "reg-mirror-hit",
+            "reg-start-hit",
+            "reg-browser-receive-hit",
+            "reg-browser-send-hit",
+            "reg-client-status-hit",
+            "reg-create-webview-insert",
+            "reg-file-read-insert",
+            "reg-client-send-message-insert",
+            "reg-ping-insert",
+            "reg-start-or-refresh-insert",
+            "reg-remote-file-insert",
+            "reg-mirror-insert",
+            "reg-start-insert",
+            "reg-browser-receive-insert",
+            "reg-browser-send-insert",
+            "reg-client-status-insert",
         };
 
         // One desktop pass logs every registry GetOrAdd. 256K slots keep the
@@ -220,7 +243,14 @@ namespace PeakSWC.RemoteWebView
             return freq == 0 ? 1 : freq;
         }
 
-        public static unsafe void Mark(int ev, Guid id = default, int a = 0, int b = 0)
+        public static void Mark(int ev, Guid id = default, int a = 0, int b = 0)
+        {
+            MarkAt(ev, id, System.Diagnostics.Stopwatch.GetTimestamp(), CachedPid, Environment.CurrentManagedThreadId, a, b);
+        }
+
+        // Writes a pre-stamped tick, pid, and thread id. Used for registry
+        // inserts so the log line matches the entry's creation stamp.
+        public static unsafe void MarkAt(int ev, Guid id, long ticks, int pid, int tid, int a = 0, int b = 0)
         {
             Header* h = header;
             if (h == null)
@@ -231,9 +261,9 @@ namespace PeakSWC.RemoteWebView
                 return;
 
             Slot* s = slots + (seq - 1);
-            s->Ticks = System.Diagnostics.Stopwatch.GetTimestamp();
-            s->Pid = CachedPid;
-            s->Tid = Environment.CurrentManagedThreadId;
+            s->Ticks = ticks;
+            s->Pid = pid;
+            s->Tid = tid;
             s->Event = ev;
             s->A = a;
             s->B = b;
@@ -250,6 +280,14 @@ namespace PeakSWC.RemoteWebView
             if (id != null)
                 Guid.TryParse(id, out parsed);
             Mark(ev, parsed, a, b);
+        }
+
+        public static void MarkAt(int ev, string? id, long ticks, int pid, int tid, int a = 0, int b = 0)
+        {
+            Guid parsed = default;
+            if (id != null)
+                Guid.TryParse(id, out parsed);
+            MarkAt(ev, parsed, ticks, pid, tid, a, b);
         }
 
         public static unsafe void Flush()
