@@ -28,7 +28,7 @@ namespace FileSyncServer.Tests
         }
 
         // Helper method to create root component
-        private RootComponent CreateRootComponent()
+        private static RootComponent CreateRootComponent()
         {
             return new RootComponent
             {
@@ -236,7 +236,7 @@ namespace FileSyncServer.Tests
         public Task AllowExternalDrop_composition_controller_is_false_after_startup()
             => RunOnUiAsync(() => AssertPathAsync(useComposition: true));
 
-        private async Task RunOnUiAsync(Func<Task> action)
+        private static async Task RunOnUiAsync(Func<Task> action)
         {
             Assert.NotNull(Application.Current);
             await Application.Current.Dispatcher.InvokeAsync(action).Task.Unwrap();

@@ -8,7 +8,7 @@ namespace FileSyncServer.Tests
 public class ServerFixture : IDisposable
 {
     public Process ServerProcess { get; private set; }
-    private readonly string _serverExePath;
+    private readonly string _serverExePath = "";
     private readonly ManualResetEventSlim _serverReady = new(false);
 
     public ServerFixture()

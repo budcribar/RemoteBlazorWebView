@@ -7,6 +7,7 @@
 		<Configurations>Debug;Release</Configurations>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<IsPackable>false</IsPackable>
 		<DefineConstants>xDEBUG_SERVER;xPROFILED_SERVER</DefineConstants>
 		<Platforms>x64</Platforms>

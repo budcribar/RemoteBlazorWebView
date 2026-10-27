@@ -118,7 +118,7 @@ namespace FileSyncServer.Tests
         }
 
 
-        private async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
+        private static async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
         {
             using var playwright = await Playwright.CreateAsync();
             // Same Chromium launch as the 300-page test. Playwright 1.63's default
@@ -165,7 +165,7 @@ namespace FileSyncServer.Tests
             Console.WriteLine(message);
         }
 
-        private string CreateHtmlReport(List<Tuple<int, double>> results)
+        private static string CreateHtmlReport(List<Tuple<int, double>> results)
         {
             var sb = new StringBuilder();
             sb.AppendLine("<html><head><title>Load Test Results</title></head><body>");

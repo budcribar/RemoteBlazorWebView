@@ -18,7 +18,7 @@ using System.IO.Compression;
 
 namespace FileSyncServer.Tests
 {
-    public static class Utilities
+    public static partial class Utilities
     {
         #region Server
 
@@ -450,7 +450,7 @@ namespace FileSyncServer.Tests
             try
             {
                 string[] jsFiles = Directory.GetFiles(directoryPath, "*.js");
-                Regex filePattern = new(@"^script\d+\.js$", RegexOptions.IgnoreCase);
+                Regex filePattern = ScriptFilePattern();
 
                 foreach (string file in jsFiles)
                 {
@@ -515,6 +515,9 @@ namespace FileSyncServer.Tests
             File.WriteAllText(indexPath, indexFileContent.ToString());
         }
 
+        [GeneratedRegex(@"^script\d+\.js$", RegexOptions.IgnoreCase)]
+        private static partial Regex ScriptFilePattern();
+
         public static string GenerateRandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -524,8 +527,7 @@ namespace FileSyncServer.Tests
 
         static string CalculateChecksum(string input)
         {
-            using SHA256 sha256Hash = SHA256.Create();
-            byte[] data = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+            byte[] data = SHA256.HashData(Encoding.UTF8.GetBytes(input));
             StringBuilder sBuilder = new();
             for (int i = 0; i < data.Length; i++)
             {

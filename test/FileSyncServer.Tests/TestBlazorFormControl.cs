@@ -31,7 +31,7 @@ namespace FileSyncServer.Tests
         }
 
         // Helper method to create root component
-        private RootComponent CreateRootComponent()
+        private static RootComponent CreateRootComponent()
         {
             return new RootComponent("#app", typeof(Home), new Dictionary<string, object?>());
         }
