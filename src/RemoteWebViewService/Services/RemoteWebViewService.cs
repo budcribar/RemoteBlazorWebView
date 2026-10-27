@@ -159,37 +159,45 @@ namespace PeakSWC.RemoteWebView
         public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
-            CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+            // One source for the read loop and the writer, created once the client registration exists.
+            CancellationTokenSource? linkedToken = null;
+            CancellationTokenSource? activeToken = null;
             try
             {
                 DateTime responseReceived = DateTime.UtcNow;
                 DateTime responseSent = DateTime.UtcNow;
 
                 ServiceState? serviceState = null;
-                
-                await foreach (PingMessageRequest message in requestStream.ReadAllAsync(linkedToken.Token).ConfigureAwait(false))
+
+                if (!await requestStream.MoveNext(context.CancellationToken).ConfigureAwait(false))
+                    return;
+
+                do
                 {
+                    var message = requestStream.Current;
                     id = message.Id;
                     if (serviceState == null)
                     {
                         var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                         serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                        linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                     }
-                    linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
+                    activeToken = linkedToken ?? throw new InvalidOperationException("Ping registration was not created.");
                     if (message.Initialize && serviceState.PingTask == null)
                     {
+                        var writerToken = activeToken;
                         serviceState.PingTask = Task.Run(async () =>
                         {
                             try
                             {
-                                while (!linkedToken.Token.IsCancellationRequested)
+                                while (!writerToken.Token.IsCancellationRequested)
                                 {
                                     responseSent = DateTime.UtcNow;
-                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }, linkedToken.Token).ConfigureAwait(false);
-                                    await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), linkedToken.Token).ConfigureAwait(false);
+                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }, writerToken.Token).ConfigureAwait(false);
+                                    await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), writerToken.Token).ConfigureAwait(false);
                                     if (responseReceived < responseSent)
                                     {
-                                        await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, linkedToken.Token).ConfigureAwait(false);
+                                        await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, writerToken.Token).ConfigureAwait(false);
                                         logger.LogWarning("Ping timeout for Id: {Id}", id);
                                         await shutdownService.Shutdown(id).ConfigureAwait(false);
                                         break;
@@ -199,7 +207,11 @@ namespace PeakSWC.RemoteWebView
                             catch (OperationCanceledException)
                             {
                             }
-                        }, linkedToken.Token);
+                            catch (ObjectDisposedException)
+                            {
+                                // The linked source is disposed when Ping returns.
+                            }
+                        }, writerToken.Token);
                     }
                     else
                     {
@@ -209,6 +221,7 @@ namespace PeakSWC.RemoteWebView
                             serviceState.MaxClientPing = delta;
                     }
                 }
+                while (await requestStream.MoveNext(activeToken!.Token).ConfigureAwait(false));
             }
             catch (OperationCanceledException)
             {
@@ -221,7 +234,10 @@ namespace PeakSWC.RemoteWebView
                 logger.LogError(ex, "Exception in Ping for Id: {Id}", id);
                 await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
             }
-            linkedToken.Dispose();
+            finally
+            {
+                linkedToken?.Dispose();
+            }
         }
     }
 }
