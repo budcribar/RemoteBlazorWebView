@@ -100,7 +100,8 @@ namespace PeakSWC.RemoteWebView
                         try
                         {
                             // Apply timeout to prevent indefinite hangs
-                            if (await Task.WhenAny(task, Task.Delay(timeout)) == task)
+                            // None, not the shutdown token: that token is already cancelled and would end the 30s wait immediately.
+                            if (await Task.WhenAny(task, Task.Delay(timeout, CancellationToken.None)) == task)
                             {
                                 // Task completed within the timeout
                                 await task.ConfigureAwait(false);
