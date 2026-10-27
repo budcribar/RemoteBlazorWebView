@@ -334,7 +334,10 @@ jobs:
         run: |
           $passes = 0
           $fails = 0
-          foreach ($n in 1..15) {
+          $env:NOPAGES_LOG = Join-Path $env:GITHUB_WORKSPACE 'TestResults\nopages-timing.txt'
+          New-Item -ItemType Directory -Force -Path (Split-Path $env:NOPAGES_LOG) | Out-Null
+          if (Test-Path $env:NOPAGES_LOG) { Remove-Item $env:NOPAGES_LOG -Force }
+          foreach ($n in 1..20) {
             foreach ($name in 'RemoteBlazorWebViewTutorial.WpfApp', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial', 'msedgewebview2') {
               Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             }
@@ -350,6 +353,7 @@ jobs:
               --results-directory "TestResults/clicks-$n"
             if ($LASTEXITCODE -eq 0) { $passes++ } else { $fails++ }
             Write-Host "iteration $n exit=$LASTEXITCODE running total pass=$passes fail=$fails"
+            if (Test-Path $env:NOPAGES_LOG) { Get-Content $env:NOPAGES_LOG }
           }
           Write-Host "TestClicks loop finished pass=$passes fail=$fails"
 

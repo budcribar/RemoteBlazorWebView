@@ -23,6 +23,7 @@ namespace FileSyncServer.Tests.Local
         private readonly TimeSpan BrowserWsTimeout = TimeSpan.FromSeconds(60);
         private int _remoteDebuggingPort;
         private string? _userDataFolder;
+        private DateTime _processStartedUtc;
         private readonly StringBuilder _stdout = new();
         private readonly StringBuilder _stderr = new();
 
@@ -51,30 +52,21 @@ namespace FileSyncServer.Tests.Local
                 }
 
                 var pages = contexts[0].Pages.ToList();
+                var atConnect = DescribeTargets();
                 if (pages.Count == 0)
                 {
                     // Observation only. The test still fails. The poll records whether a page
-                    // appears after the first empty snapshot, and /json/list shows what DevTools saw.
+                    // appears in any context after the first empty snapshot.
                     var poll = new StringBuilder();
-                    string listText;
-                    try
-                    {
-                        using var listClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-                        listText = await listClient.GetStringAsync($"http://127.0.0.1:{_remoteDebuggingPort}/json/list");
-                    }
-                    catch (Exception ex)
-                    {
-                        listText = ex.GetType().Name + ": " + ex.Message;
-                    }
+                    string listText = await ReadJsonListAsync();
 
                     for (var i = 1; i <= 8; i++)
                     {
                         await Task.Delay(500);
                         try
                         {
-                            var later = contexts[0].Pages.Count;
-                            poll.Append($"t+{i * 500}ms={later};");
-                            if (later > 0)
+                            poll.Append($"t+{i * 500}ms {DescribeTargets()};");
+                            if (Browser.Contexts.Any(context => context.Pages.Count > 0))
                                 break;
                         }
                         catch (Exception ex)
@@ -84,10 +76,13 @@ namespace FileSyncServer.Tests.Local
                         }
                     }
 
-                    throw new InvalidOperationException(DescribeFailure(
-                        "No pages found in the first browser context. pagePoll=" + poll + " jsonList=" + Tail(listText)));
+                    var detail = "No pages found in the first browser context. atConnect=" + atConnect
+                        + " pagePoll=" + poll + " jsonList=" + Tail(listText);
+                    Note(detail);
+                    throw new InvalidOperationException(DescribeFailure(detail));
                 }
 
+                Note($"pagesAtConnect context0={pages.Count} {atConnect} devtoolsMs={(DateTime.UtcNow - _processStartedUtc).TotalMilliseconds:0}");
                 Page = pages[0];
             }
             catch
@@ -174,6 +169,7 @@ namespace FileSyncServer.Tests.Local
                 Console.Error.WriteLine($"[Error]: {e.Data}");
             };
 
+            _processStartedUtc = DateTime.UtcNow;
             if (!process.Start())
             {
                 throw new InvalidOperationException($"Failed to start {startInfo.FileName}.");
@@ -225,10 +221,49 @@ namespace FileSyncServer.Tests.Local
                     // The browser process has not bound the port yet.
                 }
 
-                await Task.Delay(200);
+                // Repro branch only. 200ms steps can step over the gap between the
+                // debugging port opening and the first page target. 20ms samples that gap.
+                await Task.Delay(20);
             }
 
             return null;
+        }
+
+        private string DescribeTargets()
+        {
+            var contexts = Browser.Contexts.ToList();
+            var pages = string.Join("/", contexts.Select(context => context.Pages.Count));
+            return $"contexts={contexts.Count} pages={pages}";
+        }
+
+        private async Task<string> ReadJsonListAsync()
+        {
+            try
+            {
+                using var listClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                var json = await listClient.GetStringAsync($"http://127.0.0.1:{_remoteDebuggingPort}/json/list");
+                using var doc = JsonDocument.Parse(json);
+                var rows = new List<string>();
+                foreach (var target in doc.RootElement.EnumerateArray())
+                {
+                    var type = target.TryGetProperty("type", out var typeElement) ? typeElement.GetString() : "?";
+                    var url = target.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : "";
+                    rows.Add(type + ":" + url);
+                }
+                return rows.Count == 0 ? "<no targets>" : string.Join(" | ", rows);
+            }
+            catch (Exception ex)
+            {
+                return ex.GetType().Name + ": " + ex.Message;
+            }
+        }
+
+        private static void Note(string line)
+        {
+            var path = Environment.GetEnvironmentVariable("NOPAGES_LOG");
+            if (string.IsNullOrEmpty(path))
+                return;
+            File.AppendAllText(path, DateTime.UtcNow.ToString("O") + " " + line + Environment.NewLine);
         }
 
         private string DescribeFailure(string reason)
