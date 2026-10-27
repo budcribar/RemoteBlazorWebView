@@ -53,7 +53,39 @@ namespace FileSyncServer.Tests.Local
                 var pages = contexts[0].Pages.ToList();
                 if (pages.Count == 0)
                 {
-                    throw new InvalidOperationException(DescribeFailure("No pages found in the first browser context."));
+                    // Observation only. The test still fails. The poll records whether a page
+                    // appears after the first empty snapshot, and /json/list shows what DevTools saw.
+                    var poll = new StringBuilder();
+                    string listText;
+                    try
+                    {
+                        using var listClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                        listText = await listClient.GetStringAsync($"http://127.0.0.1:{_remoteDebuggingPort}/json/list");
+                    }
+                    catch (Exception ex)
+                    {
+                        listText = ex.GetType().Name + ": " + ex.Message;
+                    }
+
+                    for (var i = 1; i <= 8; i++)
+                    {
+                        await Task.Delay(500);
+                        try
+                        {
+                            var later = contexts[0].Pages.Count;
+                            poll.Append($"t+{i * 500}ms={later};");
+                            if (later > 0)
+                                break;
+                        }
+                        catch (Exception ex)
+                        {
+                            poll.Append($"t+{i * 500}ms={ex.GetType().Name};");
+                            break;
+                        }
+                    }
+
+                    throw new InvalidOperationException(DescribeFailure(
+                        "No pages found in the first browser context. pagePoll=" + poll + " jsonList=" + Tail(listText)));
                 }
 
                 Page = pages[0];

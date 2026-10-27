@@ -28,7 +28,7 @@ name: Windows tests
 
 on:
   push:
-    branches: [net9, net9-ci]
+    branches: [net9, net9-ci, net9-nopages-repro]
   workflow_dispatch:
 
 permissions:
@@ -304,7 +304,7 @@ jobs:
       # while those desktop launches still cannot complete on the runner.
       # File-not-found for those executables fails the publish step above.
       - name: Test FileSyncServer desktop and tutorial (continue on error)
-        if: always() && steps.publish.outcome == 'success'
+        if: always() && steps.publish.outcome == 'success' && github.ref != 'refs/heads/net9-nopages-repro'
         timeout-minutes: 60
         continue-on-error: true
         run: |
@@ -324,6 +324,34 @@ jobs:
             --filter "FullyQualifiedName!~FileFetchingTests&FullyQualifiedName!~ClientCachingTests&FullyQualifiedName!~ServerCachingTests&FullyQualifiedName!~ConcurrentRequestsTests&FullyQualifiedName!~LoadTest&FullyQualifiedName!~PerformanceTests&FullyQualifiedName!~TestMisc" `
             --logger "trx;LogFileName=FileSyncServer.Desktop.trx" `
             --results-directory TestResults/FileSyncServer.Desktop
+
+      # Temporary repro for TestLocalBlazorWebViewDebug.TestClicks. The assertion
+      # is unchanged; a failure records whether a page appears after the empty snapshot.
+      - name: Loop debug Photino TestClicks
+        if: always() && steps.publish.outcome == 'success' && github.ref == 'refs/heads/net9-nopages-repro'
+        timeout-minutes: 60
+        continue-on-error: true
+        run: |
+          $passes = 0
+          $fails = 0
+          foreach ($n in 1..15) {
+            foreach ($name in 'RemoteBlazorWebViewTutorial.WpfApp', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial', 'msedgewebview2') {
+              Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            }
+            dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
+              -c Release `
+              --no-build `
+              -p:Platform=x64 `
+              -p:EnableWindowsTargeting=true `
+              -p:GeneratePackageOnBuild=false `
+              -p:AppendRuntimeIdentifierToOutputPath=false `
+              --filter "FullyQualifiedName~TestLocalBlazorWebViewDebug.TestClicks" `
+              --logger "trx;LogFileName=clicks-$n.trx" `
+              --results-directory "TestResults/clicks-$n"
+            if ($LASTEXITCODE -eq 0) { $passes++ } else { $fails++ }
+            Write-Host "iteration $n exit=$LASTEXITCODE running total pass=$passes fail=$fails"
+          }
+          Write-Host "TestClicks loop finished pass=$passes fail=$fails"
 
       - name: Upload test results
         if: always()
