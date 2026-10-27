@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -87,6 +88,7 @@ namespace PeakSWC.RemoteWebView
             public const int RegBrowserReceiveInsert = 70;
             public const int RegBrowserSendInsert = 71;
             public const int RegClientStatusInsert = 72;
+            public const int RegDeregister = 73;
         }
 
         private static readonly string[] Names =
@@ -164,6 +166,7 @@ namespace PeakSWC.RemoteWebView
             "reg-browser-receive-insert",
             "reg-browser-send-insert",
             "reg-client-status-insert",
+            "reg-deregister",
         };
 
         // One desktop pass logs every registry GetOrAdd. 256K slots keep the
@@ -364,13 +367,23 @@ namespace PeakSWC.RemoteWebView
                         writer.Write(name);
                         writer.Write(" id=");
                         writer.Write(FormatGuid(s->Id0, s->Id1));
-                        writer.Write(" a=");
-                        writer.Write(s->A);
+                        if (IsRegistryStamp(ev))
+                        {
+                            writer.Write(" regseq=");
+                            writer.Write(s->A);
+                        }
+                        else
+                        {
+                            writer.Write(" a=");
+                            writer.Write(s->A);
+                        }
                         writer.Write(" b=");
                         writer.Write(s->B);
                         writer.WriteLine();
                         last = i + 1;
                     }
+
+                    WriteRegistrationOrder(writer, next);
 
                     long published = Volatile.Read(ref h->Next);
                     if (published > Capacity)
@@ -393,6 +406,201 @@ namespace PeakSWC.RemoteWebView
             }
             catch
             {
+            }
+        }
+
+        private static bool IsRegistryStamp(int ev)
+        {
+            return ev >= Ev.RegCreateWebViewInsert && ev <= Ev.RegDeregister;
+        }
+
+        // Diagnostic only. Orders register and deregister events by the
+        // execution ticks stored on them. regseq is reported beside that
+        // order and is not used to drop, park, or replace anything.
+        private static unsafe void WriteRegistrationOrder(StreamWriter writer, long next)
+        {
+            var byClient = new Dictionary<ClientKey, List<RegEvent>>();
+            for (long i = 0; i < next; i++)
+            {
+                Slot* s = slots + i;
+                if (Volatile.Read(ref s->Seq) != i + 1)
+                    continue;
+                int ev = s->Event;
+                bool insert = ev >= Ev.RegCreateWebViewInsert && ev <= Ev.RegClientStatusInsert;
+                if (!insert && ev != Ev.RegDeregister)
+                    continue;
+                var key = new ClientKey(s->Id0, s->Id1);
+                if (!byClient.TryGetValue(key, out var list))
+                {
+                    list = new List<RegEvent>();
+                    byClient.Add(key, list);
+                }
+                list.Add(new RegEvent(s->Ticks, i, s->Pid, s->Tid, ev, s->A, insert));
+            }
+
+            writer.Write("order-begin through=");
+            writer.Write(next);
+            writer.WriteLine(" timestamps-decide-newest regseq=execution-only");
+
+            foreach (var pair in byClient)
+            {
+                bool anyDeregister = false;
+                for (int n = 0; n < pair.Value.Count; n++)
+                {
+                    if (!pair.Value[n].Insert)
+                    {
+                        anyDeregister = true;
+                        break;
+                    }
+                }
+                if (!anyDeregister)
+                    continue;
+
+                List<RegEvent> events = pair.Value;
+                events.Sort(static (x, y) =>
+                {
+                    int cmp = x.Ticks.CompareTo(y.Ticks);
+                    return cmp != 0 ? cmp : x.SlotIndex.CompareTo(y.SlotIndex);
+                });
+
+                RegEvent newest = events[events.Count - 1];
+                bool deregisterBeforeRegister = false;
+                bool publishAgrees = true;
+                bool regseqAgrees = true;
+                long prevSlot = long.MinValue;
+                int prevSeq = int.MinValue;
+                for (int n = 0; n < events.Count; n++)
+                {
+                    RegEvent ev = events[n];
+                    if (ev.SlotIndex < prevSlot)
+                        publishAgrees = false;
+                    if (ev.RegSeq < prevSeq)
+                        regseqAgrees = false;
+                    prevSlot = ev.SlotIndex;
+                    prevSeq = ev.RegSeq;
+                    if (ev.Insert)
+                        continue;
+                    for (int m = 0; m < events.Count; m++)
+                    {
+                        if (events[m].Insert && ev.Ticks < events[m].Ticks)
+                        {
+                            deregisterBeforeRegister = true;
+                            break;
+                        }
+                    }
+                }
+
+                string id = FormatGuid(pair.Key.Id0, pair.Key.Id1);
+                string newestName = (uint)newest.Event < (uint)Names.Length ? Names[newest.Event] : "ev";
+                writer.Write("order id=");
+                writer.Write(id);
+                writer.Write(" events=");
+                writer.Write(events.Count);
+                writer.Write(" newest=");
+                writer.Write(newestName);
+                writer.Write(" newestTicks=");
+                writer.Write(newest.Ticks);
+                writer.Write(" newestRegseq=");
+                writer.Write(newest.RegSeq);
+                writer.Write(" deregister-before-register=");
+                writer.Write(deregisterBeforeRegister ? "yes" : "no");
+                writer.Write(" tick-vs-publish=");
+                writer.Write(publishAgrees ? "agree" : "out-of-order");
+                writer.Write(" tick-vs-regseq=");
+                writer.Write(regseqAgrees ? "agree" : "disagree");
+                writer.WriteLine();
+
+                for (int n = 0; n < events.Count; n++)
+                {
+                    RegEvent ev = events[n];
+                    bool isNewest = ev.Ticks == newest.Ticks;
+                    string name = (uint)ev.Event < (uint)Names.Length ? Names[ev.Event] : "ev";
+                    writer.Write("order-event id=");
+                    writer.Write(id);
+                    writer.Write(" rank=");
+                    writer.Write(n + 1);
+                    writer.Write(" ticks=");
+                    writer.Write(ev.Ticks);
+                    writer.Write(" regseq=");
+                    writer.Write(ev.RegSeq);
+                    writer.Write(" pid=");
+                    writer.Write(ev.Pid);
+                    writer.Write(" tid=");
+                    writer.Write(ev.Tid);
+                    writer.Write(' ');
+                    writer.Write(name);
+                    writer.Write(" newest=");
+                    writer.Write(isNewest ? "yes" : "no");
+                    if (!ev.Insert && deregisterBeforeRegister)
+                    {
+                        bool stale = false;
+                        for (int m = 0; m < events.Count; m++)
+                        {
+                            if (events[m].Insert && ev.Ticks < events[m].Ticks)
+                            {
+                                stale = true;
+                                break;
+                            }
+                        }
+                        if (stale)
+                            writer.Write(" stale=yes");
+                    }
+                    if (ev.Insert)
+                    {
+                        bool after = false;
+                        for (int m = 0; m < events.Count; m++)
+                        {
+                            if (!events[m].Insert && events[m].Ticks < ev.Ticks)
+                            {
+                                after = true;
+                                break;
+                            }
+                        }
+                        if (after)
+                            writer.Write(" after-deregister=yes");
+                    }
+                    writer.WriteLine();
+                }
+            }
+        }
+
+        private readonly struct ClientKey : IEquatable<ClientKey>
+        {
+            public readonly long Id0;
+            public readonly long Id1;
+
+            public ClientKey(long id0, long id1)
+            {
+                Id0 = id0;
+                Id1 = id1;
+            }
+
+            public bool Equals(ClientKey other) => Id0 == other.Id0 && Id1 == other.Id1;
+
+            public override bool Equals(object? obj) => obj is ClientKey other && Equals(other);
+
+            public override int GetHashCode() => HashCode.Combine(Id0, Id1);
+        }
+
+        private readonly struct RegEvent
+        {
+            public readonly long Ticks;
+            public readonly long SlotIndex;
+            public readonly int Pid;
+            public readonly int Tid;
+            public readonly int Event;
+            public readonly int RegSeq;
+            public readonly bool Insert;
+
+            public RegEvent(long ticks, long slotIndex, int pid, int tid, int ev, int regSeq, bool insert)
+            {
+                Ticks = ticks;
+                SlotIndex = slotIndex;
+                Pid = pid;
+                Tid = tid;
+                Event = ev;
+                RegSeq = regSeq;
+                Insert = insert;
             }
         }
 

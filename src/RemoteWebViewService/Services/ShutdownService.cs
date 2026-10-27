@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteWebView.Services
         public async Task Shutdown(string id, Exception? exception = null)
         {
             PeakSWC.RemoteWebView.RaceLog.Mark(PeakSWC.RemoteWebView.RaceLog.Ev.ShutdownEnter, id, exception?.HResult ?? 0);
-            if (serviceDictionary.TryRemove(id, out var client))
+            if (PeakSWC.RemoteWebView.RegistryLog.TryRemove(serviceDictionary, id, out var client))
             {
                 PeakSWC.RemoteWebView.RaceLog.Mark(PeakSWC.RemoteWebView.RaceLog.Ev.ShutdownRemoved, id);
                 try
