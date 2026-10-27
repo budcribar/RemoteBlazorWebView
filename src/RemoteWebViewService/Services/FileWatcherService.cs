@@ -31,7 +31,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     RunArguments = runArguments
                 }
-            }).ConfigureAwait(false);
+            }, context.CancellationToken).ConfigureAwait(false);
 
             // Stream the initial file
             await StreamFileInChunks(filePath, responseStream, context.CancellationToken).ConfigureAwait(false);
@@ -43,7 +43,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     Content = Google.Protobuf.ByteString.Empty
                 }
-            }).ConfigureAwait(false);
+            }, context.CancellationToken).ConfigureAwait(false);
 
             // Start watching for changes
             FileSystemWatcher? watcher = new(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
@@ -69,7 +69,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             RunArguments = updatedRunArguments
                         }
-                    }).ConfigureAwait(false);
+                    }, context.CancellationToken).ConfigureAwait(false);
 
                     // Stream the updated file
                     await StreamFileInChunks(filePath, responseStream, context.CancellationToken).ConfigureAwait(false);
@@ -81,7 +81,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             Content = Google.Protobuf.ByteString.Empty
                         }
-                    }).ConfigureAwait(false);
+                    }, context.CancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -153,7 +153,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         Content = Google.Protobuf.ByteString.CopyFrom(actualBytes)
                     }
-                }).ConfigureAwait(false);
+                }, cancellationToken).ConfigureAwait(false);
             }
 
             logger.LogInformation($"Completed streaming file: {filePath}");
