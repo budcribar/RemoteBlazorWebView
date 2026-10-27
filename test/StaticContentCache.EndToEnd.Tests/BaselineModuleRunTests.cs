@@ -70,12 +70,10 @@ public class BaselineModuleRunTests : IAsyncLifetime
             await _host.DisposeAsync();
     }
 
-    [Fact]
+    [HeadlessChromeFact]
     public async Task Test_hook_sees_each_initializer_once_in_order_via_the_remote_path()
     {
         var chrome = FindChrome();
-        Assert.False(string.IsNullOrEmpty(chrome), "Headless Chrome was not found. This test does not use WebView2.");
-
         var pageUrl = $"{_host!.BrowserUrl}/{_clientId}/{HostPageName}";
         var json = await RunHook(chrome!, pageUrl);
         var report = JsonSerializer.Deserialize<HookReport>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
