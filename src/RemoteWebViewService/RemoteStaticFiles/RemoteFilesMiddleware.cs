@@ -232,8 +232,11 @@ namespace PeakSWC.RemoteWebView
                     return;
                 }
 
-                // Stream directly to the response
-                context.Response.ContentLength = clientMetadata.Length;
+                // The host page is rewritten after metadata is measured, so a seekable
+                // stream's length is the body actually written. A pipe uses the metadata length.
+                context.Response.ContentLength = dataRequest.Stream.CanSeek
+                    ? dataRequest.Stream.Length
+                    : clientMetadata.Length;
 
                 try
                 {
@@ -245,6 +248,7 @@ namespace PeakSWC.RemoteWebView
 
                         memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
+                        context.Response.ContentLength = memStream.Length;
                         memStream.Position = 0;
                         await memStream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
                     }
