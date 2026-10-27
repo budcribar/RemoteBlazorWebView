@@ -2,6 +2,9 @@ namespace EditWebView
 {
     public class Editor
     {
+        private const string BlazorWebViewBaseFile = "BlazorWebViewBase.cs";
+        private const string BlazorWebViewFormBaseFile = "BlazorWebViewFormBase.cs";
+
         private string _text;
         private readonly string _fileName;
 
@@ -23,7 +26,7 @@ namespace EditWebView
 
             if (fileName == "BlazorWebView.cs")
             {
-                return file.Contains("WindowsForms") ? "BlazorWebViewFormBase.cs" : "BlazorWebViewBase.cs";
+                return file.Contains("WindowsForms") ? BlazorWebViewFormBaseFile : BlazorWebViewBaseFile;
             }
 
             return fileName;
@@ -46,8 +49,8 @@ namespace EditWebView
                 case "BlazorWebViewServiceCollectionExtensions.cs":
                     EditBlazorWebViewServiceCollectionExtensions();
                     break;
-                case "BlazorWebViewFormBase.cs":
-                case "BlazorWebViewBase.cs":
+                case BlazorWebViewFormBaseFile:
+                case BlazorWebViewBaseFile:
                     EditBlazorWebViewBase();
                     break;
             }
@@ -135,7 +138,7 @@ namespace EditWebView
                 "public IWebView2 WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
 
             Replace("new WebView2WebViewManager", "CreateWebViewManager");
-            var webViewParameterType = _fileName == "BlazorWebViewBase.cs" ? "IWebView2" : "WebView2Control";
+            var webViewParameterType = _fileName == BlazorWebViewBaseFile ? "IWebView2" : "WebView2Control";
             Replace("private void StartWebViewCoreIfPossible()",
                 $@"public virtual WebView2WebViewManager CreateWebViewManager({webViewParameterType} webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
 		{{
@@ -167,8 +170,8 @@ namespace EditWebView
 
         private void InsertUsingStatements()
         {
-            if (_fileName == "RootComponent.cs" || _fileName == "WpfDispatcher.cs" || _fileName == "BlazorWebViewBase.cs" ||
-                _fileName == "WindowsFormsDispatcher.cs" || _fileName == "BlazorWebViewFormBase.cs" || _fileName == "RootComponentCollectionExtensions.cs")
+            if (_fileName == "RootComponent.cs" || _fileName == "WpfDispatcher.cs" || _fileName == BlazorWebViewBaseFile ||
+                _fileName == "WindowsFormsDispatcher.cs" || _fileName == BlazorWebViewFormBaseFile || _fileName == "RootComponentCollectionExtensions.cs")
             {
                 InsertUsing("Microsoft.AspNetCore.Components");
             }
@@ -178,7 +181,7 @@ namespace EditWebView
                 InsertUsing("Microsoft.AspNetCore.Components.WebView");
             }
 
-            if (_fileName == "RootComponent.cs" || _fileName == "BlazorWebViewFormBase.cs" || _fileName == "BlazorWebViewBase.cs")
+            if (_fileName == "RootComponent.cs" || _fileName == BlazorWebViewFormBaseFile || _fileName == BlazorWebViewBaseFile)
             {
                 Replace("using Microsoft.AspNetCore.Components.WebView.WebView2;", "using WebView2 = Microsoft.AspNetCore.Components.WebView.WebView2;");
             }

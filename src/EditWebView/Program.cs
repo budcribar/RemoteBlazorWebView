@@ -1,11 +1,9 @@
-using EditWebView;
 using System.IO;
 
-class Program
+namespace EditWebView
 {
-    //private const string AspNetUrl = "https://github.com/dotnet/aspnetcore/archive/refs/tags/v9.0.0-preview.7.24406.2.zip";
-   // private const string MauiUrl = " https://github.com/dotnet/maui/archive/refs/tags/9.0.0-preview.7.24407.4.zip";
-
+static class Program
+{
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";
     private const int TargetMajorVersion = 11;
@@ -75,13 +73,17 @@ class Program
     static List<int> ReadMajorArguments(string[] args)
     {
         var majors = new List<int>();
-        for (int i = 0; i < args.Length; i++)
+        int i = 0;
+        while (i < args.Length)
         {
             if (args[i] == "--major" && i + 1 < args.Length && int.TryParse(args[i + 1], out int major))
             {
                 majors.Add(major);
-                i++;
+                i += 2;
+                continue;
             }
+
+            i++;
         }
         return majors;
     }
@@ -283,4 +285,5 @@ class Program
 
         Console.WriteLine($"Local file update complete. Files updated: {updated.Count}");
     }
+}
 }

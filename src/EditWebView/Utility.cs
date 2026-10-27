@@ -11,14 +11,19 @@ namespace EditWebView
     public static partial class Utility
     {
         private static readonly HttpClient _httpClient = new();
-        private static readonly Encoding _windows1252Encoding;
+        private static readonly Encoding _windows1252Encoding = CreateWindows1252Encoding();
 
         private const string AspNetCoreRepo = "dotnet/aspnetcore";
         private const string MauiRepo = "dotnet/maui";
 
-        private static readonly Regex ReleaseTagRegex = new(
-            @"^v?(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-(?<channel>rc|preview)\.(?<n>\d+))?(?:\.(?<build>\d+(?:\.\d+)*))?$",
-            RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        [GeneratedRegex(@"^v?(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-(?<channel>rc|preview)\.(?<n>\d+))?(?:\.(?<build>\d+(?:\.\d+)*))?$", RegexOptions.CultureInvariant | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
+        private static partial Regex ReleaseTagRegex();
+
+        private static Encoding CreateWindows1252Encoding()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            return Encoding.GetEncoding(1252);
+        }
 
         public static async Task<string> GetLatestFrameworkVersionAsync(string framework, int majorVersion)
         {
@@ -44,7 +49,7 @@ namespace EditWebView
                 .ToList();
 
             if (parsed.Count == 0)
-                throw new Exception($"No valid version {majorVersion} release found for {MauiRepo}.");
+                throw new InvalidOperationException($"No valid version {majorVersion} release found for {MauiRepo}.");
 
             // .NET 11 MAUI moved prereleases to 11.0.100-rc/preview. Older majors use 9.0.0 / 10.0.0.
             // Servicing GA tags use the patch number (10.0.110, 10.0.80, 9.0.120).
@@ -66,7 +71,7 @@ namespace EditWebView
                 .ToList();
 
             if (parsed.Count == 0)
-                throw new Exception($"No valid version {majorVersion} release found for {AspNetCoreRepo}.");
+                throw new InvalidOperationException($"No valid version {majorVersion} release found for {AspNetCoreRepo}.");
 
             return parsed.OrderByDescending(tag => tag, ReleaseTagComparer.Instance).First().Name;
         }
@@ -106,7 +111,7 @@ namespace EditWebView
 
         private static ReleaseTag? ParseReleaseTag(string name)
         {
-            var match = ReleaseTagRegex.Match(name);
+            var match = ReleaseTagRegex().Match(name);
             if (!match.Success)
                 return null;
 
@@ -170,11 +175,6 @@ namespace EditWebView
                 }
                 return 0;
             }
-        }
-        static Utility()
-        {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _windows1252Encoding = Encoding.GetEncoding(1252);
         }
 
         public static async Task<bool> ArchiveExistsAsync(string url)
@@ -301,7 +301,6 @@ namespace EditWebView
             {
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 File.WriteAllText(filePath, content, _windows1252Encoding);
-                //Console.WriteLine($"Successfully converted {filePath} from UTF-8 to Windows-1252 encoding.");
             }
             catch (Exception ex)
             {
@@ -333,7 +332,6 @@ namespace EditWebView
                 {
                     content = content.Replace("\n", "\r\n");
                     File.WriteAllText(filePath, content, Encoding.UTF8);
-                    //Console.WriteLine($"Successfully converted {filePath} to Windows line endings.");
                 }
             }
             catch (Exception ex)
