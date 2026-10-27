@@ -245,7 +245,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                             RequestUri = requestUri ?? string.Empty,
                             ContentType = contentType ?? string.Empty
                         };
-                        await responseStream.WriteAsync(request).ConfigureAwait(false);
+                        await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
                         _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
                     }
                     else
@@ -289,7 +289,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                             RequestType = ServerFileReadRequest.Types.RequestType.FileData
                         };
 
-                        await responseStream.WriteAsync(request).ConfigureAwait(false);
+                        await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
                         _logger.LogDebug("Sent file data request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
                     }
                     else
@@ -341,7 +341,8 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
             try
             {
-                ProcessWriteChannelAsync().Wait();
+                // _cts is already cancelled above, so this wait must not use that token or it returns immediately.
+                ProcessWriteChannelAsync().Wait(CancellationToken.None);
             }
             catch (AggregateException ae)
             {

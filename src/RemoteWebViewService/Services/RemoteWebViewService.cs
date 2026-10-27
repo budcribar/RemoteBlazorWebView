@@ -44,15 +44,15 @@ namespace PeakSWC.RemoteWebView
             if (serviceStateTaskSource.Task.IsCompleted)
             {
                 logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }).ConfigureAwait(false);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
                 return;
             }     
 
             // No need to wait for writes to complete
-            serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}").ConfigureAwait(false));
+            serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}", CancellationToken.None).ConfigureAwait(false));
             state.IPC.ClientResponseStream = responseStream;
 
-            await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }).ConfigureAwait(false);
+            await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
 
             serviceStateTaskSource.SetResult(state);
 
@@ -102,7 +102,7 @@ namespace PeakSWC.RemoteWebView
             {
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 serviceState.FileManagerReady.SetResult(true);
 
                 // Create a linked cancellation token to handle both client cancellation and server cancellation
@@ -144,7 +144,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
@@ -173,25 +173,31 @@ namespace PeakSWC.RemoteWebView
                     if (serviceState == null)
                     {
                         var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-                        serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                        serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                     }
                     linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                     if (message.Initialize && serviceState.PingTask == null)
                     {
                         serviceState.PingTask = Task.Run(async () =>
                         {
-                            while (!linkedToken.Token.IsCancellationRequested)
+                            try
                             {
-                                responseSent = DateTime.UtcNow;
-                                await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }).ConfigureAwait(false);
-                                await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), linkedToken.Token).ConfigureAwait(false);
-                                if (responseReceived < responseSent)
+                                while (!linkedToken.Token.IsCancellationRequested)
                                 {
-                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }).ConfigureAwait(false);
-                                    logger.LogWarning("Ping timeout for Id: {Id}", id);
-                                    await shutdownService.Shutdown(id).ConfigureAwait(false);
-                                    break;
+                                    responseSent = DateTime.UtcNow;
+                                    await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }, linkedToken.Token).ConfigureAwait(false);
+                                    await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), linkedToken.Token).ConfigureAwait(false);
+                                    if (responseReceived < responseSent)
+                                    {
+                                        await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, linkedToken.Token).ConfigureAwait(false);
+                                        logger.LogWarning("Ping timeout for Id: {Id}", id);
+                                        await shutdownService.Shutdown(id).ConfigureAwait(false);
+                                        break;
+                                    }
                                 }
+                            }
+                            catch (OperationCanceledException)
+                            {
                             }
                         }, linkedToken.Token);
                     }

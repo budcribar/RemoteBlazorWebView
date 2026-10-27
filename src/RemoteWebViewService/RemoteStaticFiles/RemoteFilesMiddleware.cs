@@ -135,7 +135,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             {
                 logger.LogWarning("Invalid request path. Expected format: /clientId/subPath");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Invalid request path. Expected format: /clientId/subPath").ConfigureAwait(false);
+                await context.Response.WriteAsync("Invalid request path. Expected format: /clientId/subPath", context.RequestAborted).ConfigureAwait(false);
                 return;
             }
 
@@ -148,19 +148,23 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             FileMetadata clientMetadata;
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), context.RequestAborted).ConfigureAwait(false);
+                var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60), context.RequestAborted).ConfigureAwait(false);
                 var contentType = GetContentType(subPath);
                 var requestUri = "/" + subPath.TrimStart('/') + context.Request.QueryString.Value;
                 clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath, requestUri, contentType).ConfigureAwait(false);
                 FileStats.Update(serviceState, clientId.ToString(), clientMetadata);
                 ILogger<RemoteWebViewService> serviceLogger = context.RequestServices.GetRequiredService<ILogger<RemoteWebViewService>>();
             }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                return;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error retrieving metadata for file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await context.Response.WriteAsync("Error retrieving file metadata from client.").ConfigureAwait(false);
+                await context.Response.WriteAsync("Error retrieving file metadata from client.", context.RequestAborted).ConfigureAwait(false);
                 return;
             }
 
@@ -168,7 +172,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             {
                 logger.LogWarning("Client ID '{ClientId}' does not have the file '{SubPath}'. Cannot serve.", clientId, subPath);
                 context.Response.StatusCode = clientMetadata.StatusCode;
-                await context.Response.WriteAsync($"File not found. {subPath}").ConfigureAwait(false);
+                await context.Response.WriteAsync($"File not found. {subPath}", context.RequestAborted).ConfigureAwait(false);
                 return;
             }
 
@@ -223,88 +227,55 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 {
                     dataRequest = await remoteFileResolver.GetFileStreamAsync(clientId.ToString(), subPath).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+                {
+                    return;
+                }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to retrieve file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                    await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
+                    await context.Response.WriteAsync($"Error retrieving file from client. {subPath}", context.RequestAborted).ConfigureAwait(false);
                     return;
                 }
 
                 // Stream directly to the response
                 context.Response.ContentLength = clientMetadata.Length;
 
-                if (options.UseServerCache)
+                try
                 {
-                    // Optionally cache the data
-                    using MemoryStream memStream = new();
-                    await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
-                    memStream.Position = 0;
-
-                    memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
-
-                    // Write the data to the response
-                    memStream.Position = 0;
-                    await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
-                }
-                else
-                {
-                    // Stream directly without caching
-                    await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
-                }
-
-                logger.LogDebug("Successfully fetched and served file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
-            }
-            else
-            {
-                // Serve from cache
-                if (cached is not null)
-                {
-                    logger.LogDebug("Serving file '{SubPath}' from in-memory cache.", subPath);
-                    context.Response.ContentLength = cached.Data.Length;
-                    await context.Response.Body.WriteAsync(cached.Data.AsMemory()).ConfigureAwait(false);
-                }
-                else
-                {
-                    logger.LogWarning("Data for file '{SubPath}' not found in cache. Fetching from client.", subPath);
-
-                    // Fetch from client
-                    FileStream dataRequest;
-                    try
-                    {
-                        dataRequest = await remoteFileResolver.GetFileStreamAsync(clientId.ToString(), subPath).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to retrieve file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
-                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                        await context.Response.WriteAsync($"Error retrieving file from client. {subPath}").ConfigureAwait(false);
-                        return;
-                    }
-
-                    // Optionally cache the data
                     if (options.UseServerCache)
                     {
+                        // Optionally cache the data
                         using MemoryStream memStream = new();
-                        await dataRequest.Stream.CopyToAsync(memStream).ConfigureAwait(false);
+                        await dataRequest.Stream.CopyToAsync(memStream, context.RequestAborted).ConfigureAwait(false);
                         memStream.Position = 0;
 
                         memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
 
                         // Write the data to the response
                         memStream.Position = 0;
-                        context.Response.ContentLength = memStream.Length;
-                        await memStream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        await memStream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
                     }
                     else
                     {
                         // Stream directly without caching
-                        context.Response.ContentLength = clientMetadata.Length;
-                        await dataRequest.Stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        await dataRequest.Stream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
                     }
-
-                    logger.LogDebug("Successfully fetched and served file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
                 }
+                catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                logger.LogDebug("Successfully fetched and served file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
+            }
+            else
+            {
+                // needsUpdate is false only after a cache hit assigned cached.
+                logger.LogDebug("Serving file '{SubPath}' from in-memory cache.", subPath);
+                context.Response.ContentLength = cached!.Data.Length;
+                await context.Response.Body.WriteAsync(cached.Data.AsMemory(), context.RequestAborted).ConfigureAwait(false);
             }
         }
 

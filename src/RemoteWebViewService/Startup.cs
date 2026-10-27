@@ -130,7 +130,10 @@ namespace PeakSWC.RemoteWebView
 
             });
 #endif
-            services.AddResponseCompression(options => { options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]); });
+            services.AddResponseCompression(options =>
+            {
+                options.MimeTypes = options.MimeTypes.Concat(["application/octet-stream", "application/wasm"]);
+            });
 #if RATELIMIT
             services.AddSingleton<RateLimitStats>();
             services.AddHostedService<RateLimitMonitoringService>();
