@@ -6,6 +6,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using PeakSWC.RemoteWebView;
+using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 
 namespace StaticContentCache.Tests;
@@ -153,6 +154,16 @@ public class BugReviewTests
         {
             manager.Dispose();
         }
+    }
+
+    [Fact]
+    public void Restart_page_encodes_the_process_name()
+    {
+        var html = RestartPage.Html(Guid.NewGuid().ToString(), "app<b>x", "host\"y");
+
+        Assert.DoesNotContain("app<b>x", html);
+        Assert.Contains("app&lt;b&gt;x", html);
+        Assert.DoesNotContain("host\"y", html);
     }
 
     private static async Task<ServerFileReadRequest> WaitForRequest(FakeFileWriter writer)
