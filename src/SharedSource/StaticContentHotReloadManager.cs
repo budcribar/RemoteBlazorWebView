@@ -19,7 +19,7 @@ namespace PeakSWC.RemoteBlazorWebView
 	{
 		private delegate void ContentUpdatedHandler(string assemblyName, string relativePath);
 
-		private readonly static Regex ContentUrlRegex = new Regex("^_content/(?<AssemblyName>[^/]+)/(?<RelativePath>.*)");
+		private readonly static Regex ContentUrlRegex = new Regex("^_content/(?<AssemblyName>[^/]+)/(?<RelativePath>.*)", RegexOptions.None, TimeSpan.FromSeconds(1));
 		private static event ContentUpdatedHandler? OnContentUpdated;
 
 		// If the current platform can't tell us the application entry assembly name, we can use a placeholder name

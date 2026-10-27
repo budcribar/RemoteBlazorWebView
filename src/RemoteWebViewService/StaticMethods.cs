@@ -7,7 +7,7 @@ namespace PeakSWC.RemoteWebView
 {
     public static class StaticMethods
     {
-        public static TBuilder ConditionallyRequireAuthorization<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
+        public static TBuilder ConditionallyRequireAuthorization<TBuilder>(this TBuilder builder) where TBuilder : class, IEndpointConventionBuilder
         {
             if (builder == null)
             {
