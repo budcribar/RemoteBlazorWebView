@@ -13,65 +13,28 @@ namespace PeakSWC.RemoteWebView.Services
     {
         private const double ThresholdMs = 50000; // 50 seconds threshold for logging long requests
 
-        // Override for Unary Calls
-        public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
+        public override Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
             TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
             where TRequest : class where TResponse : class
         {
-            stats.RecordConnectionStart();
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            bool success = false;
-            string? errorType = null;
-            long bytesReceived = 0;
-            long bytesSent = 0;
-
-            try
+            return Track(async () =>
             {
+                long bytesReceived = 0;
                 if (request is IMessage message)
-                {
                     bytesReceived = stats.CalculateMessageSize(message);
-                }
                 stats.RecordBytesReceived(bytesReceived);
 
                 var response = await continuation(request, context).ConfigureAwait(false);
 
+                long bytesSent = 0;
                 if (response is IMessage message2)
-                {
                     bytesSent = stats.CalculateMessageSize(message2);
-                }
                 stats.RecordBytesSent(bytesSent);
-
-                success = true;
                 return response;
-            }
-            catch (RpcException rpcEx)
-            {
-                errorType = rpcEx.StatusCode.ToString();
-                throw;
-            }
-            catch (Exception ex)
-            {
-                errorType = ex.GetType().Name;
-                throw new RpcException(new Status(StatusCode.Internal, ex.Message));
-            }
-            finally
-            {
-                stopwatch.Stop();
-                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                stats.RecordRequest(success, elapsedTime, errorType);
-
-                if (elapsedTime > ThresholdMs)
-                {
-                    //_logger.LogWarning($"Unary request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
-                }
-
-                stats.RecordConnectionEnd();
-            }
+            });
         }
 
-        // Override for Server Streaming Calls
-        public override async Task ServerStreamingServerHandler<TRequest, TResponse>(
+        public override Task ServerStreamingServerHandler<TRequest, TResponse>(
             TRequest request,
             IServerStreamWriter<TResponse> responseStream,
             ServerCallContext context,
@@ -79,110 +42,39 @@ namespace PeakSWC.RemoteWebView.Services
             where TRequest : class
             where TResponse : class
         {
-            stats.RecordConnectionStart();
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            bool success = false;
-            string? errorType = null;
-            long bytesReceived = 0;
-
-            try
+            return Track(async () =>
             {
+                long bytesReceived = 0;
                 if (request is IMessage message)
-                {
                     bytesReceived = stats.CalculateMessageSize(message);
-                }
                 stats.RecordBytesReceived(bytesReceived);
 
                 var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
-
                 await continuation(request, wrappedStream, context).ConfigureAwait(false);
-
                 stats.RecordBytesSent(wrappedStream.BytesSent);
-
-                success = true;
-            }
-            catch (RpcException rpcEx)
-            {
-                errorType = rpcEx.StatusCode.ToString();
-                throw;
-            }
-            catch (Exception ex)
-            {
-                errorType = ex.GetType().Name;
-                throw new RpcException(new Status(StatusCode.Internal, ex.Message));
-            }
-            finally
-            {
-                stopwatch.Stop();
-                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                stats.RecordRequest(success, elapsedTime, errorType);
-
-                if (elapsedTime > ThresholdMs)
-                {
-                    //_logger.LogWarning($"Server streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
-                }
-
-                stats.RecordConnectionEnd();
-            }
+            });
         }
 
-        // Override for Client Streaming Calls
-        public override async Task<TResponse> ClientStreamingServerHandler<TRequest, TResponse>(
+        public override Task<TResponse> ClientStreamingServerHandler<TRequest, TResponse>(
             IAsyncStreamReader<TRequest> requestStream,
             ServerCallContext context,
             ClientStreamingServerMethod<TRequest, TResponse> continuation)
             where TRequest : class where TResponse : class
         {
-            stats.RecordConnectionStart();
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            bool success = false;
-            string? errorType = null;
-            long bytesSent = 0;
-
-            try
+            return Track(async () =>
             {
                 var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
-
                 var response = await continuation(wrappedStream, context).ConfigureAwait(false);
 
+                long bytesSent = 0;
                 if (response is IMessage message)
-                {
                     bytesSent = stats.CalculateMessageSize(message);
-                }
                 stats.RecordBytesSent(bytesSent);
-
-                success = true;
                 return response;
-            }
-            catch (RpcException rpcEx)
-            {
-                errorType = rpcEx.StatusCode.ToString();
-                throw;
-            }
-            catch (Exception ex)
-            {
-                errorType = ex.GetType().Name;
-                throw new RpcException(new Status(StatusCode.Internal, ex.Message));
-            }
-            finally
-            {
-                stopwatch.Stop();
-                var elapsedTime = stopwatch.Elapsed.TotalMilliseconds;
-                stats.RecordRequest(success, elapsedTime, errorType);
-
-                if (elapsedTime > ThresholdMs)
-                {
-                    //_logger.LogWarning($"Client streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
-                }
-
-                stats.RecordConnectionEnd();
-            }
+            });
         }
 
-        // Override for Duplex Streaming Calls
-        public override async Task DuplexStreamingServerHandler<TRequest, TResponse>(
+        public override Task DuplexStreamingServerHandler<TRequest, TResponse>(
             IAsyncStreamReader<TRequest> requestStream,
             IServerStreamWriter<TResponse> responseStream,
             ServerCallContext context,
@@ -190,22 +82,36 @@ namespace PeakSWC.RemoteWebView.Services
             where TRequest : class
             where TResponse : class
         {
+            return Track(async () =>
+            {
+                var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
+                var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
+                await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
+                stats.RecordBytesSent(wrappedResponseStream.BytesSent);
+            });
+        }
+
+        private Task Track(Func<Task> work)
+        {
+            return Track(async () =>
+            {
+                await work().ConfigureAwait(false);
+                return true;
+            });
+        }
+
+        private async Task<T> Track<T>(Func<Task<T>> work)
+        {
             stats.RecordConnectionStart();
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
             bool success = false;
             string? errorType = null;
 
             try
             {
-                var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
-                var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
-
-                await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
-
-                stats.RecordBytesSent(wrappedResponseStream.BytesSent);
-
+                var result = await work().ConfigureAwait(false);
                 success = true;
+                return result;
             }
             catch (RpcException rpcEx)
             {
@@ -225,7 +131,7 @@ namespace PeakSWC.RemoteWebView.Services
 
                 if (elapsedTime > ThresholdMs)
                 {
-                    //_logger.LogWarning($"Duplex streaming request exceeded {ThresholdMs}ms: {context.Method}, Duration: {elapsedTime}ms");
+                    // Long-request logging is intentionally disabled.
                 }
 
                 stats.RecordConnectionEnd();
