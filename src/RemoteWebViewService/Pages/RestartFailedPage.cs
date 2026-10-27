@@ -4,7 +4,8 @@
     {
         public static string Html(string processName, int pid, string hostName)
         {
-
+            var safeProcess = System.Net.WebUtility.HtmlEncode(processName);
+            var safeHost = System.Net.WebUtility.HtmlEncode(hostName);
 
             string html = $"""
                 <!DOCTYPE html>
@@ -19,11 +20,11 @@
                 <div style='vertical-align:middle;margin:0;height:100%;color:#a94442;background-color:#f2dede;text-align:center;font-size: large; font-family: Verdana, Geneva, Tahoma, sans-serif;'>
                     <br/>
                     <br/>
-                <span >  Failed to restart {processName}.</span>
+                <span >  Failed to restart {safeProcess}.</span>
                 <br/>
                 <br/>
 
-                <span >  Running with Pid {pid} on system {hostName}.</span>
+                <span >  Running with Pid {pid} on system {safeHost}.</span>
 
                 </div>
                 </body>
