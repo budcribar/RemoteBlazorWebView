@@ -62,6 +62,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="StaticContentCache.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
