@@ -10,7 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using PeakSWC.RemoteWebView;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
-using ServiceFileStream = PeakSWC.RemoteWebView.RemoteStaticFiles.FileStream;
+using ServiceFileStream = PeakSWC.RemoteWebView.FileStream;
 
 namespace StaticContentCache.Tests;
 
