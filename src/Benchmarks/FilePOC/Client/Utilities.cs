@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http.Headers;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Client
@@ -237,11 +238,9 @@ function calculateSimpleHash(arr) {{
         // Create a large file to test streaming and buffering
         string largeTextFilePath = Path.Combine(directoryPath, "largeFile.txt");
         using StreamWriter writer = new(largeTextFilePath);
+        for (int i = 0; i < 1000000; i++)
         {
-            for (int i = 0; i < 1000000; i++)
-            {
-                writer.WriteLine($"This is line {i}");
-            }
+            writer.WriteLine($"This is line {i}");
         }
 
         // Create files with uncommon MIME types
@@ -250,17 +249,8 @@ function calculateSimpleHash(arr) {{
 
         // Create a binary file (e.g., a simple binary blob)
         byte[] binaryData = new byte[256];
-        new Random().NextBytes(binaryData);
+        RandomNumberGenerator.Fill(binaryData);
         File.WriteAllBytes(Path.Combine(directoryPath, "binary.bin"), binaryData);
-
-        // Create a hidden file
-        //string hiddenFilePath = Path.Combine(directoryPath, ".hiddenfile");
-        //File.WriteAllText(hiddenFilePath, "This is a hidden file.");
-        //File.SetAttributes(hiddenFilePath, FileAttributes.Hidden);
-
-        // Create a file with a very long filename
-        //string longFileName = new string('a', 255) + ".txt";
-        //File.WriteAllText(Path.Combine(directoryPath, longFileName), "File with a very long filename.");
 
         // Create nested directories
         string nestedDirPath = Path.Combine(directoryPath, "nested", "deeply", "nested", "directory");
@@ -411,8 +401,6 @@ function calculateSimpleHash(arr) {{
                 {
                     Console.WriteLine($"Test file already exists: {filePath}");
                 }
-                //if (i == 3)
-                 //  ModifyFilePermissions(filePath, false);
 
                 filesToSync.Add(filePath);
             }
