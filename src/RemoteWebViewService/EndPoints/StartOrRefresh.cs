@@ -99,22 +99,25 @@ namespace PeakSWC.RemoteWebView.EndPoints
             };
         }
 
-        // Helper method to wait for the client to shut down, with a timeout and delay specified via TimeSpan
-        private static async Task<bool> WaitForClientShutdown(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, string guid, TimeSpan timeout, TimeSpan delay)
+        // The object captured before the loop is the registration that was live when
+        // this wait started. A missing key or a different object means that registration
+        // is gone, even if a later call inserted a new one under the same id.
+        internal static async Task<bool> WaitForClientShutdown(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, string guid, TimeSpan timeout, TimeSpan delay)
         {
+            serviceDictionary.TryGetValue(guid, out var original);
             int attempts = (int)(timeout.TotalMilliseconds / delay.TotalMilliseconds);
 
             for (int i = 0; i < attempts; i++)
             {
-                if (!serviceDictionary.ContainsKey(guid))
+                if (!serviceDictionary.TryGetValue(guid, out var current) || !ReferenceEquals(current, original))
                 {
-                    return true; // Client has shut down
+                    return true;
                 }
 
                 await Task.Delay(delay).ConfigureAwait(false);
             }
 
-            return false; // Client did not shut down within the timeout
+            return false;
         }
     }
 }
