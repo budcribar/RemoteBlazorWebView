@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 {
@@ -172,7 +173,11 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             {
                 logger.LogWarning("Client ID '{ClientId}' does not have the file '{SubPath}'. Cannot serve.", clientId, subPath);
                 context.Response.StatusCode = clientMetadata.StatusCode;
-                await context.Response.WriteAsync($"File not found. {subPath}", context.RequestAborted).ConfigureAwait(false);
+                context.Response.ContentType = "text/plain";
+                context.Response.Headers[HeaderNames.CacheControl] = MauiDefaultCacheControl;
+                // Body.WriteAsync keeps Content-Type as text/plain. WriteAsync(string) adds a charset.
+                var message = Encoding.UTF8.GetBytes($"There is no content at {subPath}");
+                await context.Response.Body.WriteAsync(message, context.RequestAborted).ConfigureAwait(false);
                 return;
             }
 

@@ -26,6 +26,19 @@ namespace PeakSWC.RemoteWebView
         // Historical MAUI default. See dotnet/maui#35706.
         public const string Default = "no-cache, max-age=0, must-revalidate, no-store";
 
+        /// <summary>
+        /// Provider installed on a desktop WebView when the app does not set one.
+        /// Same header local BlazorWebView's StaticContentProvider sends.
+        /// </summary>
+        public static readonly Func<BlazorWebViewStaticContentRequest, string?> DefaultProvider = static _ => Default;
+
+        /// <summary>
+        /// Returns the app provider, or <see cref="DefaultProvider"/> when the app set none.
+        /// </summary>
+        public static Func<BlazorWebViewStaticContentRequest, string?> ProviderOrDefault(
+            Func<BlazorWebViewStaticContentRequest, string?>? provider)
+            => provider ?? DefaultProvider;
+
         // Remote-only cap. MAUI does not limit the provider string. The value is copied into an HTTP
         // response header, so a multi-kilobyte result is rejected and the default is used instead.
         public const int MaxLength = 1024;

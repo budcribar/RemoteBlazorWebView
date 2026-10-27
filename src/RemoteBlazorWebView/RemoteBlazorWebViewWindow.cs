@@ -19,7 +19,7 @@ namespace PeakSWC.RemoteWebView
         public string Group { get; set; } = "test";
         public string Markup { get; set; } = "";
 
-        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; }
+        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; } = StaticContentCacheControl.DefaultProvider;
 
         public bool EnableMirrors { get; set; } = false;
 

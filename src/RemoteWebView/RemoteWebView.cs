@@ -188,7 +188,7 @@ namespace PeakSWC.RemoteWebView
                     FireDisconnected(exception);
                     throw exception;
                 }
-                var fileClient = new ClientFileSyncManager(client, blazorWebView.Id, HostHtmlPath, fileProvider, FireDisconnected, logger, blazorWebView.StaticContentCacheControlProvider);
+                var fileClient = new ClientFileSyncManager(client, blazorWebView.Id, HostHtmlPath, fileProvider, FireDisconnected, logger, StaticContentCacheControl.ProviderOrDefault(blazorWebView.StaticContentCacheControlProvider));
                 fileClient.HandleServerRequests(cts.Token);
 
                 MonitorPingTask(blazorWebView,client);

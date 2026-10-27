@@ -100,7 +100,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             set => SetValue(MarkupProperty, value);
         }
 
-        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; }
+        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; } = StaticContentCacheControl.DefaultProvider;
 
         public override string HostPage
         {

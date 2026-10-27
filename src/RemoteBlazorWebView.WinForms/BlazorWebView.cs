@@ -187,7 +187,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; }
+        public Func<BlazorWebViewStaticContentRequest, string?>? StaticContentCacheControlProvider { get; set; } = StaticContentCacheControl.DefaultProvider;
         private string _markup = "";
         private void ResetMarkup() => _markup = "";
         private bool ShouldSerializeMarkup() => _markup != "";

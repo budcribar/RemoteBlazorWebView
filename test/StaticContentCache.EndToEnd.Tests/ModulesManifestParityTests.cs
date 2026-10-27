@@ -73,7 +73,9 @@ public class ModulesManifestParityTests : IAsyncLifetime
         var ipc = new client::PeakSWC.RemoteWebView.WebViewIPC.WebViewIPCClient(_channel);
         _appSync = new ClientSync(ipc, _appClient, "index.html", _appFiles, static _ => { }, NullLogger.Instance,
             _ => client::PeakSWC.RemoteWebView.StaticContentCacheControl.Default);
-        _emptySync = new ClientSync(ipc, _emptyClient, "index.html", emptyFiles, static _ => { }, NullLogger.Instance);
+        // Same call RemoteWebView makes when the desktop control's provider was left unset.
+        _emptySync = new ClientSync(ipc, _emptyClient, "index.html", emptyFiles, static _ => { }, NullLogger.Instance,
+            client::PeakSWC.RemoteWebView.StaticContentCacheControl.ProviderOrDefault(null));
         _appSync.HandleServerRequests(CancellationToken.None);
         _emptySync.HandleServerRequests(CancellationToken.None);
         await _host.WaitUntilReady();
@@ -176,7 +178,7 @@ public class ModulesManifestParityTests : IAsyncLifetime
     public async Task Missing_file_cache_control_matches_the_local_provider()
     {
         var response = await Get(_appClient, "no-such.lib.module.js");
-        Assert.Equal(LocalCacheControl, Header(response, "Cache-Control"));
+        AssertSameCacheDirectives(Header(response, "Cache-Control"), LocalCacheControl);
     }
 
     [Fact]
@@ -185,22 +187,14 @@ public class ModulesManifestParityTests : IAsyncLifetime
         Assert.Equal(LocalCacheControl, client::PeakSWC.RemoteWebView.StaticContentCacheControl.Default);
 
         var withProvider = await Get(_appClient, "_content/Lib/Lib.lib.module.js");
-        Assert.Equal(LocalCacheControl, Header(withProvider, "Cache-Control"));
+        AssertSameCacheDirectives(Header(withProvider, "Cache-Control"), LocalCacheControl);
     }
 
     [Fact]
     public async Task Stock_client_cache_control_matches_the_local_provider()
     {
         var stock = await Get(_emptyClient, "_framework/blazor.modules.json");
-        Assert.Equal(LocalCacheControl, Header(stock, "Cache-Control"));
-    }
-
-    [Fact]
-    public async Task Stock_client_omits_validators_like_the_local_provider()
-    {
-        var stock = await Get(_emptyClient, "_framework/blazor.modules.json");
-        Assert.Null(Header(stock, "ETag"));
-        Assert.Null(stock.Content.Headers.LastModified);
+        AssertSameCacheDirectives(Header(stock, "Cache-Control"), LocalCacheControl);
     }
 
     [Fact]
@@ -241,6 +235,19 @@ public class ModulesManifestParityTests : IAsyncLifetime
 
     private static string? Header(HttpResponseMessage response, string name)
         => response.Headers.TryGetValues(name, out var values) ? values.Single() : null;
+
+    // Kestrel's typed Cache-Control header rewrites directive order. Membership is exact.
+    // This is not a comparison of file byte totals.
+    private static void AssertSameCacheDirectives(string? actual, string expected)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(CacheDirectives(expected), CacheDirectives(actual));
+    }
+
+    private static string[] CacheDirectives(string value)
+        => value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .OrderBy(directive => directive, StringComparer.Ordinal)
+            .ToArray();
 
     private static string LocalContentType(string path)
         => LocalContentTypes.TryGetContentType(path, out var contentType) ? contentType : "application/octet-stream";

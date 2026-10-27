@@ -6,6 +6,19 @@ namespace StaticContentCache.Tests;
 public class StaticContentCacheControlTests
 {
     [Fact]
+    public void Unset_desktop_provider_is_the_local_default()
+    {
+        var provider = StaticContentCacheControl.ProviderOrDefault(null);
+        var header = provider(new BlazorWebViewStaticContentRequest(new Uri("https://0.0.0.1/app.js"), "text/javascript"));
+
+        Assert.Same(StaticContentCacheControl.DefaultProvider, provider);
+        Assert.Equal(StaticContentCacheControl.Default, header);
+
+        var custom = StaticContentCacheControl.ProviderOrDefault(_ => "public, max-age=60");
+        Assert.Equal("public, max-age=60", custom(new BlazorWebViewStaticContentRequest(new Uri("https://0.0.0.1/app.js"), "text/javascript")));
+    }
+
+    [Fact]
     public void Provider_null_leaves_metadata_unset()
     {
         var metadata = new FileMetadata();
