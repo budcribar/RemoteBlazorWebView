@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using PeakSWC.RemoteWebView.Pages;
 using System;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.EndPoints
@@ -13,16 +11,11 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                // Check if 'id' route value exists and is a valid GUID
-                if (!context.Request.RouteValues.TryGetValue("id", out var idValue) || idValue == null || !Guid.TryParse(idValue.ToString(), out var guid))
-                {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync($"Invalid or missing GUID {idValue}").ConfigureAwait(false);
+                var client = await TryReadClientAsync(context).ConfigureAwait(false);
+                if (client == null)
                     return;
-                }
 
-                // Retrieve the service state from the service dictionary
-                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+                var (guid, serviceDictionary) = client.Value;
 
                 // Wait for the specified service to appear in the dictionary, up to a 30-second timeout
                 for (int i = 0; i < 30; i++)
