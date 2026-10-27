@@ -106,6 +106,9 @@ jobs:
             '**/remote.blazor.desktop.js',
             '**/wwwroot/**/*.js',
             '**/wwwroot/js/**',
+            'src/RemoteWebView.Blazor.JS/**/*.js',
+            '**/*.mjs',
+            '**/ServiceDependencies/**',
             '**/bin/**',
             '**/obj/**'
           ) -join ','
@@ -118,7 +121,10 @@ jobs:
             'src/RemoteWebView.Blazor.JS/protoc/**',
             '**/remote.blazor.desktop.js',
             '**/wwwroot/**/*.js',
-            '**/wwwroot/js/**'
+            '**/wwwroot/js/**',
+            'src/RemoteWebView.Blazor.JS/**/*.js',
+            '**/*.mjs',
+            '**/ServiceDependencies/**'
           ) -join ','
           & $scanner begin `
             /k:budcribar_RemoteBlazorWebView `
