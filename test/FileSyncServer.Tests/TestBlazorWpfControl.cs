@@ -28,7 +28,7 @@ namespace WebdriverTestProject
         }
 
         // Helper method to create root component
-        private RootComponent CreateRootComponent()
+        private static RootComponent CreateRootComponent()
         {
             return new RootComponent
             {
@@ -231,7 +231,7 @@ namespace WebdriverTestProject
         public Task AllowExternalDrop_controller_is_false_after_startup()
             => RunOnUiAsync(AssertHwndAsync);
 
-        private async Task RunOnUiAsync(Func<Task> action)
+        private static async Task RunOnUiAsync(Func<Task> action)
         {
             Assert.NotNull(Application.Current);
             await Application.Current.Dispatcher.InvokeAsync(action).Task.Unwrap();

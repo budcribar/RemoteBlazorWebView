@@ -189,7 +189,7 @@ namespace FileSyncServer.Tests.Local
         }
     }
 
-    internal static class NativeWindowProbe
+    internal static partial class NativeWindowProbe
     {
         internal static string Describe(Process? process)
         {
@@ -211,16 +211,16 @@ namespace FileSyncServer.Tests.Local
             var pid = (uint)process.Id;
             EnumWindowsProc callback = (hwnd, _) =>
             {
-                GetWindowThreadProcessId(hwnd, out var windowPid);
-                if (windowPid != pid || !IsWindowVisible(hwnd))
+                uint threadId = GetWindowThreadProcessId(hwnd, out var windowPid);
+                if (threadId == 0 || windowPid != pid || !IsWindowVisible(hwnd))
                     return true;
 
                 GetWindowRect(hwnd, out var window);
                 GetClientRect(hwnd, out var client);
                 var title = new StringBuilder(512);
-                GetWindowText(hwnd, title, title.Capacity);
+                int copied = GetWindowText(hwnd, title, title.Capacity);
                 rows.Add(
-                    $"hwnd=0x{hwnd.ToInt64():X} title='{title}' iconic={IsIconic(hwnd)} zoomed={IsZoomed(hwnd)} " +
+                    $"hwnd=0x{hwnd.ToInt64():X} title='{(copied > 0 ? title.ToString() : "")}' iconic={IsIconic(hwnd)} zoomed={IsZoomed(hwnd)} " +
                     $"window={window.Right - window.Left}x{window.Bottom - window.Top}@({window.Left},{window.Top}) " +
                     $"client={client.Right}x{client.Bottom} dpi={GetDpiForWindow(hwnd)}");
                 return true;
@@ -234,34 +234,41 @@ namespace FileSyncServer.Tests.Local
             return "native-window: " + string.Join(" | ", rows);
         }
 
+        [return: MarshalAs(UnmanagedType.Bool)]
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        [LibraryImport("user32.dll")]
+        private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-        [DllImport("user32.dll")]
-        private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 
-        [DllImport("user32.dll")]
-        private static extern bool IsWindowVisible(IntPtr hWnd);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool IsWindowVisible(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
-        private static extern bool IsIconic(IntPtr hWnd);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool IsIconic(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
-        private static extern bool IsZoomed(IntPtr hWnd);
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool IsZoomed(IntPtr hWnd);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-        [DllImport("user32.dll")]
-        private static extern uint GetDpiForWindow(IntPtr hWnd);
+        [LibraryImport("user32.dll")]
+        private static partial uint GetDpiForWindow(IntPtr hWnd);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct RECT
