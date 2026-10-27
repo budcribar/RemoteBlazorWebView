@@ -16,7 +16,7 @@ namespace PeakSWC.RemoteWebView
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, request.Id, RaceLog.Ev.RegBrowserReceive);
 
             try
             {
@@ -64,7 +64,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, request.Id, RaceLog.Ev.RegBrowserSend);
             try
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);

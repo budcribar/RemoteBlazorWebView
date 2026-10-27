@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                 // Retrieve service state and channels
                 var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                var serviceStateTaskSource = PeakSWC.RemoteWebView.RegistryLog.GetOrAdd(serviceDictionary, guid.ToString(), PeakSWC.RemoteWebView.RaceLog.Ev.RegStart);
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
 
                 try

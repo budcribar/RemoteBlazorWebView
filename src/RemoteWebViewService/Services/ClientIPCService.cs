@@ -86,7 +86,7 @@ namespace PeakSWC.RemoteWebView
             {
                 var responses = new List<TaskResponse>();
 
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, id, RaceLog.Ev.RegClientStatus);
                 try
                 {
                     var ss = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);

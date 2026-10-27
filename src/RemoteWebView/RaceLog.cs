@@ -64,6 +64,17 @@ namespace PeakSWC.RemoteWebView
             public const int TestClientStarted = 48;
             public const int TestKill = 49;
             public const int CreateFailedReceived = 50;
+            public const int RegCreateWebView = 51;
+            public const int RegFileRead = 52;
+            public const int RegClientSendMessage = 53;
+            public const int RegPing = 54;
+            public const int RegStartOrRefresh = 55;
+            public const int RegRemoteFile = 56;
+            public const int RegMirror = 57;
+            public const int RegStart = 58;
+            public const int RegBrowserReceive = 59;
+            public const int RegBrowserSend = 60;
+            public const int RegClientStatus = 61;
         }
 
         private static readonly string[] Names =
@@ -119,9 +130,23 @@ namespace PeakSWC.RemoteWebView
             "test-client-started",
             "test-kill",
             "createFailed-received",
+            "reg-create-webview",
+            "reg-file-read",
+            "reg-client-send-message",
+            "reg-ping",
+            "reg-start-or-refresh",
+            "reg-remote-file",
+            "reg-mirror",
+            "reg-start",
+            "reg-browser-receive",
+            "reg-browser-send",
+            "reg-client-status",
         };
 
-        private const int Capacity = 65536;
+        // One desktop pass logs every registry GetOrAdd. 256K slots keep the
+        // refresh window if file and browser calls are chatty. Mark() still
+        // does no I/O; slots past Capacity are dropped and Flush records that.
+        private const int Capacity = 262144;
         private const string MapName = "Local\\RbwRaceRing";
 
         private struct Header
@@ -307,6 +332,16 @@ namespace PeakSWC.RemoteWebView
                         writer.Write(s->B);
                         writer.WriteLine();
                         last = i + 1;
+                    }
+
+                    long published = Volatile.Read(ref h->Next);
+                    if (published > Capacity)
+                    {
+                        writer.Write("dropped=");
+                        writer.Write(published - Capacity);
+                        writer.Write(" next=");
+                        writer.Write(published);
+                        writer.WriteLine();
                     }
 
                     writer.Flush();

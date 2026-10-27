@@ -40,7 +40,7 @@ namespace PeakSWC.RemoteWebView
                 ProcessName = request.ProcessName,
             };
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, request.Id, RaceLog.Ev.RegCreateWebView);
 
             if (serviceStateTaskSource.Task.IsCompleted)
             {
@@ -102,7 +102,7 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, clientGuid, RaceLog.Ev.RegFileRead);
 
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 serviceState.FileManagerReady.SetResult(true);
@@ -142,7 +142,7 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, request.Id, RaceLog.Ev.RegClientSendMessage);
 
             try
             {
@@ -174,7 +174,7 @@ namespace PeakSWC.RemoteWebView
                     id = message.Id;
                     if (serviceState == null)
                     {
-                        var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                        var serviceStateTaskSource = RegistryLog.GetOrAdd(serviceDictionary, id.ToString(), RaceLog.Ev.RegPing);
                         serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     }
                     linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);

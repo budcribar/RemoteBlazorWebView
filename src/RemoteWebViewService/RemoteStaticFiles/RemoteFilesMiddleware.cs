@@ -137,7 +137,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             logger.LogDebug("Received GET request for file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
 
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientId.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            var serviceStateTaskSource = PeakSWC.RemoteWebView.RegistryLog.GetOrAdd(serviceDictionary, clientId.ToString(), PeakSWC.RemoteWebView.RaceLog.Ev.RegRemoteFile);
 
             // Step 1: Retrieve client metadata
             FileMetadata clientMetadata;
