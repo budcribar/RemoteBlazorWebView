@@ -42,17 +42,8 @@ namespace PeakSWC.RemoteWebView
         {
             this.Dispatcher.InvokeAsync(() =>
             {
-                var url = sender?.ToString() ?? "";
-                if (BlazorWebView.ServerUri != null && url.StartsWith(BlazorWebView.ServerUri.ToString()))
-                {
-                    url = url.Replace(BlazorWebView.ServerUri.ToString(), this.url?.ToString() ?? "");
-                    url = url.Replace(BlazorWebView.Id.ToString() + $"/", "");
-                    if (url.EndsWith(RemoteWebView.HostHtmlPath)) url = url.Replace(RemoteWebView.HostHtmlPath, "");
-                }
-
-                MessageReceived(new Uri(url), e);
+                MessageReceived(RemoteMessageUrl.Rewrite(sender?.ToString(), BlazorWebView.ServerUri, BlazorWebView.Id, RemoteWebView.HostHtmlPath, this.url), e);
             });
-
         }
 
         protected override void NavigateCore(Uri absoluteUri)
