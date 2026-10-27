@@ -21,7 +21,8 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
 
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
 
@@ -82,8 +83,8 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-               
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
+                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                 // Skip messages from read only client
                 if (!request.IsPrimary)
