@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
@@ -20,24 +20,32 @@ namespace PeakSWC.RemoteWebView
         /// <returns>True if the server is healthy within the timeout; otherwise, false.</returns>
         public static async Task<bool> WaitAsync(string healthCheckUrl, int timeoutSeconds = 30, int retryIntervalSeconds = 1)
         {
+            if (string.IsNullOrWhiteSpace(healthCheckUrl) ||
+                !Uri.TryCreate(healthCheckUrl, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                timeoutSeconds <= 0)
+            {
+                return false;
+            }
+
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            var delay = TimeSpan.FromSeconds(retryIntervalSeconds);
+            var delay = TimeSpan.FromSeconds(Math.Max(1, retryIntervalSeconds));
             var startTime = DateTime.UtcNow;
 
             while (DateTime.UtcNow - startTime < timeout)
             {
                 try
                 {
-                    var response = await httpClient.GetAsync(healthCheckUrl);
+                    using var response = await httpClient.GetAsync(uri);
                     if (response.IsSuccessStatusCode)
                     {
                         return true;
                     }              
                 }
-                catch (HttpRequestException ex)
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
                 {
                     Console.WriteLine($"Health check request failed: {ex.Message}. Retrying in {delay.Seconds} seconds...");
                 }

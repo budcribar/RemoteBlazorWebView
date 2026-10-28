@@ -1,4 +1,4 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using PeakSWC.RemoteWebView;
 using Microsoft.Extensions.Logging;
 using Google.Protobuf;
@@ -96,9 +96,16 @@ namespace PeakSWC.RemoteWebView
         private static readonly int WwwRootPrefixLength = WwwRootPrefix.Length;
 
         public static string GetSubPath(string path)
-            => path.StartsWith(WwwRootPrefix, StringComparison.OrdinalIgnoreCase)
-               ? path[WwwRootPrefixLength..]
-               : path;
+        {
+            var normalized = (path ?? string.Empty).Replace('\\', '/').TrimStart('/');
+            while (normalized.StartsWith(WwwRootPrefix, StringComparison.OrdinalIgnoreCase))
+                normalized = normalized[WwwRootPrefixLength..].TrimStart('/');
+            return string.Equals(normalized, "wwwroot", StringComparison.OrdinalIgnoreCase) ? string.Empty : normalized;
+        }
+
+
+
+
 
         private async Task HandleMetaDataRequestAsync(ServerFileReadRequest request)
         {
@@ -122,7 +129,7 @@ namespace PeakSWC.RemoteWebView
                 Path = subPath,
                 Metadata = metadata
             };
-            await _call.RequestStream.WriteAsync(response).ConfigureAwait(false);
+            await _requestStream.WriteAsync(response).ConfigureAwait(false);
           
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -145,7 +152,13 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                using var fileStream = _fileProvider.GetFileInfo(subPath).CreateReadStream();
+                var fileInfo = _fileProvider.GetFileInfo(subPath);
+                if (!fileInfo.Exists || fileInfo.IsDirectory)
+                {
+                    await SendCompletionAfterFailure(requestId, subPath).ConfigureAwait(false);
+                    return;
+                }
+                using var fileStream = fileInfo.CreateReadStream();
 
                 // Send FileData messages
                 while (true)
@@ -250,7 +263,7 @@ namespace PeakSWC.RemoteWebView
                 var fileInfo = _fileProvider.GetFileInfo(localFilePath);
                
 
-                if (!fileInfo.Exists)
+                if (!fileInfo.Exists || fileInfo.IsDirectory)
                 {
                     return new FileMetadata
                     {
@@ -299,7 +312,15 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public async Task CloseAsync()
         {
-            await _call.RequestStream.CompleteAsync().ConfigureAwait(false);
+            try
+            {
+                if (_requestStream != null)
+                    await _requestStream.CompleteAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _call?.Dispose();
+            }
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("Closed request stream.");

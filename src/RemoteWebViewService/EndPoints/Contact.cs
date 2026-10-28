@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Pages;
@@ -34,7 +34,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     context.Response.ContentType = "text/html";
 
-                    context.Response.ContentLength = html.Length;
+                    context.Response.ContentLength = System.Text.Encoding.UTF8.GetByteCount(html);
 
                     await context.Response.WriteAsync(html).ConfigureAwait(false);
                 }

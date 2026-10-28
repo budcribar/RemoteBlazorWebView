@@ -1,4 +1,4 @@
-﻿//
+//
 namespace PeakSWC.RemoteWebView.Pages
 {
     public static class RestartPage
@@ -7,7 +7,7 @@ namespace PeakSWC.RemoteWebView.Pages
         {
             var safeProcess = System.Net.WebUtility.HtmlEncode(processName);
             var safeHost = System.Net.WebUtility.HtmlEncode(hostName);
-            string restart = string.IsNullOrEmpty(processName) || string.IsNullOrEmpty(hostName) ? "Restarting" : $"Restarting <b>{safeProcess}</b> on host <b>{safeHost}</b>";
+            string restart = string.IsNullOrWhiteSpace(processName) || string.IsNullOrWhiteSpace(hostName) ? "Restarting" : $"Restarting <b>{safeProcess}</b> on host <b>{safeHost}</b>";
 
             string html = $$"""
                 <!DOCTYPE html>
@@ -20,13 +20,13 @@ namespace PeakSWC.RemoteWebView.Pages
                       var xmlHttp = new XMLHttpRequest();
                       xmlHttp.onreadystatechange = function () {
                         if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                          window.location.assign('/app/{{guid}}');       
-                        } else  if (xmlHttp.readyState == 4 && xmlHttp.status == 400){
+                          window.location.assign('/app/{{System.Uri.EscapeDataString(guid ?? string.Empty)}}');       
+                        } else  if (xmlHttp.readyState == 4 && (xmlHttp.status == 408 || xmlHttp.status == 400)){
                             document.getElementById('restarting').innerHTML = xmlHttp.responseText;
           
                         }
                       };
-                      xmlHttp.open('GET', '/wait/{{guid}}', true);
+                      xmlHttp.open('GET', '/wait/{{System.Uri.EscapeDataString(guid ?? string.Empty)}}', true);
                       xmlHttp.send(null);
                   </script>
                 </head>

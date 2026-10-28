@@ -24,9 +24,25 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task CreateWebView(CreateWebViewRequest request, IServerStreamWriter<WebMessageResponse> responseStream, ServerCallContext context)
         {         
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+            {
+                logger.LogError("CreateWebView called with null or empty Id.");
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+
             logger.LogDebug("CreateWebView called for Id: {Id}", request.Id);
 
-            ServiceState state= new(logger, request.EnableMirrors)
+            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+
+            if (serviceStateTaskSource.Task.IsCompleted)
+            {
+                logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }     
+
+            ServiceState state = new(logger, request.EnableMirrors)
             {
                 HtmlHostPath = request.HtmlHostPath,
                 Markup = request.Markup,
@@ -39,35 +55,34 @@ namespace PeakSWC.RemoteWebView
                 ProcessName = request.ProcessName,
             };
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-
-            if (serviceStateTaskSource.Task.IsCompleted)
-            {
-                logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
-                return;
-            }     
-
-            // No need to wait for writes to complete
-            serviceStateChannel.Values.ToList().ForEach(async x => await x.Writer.WriteAsync($"Start:{request.Id}", CancellationToken.None).ConfigureAwait(false));
-            state.IPC.ClientResponseStream = responseStream;
-
-            await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
-
-            serviceStateTaskSource.SetResult(state);
-
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try
             {
+                // No need to wait for writes to complete
+                foreach (var x in serviceStateChannel.Values)
+                    x.Writer.TryWrite($"Start:{request.Id}");
+                state.IPC.ClientResponseStream = responseStream;
+
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
+
+                serviceStateTaskSource.SetResult(state);
+
                 await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException) when (serviceStateTaskSource.Task.IsCompleted)
             {
                 // Expected when cancellation is requested; no action needed.
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "CreateWebView failed for Id: {Id}", request.Id);
+                if (!serviceStateTaskSource.Task.IsCompleted)
+                {
+                    serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(request.Id, serviceStateTaskSource));
+                    serviceStateTaskSource.TrySetCanceled();
+                    await state.DisposeAsync().ConfigureAwait(false);
+                    return;
+                }
                 await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
             }         
         }
@@ -83,13 +98,19 @@ namespace PeakSWC.RemoteWebView
 
             var initResponse = requestStream.Current;
 
-            if (initResponse.Init == null)
+            if (initResponse?.Init == null)
             {
                 logger.LogWarning("First message from client is not Init.");
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "First message must be Init."));
             }
 
             string clientGuid = initResponse.ClientId;
+            if (string.IsNullOrWhiteSpace(clientGuid))
+            {
+                logger.LogWarning("Init message from client has empty ClientId.");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "ClientId cannot be empty."));
+            }
+
             logger.LogDebug("Client '{ClientGuid}' connected and initialized.", clientGuid);
 
             // Register the client
@@ -103,7 +124,7 @@ namespace PeakSWC.RemoteWebView
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
-                serviceState.FileManagerReady.SetResult(true);
+                serviceState.FileManagerReady.TrySetResult(true);
 
                 // Create a linked cancellation token to handle both client cancellation and server cancellation
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
@@ -134,6 +155,9 @@ namespace PeakSWC.RemoteWebView
         }
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+                return new Empty();
+
             await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
             return new Empty();
         }
@@ -175,6 +199,9 @@ namespace PeakSWC.RemoteWebView
                 do
                 {
                     var message = requestStream.Current;
+                    if (message == null || string.IsNullOrWhiteSpace(message.Id))
+                        return;
+
                     id = message.Id;
                     if (serviceState == null)
                     {
@@ -194,7 +221,7 @@ namespace PeakSWC.RemoteWebView
                                 {
                                     responseSent = DateTime.UtcNow;
                                     await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = false }, writerToken.Token).ConfigureAwait(false);
-                                    await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds), writerToken.Token).ConfigureAwait(false);
+                                    await Task.Delay(TimeSpan.FromSeconds(message.PingIntervalSeconds > 0 ? message.PingIntervalSeconds : 30), writerToken.Token).ConfigureAwait(false);
                                     if (responseReceived < responseSent)
                                     {
                                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, writerToken.Token).ConfigureAwait(false);
@@ -227,12 +254,14 @@ namespace PeakSWC.RemoteWebView
             {
                 // No need to shutdown as we are in the process of shutting down
                 logger.LogInformation("Ping operation canceled for Id: {Id}", id);
-                await shutdownService.Shutdown(id).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(id))
+                    await shutdownService.Shutdown(id).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Exception in Ping for Id: {Id}", id);
-                await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(id))
+                    await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
             }
             finally
             {

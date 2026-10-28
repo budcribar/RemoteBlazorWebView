@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Linq;
@@ -124,7 +124,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var errorTypes = (Dictionary<string, long>)data["ErrorTypes"];
                 foreach (var error in errorTypes.OrderBy(e => e.Key))
                 {
-                    htmlBuilder.AppendLine($"        <tr><td>{error.Key}</td><td>{error.Value}</td></tr>");
+                    htmlBuilder.AppendLine($"        <tr><td>{System.Net.WebUtility.HtmlEncode(error.Key)}</td><td>{error.Value}</td></tr>");
                 }
                 htmlBuilder.AppendLine("    </table>");
 

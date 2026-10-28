@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
@@ -38,7 +38,10 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     if (serviceState.EnableMirrors && serviceState.InUse)
                     {
-                        serviceState.User = context.User.GetDisplayName() ?? string.Empty;
+                        if (string.IsNullOrEmpty(serviceState.User))
+                        {
+                            serviceState.User = context.User.GetDisplayName() ?? string.Empty;
+                        }
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
                         if (serviceState.IPC.ClientResponseStream != null)
