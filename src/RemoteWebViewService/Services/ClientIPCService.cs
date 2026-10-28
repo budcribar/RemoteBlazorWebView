@@ -61,14 +61,18 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
         {
-            var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
+            var groups = await userService.GetUserGroups(request?.Oid ?? string.Empty).ConfigureAwait(false);
             var response = new UserResponse();
-            response.Groups.AddRange(groups);
+            if (groups != null)
+                response.Groups.AddRange(groups);
             return response;
         }
 
         public override Task<Empty> SetCache(CacheRequest request, ServerCallContext context)
         {
+            if (request == null)
+                return Task.FromResult(new Empty());
+
             if (request.EnableServerCache != null)
             {
                 filesOptions.UseServerCache = request.EnableServerCache.Value;

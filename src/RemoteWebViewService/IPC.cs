@@ -22,6 +22,9 @@ namespace PeakSWC.RemoteWebView
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
         public void BrowserResponseStream(BrowserResponseNode brn, CancellationTokenSource linkedToken)
         {
+            if (brn == null || linkedToken == null)
+                return;
+
             var channel = Channel.CreateUnbounded<StringRequest>();
           
             foreach (var message in messageHistory)
@@ -43,7 +46,8 @@ namespace PeakSWC.RemoteWebView
             try
             {
                 await serverStreamWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
-                if (message.Request.Contains("BeginInvokeJS") && message.Request.Contains("import"))
+                var req = message?.Request ?? string.Empty;
+                if (req.Contains("BeginInvokeJS") && req.Contains("import"))
                 {
                     if (isMirror)
                         await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
@@ -57,7 +61,7 @@ namespace PeakSWC.RemoteWebView
 
         public async ValueTask SendMessage(string message)
         {
-            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }, cancellationToken).ConfigureAwait(false);
+            await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message ?? string.Empty }, cancellationToken).ConfigureAwait(false);
         }
 
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
@@ -92,11 +96,15 @@ namespace PeakSWC.RemoteWebView
                 {
                     await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token).ConfigureAwait(false))
                     {
-                        if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
+                        var req = m?.Request ?? string.Empty;
+                        if (!req.Contains("EndInvokeDotNet") && enableMirrors && m != null)
                             messageHistory.Enqueue(m);
-                        foreach (var observer in observers.Values)
+                        if (m != null)
                         {
-                            observer.Writer.TryWrite(m);
+                            foreach (var observer in observers.Values)
+                            {
+                                observer.Writer.TryWrite(m);
+                            }
                         }
                     }
                 }
@@ -115,11 +123,12 @@ namespace PeakSWC.RemoteWebView
                 {
                     await foreach (var request in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet", StringComparison.Ordinal))
+                        var req = request?.Request ?? string.Empty;
+                        if (request != null && (brn.IsPrimary || !req.Contains("EndInvokeDotNet", StringComparison.Ordinal)))
                         {
                             await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary, cancellationToken).ConfigureAwait(false);
                             if (logger.IsEnabled(LogLevel.Information))
-                                logger.LogDebug($"WebView -> Browser {request.Id} {request.Request}");
+                                logger.LogDebug($"WebView -> Browser {request.Id} {req}");
                         }
                     }
                 }
@@ -143,26 +152,33 @@ namespace PeakSWC.RemoteWebView
 
         public Task LocationChanged(Point point)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }, cancellationToken) ?? Task.CompletedTask);
+            return ReceiveMessage(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }).AsTask();
         }
         public Task SizeChanged(Size size)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }, cancellationToken) ?? Task.CompletedTask);
+            return ReceiveMessage(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }).AsTask();
         }
 
         public void Shutdown()
         {
             try
             {
-                responseChannel.Writer.Complete();
+                responseChannel.Writer.TryComplete();
             }
             catch { }
             try
             {
-                browserResponseChannel.Writer.Complete();
+                browserResponseChannel.Writer.TryComplete();
             }
             catch { }
-
+            foreach (var observer in observers.Values)
+            {
+                try
+                {
+                    observer.Writer.TryComplete();
+                }
+                catch { }
+            }
         }
     }
 }

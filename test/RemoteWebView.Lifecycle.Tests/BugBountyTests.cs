@@ -70,6 +70,77 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug02_BrowserIPC_SendMessage_cancelled_wait_does_not_release_unacquired_semaphore()
+    {
+        var id = Guid.NewGuid().ToString();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = id };
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        services[id] = tcs;
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
+        var browserIpc = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, services, shutdown);
+
+        // Hold the semaphore to simulate an active request in the critical section.
+        await state.BrowserIPC.Semaphore.WaitAsync();
+        Assert.Equal(0, state.BrowserIPC.Semaphore.CurrentCount);
+
+        using var cancelledCts = new CancellationTokenSource();
+        cancelledCts.Cancel();
+
+        var response = await browserIpc.SendMessage(
+            new SendSequenceMessageRequest
+            {
+                Id = id,
+                ClientId = "browser-1",
+                IsPrimary = true,
+                Sequence = 1,
+                Message = "test"
+            },
+            new TestCallContext(cancelledCts.Token));
+
+        Assert.False(response.Success);
+        // The cancelled caller never acquired the semaphore, so CurrentCount must still be 0,
+        // and the legitimate holder must be able to release without SemaphoreFullException.
+        Assert.Equal(0, state.BrowserIPC.Semaphore.CurrentCount);
+        var ex = Record.Exception(() => state.BrowserIPC.Semaphore.Release());
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task Bug03_ShutdownService_disposes_service_state_even_when_client_stream_write_throws_and_cancels_pending_tcs()
+    {
+        var id = Guid.NewGuid().ToString();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
+        {
+            Id = id,
+            InUse = true
+        };
+        state.IPC.ClientResponseStream = new ThrowingStreamWriter<WebMessageResponse>(new InvalidOperationException("stream broken"));
+        var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ready.SetResult(state);
+        services[id] = ready;
+
+        var pendingId = Guid.NewGuid().ToString();
+        var pendingTcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        services[pendingId] = pendingTcs;
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
+
+        await shutdown.Shutdown(id);
+
+        Assert.False(state.InUse);
+        Assert.True(state.Token.IsCancellationRequested);
+
+        await shutdown.Shutdown(pendingId).WaitAsync(TimeSpan.FromMilliseconds(500));
+        Assert.True(pendingTcs.Task.IsCompleted);
+    }
+
+    [Fact]
     public async Task Bug04_IPC_BrowserResponseStream_removes_observer_when_connection_is_cancelled()
     {
         using var serviceCts = new CancellationTokenSource();
@@ -105,6 +176,31 @@ public class BugBountyTests
         var dataRequest = await manager.RequestFileDataAsync(clientId, "wwwroot/app.css", NullLogger<RemoteFileResolver>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await dataRequest.Pipe.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromMilliseconds(500)));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-guid")]
+    public async Task Bug06_Start_and_Mirror_endpoints_reject_invalid_guid_without_polluting_service_dictionary(string? id)
+    {
+        foreach (var endpoint in new[] { Endpoints.Start(), Endpoints.Mirror() })
+        {
+            var clients = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+            var services = new ServiceCollection()
+                .AddSingleton(clients)
+                .AddSingleton(new ConcurrentDictionary<string, Channel<string>>())
+                .BuildServiceProvider();
+
+            var context = new DefaultHttpContext { RequestServices = services };
+            if (id != null)
+                context.Request.RouteValues["id"] = id;
+            context.Response.Body = new MemoryStream();
+
+            await endpoint(context).WaitAsync(TimeSpan.FromMilliseconds(300));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+            Assert.Empty(clients);
+        }
     }
 
     [Fact]
@@ -168,6 +264,41 @@ public class BugBountyTests
         Assert.Equal(expectedIp, captured!.IpAddress);
         Assert.Equal(expectedUser, captured.User);
         await remote.DisposeAsyncCore();
+    }
+
+    [Fact]
+    public void Bug10_OptimizedCompositeFileProvider_prioritizes_leading_slash_and_FixedManifest_removes_all_empty_nodes()
+    {
+        var diskProvider = new SingleMemoryFileProvider("_framework/blazor.modules.json", "disk-override");
+        var embeddedProvider = new EmbeddedFileProvider(typeof(ClientRemote.RemoteWebView).Assembly);
+        var composite = new ClientRemote.OptimizedCompositeFileProvider(diskProvider, embeddedProvider);
+
+        // Even with a leading slash, _framework paths must prioritize the embedded provider over disk.
+        var fileInfo = composite.GetFileInfo("/_framework/blazor.modules.json");
+        Assert.True(fileInfo.Exists);
+        using (var reader = new StreamReader(fileInfo.CreateReadStream()))
+        {
+            Assert.NotEqual("disk-override", reader.ReadToEnd());
+        }
+
+        var manifestXml = """
+            <?xml version="1.0" encoding="utf-8" ?>
+            <Manifest>
+              <FileSystem>
+                <File Name="" />
+                <File Name="" />
+                <File Name="index.html">
+                  <ResourcePath>app.wwwroot.index.html</ResourcePath>
+                </File>
+              </FileSystem>
+            </Manifest>
+            """;
+        var fixedAssembly = new ClientRemote.FixedManifestEmbeddedAssembly(new FakeManifestAssembly(manifestXml));
+        using var stream = fixedAssembly.GetManifestResourceStream("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml")!;
+        var parsed = XDocument.Load(stream);
+        var emptyFiles = parsed.Descendants("File").Where(n => string.IsNullOrEmpty(n.Attribute("Name")?.Value)).ToList();
+
+        Assert.Empty(emptyFiles);
     }
 
     [Fact]
@@ -255,6 +386,64 @@ public class BugBountyTests
         Assert.Equal("req-meta", sent.RequestId);
         Assert.Equal(200, sent.Metadata.StatusCode);
         Assert.True(writer.Completed);
+    }
+
+    [Fact]
+    public void Bug14_FileStats_Update_ignores_failed_or_missing_file_metadata()
+    {
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
+
+        FileStats.Update(state, "client-1", new FileMetadata { Length = 100, StatusCode = StatusCodes.Status200OK });
+        FileStats.Update(state, "client-1", new FileMetadata { Length = -1, StatusCode = StatusCodes.Status404NotFound });
+        FileStats.Update(state, "client-1", new FileMetadata { Length = -1, StatusCode = StatusCodes.Status500InternalServerError });
+
+        Assert.Equal(1, state.TotalFilesRead);
+        Assert.Equal(100, state.TotalBytesRead);
+    }
+
+    [Fact]
+    public async Task Bug15_RemoteFilesMiddleware_resolves_client_guid_from_mirror_and_app_referrers_and_disposes_stream()
+    {
+        var clientId = Guid.NewGuid();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = clientId.ToString() };
+        state.FileManagerReady.SetResult(true);
+        var stateTcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        stateTcs.SetResult(state);
+        services[clientId.ToString()] = stateTcs;
+
+        using var fileSync = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var trackingStream = new TrackingMemoryStream(Encoding.UTF8.GetBytes("body { margin: 0; }"));
+        var resolver = new StubRemoteFileResolver(
+            fileSync,
+            new FileMetadata { Length = trackingStream.Length, StatusCode = StatusCodes.Status200OK, ETag = "\"etag-1\"" },
+            trackingStream);
+
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var middleware = new RemoteFilesMiddleware(
+            _ => Task.CompletedTask,
+            cache,
+            NullLogger<RemoteFilesMiddleware>.Instance,
+            resolver,
+            fileSync);
+
+        var sp = new ServiceCollection()
+            .AddSingleton(new RemoteFilesOptions { UseServerCache = false, UseClientCache = false })
+            .AddSingleton(services)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<RemoteWebViewService>>(NullLogger<RemoteWebViewService>.Instance)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = sp };
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = "/css/app.css";
+        context.Request.Headers[HeaderNames.Referer] = $"https://localhost:5001/mirror/{clientId}";
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Equal("css/app.css", resolver.LastRequestedSubPath);
+        Assert.True(trackingStream.IsDisposed);
     }
 
     [Fact]
@@ -443,6 +632,124 @@ public class BugBountyTests
 
         cts2.Cancel();
         try { await watcher2Task.WaitAsync(TimeSpan.FromSeconds(2)); } catch (OperationCanceledException) { }
+    }
+
+    [Fact]
+    public async Task Bug22_ServiceState_Dispose_cancels_token_completes_channels_and_shuts_down_ipc()
+    {
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false);
+        state.Dispose();
+
+        Assert.True(state.Token.IsCancellationRequested);
+        Assert.True(state.FileCollection.Reader.Completion.IsCompleted);
+        Assert.Same(state.IPC.ClientTask, await Task.WhenAny(state.IPC.ClientTask, Task.Delay(TimeSpan.FromSeconds(1))));
+        Assert.Same(state.IPC.BrowserTask, await Task.WhenAny(state.IPC.BrowserTask, Task.Delay(TimeSpan.FromSeconds(1))));
+    }
+
+    [Fact]
+    public async Task Bug23_IPC_LocationChanged_and_SizeChanged_queue_via_responseChannel_and_Shutdown_completes_observers()
+    {
+        using var cts = new CancellationTokenSource();
+        var ipc = new IPC(cts.Token, NullLogger<RemoteWebViewService>.Instance, enableMirrors: false);
+
+        // 1. LocationChanged and SizeChanged must serialize writes through responseChannel rather than writing concurrently to ClientResponseStream.
+        var firstWriteEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirstWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allThreeWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var activeWriters = 0;
+        var concurrentOverlapDetected = false;
+        var written = new ConcurrentQueue<string>();
+
+        ipc.ClientResponseStream = new AsyncGatedStreamWriter<WebMessageResponse>(async msg =>
+        {
+            if (Interlocked.Increment(ref activeWriters) > 1)
+                concurrentOverlapDetected = true;
+
+            try
+            {
+                if (msg.Response == "first")
+                {
+                    firstWriteEntered.TrySetResult();
+                    await releaseFirstWrite.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                }
+                written.Enqueue(msg.Response);
+                if (written.Count >= 3)
+                    allThreeWritten.TrySetResult();
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeWriters);
+            }
+        });
+
+        await ipc.ReceiveMessage(new WebMessageResponse { Response = "first" });
+        await firstWriteEntered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        // Calling LocationChanged and SizeChanged while "first" is in-flight on ClientResponseStream must queue behind it, not overlap.
+        var locTask = ipc.LocationChanged(new System.Drawing.Point(10, 20));
+        var sizeTask = ipc.SizeChanged(new System.Drawing.Size(300, 400));
+        await Task.Delay(30);
+        Assert.False(concurrentOverlapDetected);
+
+        releaseFirstWrite.TrySetResult();
+        await Task.WhenAll(locTask, sizeTask, allThreeWritten.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.False(concurrentOverlapDetected);
+
+        // 2. Shutdown() must complete observer channels so ProcessMessagesTask exits even if linkedToken is not cancelled.
+        using var uncancelledLinked = new CancellationTokenSource();
+        var node = new BrowserResponseNode(new CallbackStreamWriter<StringRequest>(_ => { }), "c1", true);
+        ipc.BrowserResponseStream(node, uncancelledLinked);
+        Assert.NotNull(ipc.ProcessMessagesTask);
+
+        ipc.Shutdown();
+        await ipc.ProcessMessagesTask!.WaitAsync(TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task Bug24_BrowserIPCService_SendMessage_enriches_out_of_order_connected_without_HttpContext_and_ignores_stale_sequences()
+    {
+        var id = Guid.NewGuid().ToString();
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
+        {
+            Id = id,
+            User = "Alice"
+        };
+
+        var received = new TaskCompletionSource<WebMessageResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+        state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(msg =>
+        {
+            if (msg.Response.StartsWith("connected:", StringComparison.Ordinal))
+                received.TrySetResult(msg);
+        });
+
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, dict);
+        var service = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, dict, shutdown);
+
+        // Send sequence 2 ("connected:") out-of-order first, using TestCallContext (no HttpContext).
+        var res2 = await service.SendMessage(
+            new SendSequenceMessageRequest { Id = id, ClientId = "c1", IsPrimary = true, Sequence = 2, Message = "connected:", Url = "https://localhost/" },
+            new TestCallContext(CancellationToken.None));
+        Assert.True(res2.Success);
+
+        // Send sequence 1 next to drain sequence 2.
+        var res1 = await service.SendMessage(
+            new SendSequenceMessageRequest { Id = id, ClientId = "c1", IsPrimary = true, Sequence = 1, Message = "first", Url = "https://localhost/" },
+            new TestCallContext(CancellationToken.None));
+        Assert.True(res1.Success);
+
+        var connectedMsg = await received.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.EndsWith("|Alice", connectedMsg.Response, StringComparison.Ordinal);
+
+        // Send a duplicate/stale sequence 1; it must not accumulate in MessageDictionary.
+        var resStale = await service.SendMessage(
+            new SendSequenceMessageRequest { Id = id, ClientId = "c1", IsPrimary = true, Sequence = 1, Message = "stale", Url = "https://localhost/" },
+            new TestCallContext(CancellationToken.None));
+        Assert.True(resStale.Success);
+        Assert.Empty(state.BrowserIPC.MessageDictionary);
     }
 
     [Fact]
@@ -659,6 +966,33 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug33_StatsInterceptor_maps_OperationCanceledException_to_StatusCode_Cancelled()
+    {
+        var stats = new ServerStats();
+        var interceptor = new StatsInterceptor(stats);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(() =>
+            interceptor.UnaryServerHandler<SendSequenceMessageRequest, SendMessageResponse>(
+                new SendSequenceMessageRequest { Id = "c1", Message = "ping" },
+                new TestCallContext(CancellationToken.None),
+                (_, _) => Task.FromException<SendMessageResponse>(new OperationCanceledException("cancelled"))));
+
+        Assert.Equal(StatusCode.Cancelled, ex.StatusCode);
+    }
+
+    [Fact]
+    public void Bug34_ServerStats_ResetStats_resets_ActiveConnections()
+    {
+        var stats = new ServerStats();
+        stats.RecordConnectionStart();
+        stats.RecordConnectionStart();
+        Assert.Equal(2L, (long)stats.GetStats()["ActiveConnections"]);
+
+        stats.ResetStats();
+        Assert.Equal(0L, (long)stats.GetStats()["ActiveConnections"]);
+    }
+
+    [Fact]
     public async Task Bug35_FileWatcherService_WatchFile_accepts_relative_file_path_in_current_directory()
     {
         var fileName = $"bug35-{Guid.NewGuid():N}.tmp";
@@ -704,6 +1038,28 @@ public class BugBountyTests
         // Calling Dispose a second time must be a safe no-op rather than throwing ObjectDisposedException / ChannelClosedException.
         var ex = Record.Exception(() => manager.Dispose());
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task Bug37_ServerFileSyncManager_AssociateResponseStream_allows_reconnection_and_RequestFileMetadataAsync_fails_fast_when_disposed()
+    {
+        var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        manager.RegisterClient("c1", "wwwroot/index.html");
+        var writer1 = new CallbackStreamWriter<ServerFileReadRequest>(_ => { });
+        var writer2 = new CallbackStreamWriter<ServerFileReadRequest>(_ => { });
+
+        manager.AssociateResponseStream("c1", writer1);
+        // Re-associating a new stream when a client reconnects must replace the stream rather than throwing InvalidOperationException.
+        var replaceEx = Record.Exception(() => manager.AssociateResponseStream("c1", writer2));
+        Assert.Null(replaceEx);
+
+        manager.Dispose();
+
+        // After Dispose closes _writeChannel, RequestFileMetadataAsync must fault immediately rather than hanging for 600s.
+        var metaTask = manager.RequestFileMetadataAsync("c1", "index.html", NullLogger<RemoteFileResolver>.Instance);
+        var completed = await Task.WhenAny(metaTask, Task.Delay(TimeSpan.FromMilliseconds(500)));
+        Assert.Same(metaTask, completed);
+        await Assert.ThrowsAnyAsync<Exception>(() => metaTask);
     }
 
     [Fact]
@@ -816,6 +1172,43 @@ public class BugBountyTests
         var id = Guid.NewGuid();
         var markup = ClientRemote.RemoteWebView.GenMarkup(new Uri("https://example.com:5001/base"), id);
         Assert.Contains($"https://example.com:5001/base/app/{id}", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Bug44_StartOrRefresh_endpoint_does_not_set_Refresh_when_initial_host_page_metadata_fails()
+    {
+        var id = Guid.NewGuid().ToString();
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
+        {
+            Id = id,
+            Refresh = false,
+            HtmlHostPath = "wwwroot/index.html"
+        };
+        state.FileManagerReady.SetResult(true);
+
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+        using var syncManager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var resolver = new StubRemoteFileResolver(
+            syncManager,
+            new FileMetadata { StatusCode = StatusCodes.Status404NotFound, Length = -1 },
+            Stream.Null);
+
+        using var services = new ServiceCollection()
+            .AddSingleton(dict)
+            .AddSingleton<RemoteFileResolver>(resolver)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<RemoteWebViewService>>(NullLogger<RemoteWebViewService>.Instance)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Request.RouteValues["id"] = id;
+        context.Response.Body = new MemoryStream();
+
+        await Endpoints.StartOrRefresh()(context);
+
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.False(state.Refresh);
     }
 
     [Fact]
@@ -1082,6 +1475,52 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug55_BrowserIPCService_SendMessage_rejects_empty_or_whitespace_Id_without_registering_or_blocking()
+    {
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, dict);
+        var service = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, dict, shutdown);
+
+        var sendTask = service.SendMessage(
+            new SendSequenceMessageRequest { Id = "   ", IsPrimary = true, Sequence = 1, Message = "connected:" },
+            new TestCallContext(CancellationToken.None));
+        try
+        {
+            var completed = await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromMilliseconds(200)));
+
+            Assert.Same(sendTask, completed);
+            var response = await sendTask;
+            Assert.False(response.Success);
+            Assert.Empty(dict);
+        }
+        finally
+        {
+            foreach (var entry in dict.Values)
+                entry.TrySetCanceled();
+        }
+    }
+
+    [Fact]
+    public async Task Bug56_BrowserIPCService_ReceiveMessage_removes_uncompleted_placeholder_when_mirror_wait_fails()
+    {
+        var id = Guid.NewGuid().ToString();
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.TrySetException(new TimeoutException("timed out waiting for client"));
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, dict);
+        var service = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, dict, shutdown);
+
+        await service.ReceiveMessage(
+            new ReceiveMessageRequest { Id = id, ClientId = "mirror-1", IsPrimary = false },
+            new CallbackStreamWriter<StringRequest>(_ => { }),
+            new TestCallContext(CancellationToken.None));
+
+        Assert.False(dict.ContainsKey(id));
+    }
+
+    [Fact]
     public void Bug57_ClientFileSyncManager_GetSubPath_strips_bare_wwwroot_and_repeated_wwwroot_prefixes()
     {
         Assert.Equal(string.Empty, ClientRemote.ClientFileSyncManager.GetSubPath("wwwroot"));
@@ -1143,12 +1582,66 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug60_Mirror_endpoint_does_not_mutate_state_when_host_file_is_missing_and_tolerates_closed_channel()
+    {
+        var id = Guid.NewGuid().ToString();
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true)
+        {
+            Id = id,
+            InUse = true,
+            HtmlHostPath = "wwwroot/index.html"
+        };
+        state.FileManagerReady.SetResult(true);
+        var sentMessages = new List<WebMessageResponse>();
+        state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(sentMessages.Add);
+
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var closed = Channel.CreateUnbounded<string>();
+        closed.Writer.Complete();
+        channels["closed"] = closed;
+
+        using var syncManager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var resolver = new StubRemoteFileResolver(
+            syncManager,
+            new FileMetadata { StatusCode = StatusCodes.Status404NotFound, Length = -1 },
+            Stream.Null);
+
+        using var services = new ServiceCollection()
+            .AddSingleton(dict)
+            .AddSingleton(channels)
+            .AddSingleton<RemoteFileResolver>(resolver)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Connection.Id = "mirror-conn-1";
+        context.Request.RouteValues["id"] = id;
+        context.Response.Body = new MemoryStream();
+
+        await Endpoints.Mirror()(context);
+
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.Empty(state.IsMirroredConnection);
+        Assert.Empty(sentMessages);
+    }
+
+    [Fact]
     public void Bug61_RemoteFileResolver_NormalizeHostRelativePath_strips_repeated_and_bare_wwwroot()
     {
         var method = typeof(RemoteFileResolver).GetMethod("NormalizeHostRelativePath", BindingFlags.Static | BindingFlags.NonPublic)!;
         Assert.Equal(string.Empty, (string)method.Invoke(null, ["wwwroot"])!);
         Assert.Equal(string.Empty, (string)method.Invoke(null, ["/wwwroot/"])!);
         Assert.Equal("index.html", (string)method.Invoke(null, ["wwwroot/wwwroot/index.html"])!);
+    }
+
+    [Fact]
+    public void Bug62_FileStats_Update_tolerates_null_serviceState_and_empty_clientId()
+    {
+        var ex = Record.Exception(() => FileStats.Update(null!, "client-1", new FileMetadata { StatusCode = 200, Length = 100 }));
+        Assert.Null(ex);
     }
 
     [Fact]
@@ -1188,6 +1681,21 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug64_IPC_SendMessage_and_ProcessMessages_tolerate_null_Request_and_null_BrowserResponseStream_args()
+    {
+        using var cts = new CancellationTokenSource();
+        var ipc = new IPC(cts.Token, NullLogger<RemoteWebViewService>.Instance, enableMirrors: true);
+
+        var exNullStream = Record.Exception(() => ipc.BrowserResponseStream(null!, cts));
+        Assert.Null(exNullStream);
+
+        await ipc.SendMessage(null!);
+        await Task.Delay(50);
+        Assert.False(ipc.BrowserTask.IsFaulted);
+        cts.Cancel();
+    }
+
+    [Fact]
     public void Bug65_ServerStats_RecordRequest_ignores_NaN_Infinity_and_negative_response_times()
     {
         var stats = new ServerStats();
@@ -1199,6 +1707,27 @@ public class BugBountyTests
         Assert.Equal(25.0, (double)stats.GetStats()["MaxResponseTime(ms)"]);
         Assert.Equal(0.0, (double)stats.GetStats()["MinResponseTime(ms)"]);
         Assert.False(double.IsNaN(stats.GetAverageResponseTime()));
+    }
+
+    [Fact]
+    public void Bug66_ServerStats_RecordConnectionEnd_and_RecordBytes_clamp_non_negative()
+    {
+        var stats = new ServerStats();
+        stats.RecordConnectionEnd();
+        stats.RecordBytesSent(-100);
+        stats.RecordBytesReceived(-200);
+
+        var dict = stats.GetStats();
+        Assert.Equal(0L, (long)dict["ActiveConnections"]);
+        Assert.Equal(0L, (long)dict["TotalBytesSent"]);
+        Assert.Equal(0L, (long)dict["TotalBytesReceived"]);
+    }
+
+    [Fact]
+    public void Bug67_SelectLatestAspNetTag_accepts_tags_without_v_prefix_and_tolerates_null_or_whitespace_entries()
+    {
+        var selected = EditWebView.Utility.SelectLatestAspNetTag([null!, "  ", "11.0.0-rc.2.26504.105", "v11.0.0-rc.1.26450.1"], 11);
+        Assert.Equal("11.0.0-rc.2.26504.105", selected);
     }
 
     [Fact]
@@ -1214,6 +1743,41 @@ public class BugBountyTests
         var method = typeof(EditWebView.Editor).GetMethod("DetermineFileName", BindingFlags.Static | BindingFlags.NonPublic)!;
         Assert.Equal("BlazorWebViewFormBase.cs", (string)method.Invoke(null, ["src/windowsforms/BlazorWebView.cs"])!);
         Assert.Equal("BlazorWebViewFormBase.cs", (string)method.Invoke(null, ["src/WINDOWSFORMS/blazorwebview.cs"])!);
+    }
+
+    [Fact]
+    public void Bug70_Editor_InsertUsing_and_Comment_are_idempotent()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"Bug70_{Guid.NewGuid():N}.cs");
+        try
+        {
+            File.WriteAllText(tempFile, "using System;\n#pragma warning disable CA1816\nnamespace Test;\n");
+            var editor = new EditWebView.Editor(tempFile);
+            editor.InsertUsing("Microsoft.AspNetCore.Components");
+            editor.InsertUsing("Microsoft.AspNetCore.Components");
+            editor.Comment("#pragma warning disable CA1816");
+            editor.Comment("#pragma warning disable CA1816");
+
+            var outDir = Path.Combine(Path.GetTempPath(), $"Bug70_out_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(outDir);
+            try
+            {
+                editor.WriteAllText(outDir);
+                var result = File.ReadAllText(Path.Combine(outDir, Path.GetFileName(tempFile)));
+                Assert.Single(System.Text.RegularExpressions.Regex.Matches(result, System.Text.RegularExpressions.Regex.Escape("using Microsoft.AspNetCore.Components;")));
+                Assert.DoesNotContain("////#pragma warning disable CA1816", result);
+                Assert.Contains("//#pragma warning disable CA1816", result);
+            }
+            finally
+            {
+                Directory.Delete(outDir, recursive: true);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
     }
 
     [Fact]
@@ -1253,6 +1817,48 @@ public class BugBountyTests
     }
 
     [Fact]
+    public void Bug73_ManifestStaticWebAssetFileProvider_FileNameComparer_GetHashCode_handles_null_or_null_Name()
+    {
+        var comparerType = typeof(ClientRemote.OptimizedCompositeFileProvider).Assembly.GetType("PeakSWC.RemoteWebView.ManifestStaticWebAssetFileProvider+FileNameComparer")!;
+        var comparer = (IEqualityComparer<IFileInfo>)Activator.CreateInstance(comparerType, nonPublic: true)!;
+
+        var ex = Record.Exception(() => comparer.GetHashCode(new NullNameFileInfo()));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Bug74_StaticWebAssetsLoader_UseStaticWebAssetsCore_tolerates_invalid_or_missing_content_roots_and_corrupt_json()
+    {
+        var method = typeof(ClientRemote.StaticWebAssetsLoader).GetMethod("UseStaticWebAssetsCore", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var fallback = new NullFileProvider();
+
+        using var badJson = new MemoryStream(Encoding.UTF8.GetBytes("{ invalid json"));
+        var res1 = (Microsoft.Extensions.FileProviders.IFileProvider)method.Invoke(null, [fallback, badJson])!;
+        Assert.Same(fallback, res1);
+
+        var nonExistentRoot = Path.Combine(Path.GetTempPath(), $"missing_root_{Guid.NewGuid():N}");
+        var validJsonMissingDir = $$"""
+        {
+          "ContentRoots": [{{System.Text.Json.JsonSerializer.Serialize(nonExistentRoot)}}],
+          "Root": { "Children": null, "Asset": null, "Patterns": null }
+        }
+        """;
+        using var missingDirStream = new MemoryStream(Encoding.UTF8.GetBytes(validJsonMissingDir));
+        var ex = Record.Exception(() => method.Invoke(null, [fallback, missingDirStream]));
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Bug75_FixedManifestEmbeddedAssembly_GetManifestResourceStream_falls_back_on_malformed_xml()
+    {
+        var asm = new ClientRemote.FixedManifestEmbeddedAssembly(new FakeManifestAssembly("<unclosed-xml"));
+        using var stream = asm.GetManifestResourceStream("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml");
+        Assert.NotNull(stream);
+        using var reader = new StreamReader(stream!);
+        Assert.Equal("<unclosed-xml", reader.ReadToEnd());
+    }
+
+    [Fact]
     public void Bug76_ETagGenerator_GenerateETag_returns_empty_string_when_file_is_null_or_missing()
     {
         Assert.Equal(string.Empty, ClientRemote.ETagGenerator.GenerateETag(null!));
@@ -1267,6 +1873,29 @@ public class BugBountyTests
             .GetMethod("WaitAsync", BindingFlags.Static | BindingFlags.Public)!
             .Invoke(null, ["not-a-valid-url", 1, 0])!;
         Assert.False(ok1);
+    }
+
+    [Fact]
+    public void Bug78_RemoteMessageUrl_Rewrite_only_strips_first_occurrence_of_id_and_tolerates_null_or_empty_hostHtmlPath()
+    {
+        var id = Guid.NewGuid();
+        var serverUri = new Uri("https://remote.example.com/");
+        var localUri = new Uri("https://0.0.0.1/");
+        var sender = $"https://remote.example.com/{id}/sub/{id}/page";
+
+        var rewritten1 = ClientRemote.RemoteMessageUrl.Rewrite(sender, serverUri, id, "", localUri);
+        var rewritten2 = ClientRemote.RemoteMessageUrl.Rewrite(sender, serverUri, id, null!, localUri);
+
+        Assert.Equal($"https://0.0.0.1/sub/{id}/page", rewritten1.ToString());
+        Assert.Equal($"https://0.0.0.1/sub/{id}/page", rewritten2.ToString());
+    }
+
+    [Fact]
+    public void Bug79_StaticContentCacheControl_TryCreateAbsoluteUri_preserves_plus_sign_in_relative_path_segments()
+    {
+        var ok = ClientRemote.StaticContentCacheControl.TryCreateAbsoluteUri("/files/c++_guide.js", out var uri);
+        Assert.True(ok);
+        Assert.Equal("/files/c++_guide.js", uri.AbsolutePath);
     }
 
     [Fact]
@@ -1361,6 +1990,90 @@ public class BugBountyTests
         await middleware.InvokeAsync(context);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Bug84_RemoteFilesMiddleware_ServerCacheKey_normalizes_case_and_backslashes_on_Windows()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var id = Guid.NewGuid();
+        var method = typeof(RemoteFilesMiddleware).GetMethod("ServerCacheKey", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var key1 = (string)method.Invoke(null, [id, "css/App.css"])!;
+        var key2 = (string)method.Invoke(null, [id, "CSS\\app.css"])!;
+
+        Assert.Equal(key1, key2);
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Bug85_ServerFileSyncManager_HandleClientResponse_tolerates_null_response_and_null_Metadata_or_FileData()
+    {
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var id = Guid.NewGuid().ToString();
+        manager.RegisterClient(id, "index.html");
+        manager.AssociateResponseStream(id, new CallbackStreamWriter<ServerFileReadRequest>(_ => { }));
+
+        var ex1 = await Record.ExceptionAsync(() => manager.HandleClientResponse(null!));
+        Assert.Null(ex1);
+
+        var dataReqTask = await manager.RequestFileDataAsync(id, "test.txt", NullLogger<RemoteFileResolver>.Instance);
+        var dictField = typeof(ServerFileSyncManager).GetField("_fileDataRequests", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var dict = (ConcurrentDictionary<string, ConcurrentDictionary<string, DataRequest>>)dictField.GetValue(manager)!;
+        var reqId = dict[id].Keys.First();
+
+        var chunkResp = new ClientFileReadResponse
+        {
+            ClientId = id,
+            RequestId = reqId,
+            FileData = new FileData()
+        };
+        typeof(FileData).GetField("fileChunk_", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(chunkResp.FileData, null);
+
+        var ex2 = await Record.ExceptionAsync(() => manager.HandleClientResponse(chunkResp));
+        Assert.Null(ex2);
+    }
+
+    [Fact]
+    public async Task Bug86_ClientIPCService_SetCache_and_GetUserGroups_tolerate_null_requests()
+    {
+        var service = new ClientIPCService(
+            NullLogger<ClientIPCService>.Instance,
+            new ConcurrentDictionary<string, Channel<string>>(),
+            new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>(),
+            new MockUserService(),
+            new RemoteFilesOptions());
+
+        using var cts = new CancellationTokenSource();
+        var ctx = new TestCallContext(cts.Token);
+
+        var cacheRes = await service.SetCache(null!, ctx);
+        Assert.NotNull(cacheRes);
+
+        var userRes = await service.GetUserGroups(null!, ctx);
+        Assert.NotNull(userRes);
+    }
+
+    [Fact]
+    public async Task Bug87_RemoteWebViewService_SendMessage_and_Shutdown_do_not_throw_or_leak_on_null_or_empty_Id()
+    {
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, dict);
+        using var syncManager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var service = new RemoteWebViewService(NullLogger<RemoteWebViewService>.Instance, dict, channels, shutdown, syncManager);
+
+        using var cts = new CancellationTokenSource();
+        var ctx = new TestCallContext(cts.Token);
+
+        var sendRes = await service.SendMessage(new SendMessageRequest { Id = "", Message = "hi" }, ctx).WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.False(sendRes.Success);
+        Assert.Empty(dict);
+
+        var ex = await Record.ExceptionAsync(() => service.Shutdown(new IdMessageRequest { Id = "" }, ctx));
+        Assert.Null(ex);
+        Assert.Empty(dict);
     }
 
     [Fact]
@@ -1481,6 +2194,20 @@ public class BugBountyTests
 
         Assert.Equal(StatusCode.InvalidArgument, rpcEx.StatusCode);
         Assert.Empty(dict);
+    }
+
+    [Fact]
+    public void Bug96_ServerFileSyncManager_AssociateResponseStream_and_RemoveClient_tolerate_null_arguments()
+    {
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+
+        var ex1 = Record.Exception(() => manager.AssociateResponseStream(null!, null!));
+        var ex2 = Record.Exception(() => manager.RemoveClient(null!));
+        var ex3 = Record.Exception(() => manager.RemoveClient("   "));
+
+        Assert.Null(ex1);
+        Assert.Null(ex2);
+        Assert.Null(ex3);
     }
 
     [Fact]

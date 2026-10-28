@@ -164,7 +164,11 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+                return new SendMessageResponse { Id = request?.Id ?? string.Empty, Success = false };
+
+            if (!serviceDictionary.TryGetValue(request.Id, out var serviceStateTaskSource) || serviceStateTaskSource == null)
+                return new SendMessageResponse { Id = request.Id, Success = false };
 
             try
             {

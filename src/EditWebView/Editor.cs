@@ -220,12 +220,17 @@ namespace EditWebView
 
         public void Comment(string target)
         {
+            if (string.IsNullOrEmpty(target) || _text.Contains($"//{target}", StringComparison.Ordinal))
+                return;
             _text = _text.Replace(target, $"//{target}");
         }
 
         public void InsertUsing(string nameSpace)
         {
-            _text = _text.Replace("using System;", $"using System;\nusing {nameSpace};");
+            var statement = $"using {nameSpace};";
+            if (_text.Contains(statement, StringComparison.Ordinal))
+                return;
+            ReplaceFirst("using System;", $"using System;\n{statement}");
         }
     }
 }

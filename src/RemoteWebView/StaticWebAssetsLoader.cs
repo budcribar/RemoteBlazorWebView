@@ -52,13 +52,22 @@ namespace PeakSWC.RemoteWebView
 
         private static IFileProvider UseStaticWebAssetsCore(IFileProvider systemProvider, Stream manifest)
         {
-            var staticWebAssetManifest = ManifestStaticWebAssetFileProvider.StaticWebAssetManifest.Parse(manifest);
+            ManifestStaticWebAssetFileProvider.StaticWebAssetManifest? staticWebAssetManifest;
+            try
+            {
+                staticWebAssetManifest = ManifestStaticWebAssetFileProvider.StaticWebAssetManifest.Parse(manifest);
+            }
+            catch
+            {
+                return systemProvider;
+            }
 
-            if (staticWebAssetManifest == null) return systemProvider;
+            if (staticWebAssetManifest == null || staticWebAssetManifest.ContentRoots == null || staticWebAssetManifest.Root == null)
+                return systemProvider;
 
             var provider = new ManifestStaticWebAssetFileProvider(
                   staticWebAssetManifest,
-                  (contentRoot) => new PhysicalFileProvider(contentRoot));
+                  (contentRoot) => Directory.Exists(contentRoot) ? new PhysicalFileProvider(contentRoot) : new NullFileProvider());
 
             return new OptimizedCompositeFileProvider([provider, systemProvider]);
         }

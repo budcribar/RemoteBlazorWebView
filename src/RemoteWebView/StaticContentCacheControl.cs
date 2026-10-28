@@ -97,7 +97,7 @@ namespace PeakSWC.RemoteWebView
                 pathPart = "/" + pathPart;
 
             // Escape each segment so a decoded space survives Uri parsing, without double-encoding %20.
-            var escapedPath = string.Join("/", pathPart.Split('/').Select(segment => Uri.EscapeDataString(Uri.UnescapeDataString(segment))));
+            var escapedPath = string.Join("/", pathPart.Split('/').Select(segment => Uri.EscapeDataString(Uri.UnescapeDataString(segment)).Replace("%2B", "+", StringComparison.OrdinalIgnoreCase)));
             return Uri.TryCreate($"https://{HostAddressHelper.GetAppHostAddress()}{escapedPath}{query}{fragment}", UriKind.Absolute, out uri!);
         }
     }

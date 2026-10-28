@@ -44,50 +44,8 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             }
         }
 
-        // Original ParsePathAndGuid method for reference
-        /*
-        private (string subPath, Guid clientGuid) ParsePathAndGuid(string path, string referrer)
-        {
-            // Try to parse the client GUID from the request path
-            var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-            if (pathSegments.Length >= 1)
-            {
-                string clientIdString = pathSegments[0];
-                if (Guid.TryParse(clientIdString, out var clientGuid))
-                {
-                    // The remaining segments form the subPath
-                    string subPath = string.Join('/', pathSegments.Skip(1));
-                    return (subPath, clientGuid);
-                }
-            }
-
-            // If not found in the path, try to parse the client GUID from the referrer
-            if (!string.IsNullOrEmpty(referrer))
-            {
-                var referrerUri = new Uri(referrer);
-                var referrerSegments = referrerUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-                if (referrerSegments.Length >= 1)
-                {
-                    string clientIdString = referrerSegments[0];
-                    if (Guid.TryParse(clientIdString, out var clientGuid))
-                    {
-                        // Use the original path as the subPath
-                        return (path.TrimStart('/'), clientGuid);
-                    }
-                }
-            }
-
-            // If the client GUID is not found, return an empty GUID
-            return (path.TrimStart('/'), Guid.Empty);
-        }
-        */
-
         private (string, Guid) ParsePathAndGuid(string path, string referrer)
         {
-            string subPath;
-
             var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             if (pathSegments?.Length > 0)
@@ -95,29 +53,23 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 string clientIdString = pathSegments[0];
                 if (Guid.TryParse(clientIdString, out var clientId))
                 {
-                    subPath = string.Join('/', pathSegments.Skip(1));
+                    string subPath = string.Join('/', pathSegments.Skip(1));
                     return (subPath, clientId);
-                }
-
-                // Attempt to get clientId from referrer
-                var referrerSegments = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
-                if (referrerSegments?.Length > 2)
-                {
-                    clientIdString = referrerSegments[2];
-                    if (Guid.TryParse(clientIdString, out clientId))
-                        return (path[1..], clientId);
                 }
             }
 
-            var referrerSegments2 = referrer.Split("/", StringSplitOptions.RemoveEmptyEntries);
-            if (referrerSegments2?.Length > 0)
+            if (!string.IsNullOrEmpty(referrer))
             {
-                if (Guid.TryParse(referrerSegments2[0], out var clientId2))
-                    return (path, clientId2);
+                var referrerSegments = referrer.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var segment in referrerSegments)
+                {
+                    if (Guid.TryParse(segment, out var clientId))
+                        return (path.TrimStart('/'), clientId);
+                }
             }
 
             // Can't find GUID
-            return (path, Guid.Empty);
+            return (path.TrimStart('/'), Guid.Empty);
         }
 
         private async Task HandleGetAsync(HttpContext context)
@@ -244,10 +196,12 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     return;
                 }
 
+                await using var responseStream = dataRequest.Stream;
+
                 // The host page is rewritten after metadata is measured, so a seekable
                 // stream's length is the body actually written. A pipe uses the metadata length.
-                context.Response.ContentLength = dataRequest.Stream.CanSeek
-                    ? dataRequest.Stream.Length
+                context.Response.ContentLength = responseStream.CanSeek
+                    ? responseStream.Length
                     : clientMetadata.Length;
 
                 try
@@ -256,7 +210,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     {
                         // Optionally cache the data
                         using MemoryStream memStream = new();
-                        await dataRequest.Stream.CopyToAsync(memStream, context.RequestAborted).ConfigureAwait(false);
+                        await responseStream.CopyToAsync(memStream, context.RequestAborted).ConfigureAwait(false);
                         memStream.Position = 0;
 
                         memoryCache.Set(cacheKey, new CachedRemoteFile(clientMetadata, memStream.ToArray()), TimeSpan.FromSeconds(fileSyncManager.CacheTimeoutSeconds));
@@ -269,7 +223,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     else
                     {
                         // Stream directly without caching
-                        await dataRequest.Stream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
+                        await responseStream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
                     }
                 }
                 catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
@@ -372,7 +326,12 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         }
 
         private static string ServerCacheKey(Guid clientId, string subPath)
-            => clientId.ToString("N") + "/" + subPath;
+        {
+            var normalized = (subPath ?? string.Empty).Replace('\\', '/').TrimStart('/');
+            if (OperatingSystem.IsWindows())
+                normalized = normalized.ToLowerInvariant();
+            return clientId.ToString("N") + "/" + normalized;
+        }
 
         private sealed record CachedRemoteFile(FileMetadata Metadata, byte[] Data);
     }

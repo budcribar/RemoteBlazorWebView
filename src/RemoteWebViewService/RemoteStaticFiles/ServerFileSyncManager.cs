@@ -71,10 +71,10 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// <param name="responseStream">Server's response stream for the client.</param>
         public void AssociateResponseStream(string clientGuid, IServerStreamWriter<ServerFileReadRequest> responseStream)
         {
-            if (!_clientResponseStreams.TryAdd(clientGuid, responseStream))
-            {
-                throw new InvalidOperationException($"Client with GUID '{clientGuid}' is already associated with a response stream.");
-            }
+            if (string.IsNullOrWhiteSpace(clientGuid) || responseStream == null)
+                return;
+
+            _clientResponseStreams[clientGuid] = responseStream;
 
             _logger.LogDebug("Associated response stream for client GUID: {ClientGuid}", clientGuid);
         }
@@ -104,6 +104,12 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// <param name="response">Client's response message.</param>
         public async Task HandleClientResponse(ClientFileReadResponse response)
         {
+            if (response == null)
+            {
+                _logger.LogError("Received null response from client.");
+                return;
+            }
+
             var clientGuid = response.ClientId;
             var requestId = response.RequestId;
 
@@ -115,6 +121,11 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
             if (response.ResponseCase == ClientFileReadResponse.ResponseOneofCase.Metadata)
             {
+                if (response.Metadata == null)
+                {
+                    _logger.LogError("Received null Metadata for requestId: {RequestId} from client GUID: {ClientGuid}", requestId, clientGuid);
+                    return;
+                }
                 HandleMetadataResponse(clientGuid, requestId, response.Metadata);
             }
             else if (response.ResponseCase == ClientFileReadResponse.ResponseOneofCase.FileData)
@@ -149,6 +160,12 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
         private async Task HandleFileChunkResponse(string clientGuid, string requestId, FileData fileData)
         {
+            if (fileData == null || fileData.FileChunk == null)
+            {
+                _logger.LogError("Received null FileData or FileChunk for requestId: {RequestId} from client GUID: {ClientGuid}", requestId, clientGuid);
+                return;
+            }
+
             if (_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests))
             {
                 if (clientFileDataRequests.TryGetValue(requestId, out var dataRequest))
@@ -236,7 +253,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             }, useSynchronizationContext: false);
 
             // 2) enqueue write
-            _writeChannel.Writer.TryWrite(new WriteRequest
+            bool written = _writeChannel.Writer.TryWrite(new WriteRequest
             {
                 Operation = async () =>
                 {
@@ -273,6 +290,13 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     }
                 }
             });
+
+            if (!written)
+            {
+                if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                    dict.TryRemove(requestId, out _);
+                tcs.TrySetException(new InvalidOperationException("ServerFileSyncManager write channel is closed."));
+            }
 
             // 3) dispose the CTS when done
             tcs.Task.ContinueWith(_ => timeoutCts.Dispose(), TaskScheduler.Default);
@@ -343,6 +367,9 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// <param name="clientGuid">Unique identifier for the client.</param>
         public void RemoveClient(string clientGuid)
         {
+            if (string.IsNullOrWhiteSpace(clientGuid))
+                return;
+
             if (_clientResponseStreams.TryRemove(clientGuid, out _))
             {
                 _logger.LogDebug("Removed response stream association for client GUID: {ClientGuid}", clientGuid);

@@ -41,7 +41,9 @@ namespace EditWebView
 
         public static string SelectLatestMauiTag(IEnumerable<string> tags, int majorVersion)
         {
+            ArgumentNullException.ThrowIfNull(tags);
             var parsed = tags
+                .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Select(ParseReleaseTag)
                 .Where(tag => tag != null && tag.Major == majorVersion)
                 .Select(tag => tag!)
@@ -63,8 +65,11 @@ namespace EditWebView
 
         public static string SelectLatestAspNetTag(IEnumerable<string> tags, int majorVersion)
         {
+            ArgumentNullException.ThrowIfNull(tags);
             var parsed = tags
-                .Where(name => name.StartsWith($"v{majorVersion}.", StringComparison.Ordinal))
+                .Where(name => !string.IsNullOrWhiteSpace(name) &&
+                    (name.StartsWith($"v{majorVersion}.", StringComparison.OrdinalIgnoreCase) ||
+                     name.StartsWith($"{majorVersion}.", StringComparison.OrdinalIgnoreCase)))
                 .Select(ParseReleaseTag)
                 .Where(tag => tag != null && tag.Major == majorVersion)
                 .Select(tag => tag!)

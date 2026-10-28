@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -29,19 +29,27 @@ namespace PeakSWC.RemoteWebView
                 return stream;
 
             using var reader = new StreamReader(stream);
+            var content = reader.ReadToEnd();
 
-            var xml = XDocument.Parse(reader.ReadToEnd());
-
-            var invalidNode = xml
-                .Descendants("File")
-                .FirstOrDefault(node => string.IsNullOrEmpty(node.Attribute("Name")?.Value));
-
-            if (invalidNode == null)
+            XDocument xml;
+            try
             {
-                return new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
+                xml = XDocument.Parse(content);
+            }
+            catch
+            {
+                return new MemoryStream(Encoding.UTF8.GetBytes(content));
             }
 
-            invalidNode.Remove();
+            var invalidNodes = xml
+                .Descendants("File")
+                .Where(node => string.IsNullOrEmpty(node.Attribute("Name")?.Value))
+                .ToList();
+
+            foreach (var invalidNode in invalidNodes)
+            {
+                invalidNode.Remove();
+            }
 
             return new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
         }

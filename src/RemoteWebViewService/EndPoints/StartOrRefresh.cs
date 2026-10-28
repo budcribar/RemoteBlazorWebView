@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Pages;
@@ -34,8 +34,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     // Handle the case where refresh is not enabled
                     if (!serviceState.Refresh)
                     {
-                        serviceState.Refresh = true;
-
                         // Retrieve and stream the home HTML file
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
@@ -55,6 +53,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
                         using Stream stream = fileStream.Stream;
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        serviceState.Refresh = true;
                     }
                     else
                     {

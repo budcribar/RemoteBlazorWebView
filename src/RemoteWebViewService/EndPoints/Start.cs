@@ -15,17 +15,13 @@ namespace PeakSWC.RemoteWebView.EndPoints
         {
             return async context =>
             {
-                string guid = context.Request.RouteValues["id"]?.ToString() ?? string.Empty;
-                if (string.IsNullOrEmpty(guid))
-                {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsync("Invalid or missing GUID").ConfigureAwait(false);
+                var client = await TryReadClientAsync(context).ConfigureAwait(false);
+                if (client == null)
                     return;
-                }
 
-                // Retrieve service state and channels
-                var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                var (parsedGuid, serviceDictionary) = client.Value;
+                string guid = parsedGuid.ToString();
+                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
 
                 try

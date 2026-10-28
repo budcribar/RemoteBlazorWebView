@@ -130,6 +130,11 @@ namespace PeakSWC.RemoteWebView.Services
                 errorType = rpcEx.StatusCode.ToString();
                 throw;
             }
+            catch (OperationCanceledException ex)
+            {
+                errorType = StatusCode.Cancelled.ToString();
+                throw new RpcException(new Status(StatusCode.Cancelled, ex.Message));
+            }
             catch (Exception ex)
             {
                 errorType = ex.GetType().Name;

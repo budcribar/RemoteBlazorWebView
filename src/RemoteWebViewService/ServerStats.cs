@@ -146,7 +146,12 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public void RecordConnectionEnd()
         {
-            Interlocked.Decrement(ref _activeConnections);
+            long initial, updated;
+            do
+            {
+                initial = Interlocked.Read(ref _activeConnections);
+                updated = Math.Max(0L, initial - 1);
+            } while (initial != Interlocked.CompareExchange(ref _activeConnections, updated, initial));
         }
 
         /// <summary>
@@ -154,6 +159,8 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public void RecordBytesSent(long bytes)
         {
+            if (bytes <= 0)
+                return;
             Interlocked.Add(ref _totalBytesSent, bytes);
         }
 
@@ -162,6 +169,8 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public void RecordBytesReceived(long bytes)
         {
+            if (bytes <= 0)
+                return;
             Interlocked.Add(ref _totalBytesReceived, bytes);
         }
 
@@ -248,6 +257,7 @@ namespace PeakSWC.RemoteWebView
             _responseTimes = new ConcurrentBag<double>();
             Interlocked.Exchange(ref _totalBytesSent, 0);
             Interlocked.Exchange(ref _totalBytesReceived, 0);
+            Interlocked.Exchange(ref _activeConnections, 0);
         }
 
         /// <summary>

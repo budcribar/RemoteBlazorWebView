@@ -16,6 +16,8 @@ namespace PeakSWC.RemoteWebView
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+                return;
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             try
@@ -55,6 +57,8 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
+                if (!serviceStateTaskSource.Task.IsCompletedSuccessfully && serviceDictionary.TryGetValue(request.Id, out var current) && ReferenceEquals(current, serviceStateTaskSource))
+                    serviceDictionary.TryRemove(request.Id, out _);
                 if (request.IsPrimary)
                 {
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
@@ -67,6 +71,8 @@ namespace PeakSWC.RemoteWebView
         {
             // A new primary page starts at sequence 1 and may arrive before CreateWebView.
             // Later messages, including a dying WebView after deregister, must not create an entry.
+            if (request == null || string.IsNullOrWhiteSpace(request.Id))
+                return new SendMessageResponse { Id = request?.Id ?? string.Empty, Success = false };
             TaskCompletionSource<ServiceState> serviceStateTaskSource;
             if (request.IsPrimary && request.Sequence == 1)
             {
@@ -98,26 +104,39 @@ namespace PeakSWC.RemoteWebView
                 if (state == null)
                     return new SendMessageResponse { Id = request.Id, Success = false };
 
+                await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
                 try
                 {
-                    await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
-
-                    if (request.Sequence == state.SequenceNum)
+                    void EnrichConnectedIfNeeded(SendSequenceMessageRequest msg)
                     {
-                        if (request.Message == "connected:")
+                        if (msg.Message == "connected:")
                         {
-                            request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
+                            string remoteIp = string.Empty;
+                            try
+                            {
+                                remoteIp = context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+                            }
+                            catch
+                            {
+                                // ServerCallContext in unit tests or non-HTTP transports may not have an HttpContext.
+                            }
+                            msg.Message += remoteIp + "|" + serviceState.User;
 #if AUTHORIZATION
                             string serializedCookies = string.Empty;
                             if (serviceState.Cookies != null)
                                 serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
-                            request.Cookies = serializedCookies;
+                            msg.Cookies = serializedCookies;
 #endif
                         }
+                    }
+
+                    if (request.Sequence == state.SequenceNum)
+                    {
+                        EnrichConnectedIfNeeded(request);
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies }).ConfigureAwait(false);
                         state.SequenceNum++;
                     }
-                    else
+                    else if (request.Sequence > state.SequenceNum)
                     {
                         bool added = state.MessageDictionary.TryAdd(request.Sequence, request);
                         if (!added)
@@ -128,6 +147,7 @@ namespace PeakSWC.RemoteWebView
 
                     while (state.MessageDictionary.TryRemove(state.SequenceNum, out var queuedRequest))
                     {
+                        EnrichConnectedIfNeeded(queuedRequest);
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse
                         {
                             Response = queuedRequest.Message,

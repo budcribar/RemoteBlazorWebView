@@ -20,14 +20,15 @@ public class OptimizedCompositeFileProvider : IFileProvider
         if (string.IsNullOrWhiteSpace(subpath))
             throw new ArgumentException("Subpath cannot be null or empty.", nameof(subpath));
 
-        bool isUnderscorePath = subpath.StartsWith("_framework");
+        var normalizedSubpath = subpath.TrimStart('/', '\\');
+        bool isUnderscorePath = normalizedSubpath.StartsWith("_framework", StringComparison.OrdinalIgnoreCase);
 
         // First pass: prioritize embedded files if the path starts with an underscore
         if (isUnderscorePath)
         {
-            foreach (var provider in _fileProviders.OfType<EmbeddedFileProvider>())
+            foreach (var provider in _fileProviders.Where(p => p is EmbeddedFileProvider or ManifestEmbeddedFileProvider))
             {
-                var fileInfo = provider.GetFileInfo(subpath);
+                var fileInfo = provider.GetFileInfo(normalizedSubpath);
                 if (fileInfo.Exists)
                 {
                     return fileInfo;
@@ -39,12 +40,16 @@ public class OptimizedCompositeFileProvider : IFileProvider
         foreach (var provider in _fileProviders)
         {
             // Skip previously checked embedded providers for underscore paths
-            if (isUnderscorePath && provider is EmbeddedFileProvider)
+            if (isUnderscorePath && provider is EmbeddedFileProvider or ManifestEmbeddedFileProvider)
             {
                 continue;
             }
 
             var fileInfo = provider.GetFileInfo(subpath);
+            if (!fileInfo.Exists && !ReferenceEquals(normalizedSubpath, subpath))
+            {
+                fileInfo = provider.GetFileInfo(normalizedSubpath);
+            }
             if (fileInfo.Exists)
             {
                 return fileInfo;

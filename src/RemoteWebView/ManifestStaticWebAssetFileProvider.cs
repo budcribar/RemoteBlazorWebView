@@ -307,7 +307,7 @@ namespace PeakSWC.RemoteWebView
 		{
 			public bool Equals(IFileInfo? x, IFileInfo? y) => string.Equals(x?.Name, y?.Name, _fsComparison);
 
-			public int GetHashCode(IFileInfo obj) => obj.Name.GetHashCode(_fsComparison);
+			public int GetHashCode(IFileInfo obj) => (obj?.Name ?? string.Empty).GetHashCode(_fsComparison);
 		}
 
 		internal sealed class StaticWebAssetManifest

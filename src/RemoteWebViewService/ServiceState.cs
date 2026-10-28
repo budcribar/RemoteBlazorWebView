@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -136,9 +136,14 @@ namespace PeakSWC.RemoteWebView
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
 
-            if (disposing)
+            if (disposing && CancellationTokenSource != null)
             {
-
+                try { CancellationTokenSource.Cancel(); } catch { }
+                try { BrowserIPC.Semaphore.Dispose(); } catch { }
+                try { FileCollection.Writer.TryComplete(); } catch { }
+                IPC.Shutdown();
+                try { CancellationTokenSource.Dispose(); } catch { }
+                CancellationTokenSource = null;
             }
 
             // Free unmanaged resources here, if any...
