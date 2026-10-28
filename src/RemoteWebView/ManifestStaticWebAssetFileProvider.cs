@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Primitives;
 using System;
@@ -96,9 +96,13 @@ namespace PeakSWC.RemoteWebView
 				if (candidate != null && candidate.HasPatterns())
 				{
 					var depth = candidate.Patterns[0].Depth;
+					if (depth < 0 || depth > segments.Length)
+						return files;
 					var candidateDirectoryPath = string.Join('/', segments[depth..]);
 					foreach (var pattern in candidate.Patterns)
 					{
+						if (pattern.ContentRoot < 0 || pattern.ContentRoot >= _fileProviders.Length || _fileProviders[pattern.ContentRoot] == null)
+							continue;
 						var contentRoot = _fileProviders[pattern.ContentRoot];
 						var matcher = new Matcher(_fsComparison);
 						matcher.AddInclude(pattern.Pattern);
@@ -141,6 +145,8 @@ namespace PeakSWC.RemoteWebView
 					}
 					else
 					{
+						if (match.ContentRoot < 0 || match.ContentRoot >= _fileProviders.Length || _fileProviders[match.ContentRoot] == null)
+							continue;
 						// This is a file.
 						files.RemoveWhere(f => string.Equals(match.Path, f.Name, _fsComparison));
 						var file = _fileProviders[match.ContentRoot].GetFileInfo(match.Path);
@@ -166,6 +172,7 @@ namespace PeakSWC.RemoteWebView
 				throw new ArgumentNullException(nameof(subpath));
 			}
 
+			subpath = Normalize(subpath);
 			var segments = subpath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 			StaticWebAssetNode? candidate = _root;
 			List<StaticWebAssetPattern>? patterns = null;
@@ -191,7 +198,7 @@ namespace PeakSWC.RemoteWebView
 			}
 
 			var match = candidate?.Match;
-			if (match != null)
+			if (match != null && match.ContentRoot >= 0 && match.ContentRoot < _fileProviders.Length && _fileProviders[match.ContentRoot] != null)
 			{
 				// If we found a file, that wins over anything else. If there are conflicts with files added after
 				// we've built the manifest, we'll be notified the next time we do a build. This is not different
@@ -218,6 +225,10 @@ namespace PeakSWC.RemoteWebView
 				for (var i = 0; i < patterns.Count; i++)
 				{
 					var pattern = patterns[i];
+					if (pattern.Depth < 0 || pattern.Depth > segments.Length || pattern.ContentRoot < 0 || pattern.ContentRoot >= _fileProviders.Length || _fileProviders[pattern.ContentRoot] == null)
+					{
+						continue;
+					}
 					if (pattern.Depth != currentDepth)
 					{
 						currentDepth = pattern.Depth;
@@ -229,7 +240,7 @@ namespace PeakSWC.RemoteWebView
 					{
 						if (!result.IsDirectory)
 						{
-							var matcher = new Matcher();
+							var matcher = new Matcher(_fsComparison);
 							matcher.AddInclude(pattern.Pattern);
 							if (!matcher.Match(candidatePath).HasMatches)
 							{

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Text;
@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView
             var htmlHostPath = manager.GetHtmlHostPath(clientId);
 
             // check to see if we need to edit index.html
-            if (Path.GetFileName(subpath) == Path.GetFileName(htmlHostPath))
+            if (IsHostPagePath(subpath, htmlHostPath))
             {
                 using StreamReader sr = new(dataRequest.Pipe.Reader.AsStream());
                 var contents = await sr.ReadToEndAsync().ConfigureAwait(false);
@@ -34,6 +34,28 @@ namespace PeakSWC.RemoteWebView
 
             return new FileStream { Stream = dataRequest.Pipe.Reader.AsStream() };
         }
+
+        private static bool IsHostPagePath(string subpath, string htmlHostPath)
+        {
+            var normalizedSubpath = NormalizeHostRelativePath(subpath);
+            var normalizedHostPath = NormalizeHostRelativePath(htmlHostPath);
+            return string.Equals(normalizedSubpath, normalizedHostPath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeHostRelativePath(string? path)
+        {
+            var normalized = (path ?? string.Empty).Replace('\\', '/').Trim('/');
+            while (normalized.StartsWith("wwwroot/", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized["wwwroot/".Length..].TrimStart('/');
+            }
+            if (string.Equals(normalized, "wwwroot", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+            return normalized;
+        }
+
         // Stay inside the base tag. A greedy match ate later quoted attributes on the same line.
         [GeneratedRegex("<base([^>]*href\\s*=\\s*)([\"'])[^\"']*\\2", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
         private static partial Regex HrefRegEx();

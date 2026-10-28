@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 using System;
 using System.Threading.Tasks;
@@ -18,7 +18,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var (guid, serviceDictionary) = client.Value;
                 var response = new StatusResponse
                 {
-                    Connected = serviceDictionary.ContainsKey(guid.ToString())
+                    Connected = serviceDictionary.TryGetValue(guid.ToString(), out var tcs) && tcs != null && !tcs.Task.IsFaulted && !tcs.Task.IsCanceled
                 };
 
                 // Set content type to JSON and return the response

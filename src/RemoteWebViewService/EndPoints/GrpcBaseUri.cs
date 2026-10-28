@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     var jsonResponse = JsonSerializer.Serialize(response, JsonContext.Default.GrpcBaseUriResponse);
 
                     context.Response.ContentType = "application/json";
-                    context.Response.ContentLength = jsonResponse.Length; 
+                    context.Response.ContentLength = System.Text.Encoding.UTF8.GetByteCount(jsonResponse); 
 
                     await context.Response.WriteAsync(jsonResponse).ConfigureAwait(false);
                 }

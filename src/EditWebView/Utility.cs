@@ -218,7 +218,8 @@ namespace EditWebView
             {
                 var destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
 
-                if (!destinationPath.StartsWith(Path.GetFullPath(extractPath), StringComparison.OrdinalIgnoreCase))
+                var fullExtractRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(extractPath)) + Path.DirectorySeparatorChar;
+                if (!destinationPath.StartsWith(fullExtractRoot, StringComparison.OrdinalIgnoreCase) && !string.Equals(destinationPath, Path.TrimEndingDirectorySeparator(Path.GetFullPath(extractPath)), StringComparison.OrdinalIgnoreCase))
                     throw new IOException("Attempted to extract file outside of destination directory.");
 
                 if (string.IsNullOrEmpty(entry.Name))
@@ -238,15 +239,16 @@ namespace EditWebView
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("URL cannot be null or empty.", nameof(url));
 
-            var match = UtilityHelpers.MyRegex().Match(url);
+            var cleanUrl = url.Split('?', '#')[0];
+            var match = UtilityHelpers.MyRegex().Match(cleanUrl);
             if (!match.Success)
                 throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
 
             string version = match.Groups[1].Value;
 
-            if (url.Contains("dotnet/aspnetcore"))
+            if (url.Contains("dotnet/aspnetcore", StringComparison.OrdinalIgnoreCase))
                 return $"aspnetcore-{version}.zip";
-            else if (url.Contains("dotnet/maui"))
+            else if (url.Contains("dotnet/maui", StringComparison.OrdinalIgnoreCase))
                 return $"maui-{version}.zip";
             else
                 throw new ArgumentException("Unsupported repository URL.", nameof(url));
@@ -267,16 +269,28 @@ namespace EditWebView
 
         public static void CopyDirectory(string sourceDir, string targetDir)
         {
+            if (string.IsNullOrWhiteSpace(sourceDir))
+                throw new ArgumentException("Source directory cannot be null or empty.", nameof(sourceDir));
+            if (string.IsNullOrWhiteSpace(targetDir))
+                throw new ArgumentException("Target directory cannot be null or empty.", nameof(targetDir));
+
+            var dirs = Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories);
+
             Directory.CreateDirectory(targetDir);
 
-            foreach (var dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+            foreach (var dir in dirs)
             {
-                Directory.CreateDirectory(dir.Replace(sourceDir, targetDir));
+                Directory.CreateDirectory(Path.Combine(targetDir, Path.GetRelativePath(sourceDir, dir)));
             }
 
-            foreach (var file in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
+            foreach (var file in files)
             {
-                File.Copy(file, file.Replace(sourceDir, targetDir), true);
+                var destFile = Path.Combine(targetDir, Path.GetRelativePath(sourceDir, file));
+                var destParent = Path.GetDirectoryName(destFile);
+                if (!string.IsNullOrEmpty(destParent))
+                    Directory.CreateDirectory(destParent);
+                File.Copy(file, destFile, true);
             }
         }
 
@@ -285,10 +299,10 @@ namespace EditWebView
             try
             {
                 string content = File.ReadAllText(filePath);
-                if (!content.Contains("\r\n") && content.Contains('\n'))
+                string normalized = content.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+                if (!string.Equals(content, normalized, StringComparison.Ordinal))
                 {
-                    content = content.Replace("\n", "\r\n");
-                    File.WriteAllText(filePath, content, Encoding.UTF8);
+                    File.WriteAllText(filePath, normalized, Encoding.UTF8);
                 }
             }
             catch (Exception ex)
@@ -310,6 +324,25 @@ namespace EditWebView
 
             try
             {
+                if (recursive)
+                {
+                    foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                    {
+                        var attrs = File.GetAttributes(file);
+                        if ((attrs & FileAttributes.ReadOnly) != 0)
+                            File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+                    }
+                    foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories))
+                    {
+                        var attrs = File.GetAttributes(dir);
+                        if ((attrs & FileAttributes.ReadOnly) != 0)
+                            File.SetAttributes(dir, attrs & ~FileAttributes.ReadOnly);
+                    }
+                }
+                var rootAttrs = File.GetAttributes(path);
+                if ((rootAttrs & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(path, rootAttrs & ~FileAttributes.ReadOnly);
+
                 Directory.Delete(path, recursive);
                 Console.WriteLine($"Deleted directory: {path}");
             }

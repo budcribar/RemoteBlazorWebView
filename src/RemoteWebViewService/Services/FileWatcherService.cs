@@ -12,7 +12,11 @@ namespace PeakSWC.RemoteWebView
     {
         public override async Task WatchFile(WatchFileRequest request, IServerStreamWriter<WatchFileResponse> responseStream, ServerCallContext context)
         {
-            string filePath = request.FilePath;
+            string filePath = request?.FilePath ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "FilePath cannot be null or empty."));
+            }
 
             logger.LogInformation($"Client requested to watch file: {filePath}");
 
@@ -46,7 +50,9 @@ namespace PeakSWC.RemoteWebView
             }, context.CancellationToken).ConfigureAwait(false);
 
             // Start watching for changes
-            FileSystemWatcher? watcher = new(Path.GetDirectoryName(filePath) ?? string.Empty, Path.GetFileName(filePath))
+            string fullPath = Path.GetFullPath(filePath);
+            string watchDir = Path.GetDirectoryName(fullPath) is { Length: > 0 } d ? d : Directory.GetCurrentDirectory();
+            FileSystemWatcher? watcher = new(watchDir, Path.GetFileName(fullPath))
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
             };
