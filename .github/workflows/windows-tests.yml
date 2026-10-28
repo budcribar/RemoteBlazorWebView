@@ -20,7 +20,7 @@
 #   it does not see this repo's global.json; CI writes the same pin into the
 #   copy (the tutorial repo is not modified). The tutorial's default BuildMode
 #   is Developer, which project-references this repo. Its NuGet.config is not
-#   modified. The desktop step stays continue-on-error when a hosted runner
+#   modified. The desktop step fails the job when a hosted runner
 #   cannot host an interactive WebView2.
 
 name: Windows tests
@@ -578,10 +578,9 @@ jobs:
       # cannot sit in that loop until the job timeout. continue-on-error stays
       # while those desktop launches still cannot complete on the runner.
       # File-not-found for those executables fails the publish step above.
-      - name: Test FileSyncServer desktop and tutorial (continue on error)
+      - name: Test FileSyncServer desktop and tutorial
         if: always() && steps.publish.outcome == 'success'
         timeout-minutes: 60
-        continue-on-error: true
         run: |
           # The startup diagnostic launches the tutorial exes. A surviving
           # WebView2 browser keeps the user-data folder and then ignores
