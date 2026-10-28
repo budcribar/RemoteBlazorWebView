@@ -18,6 +18,7 @@ using Microsoft.Net.Http.Headers;
 using PeakSWC.RemoteWebView;
 using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Pages;
+
 using PeakSWC.RemoteWebView.Services;
 using ClientRemote = client::PeakSWC.RemoteWebView;
 
@@ -135,7 +136,7 @@ public class BugBountyTests
         var context = new DefaultHttpContext();
         context.Request.Scheme = "https";
         context.Request.Host = new HostString("localhost", 5001);
-        context.Request.PathBase = "/cafÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©";
+        context.Request.PathBase = "/cafÃƒÆ’Ã‚Â©";
         context.Response.Body = new MemoryStream();
 
         await Endpoints.GrpcBaseUri()(context);
@@ -1200,10 +1201,20 @@ public class BugBountyTests
     }
 
     [Fact]
+    public void Bug71_OptimizedCompositeFileProvider_tolerates_null_provider_entries_and_null_subpath_in_GetDirectoryContents_and_Watch()
+    {
+        var composite = new ClientRemote.OptimizedCompositeFileProvider([null!, new NullFileProvider()]);
+        Assert.False(composite.GetFileInfo("index.html").Exists);
+        Assert.False(composite.GetFileInfo("_framework/blazor.webassembly.js").Exists);
+        Assert.False(composite.GetDirectoryContents(null!).Exists);
+        Assert.Same(NullChangeToken.Singleton, composite.Watch(null!));
+    }
+
+    [Fact]
     public void Bug72_ManifestStaticWebAssetFileProvider_handles_out_of_bounds_pattern_depth_and_content_root_gracefully()
     {
-        var manifestType = typeof(ClientRemote.RemoteWebView).Assembly.GetType("PeakSWC.RemoteWebView.ManifestStaticWebAssetFileProvider+StaticWebAssetManifest")!;
-        var providerType = typeof(ClientRemote.RemoteWebView).Assembly.GetType("PeakSWC.RemoteWebView.ManifestStaticWebAssetFileProvider")!;
+        var manifestType = typeof(ClientRemote.OptimizedCompositeFileProvider).Assembly.GetType("PeakSWC.RemoteWebView.ManifestStaticWebAssetFileProvider+StaticWebAssetManifest")!;
+        var providerType = typeof(ClientRemote.OptimizedCompositeFileProvider).Assembly.GetType("PeakSWC.RemoteWebView.ManifestStaticWebAssetFileProvider")!;
 
         var json = """
         {
@@ -1235,7 +1246,7 @@ public class BugBountyTests
     [Fact]
     public async Task Bug77_HealthCheck_WaitAsync_returns_false_without_throwing_on_invalid_url_or_non_positive_timeout()
     {
-        var ok1 = await (Task<bool>)typeof(ClientRemote.RemoteWebView).Assembly
+        var ok1 = await (Task<bool>)typeof(ClientRemote.OptimizedCompositeFileProvider).Assembly
             .GetType("PeakSWC.RemoteWebView.HealthCheck")!
             .GetMethod("WaitAsync", BindingFlags.Static | BindingFlags.Public)!
             .Invoke(null, ["not-a-valid-url", 1, 0])!;

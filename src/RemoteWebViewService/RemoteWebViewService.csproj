@@ -67,7 +67,11 @@
     <None Remove="appsettings.json.save" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="appsettings.json.save" />
+    <Content Include="appsettings.json.save">
+      <Pack>false</Pack>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
  
   <ItemGroup>
@@ -110,6 +114,8 @@
   <ItemGroup>
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+      <Pack>false</Pack>
     </Content>
   </ItemGroup>
   <ItemGroup>

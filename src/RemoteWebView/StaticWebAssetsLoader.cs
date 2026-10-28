@@ -60,7 +60,7 @@ namespace PeakSWC.RemoteWebView
                   staticWebAssetManifest,
                   (contentRoot) => new PhysicalFileProvider(contentRoot));
 
-            return new CompositeFileProvider(new[] { provider, systemProvider });
+            return new OptimizedCompositeFileProvider([provider, systemProvider]);
         }
 
         private static string? ResolveRelativeToAssembly()
