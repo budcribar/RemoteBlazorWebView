@@ -253,7 +253,7 @@ namespace FileSyncServer.Tests
         public static string BlazorWpfDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net11.0-windows10.0.17763.0";
+            var exePath = @"bin\x64\debug\net11.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
