@@ -73,12 +73,16 @@ static class Program
     static List<int> ReadMajorArguments(string[] args)
     {
         var majors = new List<int>();
+        if (args == null)
+            return majors;
+
         int i = 0;
         while (i < args.Length)
         {
             if (args[i] == "--major" && i + 1 < args.Length && int.TryParse(args[i + 1], out int major))
             {
-                majors.Add(major);
+                if (major > 0)
+                    majors.Add(major);
                 i += 2;
                 continue;
             }

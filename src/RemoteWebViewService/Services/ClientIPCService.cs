@@ -20,11 +20,14 @@ namespace PeakSWC.RemoteWebView
             var list = new ClientResponseList();
             try
             {
-                // Show only complete values
-                var tasks = serviceDictionary.Values.Where(x => x.Task.IsCompleted).Select(x => x.Task);
-                var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+                if (groups != null)
+                {
+                    // Show only complete values
+                    var tasks = serviceDictionary.Values.Where(x => x.Task.IsCompletedSuccessfully).Select(x => x.Task);
+                    var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-                list.ClientResponses.AddRange(results.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+                    list.ClientResponses.AddRange(results.Where(x => groups.Contains(x.Group)).Select(x => new ClientResponse { Markup = x.Markup, Id = x.Id, State = x.InUse ? ClientState.Connected : ClientState.ShuttingDown, Url = x.Url, Group = x.Group }));
+                }
             }
             catch { }
            
@@ -33,16 +36,18 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task GetClients(UserMessageRequest request, IServerStreamWriter<ClientResponseList> responseStream, ServerCallContext context)
         {
-            string id = request.Id;
-            serviceStateChannel.TryAdd(id, Channel.CreateUnbounded<string>());
+            string id = request?.Id ?? string.Empty;
+            var channel = Channel.CreateUnbounded<string>();
+            string key = !string.IsNullOrEmpty(id) && serviceStateChannel.TryAdd(id, channel) ? id : $"{id}:{Guid.NewGuid():N}";
+            if (key != id) serviceStateChannel.TryAdd(key, channel);
            
             try
             {
-                var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
+                var groups = await userService.GetUserGroups(request?.Oid ?? string.Empty).ConfigureAwait(false) ?? [];
                 
                 await WriteResponse(responseStream, groups).ConfigureAwait(false);
 
-                await foreach (var state in serviceStateChannel[id].Reader.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+                await foreach (var state in channel.Reader.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
                 {
                     logger.LogDebug($"Client IPC: {state}");
                     await WriteResponse(responseStream, groups).ConfigureAwait(false);
@@ -50,7 +55,7 @@ namespace PeakSWC.RemoteWebView
             }
             finally 
             {
-                serviceStateChannel.TryRemove(id, out _);
+                serviceStateChannel.TryRemove(KeyValuePair.Create(key, channel));
             }        
         }
 
@@ -140,6 +145,8 @@ namespace PeakSWC.RemoteWebView
             {
                 try
                 {
+                    if (!pending.Task.IsCompleted)
+                        continue;
                     results.Add(await pending.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false));
                 }
                 catch

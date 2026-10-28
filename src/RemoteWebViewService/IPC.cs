@@ -1,4 +1,4 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -111,13 +111,26 @@ namespace PeakSWC.RemoteWebView
         {
             if (observers.TryGetValue(brn, out var channel))
             {
-                await foreach (var request in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+                try
                 {
-                    if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet", StringComparison.Ordinal))
+                    await foreach (var request in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary, cancellationToken).ConfigureAwait(false);
-                        if (logger.IsEnabled(LogLevel.Information))
-                            logger.LogDebug($"WebView -> Browser {request.Id} {request.Request}");
+                        if (brn.IsPrimary || !request.Request.Contains("EndInvokeDotNet", StringComparison.Ordinal))
+                        {
+                            await WriteMessage(brn.StreamWriter, request, !brn.IsPrimary, cancellationToken).ConfigureAwait(false);
+                            if (logger.IsEnabled(LogLevel.Information))
+                                logger.LogDebug($"WebView -> Browser {request.Id} {request.Request}");
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                finally
+                {
+                    if (observers.TryRemove(brn, out var removed))
+                    {
+                        removed.Writer.TryComplete();
                     }
                 }
             }

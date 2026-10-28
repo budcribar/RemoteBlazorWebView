@@ -1,4 +1,4 @@
-﻿//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
+//$(UserProfile)\.nuget\packages\$(AssemblyName.toLower())\$(Version)\lib
 
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
@@ -256,7 +256,7 @@ namespace PeakSWC.RemoteWebView
                                     // TODO Create property for timeout value
                                     await Task.Delay(TimeSpan.FromSeconds(90), cts.Token).ConfigureAwait(false);
                                 }
-                                catch (Exception) { }
+                                catch (Exception) { return; }
 
                                 if (!connected)
                                 {
@@ -297,6 +297,10 @@ namespace PeakSWC.RemoteWebView
                             logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
                             cts.Cancel();
                             break; // Exit processing on shutdown
+                        }
+                        else if (commandSpan.Equals("location", StringComparison.OrdinalIgnoreCase) || commandSpan.Equals("size", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Informational window location/size notifications from IPC; no action required on the client.
                         }
                         else if (commandSpan.Equals("connected", StringComparison.OrdinalIgnoreCase))
                         {
@@ -390,9 +394,12 @@ namespace PeakSWC.RemoteWebView
             try
             {
                 // Parse the payload: "connected:url|user"
-                var split = payload.Split('|');
-                var user = split.Length == 2 ? split[1] : string.Empty;
-                var ipPart = split.Length > 0 ? split[0].Substring(split[0].IndexOf(':') + 1).Replace(":", "") : string.Empty;
+                int pipeIndex = payload.IndexOf('|');
+                var user = pipeIndex >= 0 ? payload[(pipeIndex + 1)..] : string.Empty;
+                var rawIp = pipeIndex >= 0 ? payload[..pipeIndex] : payload;
+                if (rawIp.StartsWith("connected:", StringComparison.OrdinalIgnoreCase))
+                    rawIp = rawIp["connected:".Length..];
+                var ipPart = rawIp;
                 FireConnected(ipPart, user);
             }
             catch (Exception ex)
@@ -463,7 +470,8 @@ namespace PeakSWC.RemoteWebView
             var color = "#f1f1f1";
             var hostname = Dns.GetHostName();
       
-            var url = $"{uri}app/{id}" ?? "";
+            var baseUri = uri?.ToString().TrimEnd('/');
+            var url = string.IsNullOrEmpty(baseUri) ? $"app/{id}" : $"{baseUri}/app/{id}";
 
             string style = $@"
             <style>

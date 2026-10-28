@@ -86,15 +86,19 @@ namespace PeakSWC.RemoteWebView
                 return true;
 
             var raw = string.IsNullOrWhiteSpace(requestUri) ? "/" : requestUri;
-            var queryIndex = raw.IndexOf('?');
-            var pathPart = queryIndex >= 0 ? raw[..queryIndex] : raw;
-            var query = queryIndex >= 0 ? raw[queryIndex..] : "";
+            var fragmentIndex = raw.IndexOf('#');
+            var fragment = fragmentIndex >= 0 ? raw[fragmentIndex..] : "";
+            var withoutFragment = fragmentIndex >= 0 ? raw[..fragmentIndex] : raw;
+
+            var queryIndex = withoutFragment.IndexOf('?');
+            var pathPart = queryIndex >= 0 ? withoutFragment[..queryIndex] : withoutFragment;
+            var query = queryIndex >= 0 ? withoutFragment[queryIndex..] : "";
             if (!pathPart.StartsWith('/'))
                 pathPart = "/" + pathPart;
 
             // Escape each segment so a decoded space survives Uri parsing, without double-encoding %20.
             var escapedPath = string.Join("/", pathPart.Split('/').Select(segment => Uri.EscapeDataString(Uri.UnescapeDataString(segment))));
-            return Uri.TryCreate($"https://{HostAddressHelper.GetAppHostAddress()}{escapedPath}{query}", UriKind.Absolute, out uri!);
+            return Uri.TryCreate($"https://{HostAddressHelper.GetAppHostAddress()}{escapedPath}{query}{fragment}", UriKind.Absolute, out uri!);
         }
     }
 }

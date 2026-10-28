@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -58,6 +58,11 @@ namespace PeakSWC.RemoteWebView
                 }
             }
 
+            if (!double.IsFinite(responseTime) || responseTime < 0)
+            {
+                responseTime = 0.0;
+            }
+
             // Atomically add the response time using CompareExchange since Interlocked.Add doesn't support double
             double initialTotal, newTotal;
             do
@@ -88,7 +93,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             // Update min response time if responseTime > 0
-            if (responseTime > 0)
+            if (responseTime >= 0)
             {
                 double initialMin, computedMin;
                 do
@@ -174,7 +179,9 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public Dictionary<int, double> GetLatencyPercentiles(List<int>? percentiles = null)
         {
-            percentiles ??= new List<int> { 50, 90, 99 };
+            if (percentiles == null || percentiles.Count == 0)
+                percentiles = new List<int> { 50, 90, 99 };
+
             var sortedTimes = _responseTimes.OrderBy(x => x).ToList();
             var n = sortedTimes.Count;
             var results = new Dictionary<int, double>();
@@ -187,7 +194,7 @@ namespace PeakSWC.RemoteWebView
                     continue;
                 }
 
-                double rank = (p / 100.0) * (n - 1);
+                double rank = Math.Clamp((p / 100.0) * (n - 1), 0.0, n - 1);
                 int lower = (int)Math.Floor(rank);
                 int upper = (int)Math.Ceiling(rank);
                 double weight = rank - lower;

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,6 +12,9 @@ namespace PeakSWC.RemoteWebView.Services
     {
         public async Task Shutdown(string id, Exception? exception = null)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                return;
+
             if (serviceDictionary.TryRemove(id, out var client))
             {
                 try

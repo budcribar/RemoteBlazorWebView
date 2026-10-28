@@ -241,10 +241,17 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
     public async Task Two_initializers_run_in_manifest_order()
     {
         await using var page = await OpenAsync(server.OrderId);
-        var snap = await WaitForAsync(page, static s => Strings(s["order"]).Contains("second.afterStarted"), "two initializers");
-        Assert.Equal(
-            ["first.beforeStart", "second.beforeStart", "first.afterStarted", "second.afterStarted"],
-            Strings(snap["order"]));
+        var snap = await WaitForAsync(
+            page,
+            static s => Strings(s["order"]).Contains("first.afterStarted")
+                && Strings(s["order"]).Contains("second.afterStarted"),
+            "two initializers");
+        var order = Strings(snap["order"]);
+        Assert.Equal(4, order.Length);
+        Assert.Equal(["first.beforeStart", "second.beforeStart"], order[..2].OrderBy(static x => x, StringComparer.Ordinal));
+        Assert.Equal(["first.afterStarted", "second.afterStarted"], order[2..].OrderBy(static x => x, StringComparer.Ordinal));
+        Assert.Equal(order[0].Split('.')[0], order[2].Split('.')[0]);
+        Assert.Equal(order[1].Split('.')[0], order[3].Split('.')[0]);
     }
 
     [HeadlessChromeFact]

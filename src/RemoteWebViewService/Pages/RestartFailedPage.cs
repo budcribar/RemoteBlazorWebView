@@ -1,4 +1,4 @@
-﻿namespace PeakSWC.RemoteWebView.Pages
+namespace PeakSWC.RemoteWebView.Pages
 {
     public static class RestartFailedPage
     {
@@ -34,6 +34,7 @@
         }
         public static string Html(string guid, bool isRestarting)
         {
+            var safeGuid = System.Net.WebUtility.HtmlEncode(guid);
             string title = isRestarting ? "Restart" : "Start";
             string failure = isRestarting ? "restart" : "start";
 
@@ -50,7 +51,7 @@
                 <div style='vertical-align:middle;margin:0;height:100%;color:#a94442;background-color:#f2dede;text-align:center;font-size: large; font-family: Verdana, Geneva, Tahoma, sans-serif;'>
                     <br/>
                     <br/>
-                <span >  Failed to {failure} {guid}.</span>
+                <span >  Failed to {failure} {safeGuid}.</span>
                 <br/>
                 <br/>
 
@@ -64,11 +65,12 @@
         }
         public static string Fragment(string guid)
         {
+            var safeGuid = System.Net.WebUtility.HtmlEncode(guid);
             string html = $"""
                 <div style='vertical-align:middle;margin:0;height:100%;color:#a94442;background-color:#f2dede;text-align:center;font-size: large; font-family: Verdana, Geneva, Tahoma, sans-serif;'>
                     <br/>
                     <br/>
-                <span >  Failed to restart {guid}.</span>
+                <span >  Failed to restart {safeGuid}.</span>
                 <br/>
                 <br/>
 

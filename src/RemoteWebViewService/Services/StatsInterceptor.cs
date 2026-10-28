@@ -1,4 +1,4 @@
-﻿using Grpc.Core.Interceptors;
+using Grpc.Core.Interceptors;
 using Grpc.Core;
 using System.Threading.Tasks;
 using System;
@@ -50,8 +50,14 @@ namespace PeakSWC.RemoteWebView.Services
                 stats.RecordBytesReceived(bytesReceived);
 
                 var wrappedStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
-                await continuation(request, wrappedStream, context).ConfigureAwait(false);
-                stats.RecordBytesSent(wrappedStream.BytesSent);
+                try
+                {
+                    await continuation(request, wrappedStream, context).ConfigureAwait(false);
+                }
+                finally
+                {
+                    stats.RecordBytesSent(wrappedStream.BytesSent);
+                }
             });
         }
 
@@ -86,8 +92,14 @@ namespace PeakSWC.RemoteWebView.Services
             {
                 var wrappedRequestStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
                 var wrappedResponseStream = new StatsServerStreamWriter<TResponse>(responseStream, stats);
-                await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
-                stats.RecordBytesSent(wrappedResponseStream.BytesSent);
+                try
+                {
+                    await continuation(wrappedRequestStream, wrappedResponseStream, context).ConfigureAwait(false);
+                }
+                finally
+                {
+                    stats.RecordBytesSent(wrappedResponseStream.BytesSent);
+                }
             });
         }
 
@@ -165,6 +177,17 @@ namespace PeakSWC.RemoteWebView.Services
 
                 await inner.WriteAsync(message).ConfigureAwait(false);
             }
+
+            public async Task WriteAsync(TResponse message, CancellationToken cancellationToken)
+            {
+                if (message is IMessage message2)
+                {
+                    long size = stats.CalculateMessageSize(message2);
+                    Interlocked.Add(ref _bytesSent, size);
+                }
+
+                await inner.WriteAsync(message, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -193,4 +216,3 @@ namespace PeakSWC.RemoteWebView.Services
         }
     }
 }
-

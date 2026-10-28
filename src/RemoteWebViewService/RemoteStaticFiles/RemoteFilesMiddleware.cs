@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.StaticFiles;
@@ -214,7 +214,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             if (options.UseClientCache && context.Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var ifNoneMatch))
             {
                 string eTag = clientMetadata.ETag;
-                if (ifNoneMatch.Contains(eTag))
+                if (!string.IsNullOrEmpty(eTag) && MatchesETag(ifNoneMatch, eTag))
                 {
                     logger.LogDebug("ETag matches for file '{SubPath}'. Returning 304 Not Modified.", subPath);
                     context.Response.StatusCode = StatusCodes.Status304NotModified;
@@ -310,8 +310,12 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 string eTag = clientMetadata.ETag;
                 context.Response.Headers[HeaderNames.ETag] = eTag;
 
-                // Ensure Last-Modified is set
-                context.Response.Headers[HeaderNames.LastModified] = DateTimeOffset.FromUnixTimeSeconds(clientMetadata.LastModified).ToString("r");
+                // Ensure Last-Modified is set if within valid DateTimeOffset Unix seconds range
+                long lastModified = clientMetadata.LastModified;
+                if (lastModified >= -62135596800L && lastModified <= 253402300799L)
+                {
+                    context.Response.Headers[HeaderNames.LastModified] = DateTimeOffset.FromUnixTimeSeconds(lastModified).ToString("r");
+                }
             }
         }
 
@@ -338,6 +342,34 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
        
         private string GetContentType(string fileName) => _contentTypeProvider.TryGetContentType(fileName, out var contentType) ? contentType : "application/octet-stream";
+
+        private static bool MatchesETag(Microsoft.Extensions.Primitives.StringValues ifNoneMatch, string eTag)
+        {
+            var normalizedETag = eTag.AsSpan().Trim();
+            if (normalizedETag.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+                normalizedETag = normalizedETag[2..].Trim();
+            normalizedETag = normalizedETag.Trim('"');
+            if (normalizedETag.IsEmpty)
+                return false;
+
+            foreach (var header in ifNoneMatch)
+            {
+                if (string.IsNullOrEmpty(header))
+                    continue;
+                foreach (var part in header.Split(','))
+                {
+                    var candidate = part.AsSpan().Trim();
+                    if (candidate.Equals("*", StringComparison.Ordinal))
+                        return true;
+                    if (candidate.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+                        candidate = candidate[2..].Trim();
+                    candidate = candidate.Trim('"');
+                    if (candidate.Equals(normalizedETag, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+            return false;
+        }
 
         private static string ServerCacheKey(Guid clientId, string subPath)
             => clientId.ToString("N") + "/" + subPath;

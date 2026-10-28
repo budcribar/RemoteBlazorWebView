@@ -1,4 +1,3 @@
-
 namespace PeakSWC.RemoteWebView;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Composite;
@@ -13,7 +12,7 @@ public class OptimizedCompositeFileProvider : IFileProvider
 
     public OptimizedCompositeFileProvider(params IFileProvider[]? fileProviders)
     {
-        _fileProviders = fileProviders ?? Array.Empty<IFileProvider>();
+        _fileProviders = fileProviders?.Where(p => p != null).ToArray() ?? Array.Empty<IFileProvider>();
     }
 
     public IFileInfo GetFileInfo(string subpath)
@@ -57,11 +56,17 @@ public class OptimizedCompositeFileProvider : IFileProvider
     }
     public IDirectoryContents GetDirectoryContents(string subpath)
     {
+        if (subpath == null)
+            return NotFoundDirectoryContents.Singleton;
+
         var directoryContents = new CompositeDirectoryContents(_fileProviders, subpath);
         return directoryContents;
     }
     public IChangeToken Watch(string pattern)
     {
+        if (string.IsNullOrEmpty(pattern))
+            return NullChangeToken.Singleton;
+
         // Watch all file providers
         var changeTokens = new List<IChangeToken>();
         foreach (IFileProvider fileProvider in _fileProviders)
@@ -83,4 +88,3 @@ public class OptimizedCompositeFileProvider : IFileProvider
     }
   
 }
-

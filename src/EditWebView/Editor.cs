@@ -24,9 +24,9 @@ namespace EditWebView
         {
             var fileName = Path.GetFileName(file);
 
-            if (fileName == "BlazorWebView.cs")
+            if (string.Equals(fileName, "BlazorWebView.cs", StringComparison.OrdinalIgnoreCase))
             {
-                return file.Contains("WindowsForms") ? BlazorWebViewFormBaseFile : BlazorWebViewBaseFile;
+                return file.Contains("WindowsForms", StringComparison.OrdinalIgnoreCase) ? BlazorWebViewFormBaseFile : BlazorWebViewBaseFile;
             }
 
             return fileName;
@@ -196,6 +196,10 @@ namespace EditWebView
 
         public void WriteAllText(string outputDir)
         {
+            if (string.IsNullOrWhiteSpace(outputDir))
+                throw new ArgumentException("Output directory cannot be null or empty.", nameof(outputDir));
+
+            Directory.CreateDirectory(outputDir);
             File.WriteAllText(Path.Combine(outputDir, _fileName), _text);
         }
 

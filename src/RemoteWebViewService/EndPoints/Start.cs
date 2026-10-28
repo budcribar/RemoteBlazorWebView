@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.Pages;
@@ -39,11 +39,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
                         return;
                     }
-                    // Set the service state
-                    serviceState.Cookies = context.Request.Cookies;
-                    serviceState.InUse = true;
-                    serviceState.User = context.User.GetDisplayName() ?? "";
-
                     // Notify that the browser is attached, if applicable
                     if (serviceState.IPC.ClientResponseStream != null)
                     {
@@ -51,10 +46,16 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
                             .ConfigureAwait(false);
                     }
+
+                    // Set the service state only after notifying the client stream succeeds
+                    serviceState.Cookies = context.Request.Cookies;
+                    serviceState.InUse = true;
+                    serviceState.User = context.User.GetDisplayName() ?? "";
+
                     // Notify all channels of the connection
                     foreach (var channel in serviceStateChannel.Values)
                     {
-                        await channel.Writer.WriteAsync($"Connect:{guid}").ConfigureAwait(false);
+                        channel.Writer.TryWrite($"Connect:{guid}");
                     }
 
                     // Redirect to the specific GUID page

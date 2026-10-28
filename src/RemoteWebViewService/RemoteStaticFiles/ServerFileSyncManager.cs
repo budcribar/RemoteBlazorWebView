@@ -1,4 +1,4 @@
-﻿using Grpc.Core;
+using Grpc.Core;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using System;
@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         // Optional: set expiration in seconds using environment variables (default to 10 minutes)
         public readonly int CacheTimeoutSeconds = int.TryParse(
             Environment.GetEnvironmentVariable("CACHE_TIMEOUT_SECONDS"),
-            out var timeout) ? timeout : 600;
+            out var timeout) && timeout > 0 ? timeout : 600;
 
         // Channel to serialize all write operations
         private static readonly int MaxConcurrentFileRequests = 1000; // Adjust as needed
@@ -37,12 +37,14 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         });
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly Task _processWriteTask;
+        private int _disposed;
 
         public ServerFileSyncManager(ILogger<ServerFileSyncManager> logger)
         {
             _logger = logger;
             // Start the channel reader
-            _ = Task.Run(ProcessWriteChannelAsync, _cts.Token);
+            _processWriteTask = Task.Run(ProcessWriteChannelAsync, _cts.Token);
         }
 
         /// <summary>
@@ -58,7 +60,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             // Initialize the nested dictionaries for the client
             _metadataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>());
             _fileDataRequests.TryAdd(clientGuid, new ConcurrentDictionary<string, DataRequest>());
-            _htmlHostPaths.TryAdd(clientGuid, htmlHostPath);
+            _htmlHostPaths[clientGuid] = htmlHostPath;
         }
 
         /// <summary>
@@ -131,7 +133,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             {
                 if (clientMetadataRequests.TryRemove(requestId, out var tcs))
                 {
-                    tcs.SetResult(metadata);
+                    tcs.TrySetResult(metadata);
                     _logger.LogDebug("Received metadata for requestId: {RequestId} from client GUID: {ClientGuid}", requestId, clientGuid);
                 }
                 else
@@ -168,6 +170,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                     }
                     catch (Exception ex)
                     {
+                        clientFileDataRequests.TryRemove(requestId, out _);
                         try
                         {
                             pipeWriter.Complete(ex);
@@ -205,6 +208,9 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// </summary>
         public Task<FileMetadata> RequestFileMetadataAsync(string clientGuid, string filePath, ILogger<RemoteFileResolver> logger, string? requestUri = null, string? contentType = null)
         {
+            if (string.IsNullOrWhiteSpace(clientGuid))
+                return Task.FromResult(new FileMetadata { Length = -1, StatusCode = (int)HttpStatusCode.InternalServerError });
+
             var requestId = Guid.NewGuid().ToString();
             var tcs = new TaskCompletionSource<FileMetadata>(TaskCreationOptions.RunContinuationsAsynchronously);
             var clientMetadataRequests = _metadataRequests.GetOrAdd(clientGuid, new ConcurrentDictionary<string, TaskCompletionSource<FileMetadata>>());
@@ -245,11 +251,24 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                             RequestUri = requestUri ?? string.Empty,
                             ContentType = contentType ?? string.Empty
                         };
-                        await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
-                        _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
+
+                        try
+                        {
+                            await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
+                            _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                                dict.TryRemove(requestId, out _);
+                            tcs.TrySetException(ex);
+                            throw;
+                        }
                     }
                     else
                     {
+                        if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                            dict.TryRemove(requestId, out _);
                         tcs.TrySetException(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
                     }
                 }
@@ -269,7 +288,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             var requestId = Guid.NewGuid().ToString();
             var dataRequest = new DataRequest(_cts.Token);
 
-            if (!_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests) || !clientFileDataRequests.TryAdd(requestId, dataRequest))
+            if (string.IsNullOrWhiteSpace(clientGuid) || !_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests) || !clientFileDataRequests.TryAdd(requestId, dataRequest))
             {
                 logger.LogCritical("A file data request with requestId: {RequestId} for client GUID: {ClientGuid} could not be created.", requestId, clientGuid);
                 dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' is not registered for file data."));
@@ -290,11 +309,24 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                             RequestType = ServerFileReadRequest.Types.RequestType.FileData
                         };
 
-                        await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
-                        _logger.LogDebug("Sent file data request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
+
+                        try
+                        {
+                            await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
+                            _logger.LogDebug("Sent file data request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_fileDataRequests.TryGetValue(clientGuid, out var dict))
+                                dict.TryRemove(requestId, out _);
+                            dataRequest.Pipe.Writer.Complete(ex);
+                            throw;
+                        }
                     }
                     else
                     {
+                        if (_fileDataRequests.TryGetValue(clientGuid, out var dict))
+                            dict.TryRemove(requestId, out _);
                         _logger.LogWarning("Cannot send file data request. Client GUID: {ClientGuid} is not associated with a response stream.", clientGuid);
                         dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
                     }
@@ -353,17 +385,23 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
         /// </summary>
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+                return;
+
             _cts.Cancel();
-            _writeChannel.Writer.Complete();
+            _writeChannel.Writer.TryComplete();
 
             try
             {
                 // _cts is already cancelled above, so this wait must not use that token or it returns immediately.
-                ProcessWriteChannelAsync().Wait(CancellationToken.None);
+                _processWriteTask.Wait(CancellationToken.None);
             }
             catch (AggregateException ae)
             {
                 ae.Handle(ex => ex is OperationCanceledException);
+            }
+            catch (OperationCanceledException)
+            {
             }
 
             _cts.Dispose();
@@ -375,7 +413,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             foreach (var clientMetadataRequests in _metadataRequests.Values)
                 foreach (var tcs in clientMetadataRequests.Values)
                     if (!tcs.Task.IsCompleted)
-                        tcs.SetException(new OperationCanceledException("ServerFileSyncManager is disposing."));
+                        tcs.TrySetException(new OperationCanceledException("ServerFileSyncManager is disposing."));
 
             _clientResponseStreams.Clear();
             _metadataRequests.Clear();
