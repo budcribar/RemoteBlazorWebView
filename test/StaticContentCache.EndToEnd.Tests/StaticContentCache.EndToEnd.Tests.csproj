@@ -22,6 +22,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\RemoteWebView\RemoteWebView.csproj">
       <Aliases>client</Aliases>
     </ProjectReference>
