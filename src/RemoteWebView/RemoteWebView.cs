@@ -32,11 +32,14 @@ namespace PeakSWC.RemoteWebView
             var root = Path.GetDirectoryName(hostPage) ?? string.Empty;
             var entryAssembly = Assembly.GetEntryAssembly()!;
 
-            try
+            if (Directory.Exists(contentRootDir))
             {
-                return new PhysicalFileProvider(contentRootDir);
+                try
+                {
+                    return new PhysicalFileProvider(contentRootDir);
+                }
+                catch (Exception) { }
             }
-            catch (Exception) { }
 
             try
             {
@@ -407,17 +410,19 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         private async Task ShutdownChannelAsync()
         {
-            cts.Cancel();
-            if (channel != null)
+            if (channel == null)
+                return;
+
+            try
             {
-                try
-                {
-                    await channel.ShutdownAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error shutting down channel.");
-                }
+                // Grpc.Net.Client's GrpcChannel does not override ChannelBase.ShutdownAsyncCore, so
+                // ShutdownAsync is a no-op. Dispose releases the handler and cancels active calls.
+                await channel.ShutdownAsync().ConfigureAwait(false);
+                channel.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error shutting down channel.");
             }
         }
 
@@ -501,18 +506,7 @@ namespace PeakSWC.RemoteWebView
 
             cts.Cancel();
             cts.Dispose();
-
-            if (channel != null)
-            {
-                try
-                {
-                    await channel.ShutdownAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error shutting down channel.");
-                }
-            }
+            await ShutdownChannelAsync().ConfigureAwait(false);
         }
     }
 }
