@@ -212,13 +212,13 @@ namespace FileSyncServer.Tests
         }
 
         [WindowsOnlyFact]
-        public void TestConnectedEvent()
+        public async Task TestConnectedEvent()
         {
             var rootComponent = CreateRootComponent();
             var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.NotNull(webView);
 
-            AutoResetEvent threadInitialized = new AutoResetEvent(false);
+            var connected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
             BlazorWebViewFormFactory.MainForm?.Invoke(() =>
             {
@@ -231,8 +231,7 @@ namespace FileSyncServer.Tests
                     webView.WebView.CoreWebView2.Navigate($"{e.Url}mirror/{e.Id}");
                     var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
                     BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
-                    Task.Delay(3000).Wait();
-                    threadInitialized.Set();
+                    connected.TrySetResult();
                 };
 
                 webView.ReadyToConnect += (sender, e) =>
@@ -244,7 +243,12 @@ namespace FileSyncServer.Tests
                 webView.HostPage = @"wwwroot\index.html";
             });
 
-            Assert.True(threadInitialized.WaitOne(10000));
+            // 10s is only for the browser to connect. The 3s pause used to run
+            // inside the handler before the signal, so a slow launch failed the
+            // wait even after Connected had fired.
+            await Task.WhenAny(connected.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.True(connected.Task.IsCompletedSuccessfully);
+            await Task.Delay(3000);
         }
 
         [WindowsOnlyFact]
