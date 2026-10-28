@@ -1,8 +1,8 @@
 # Builds and runs every test project on a Windows runner.
 #
 # Push to net10, net10-ci, and workflow_dispatch only. Pull requests are omitted so this
-# does not run for forks. StaticContentCache and lifecycle tests are net11-only
-# and are not on this line.
+# does not run for forks. Lifecycle tests are net11-only. Module serving tests in
+# StaticContentCache.EndToEnd.Tests run here; the Chrome hook tests do not.
 #
 # RemoteBlazorWebView is built before the projects that reference it, and before
 # the tutorial. StressServer is not built: it embeds a tutorial executable.
@@ -112,7 +112,8 @@ jobs:
             'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
             'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
             'src/Benchmarks/FilePOC/Client/Client.csproj',
-            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
+            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj',
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj'
           )
           foreach ($project in $projects) {
             $args = $common
@@ -125,6 +126,19 @@ jobs:
             }
             dotnet build $project @args
           }
+
+
+      - name: Test module serving
+        if: steps.build.outcome == 'success'
+        run: |
+          dotnet test test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            --logger "trx;LogFileName=StaticContentCache.EndToEnd.Tests.trx" `
+            --results-directory TestResults/StaticContentCache.EndToEnd.Tests
 
       # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
       # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
