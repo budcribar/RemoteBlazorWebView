@@ -73,9 +73,10 @@ public class BaselineModuleRunTests : IAsyncLifetime
     [HeadlessChromeFact]
     public async Task Test_hook_sees_each_initializer_once_in_order_via_the_remote_path()
     {
-        var chrome = FindChrome();
+        var chrome = ChromeSession.FindBrowser()
+            ?? throw new InvalidOperationException("Google Chrome or Chromium was not found.");
         var pageUrl = $"{_host!.BrowserUrl}/{_clientId}/{HostPageName}";
-        var json = await RunHook(chrome!, pageUrl);
+        var json = await RunHook(chrome, pageUrl);
         var report = JsonSerializer.Deserialize<HookReport>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.NotNull(report);
         Assert.True(string.IsNullOrEmpty(report.Error), report.Error);
@@ -103,46 +104,6 @@ public class BaselineModuleRunTests : IAsyncLifetime
     }
 
     private static string Asset(string name) => Path.Combine(AppContext.BaseDirectory, "Assets", name);
-
-    private static string? FindChrome()
-    {
-        foreach (var name in new[] { "google-chrome-stable", "chromium", "chromium-browser", "google-chrome" })
-        {
-            var path = Which(name);
-            if (path is not null && !IsSharedDebugPortWrapper(path))
-                return path;
-        }
-        return null;
-    }
-
-    private static bool IsSharedDebugPortWrapper(string path)
-    {
-        var info = new System.IO.FileInfo(path);
-        if (info.Length > 64 * 1024)
-            return false;
-        try
-        {
-            return File.ReadAllText(path).Contains("remote-debugging-port=9222", StringComparison.Ordinal);
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-    }
-
-    private static string? Which(string name)
-    {
-        var path = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrEmpty(path))
-            return null;
-        foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            var candidate = Path.Combine(dir, name);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-        return null;
-    }
 
     private async Task<string> RunHook(string chrome, string url)
     {

@@ -409,9 +409,10 @@ public class ModuleInitializerContractTests
 
         public async Task<ContractReport[]> LoadManyAsync(Guid id, string query, int reports, Func<ContractReport, Task>? afterFirst = null)
         {
-            var chrome = FindChrome();
+            var chrome = ChromeSession.FindBrowser()
+                ?? throw new InvalidOperationException("Google Chrome or Chromium was not found.");
             var seen = Reports().Count;
-            var process = StartChrome(chrome!, $"{BrowserUrl}/{id}/{HostPageName}{query}");
+            var process = StartChrome(chrome, $"{BrowserUrl}/{id}/{HostPageName}{query}");
             try
             {
                 if (afterFirst is not null)
@@ -541,23 +542,6 @@ public class ModuleInitializerContractTests
             if (!process.HasExited)
                 process.Kill(entireProcessTree: true);
             process.Dispose();
-        }
-
-        private static string? FindChrome()
-        {
-            var path = Environment.GetEnvironmentVariable("PATH");
-            if (string.IsNullOrEmpty(path))
-                return null;
-            foreach (var name in new[] { "google-chrome", "google-chrome-stable", "chromium", "chromium-browser" })
-            {
-                foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var candidate = Path.Combine(dir, name);
-                    if (File.Exists(candidate))
-                        return candidate;
-                }
-            }
-            return null;
         }
 
         private static int FreePort()

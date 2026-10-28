@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
@@ -10,9 +11,12 @@ namespace StaticContentCache.EndToEnd.Tests;
 
 /// <summary>
 /// Headless Google Chrome (or Chromium) over the DevTools protocol.
-/// Playwright is not referenced. The browser is the installed Chrome binary,
-/// started with its own user-data directory so the machine wrapper that pins
-/// port 9222 is not used.
+/// Playwright is not referenced. <see cref="FindBrowser"/> is the one lookup
+/// used to decide whether a browser test runs and which binary it starts:
+/// CHROME_PATH, a known install, a PATH binary, or Playwright's Chrome for
+/// Testing under ms-playwright/chromium-*. The headless shell is not used.
+/// Each launch gets its own user-data directory so a wrapper that pins port
+/// 9222 is not used.
 /// </summary>
 public sealed class ChromeSession : IAsyncDisposable
 {
@@ -32,25 +36,147 @@ public sealed class ChromeSession : IAsyncDisposable
     public static string? FindBrowser()
     {
         var env = Environment.GetEnvironmentVariable("CHROME_PATH");
-        if (!string.IsNullOrEmpty(env) && File.Exists(env) && !ForcesSharedDebugPort(env))
+        if (IsUsableBrowser(env))
             return env;
 
-        string[] candidates =
-        [
-            "/usr/bin/google-chrome-stable",
-            "/usr/bin/chromium",
-            "/usr/bin/chromium-browser",
-            "/opt/google/chrome/chrome",
-            @"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-        ];
-        foreach (var candidate in candidates)
+        foreach (var candidate in InstalledCandidates())
         {
-            if (File.Exists(candidate) && !ForcesSharedDebugPort(candidate))
+            if (IsUsableBrowser(candidate))
                 return candidate;
         }
 
+        var localAppData = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+        if (string.IsNullOrEmpty(localAppData))
+            localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        foreach (var root in PlaywrightRegistryRoots(
+            Environment.GetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH"),
+            localAppData,
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetEnvironmentVariable("XDG_CACHE_HOME"),
+            OperatingSystem.IsWindows()))
+        {
+            var playwright = FindPlaywrightChrome(root);
+            if (playwright is not null)
+                return playwright;
+        }
+
         return null;
+    }
+
+    internal static IEnumerable<string> PlaywrightRegistryRoots(string? browsersPath, string? localAppData, string? home, string? xdgCacheHome, bool windows)
+    {
+        // Playwright treats "0" as "beside the package". This lookup does not
+        // know that directory. An explicit path replaces the default registry.
+        if (string.Equals(browsersPath, "0", StringComparison.Ordinal))
+            yield break;
+        if (!string.IsNullOrWhiteSpace(browsersPath))
+        {
+            yield return Path.IsPathRooted(browsersPath) ? browsersPath : Path.GetFullPath(browsersPath);
+            yield break;
+        }
+
+        if (windows)
+        {
+            if (!string.IsNullOrEmpty(localAppData))
+                yield return Path.Combine(localAppData, "ms-playwright");
+            yield break;
+        }
+
+        if (!string.IsNullOrEmpty(xdgCacheHome))
+            yield return Path.Combine(xdgCacheHome, "ms-playwright");
+        if (!string.IsNullOrEmpty(home))
+            yield return Path.Combine(home, ".cache", "ms-playwright");
+    }
+
+    internal static string? FindPlaywrightChrome(string registryRoot)
+    {
+        if (string.IsNullOrEmpty(registryRoot) || !Directory.Exists(registryRoot))
+            return null;
+
+        List<(int Revision, string Directory)> installs = [];
+        IEnumerable<string> directories;
+        try
+        {
+            directories = Directory.EnumerateDirectories(registryRoot);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        foreach (var directory in directories)
+        {
+            var name = Path.GetFileName(directory);
+            const string prefix = "chromium-";
+            if (!name.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+            if (!int.TryParse(name.AsSpan(prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var revision))
+                continue;
+            installs.Add((revision, directory));
+        }
+
+        foreach (var install in installs.OrderByDescending(install => install.Revision))
+        {
+            foreach (var relative in PlaywrightChromeRelativePaths)
+            {
+                var candidate = Path.Combine(install.Directory, relative);
+                if (IsUsableBrowser(candidate))
+                    return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> InstalledCandidates()
+    {
+        yield return "/usr/bin/google-chrome-stable";
+        yield return "/usr/bin/chromium";
+        yield return "/usr/bin/chromium-browser";
+        yield return "/opt/google/chrome/chrome";
+        yield return @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+        yield return @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
+
+        var path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path))
+            yield break;
+
+        string[] names = OperatingSystem.IsWindows()
+            ? ["chrome.exe", "chrome", "google-chrome.exe", "chromium.exe"]
+            : ["google-chrome-stable", "google-chrome", "chromium", "chromium-browser", "chrome"];
+        foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            foreach (var name in names)
+                yield return Path.Combine(dir, name);
+        }
+    }
+
+    private static readonly string[] PlaywrightChromeRelativePaths =
+    [
+        Path.Combine("chrome-win64", "chrome.exe"),
+        Path.Combine("chrome-win", "chrome.exe"),
+        Path.Combine("chrome-linux64", "chrome"),
+        Path.Combine("chrome-linux", "chrome"),
+        Path.Combine("chrome-linux-arm64", "chrome")
+    ];
+
+    private static bool IsUsableBrowser(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists)
+                return false;
+            _ = info.Length;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+
+        return !ForcesSharedDebugPort(path);
     }
 
     public static async Task<ChromeSession> StartAsync()
@@ -181,10 +307,12 @@ public sealed class ChromeSession : IAsyncDisposable
     {
         try
         {
-            var head = File.ReadAllText(path);
-            return head.Contains("remote-debugging-port=9222", StringComparison.Ordinal);
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length > 64 * 1024)
+                return false;
+            return File.ReadAllText(path).Contains("remote-debugging-port=9222", StringComparison.Ordinal);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
