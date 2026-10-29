@@ -328,21 +328,33 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
             foreach (var header in ifNoneMatch)
             {
-                if (string.IsNullOrEmpty(header))
-                    continue;
-                foreach (var part in header.Split(','))
-                {
-                    var candidate = part.AsSpan().Trim();
-                    if (candidate.Equals("*", StringComparison.Ordinal))
-                        return true;
-                    if (candidate.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
-                        candidate = candidate[2..].Trim();
-                    candidate = candidate.Trim('"');
-                    if (candidate.Equals(normalizedETag, StringComparison.Ordinal))
-                        return true;
-                }
+                if (HeaderMatchesETag(header, normalizedETag))
+                    return true;
             }
             return false;
+        }
+
+        private static bool HeaderMatchesETag(string? header, ReadOnlySpan<char> normalizedETag)
+        {
+            if (string.IsNullOrEmpty(header))
+                return false;
+            foreach (var part in header.Split(','))
+            {
+                if (CandidateMatchesETag(part, normalizedETag))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool CandidateMatchesETag(ReadOnlySpan<char> candidate, ReadOnlySpan<char> normalizedETag)
+        {
+            candidate = candidate.Trim();
+            if (candidate.Equals("*", StringComparison.Ordinal))
+                return true;
+            if (candidate.StartsWith("W/", StringComparison.OrdinalIgnoreCase))
+                candidate = candidate[2..].Trim();
+            candidate = candidate.Trim('"');
+            return candidate.Equals(normalizedETag, StringComparison.Ordinal);
         }
 
         private static string ServerCacheKey(Guid clientId, string subPath)
