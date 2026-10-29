@@ -132,6 +132,9 @@ jobs:
       - name: Test module serving
         if: steps.build.outcome == 'success'
         run: |
+          # Both suites always run. PowerShell otherwise keeps only the last native exit code,
+          # which hid EndToEnd failures when Lifecycle passed (run 40813641256).
+          $failed = $false
           dotnet test test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj `
             -c Release `
             --no-build `
@@ -140,7 +143,10 @@ jobs:
             -p:GeneratePackageOnBuild=false `
             --logger "trx;LogFileName=StaticContentCache.EndToEnd.Tests.trx" `
             --results-directory TestResults/StaticContentCache.EndToEnd.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
           dotnet test test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj -c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false --logger "trx;LogFileName=RemoteWebView.Lifecycle.Tests.trx" --results-directory TestResults/RemoteWebView.Lifecycle.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          if ($failed) { exit 1 }
 
       # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
       # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
