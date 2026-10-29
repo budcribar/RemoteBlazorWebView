@@ -31,13 +31,13 @@ public class FileReadCompletionTests
         Assert.Contains(writer.Messages, message => message.FileData != null && message.FileData.FileChunk.Length == 0);
     }
 
-    public static IEnumerable<object[]> ReadFailures()
+    public static TheoryData<Exception> ReadFailures { get; } = new()
     {
-        yield return new object[] { new FileNotFoundException("missing") };
-        yield return new object[] { new IOException("io") };
-        yield return new object[] { new UnauthorizedAccessException("denied") };
-        yield return new object[] { new InvalidDataException("bad") };
-    }
+        new FileNotFoundException("missing"),
+        new IOException("io"),
+        new UnauthorizedAccessException("denied"),
+        new InvalidDataException("bad")
+    };
 
     private sealed class ClosedPipeWriter : IClientStreamWriter<ClientFileReadResponse>
     {
