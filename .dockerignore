@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.vs/
+**/*.user
+**/*.pfx
+**/*.pem
+**/*.key
+**/appsettings.Development.json
+.git/
+artifacts/
+test/
+doc/

@@ -116,6 +116,8 @@ namespace PeakSWC.RemoteWebView
 
                 lb.ClearProviders();
                 lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
+                // EventLog is Windows-only; on Linux (containers) log to console instead
+                if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); return; }
                 // Configure EventLog provider
                 lb.AddEventLog(eventLogSettings =>
                 {
@@ -282,7 +284,8 @@ namespace PeakSWC.RemoteWebView
 
             app.UseRateLimiter();
 #endif
-            app.UseHttpsRedirection();
+            if (!Program.IsContainerMode)
+                app.UseHttpsRedirection();
 
             app.UseResponseCompression();
             app.UseRouting();
