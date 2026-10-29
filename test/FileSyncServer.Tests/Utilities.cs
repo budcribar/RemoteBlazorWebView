@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -246,7 +246,7 @@ namespace WebdriverTestProject
 
         #region Wpf
 
-        public static Process StartRemoteBlazorWpfDebugApp(string url, string id) => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfDebugPath(), url, id);
+        public static Process StartRemoteBlazorWpfDebugApp(string url, string id) => StartProcess(BlazorWpfDebugAppExe(), BlazorWpfPath(), url, id);
         public static string BlazorWpfDebugAppExe() => Path.Combine(BlazorWpfDebugPath(), "RemoteBlazorWebViewTutorial.WpfApp.exe");
 
         public static string BlazorWpfDebugPath()
