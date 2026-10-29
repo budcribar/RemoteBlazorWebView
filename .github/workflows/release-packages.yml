@@ -1,0 +1,55 @@
+# Draft release workflow. Packs the five PeakSWC packages and uploads them.
+# The NuGet push job is unreachable. Nothing in this file publishes a package.
+#
+# Dispatch this workflow by hand. It does not run on push.
+
+name: Release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      line:
+        description: Target .NET line to pack
+        required: true
+        type: choice
+        options:
+          - net9
+          - net10
+          - net11
+      version_override:
+        description: Optional full package version. Leave empty to derive it from the line.
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: Plan and pack artifacts only. Never pushes to NuGet.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan ${{ inputs.line }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the requested release
+        run: |
+          echo "line=${{ inputs.line }}"
+          echo "version_override=${{ inputs.version_override }}"
+          echo "dry_run=${{ inputs.dry_run }}"
+          echo "NuGet push is not part of this job."
+
+  nuget-push:
+    name: Push to NuGet.org (unreachable)
+    runs-on: ubuntu-latest
+    if: false
+    environment: nuget-org
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Unreachable
+        run: echo "This job is disabled. See doc/ReleaseProcess.md."
