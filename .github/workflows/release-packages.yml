@@ -1,0 +1,292 @@
+# Manually dispatched package release. Packs the five PeakSWC packages and
+# uploads them. The tutorial repository is not checked out and is not packed.
+#
+# The NuGet push job is unreachable. Its condition never matches, including
+# when dry_run is false. This file does not read a repository secret and does
+# not push to NuGet.org. When the job is later allowed to run, NuGet/login
+# uses the repository variable NUGET_USER (value budcribar, the nuget.org
+# profile name, not a secret). The nuget-org environment's required reviewer
+# is budcribar. Do not create that environment, variable, or nuget.org policy
+# from this workflow, and do not change the job condition here.
+
+name: Release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      line:
+        description: Target .NET line to pack
+        required: true
+        type: choice
+        options:
+          - net9
+          - net10
+          - net11
+      version_override:
+        description: Optional full package version (for example 9.0.22 or 9.0.21-rc2). Empty uses Directory.Build.props when global.json is GA, and global.json when it is a prerelease.
+        required: false
+        type: string
+        default: ""
+      patch:
+        description: Optional servicing counter. Empty or 0 adds nothing. 1 appends -p1 (11.0.0-rc2-p1 or 11.0.0-p1).
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: Pack artifacts only. net9 still runs Windows tests when line is net9. Never pushes to NuGet.
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Version and notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this workflow
+        uses: actions/checkout@v4
+        with:
+          path: workflow
+
+      - name: Checkout the selected line
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.line }}
+          fetch-depth: 0
+          path: line
+
+      - name: Derive the package version
+        id: version
+        working-directory: line
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
+          {
+            echo "prefix=$PREFIX"
+            echo "suffix=$SUFFIX"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "Line: ${{ inputs.line }}"
+            echo "SDK: ${SDK:-override}"
+            echo "VersionPrefix: $PREFIX"
+            echo "VersionSuffix: $SUFFIX"
+            echo "Package version: $VERSION"
+            echo "dry_run: ${{ inputs.dry_run }}"
+            echo
+            echo "Maintainer commit, not applied by this workflow:"
+            echo "  set VersionPrefix and VersionSuffix in Directory.Build.props to the values above."
+          } | tee "$GITHUB_WORKSPACE/version.txt"
+
+      - name: Release notes since the last tag
+        working-directory: line
+        run: |
+          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt" "${{ steps.version.outputs.version }}"
+          "$GITHUB_WORKSPACE/workflow/eng/apply-release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          git diff -- \
+            src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
+            src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
+            src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj \
+            > "$GITHUB_WORKSPACE/release-notes.patch"
+          git checkout -- \
+            src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
+            src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
+            src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj
+          echo "Notes and patch uploaded. This workflow does not commit them."
+          cat "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+
+      - name: Upload the version plan and notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-plan-${{ inputs.line }}
+          path: |
+            version.txt
+            PackageReleaseNotes.txt
+            release-notes.patch
+          if-no-files-found: error
+
+  windows-tests:
+    name: Windows tests
+    needs: prepare
+    if: ${{ inputs.line == 'net9' }}
+    uses: ./.github/workflows/windows-tests.yml
+    permissions:
+      contents: read
+      actions: write
+
+  pack:
+    name: Pack ${{ inputs.line }}
+    needs: [prepare, windows-tests]
+    if: ${{ always() && needs.prepare.result == 'success' && (needs.windows-tests.result == 'success' || needs.windows-tests.result == 'skipped') }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout this workflow
+        uses: actions/checkout@v4
+        with:
+          path: workflow
+
+      - name: Checkout the selected line
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.line }}
+          fetch-depth: 0
+          path: line
+
+      # The three UI packages include the tutorial README via a path outside
+      # this repo. The tutorial is not packed and this checkout is not pushed.
+      - name: Checkout the tutorial README
+        uses: actions/checkout@v4
+        with:
+          repository: budcribar/RemoteBlazorWebViewTutorial
+          ref: ${{ inputs.line }}
+          path: RemoteBlazorWebViewTutorial
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: line/global.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
+
+      - name: Build remote.blazor.desktop.js
+        shell: pwsh
+        working-directory: line
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          corepack enable
+          corepack prepare yarn@4.3.1 --activate
+          $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
+          Push-Location src/RemoteWebView.Blazor.JS
+          yarn install --immutable
+          Push-Location Web.JS
+          npm install --no-audit --no-fund
+          Pop-Location
+          npm run build:production
+          Pop-Location
+
+      - name: Derive the package version
+        id: version
+        shell: bash
+        working-directory: line
+        run: |
+          set -euo pipefail
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes
+        shell: bash
+        working-directory: line
+        run: |
+          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt" "${{ steps.version.outputs.version }}"
+
+      - name: Other lines are not called from this branch's Windows workflow
+        if: ${{ inputs.line != 'net9' }}
+        shell: bash
+        run: |
+          echo "::warning::Windows tests for ${{ inputs.line }} are not invoked here. Dispatch that line's Windows tests workflow and wait for green before treating this pack as a release. See doc/ReleaseProcess.md."
+
+      - name: Pack the five packages
+        shell: pwsh
+        working-directory: line
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $notes = Get-Content -Raw "$env:GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          $projects = @(
+            'src/RemoteWebView/RemoteWebView.csproj',
+            'src/RemoteWebViewService/RemoteWebViewService.csproj',
+            'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
+            'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
+            'src/RemoteBlazorWebView/RemoteBlazorWebView.csproj'
+          )
+          $failed = $false
+          foreach ($project in $projects) {
+            dotnet pack $project `
+              -c Release `
+              -o "$env:GITHUB_WORKSPACE/packages" `
+              -p:EnableWindowsTargeting=true `
+              -p:Platform=x64 `
+              -p:GeneratePackageOnBuild=false `
+              -p:VersionPrefix="${{ steps.version.outputs.prefix }}" `
+              -p:VersionSuffix="${{ steps.version.outputs.suffix }}" `
+              "-p:PackageReleaseNotes=$notes"
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          if ($failed) { exit 1 }
+          $packages = Get-ChildItem "$env:GITHUB_WORKSPACE/packages/*.nupkg"
+          if ($packages.Count -ne 5) {
+            Write-Error "Expected 5 nupkg files and found $($packages.Count)."
+            exit 1
+          }
+          $sums = foreach ($package in $packages) {
+            $hash = Get-FileHash $package.FullName -Algorithm SHA256
+            "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), $package.Name
+          }
+          $sums | Set-Content "$env:GITHUB_WORKSPACE/packages/SHA256SUMS.txt"
+          Get-Content "$env:GITHUB_WORKSPACE/packages/SHA256SUMS.txt"
+
+      - name: Upload packages and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ inputs.line }}-${{ steps.version.outputs.version }}
+          path: packages/**
+          if-no-files-found: error
+
+  nuget-push:
+    name: Push to NuGet.org (unreachable)
+    needs: pack
+    # Unreachable. actionlint rejects a literal `if: false`. dry_run is a
+    # boolean, so it never equals this sentinel. The job stays skipped,
+    # including when dry_run is false. Do not change this condition until the
+    # setup in doc/ReleaseProcess.md is done by hand: nuget-org environment
+    # with required reviewer budcribar, repository variable NUGET_USER=budcribar,
+    # and the nuget.org trusted publishing policy. This workflow does not
+    # create those.
+    if: ${{ inputs.dry_run == '__nuget_push_disabled__' }}
+    runs-on: windows-latest
+    environment: nuget-org
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download packed packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: packages
+          merge-multiple: true
+
+      - name: NuGet login (OIDC, short-lived key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          # Repository variable, not a secret. Value is budcribar.
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = Get-ChildItem -Path packages -Filter *.nupkg -Recurse
+          if ($packages.Count -ne 5) { throw "Expected 5 packages and found $($packages.Count)." }
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName `
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

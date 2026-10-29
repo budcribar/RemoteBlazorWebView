@@ -30,6 +30,7 @@ on:
   push:
     branches: [net9, net9-ci]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
