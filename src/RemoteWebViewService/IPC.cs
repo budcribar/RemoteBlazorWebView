@@ -125,6 +125,7 @@ namespace PeakSWC.RemoteWebView
                 }
                 catch (OperationCanceledException)
                 {
+                    // The browser read ended because the caller cancelled it.
                 }
                 finally
                 {
