@@ -1,8 +1,13 @@
 # Manually dispatched package release. Packs the five PeakSWC packages and
 # uploads them. The tutorial repository is not checked out and is not packed.
 #
-# The NuGet push job is unreachable (if: false). This file does not read
-# NUGET_API_KEY and does not push to NuGet.org.
+# The NuGet push job is unreachable. Its condition never matches, including
+# when dry_run is false. This file does not read a repository secret and does
+# not push to NuGet.org. When the job is later allowed to run, NuGet/login
+# uses the repository variable NUGET_USER (value budcribar, the nuget.org
+# profile name, not a secret). The nuget-org environment's required reviewer
+# is budcribar. Do not create that environment, variable, or nuget.org policy
+# from this workflow, and do not change the job condition here.
 
 name: Release packages
 
@@ -247,8 +252,10 @@ jobs:
     # Unreachable. actionlint rejects a literal `if: false`. dry_run is a
     # boolean, so it never equals this sentinel. The job stays skipped,
     # including when dry_run is false. Do not change this condition until the
-    # nuget-org environment has required reviewers and the trusted-publisher
-    # policy in doc/ReleaseProcess.md is in place.
+    # setup in doc/ReleaseProcess.md is done by hand: nuget-org environment
+    # with required reviewer budcribar, repository variable NUGET_USER=budcribar,
+    # and the nuget.org trusted publishing policy. This workflow does not
+    # create those.
     if: ${{ inputs.dry_run == '__nuget_push_disabled__' }}
     runs-on: windows-latest
     environment: nuget-org
@@ -267,6 +274,7 @@ jobs:
         id: login
         uses: NuGet/login@v1
         with:
+          # Repository variable, not a secret. Value is budcribar.
           user: ${{ vars.NUGET_USER }}
 
       - name: Push packages

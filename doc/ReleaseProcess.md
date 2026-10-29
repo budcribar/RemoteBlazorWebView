@@ -60,16 +60,20 @@ BlazorBot runs a separate read-only check of the .NET SDK and runtime for each l
 
 ## Trusted publishing setup (one time)
 
-Confirm these fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating the policy. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. The workflow exchanges a GitHub OIDC token through `NuGet/login@v1` for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
+The nuget.org profile name is `budcribar`. The workflow reads it from the repository variable `NUGET_USER`. That variable is a name, not a secret, and it is not an API key. Do not add `NUGET_API_KEY`.
 
-1. On nuget.org, open the account menu and choose **Trusted Publishing**.
-2. Add a policy for this repository:
+Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. Once the push job is allowed to run, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
+
+Create these by hand. This repository's workflow does not create them, and the push job stays unreachable until someone later changes its condition on purpose.
+
+1. In GitHub, create the `nuget-org` environment and set **budcribar** as a required reviewer.
+2. Add the repository variable `NUGET_USER` with the value `budcribar`.
+3. On nuget.org, open the account menu, choose **Trusted Publishing**, and add a policy:
    - Repository owner: `budcribar`
    - Repository: `RemoteBlazorWebView`
    - Workflow file: `release-packages.yml` (the file name only, not `.github/workflows/release-packages.yml`)
    - Environment: `nuget-org`
-3. In GitHub, create an environment named `nuget-org` and require a reviewer. That is the approval gate.
-4. Add a repository variable `NUGET_USER` whose value is the nuget.org profile name. This is not an API key. Do not add `NUGET_API_KEY`.
-5. Only after those exist, replace the `nuget-push` job condition and review the workflow again. Until that edit, the job cannot run. Setting `dry_run` to false does not enable it either.
+
+Only after those exist, replace the `nuget-push` job condition and review the workflow again. Until that edit, the job cannot run. Setting `dry_run` to false does not enable it either.
 
 The push source, once the job is allowed to run, is `https://api.nuget.org/v3/index.json`. The key used there is `steps.login.outputs.NUGET_API_KEY`, the temporary key from the login action, not a repository secret.
