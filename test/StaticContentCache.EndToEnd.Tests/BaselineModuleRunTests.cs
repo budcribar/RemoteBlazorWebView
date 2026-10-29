@@ -24,6 +24,7 @@ using ClientSync = client::PeakSWC.RemoteWebView.ClientFileSyncManager;
 
 namespace StaticContentCache.EndToEnd.Tests;
 
+[Collection("HeadlessChrome")]
 public class BaselineModuleRunTests : IAsyncLifetime
 {
     private const string ModuleName = "Baseline.lib.module.js";
