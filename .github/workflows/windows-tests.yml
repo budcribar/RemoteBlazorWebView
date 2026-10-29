@@ -113,7 +113,8 @@ jobs:
             'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
             'src/Benchmarks/FilePOC/Client/Client.csproj',
             'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj',
-            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj'
+            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj'
           )
           foreach ($project in $projects) {
             $args = $common
@@ -139,6 +140,7 @@ jobs:
             -p:GeneratePackageOnBuild=false `
             --logger "trx;LogFileName=StaticContentCache.EndToEnd.Tests.trx" `
             --results-directory TestResults/StaticContentCache.EndToEnd.Tests
+          dotnet test test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj -c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false --logger "trx;LogFileName=RemoteWebView.Lifecycle.Tests.trx" --results-directory TestResults/RemoteWebView.Lifecycle.Tests
 
       # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
       # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
