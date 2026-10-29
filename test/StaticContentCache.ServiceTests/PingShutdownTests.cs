@@ -40,6 +40,7 @@ public class PingShutdownTests
             await reader.SecondReadEntered.WaitAsync(TimeSpan.FromSeconds(2));
             state.Cancel();
             await ping.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.True(ping.IsCompletedSuccessfully);
         }
         finally
         {
