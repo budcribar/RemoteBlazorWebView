@@ -1,7 +1,51 @@
+using System.Reflection;
+
 namespace StaticContentCache.EndToEnd.Tests;
 
 public class ChromeLocatorTests
 {
+    [Fact]
+    public async Task Debugger_wait_retries_after_the_http_client_timeout()
+    {
+        var attempts = 0;
+        await ChromeSession.WaitForHttpAsync(
+            () =>
+            {
+                attempts++;
+                if (attempts == 1)
+                    throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout of 5 seconds elapsing.");
+                return Task.FromResult(true);
+            },
+            () => false,
+            TimeSpan.FromSeconds(2),
+            () => "exited",
+            () => "timed out");
+
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public void Chrome_module_classes_share_one_collection()
+    {
+        var names = new[]
+        {
+            typeof(BaselineModuleRunTests),
+            typeof(ModuleInitializerContractTests),
+            typeof(ModuleInitializerParityTests)
+        }.Select(CollectionName).ToArray();
+
+        Assert.All(names, name => Assert.Equal("HeadlessChrome", name));
+    }
+
+    private static string? CollectionName(Type type)
+    {
+        var data = type.GetCustomAttributesData()
+            .FirstOrDefault(attribute => attribute.AttributeType == typeof(CollectionAttribute));
+        return data is { ConstructorArguments.Count: > 0 }
+            ? data.ConstructorArguments[0].Value as string
+            : null;
+    }
+
     [Fact]
     public void Windows_registry_is_local_app_data_ms_playwright()
     {

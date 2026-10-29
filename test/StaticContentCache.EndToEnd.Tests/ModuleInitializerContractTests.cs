@@ -27,6 +27,7 @@ using CacheRequest = client::PeakSWC.RemoteWebView.BlazorWebViewStaticContentReq
 
 namespace StaticContentCache.EndToEnd.Tests;
 
+[Collection("HeadlessChrome")]
 public partial class ModuleInitializerContractTests
 {
     private const string HostPageName = "module-init-contract-host.html";

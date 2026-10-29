@@ -273,27 +273,48 @@ public sealed class ChromeSession : IAsyncDisposable
         });
     }
 
-    private async Task WaitForDebuggerAsync()
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(15);
-        while (DateTime.UtcNow < deadline)
-        {
-            if (_process.HasExited)
-                throw new InvalidOperationException("Chrome exited. " + _error);
-            try
+    private Task WaitForDebuggerAsync()
+        => WaitForHttpAsync(
+            async () =>
             {
                 using var response = await _http.GetAsync($"http://127.0.0.1:{_port}/json/version");
-                if (response.IsSuccessStatusCode)
+                return response.IsSuccessStatusCode;
+            },
+            () => _process.HasExited,
+            TimeSpan.FromSeconds(15),
+            () => "Chrome exited. " + _error,
+            () => "Chrome DevTools did not accept connections. " + _error);
+
+    // The 15s deadline is the wait. One probe uses HttpClient.Timeout (5s). A slow
+    // DevTools accept must be retried inside that deadline, not fail the test early.
+    internal static async Task WaitForHttpAsync(
+        Func<Task<bool>> probe,
+        Func<bool> hasExited,
+        TimeSpan budget,
+        Func<string> exitDetail,
+        Func<string> timeoutDetail)
+    {
+        var deadline = DateTime.UtcNow.Add(budget);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (hasExited())
+                throw new InvalidOperationException(exitDetail());
+            try
+            {
+                if (await probe())
                     return;
             }
-            catch (HttpRequestException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
             }
 
-            await Task.Delay(100);
+            var remaining = deadline - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+                break;
+            await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(100, remaining.TotalMilliseconds)));
         }
 
-        throw new TimeoutException("Chrome DevTools did not accept connections. " + _error);
+        throw new TimeoutException(timeoutDetail());
     }
 
     private static int FreePort()

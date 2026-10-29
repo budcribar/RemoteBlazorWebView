@@ -24,6 +24,7 @@ using ClientSync = client::PeakSWC.RemoteWebView.ClientFileSyncManager;
 
 namespace StaticContentCache.EndToEnd.Tests;
 
+[Collection("HeadlessChrome")]
 public partial class BaselineModuleRunTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions HookJsonOptions = new() { PropertyNameCaseInsensitive = true };

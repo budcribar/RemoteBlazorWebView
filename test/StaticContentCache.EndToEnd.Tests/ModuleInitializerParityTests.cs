@@ -24,6 +24,7 @@ namespace StaticContentCache.EndToEnd.Tests;
 // Promise.all, call beforeStart with no arguments, then after sendAttachPage call
 // afterStarted(window.Blazor). A rejection in that Promise.all rejects boot before
 // AttachPage and before afterStarted. These tests record that behavior.
+[Collection("HeadlessChrome")]
 public class ModuleInitializerParityTests(ModuleInitializerServer server) : IClassFixture<ModuleInitializerServer>
 {
     private static readonly FileExtensionContentTypeProvider ContentTypes = new();
