@@ -26,6 +26,9 @@ namespace RemoteWebView.Lifecycle.Tests;
 
 public class BugBountyTests
 {
+    private static readonly string[] MajorArgumentsWithInvalidValues = ["--major", "0", "--major", "-5", "--major", "11"];
+    private static readonly string[] MajorArgumentZeroOnly = ["--major", "0"];
+
     [Fact]
     public async Task Bug01_GetClients_does_not_drop_connected_clients_when_one_registration_faults()
     {
@@ -320,9 +323,18 @@ public class BugBountyTests
         context.Response.Body = new MemoryStream();
 
         var waitTask = Endpoints.Wait()(context);
-        var completed = await Task.WhenAny(waitTask, Task.Delay(TimeSpan.FromMilliseconds(600)));
-
-        Assert.Same(waitTask, completed);
+        using var timeout = new CancellationTokenSource();
+        var delay = Task.Delay(TimeSpan.FromMilliseconds(600), timeout.Token);
+        try
+        {
+            var completed = await Task.WhenAny(waitTask, delay);
+            Assert.Same(waitTask, completed);
+        }
+        finally
+        {
+            timeout.Cancel();
+            try { await delay; } catch (OperationCanceledException) { }
+        }
     }
 
     [Fact]
@@ -948,7 +960,18 @@ public class BugBountyTests
             new RemoteFilesOptions());
 
         var statusTask = service.GetServerStatus(new Google.Protobuf.WellKnownTypes.Empty(), new TestCallContext(CancellationToken.None));
-        var completed = await Task.WhenAny(statusTask, Task.Delay(TimeSpan.FromMilliseconds(500)));
+        using var timeout = new CancellationTokenSource();
+        var delay = Task.Delay(TimeSpan.FromMilliseconds(500), timeout.Token);
+        Task completed;
+        try
+        {
+            completed = await Task.WhenAny(statusTask, delay);
+        }
+        finally
+        {
+            timeout.Cancel();
+            try { await delay; } catch (OperationCanceledException) { }
+        }
 
         Assert.Same(statusTask, completed);
         var response = await statusTask;
@@ -1311,10 +1334,10 @@ public class BugBountyTests
         var readMajors = programType.GetMethod("ReadMajorArguments", BindingFlags.Static | BindingFlags.NonPublic)!;
         var resolveMajor = programType.GetMethod("ResolveMajorVersion", BindingFlags.Static | BindingFlags.NonPublic)!;
 
-        var majors = (List<int>)readMajors.Invoke(null, [new[] { "--major", "0", "--major", "-5", "--major", "11" }])!;
+        var majors = (List<int>)readMajors.Invoke(null, [MajorArgumentsWithInvalidValues])!;
         Assert.Equal([11], majors);
 
-        var resolved = (int)resolveMajor.Invoke(null, [new[] { "--major", "0" }])!;
+        var resolved = (int)resolveMajor.Invoke(null, [MajorArgumentZeroOnly])!;
         Assert.True(resolved > 0);
     }
 
