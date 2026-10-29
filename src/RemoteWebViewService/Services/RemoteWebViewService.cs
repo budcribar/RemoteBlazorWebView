@@ -90,7 +90,7 @@ namespace PeakSWC.RemoteWebView
         public override async Task RequestClientFileRead(IAsyncStreamReader<ClientFileReadResponse> requestStream, IServerStreamWriter<ServerFileReadRequest> responseStream, ServerCallContext context)
         {
             // Handle Init message
-            if (!await requestStream.MoveNext().ConfigureAwait(false))
+            if (!await requestStream.MoveNext(context.CancellationToken).ConfigureAwait(false))
             {
                 logger.LogWarning("Client disconnected without sending Init message.");
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "Init message not received."));
@@ -185,7 +185,7 @@ namespace PeakSWC.RemoteWebView
             var id = string.Empty;
             // One source for the read loop and the writer, created once the client registration exists.
             CancellationTokenSource? linkedToken = null;
-            CancellationTokenSource? activeToken = null;
+            CancellationTokenSource activeToken;
             try
             {
                 DateTime responseReceived = DateTime.UtcNow;
@@ -248,7 +248,7 @@ namespace PeakSWC.RemoteWebView
                             serviceState.MaxClientPing = delta;
                     }
                 }
-                while (await requestStream.MoveNext(activeToken!.Token).ConfigureAwait(false));
+                while (await requestStream.MoveNext(activeToken.Token).ConfigureAwait(false));
             }
             catch (OperationCanceledException)
             {
