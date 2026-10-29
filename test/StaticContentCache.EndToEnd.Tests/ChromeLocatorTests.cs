@@ -1,9 +1,17 @@
 using System.Reflection;
+using System.Text;
 
 namespace StaticContentCache.EndToEnd.Tests;
 
 public class ChromeLocatorTests
 {
+    [Fact]
+    public void Chrome_output_reader_starts_off_the_thread_pool_before_drain_returns()
+    {
+        var pool = ChromeSession.StartPipeReader(new StringReader(""), new StringBuilder());
+        Assert.False(pool);
+    }
+
     [Fact]
     public async Task Debugger_wait_retries_after_the_http_client_timeout()
     {

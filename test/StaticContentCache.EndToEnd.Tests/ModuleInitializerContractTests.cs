@@ -533,11 +533,13 @@ public partial class ModuleInitializerContractTests
             process.StartInfo.ArgumentList.Add("--no-sandbox");
             process.StartInfo.ArgumentList.Add("--disable-gpu");
             process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
+            process.StartInfo.ArgumentList.Add("--no-first-run");
+            process.StartInfo.ArgumentList.Add("--disable-background-networking");
             process.StartInfo.ArgumentList.Add("--user-data-dir=" + profile);
             process.StartInfo.ArgumentList.Add(url);
             process.Start();
-            _ = process.StandardOutput.ReadToEndAsync();
-            _ = process.StandardError.ReadToEndAsync();
+            ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
+            ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
             return process;
         }
 

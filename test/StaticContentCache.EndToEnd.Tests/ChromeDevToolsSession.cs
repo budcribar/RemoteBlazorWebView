@@ -205,8 +205,16 @@ public sealed class ChromeSession : IAsyncDisposable
         var session = new ChromeSession(process, port, userData);
         session.Drain(process.StandardOutput);
         session.Drain(process.StandardError);
-        await session.WaitForDebuggerAsync();
-        return session;
+        try
+        {
+            await session.WaitForDebuggerAsync();
+            return session;
+        }
+        catch
+        {
+            await session.DisposeAsync();
+            throw;
+        }
     }
 
     public async Task<ChromePage> OpenAsync(string url)
@@ -253,24 +261,54 @@ public sealed class ChromeSession : IAsyncDisposable
         await Task.CompletedTask;
     }
 
-    private void Drain(StreamReader reader)
+    private void Drain(StreamReader reader) => StartPipeReader(reader, _error);
+
+    // The reader is a dedicated thread that is already inside Read before this returns.
+    // A thread-pool queue lets Chrome fill the redirected stderr pipe and stall before DevTools listens.
+    internal static bool StartPipeReader(TextReader reader, StringBuilder sink)
     {
-        _ = Task.Run(async () =>
+        var pool = true;
+        var started = new ManualResetEventSlim(false);
+        var thread = new Thread(() =>
         {
-            var buffer = new char[1024];
-            while (true)
+            pool = Thread.CurrentThread.IsThreadPoolThread;
+            started.Set();
+            ReadPipe(reader, sink);
+        })
+        {
+            IsBackground = true,
+            Name = "chrome-output"
+        };
+        thread.Start();
+        if (!started.Wait(TimeSpan.FromSeconds(2)))
+            throw new InvalidOperationException("Chrome output reader did not start.");
+        return pool;
+    }
+
+    private static void ReadPipe(TextReader reader, StringBuilder sink)
+    {
+        var buffer = new char[1024];
+        while (true)
+        {
+            int read;
+            try
             {
-                var read = await reader.ReadAsync(buffer);
-                if (read == 0)
-                    break;
-                lock (_error)
-                {
-                    _error.Append(buffer, 0, read);
-                    if (_error.Length > 4000)
-                        _error.Remove(0, _error.Length - 4000);
-                }
+                read = reader.Read(buffer, 0, buffer.Length);
             }
-        });
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+            {
+                break;
+            }
+
+            if (read == 0)
+                break;
+            lock (sink)
+            {
+                sink.Append(buffer, 0, read);
+                if (sink.Length > 4000)
+                    sink.Remove(0, sink.Length - 4000);
+            }
+        }
     }
 
     private Task WaitForDebuggerAsync()
