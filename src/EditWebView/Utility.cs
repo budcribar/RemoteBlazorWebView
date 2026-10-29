@@ -239,7 +239,7 @@ namespace EditWebView
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("URL cannot be null or empty.", nameof(url));
 
-            var cleanUrl = url.Split('?', '#')[0];
+            var cleanUrl = url.Split(['?', '#'], StringSplitOptions.None)[0];
             var match = UtilityHelpers.MyRegex().Match(cleanUrl);
             if (!match.Success)
                 throw new ArgumentException("Invalid URL format. Unable to extract version.", nameof(url));
