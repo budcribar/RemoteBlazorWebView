@@ -24,8 +24,13 @@ using ClientSync = client::PeakSWC.RemoteWebView.ClientFileSyncManager;
 
 namespace StaticContentCache.EndToEnd.Tests;
 
-public class BaselineModuleRunTests : IAsyncLifetime
+public partial class BaselineModuleRunTests : IAsyncLifetime
 {
+    private static readonly JsonSerializerOptions HookJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    [GeneratedRegex(@"module-init-result\?report=([^&]*)")]
+    private static partial Regex ModuleInitResultPattern();
+
     private const string ModuleName = "Baseline.lib.module.js";
     private const string HostPageName = "module-init-host.html";
     private static readonly byte[] HostPage = File.ReadAllBytes(Asset(HostPageName));
@@ -77,7 +82,7 @@ public class BaselineModuleRunTests : IAsyncLifetime
             ?? throw new InvalidOperationException("Google Chrome or Chromium was not found.");
         var pageUrl = $"{_host!.BrowserUrl}/{_clientId}/{HostPageName}";
         var json = await RunHook(chrome, pageUrl);
-        var report = JsonSerializer.Deserialize<HookReport>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var report = JsonSerializer.Deserialize<HookReport>(json, HookJsonOptions);
         Assert.NotNull(report);
         Assert.True(string.IsNullOrEmpty(report.Error), report.Error);
         var names = Assert.IsType<string[]>(report.Names);
@@ -130,7 +135,7 @@ public class BaselineModuleRunTests : IAsyncLifetime
         string? result = null;
         while (DateTime.UtcNow < deadline)
         {
-            result = _requests.Select(static path => Regex.Match(path, @"module-init-result\?report=([^&]*)"))
+            result = _requests.Select(static path => ModuleInitResultPattern().Match(path))
                 .Where(static match => match.Success)
                 .Select(static match => Uri.UnescapeDataString(match.Groups[1].Value))
                 .LastOrDefault();
