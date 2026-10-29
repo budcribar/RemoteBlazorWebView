@@ -80,7 +80,22 @@ jobs:
       - name: Release notes since the last tag
         working-directory: line
         run: |
-          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt" "${{ steps.version.outputs.version }}"
+          "$GITHUB_WORKSPACE/workflow/eng/apply-release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          git diff -- \
+            src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
+            src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
+            src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj \
+            > "$GITHUB_WORKSPACE/release-notes.patch"
+          git checkout -- \
+            src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
+            src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
+            src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj
+          echo "Notes and patch uploaded. This workflow does not commit them."
           cat "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
 
       - name: Upload the version plan and notes
@@ -90,6 +105,7 @@ jobs:
           path: |
             version.txt
             PackageReleaseNotes.txt
+            release-notes.patch
           if-no-files-found: error
 
   windows-tests:
@@ -171,7 +187,7 @@ jobs:
         shell: bash
         working-directory: line
         run: |
-          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt" "${{ steps.version.outputs.version }}"
 
       - name: Other lines are not called from this branch's Windows workflow
         if: ${{ inputs.line != 'net11' }}
