@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Build the current tree and a baseline worktree, run PerfRegression interleaved
-# on this machine, and write a median ratio table. Exits 0 even when a metric
-# is over tolerance or a sample fails. The workflow uses that so a push is not
-# blocked.
+# on this machine, and write a median ratio table. A slow timing is a WARN and
+# does not fail the run. A failed build or zero samples on either side exits 1.
 set -u
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -28,31 +27,13 @@ if ! [[ $COUNT_TOLERANCE =~ ^[0-9]+([.][0-9]+)?$ ]]; then
 fi
 
 resolve_baseline() {
+  # BASELINE is the workflow input/env. Empty means origin/net10, the same
+  # ref on net9, net10, and net11. Tags are not considered.
   if [[ -n ${BASELINE:-} ]]; then
     printf '%s\n' "$BASELINE"
     return
   fi
-  git fetch origin net10 --tags --quiet || true
-  local tag tfm
-  while read -r tag; do
-    [[ -z $tag ]] && continue
-    if git cat-file -e "$tag:src/RemoteWebView/ClientFileSyncManager.cs" 2>/dev/null; then
-      tfm=$(git show "$tag:src/RemoteWebView/RemoteWebView.csproj" | sed -n 's/.*<TargetFramework>\(.*\)<\/TargetFramework>.*/\1/p' | head -1)
-      case $tfm in
-        net10*|net11*)
-          printf '%s\n' "$tag"
-          return
-          ;;
-        *)
-          ;;
-      esac
-    fi
-  done < <(git tag --list --sort=-v:refname)
-  if git rev-parse --verify --quiet origin/net10 >/dev/null; then
-    printf '%s\n' origin/net10
-    return
-  fi
-  printf '%s\n' HEAD~1
+  printf '%s\n' origin/net10
 }
 
 # npm's protoc shim and some plugin bins ship a CRLF shebang. Linux refuses
@@ -160,27 +141,68 @@ write_summary() {
   fi
 }
 
+sample_count() {
+  python3 - "$1" <<'PY'
+import json, sys
+from pathlib import Path
+count = 0
+root = Path(sys.argv[1])
+if root.is_dir():
+    for path in sorted(root.glob("*.json")):
+        parsed = None
+        for line in reversed(path.read_text(encoding="utf-8", errors="replace").splitlines()):
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                parsed = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            break
+        if isinstance(parsed, dict) and "scenarios" in parsed:
+            count += 1
+print(count)
+PY
+}
+
+finish() {
+  local status=$1
+  local baseline_samples current_samples
+  write_summary
+  baseline_samples=$(sample_count "$OUT/baseline")
+  current_samples=$(sample_count "$OUT/current")
+  if [[ $baseline_samples -eq 0 || $current_samples -eq 0 ]]; then
+    echo "Zero samples: baseline=${baseline_samples} current=${current_samples}. This check fails when a build fails or either side has no samples. A slow timing does not fail it." | tee -a "$OUT/error.txt"
+    status=1
+  fi
+  if [[ $status -ne 0 ]]; then
+    echo "Performance regression failed. See perf-results/error.txt." >&2
+    exit 1
+  fi
+  exit 0
+}
+
 mkdir -p "$OUT/baseline" "$OUT/current"
 rm -f "$OUT/baseline/"*.json "$OUT/current/"*.json "$OUT/build-baseline.log" "$OUT/build-current.log" "$OUT/error.txt"
 
 BASELINE_REF=$(resolve_baseline)
 echo "Baseline ref: $BASELINE_REF" | tee "$OUT/baseline-ref.txt"
+git fetch origin net10 --quiet || true
 
 if ! build_js; then
   echo "JS bundle build failed" | tee "$OUT/error.txt"
+  finish 1
 fi
 
 if [[ ! -f src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js ]]; then
   echo "remote.blazor.desktop.js is missing, so the harness cannot be built." | tee "$OUT/error.txt"
-  write_summary
-  exit 0
+  finish 1
 fi
 
 git worktree remove --force "$WORKTREE" >/dev/null 2>&1 || true
 if ! git worktree add --detach "$WORKTREE" "$BASELINE_REF"; then
   echo "Could not check out baseline $BASELINE_REF" | tee "$OUT/error.txt"
-  write_summary
-  exit 0
+  finish 1
 fi
 copy_harness "$WORKTREE"
 
@@ -188,8 +210,10 @@ current_status=0
 baseline_status=0
 current_dll=$(build_harness "$ROOT" "$OUT/build-current.log") || current_status=$?
 baseline_dll=$(build_harness "$WORKTREE" "$OUT/build-baseline.log") || baseline_status=$?
+build_status=0
 if [[ $current_status -ne 0 || $baseline_status -ne 0 ]]; then
   echo "Harness build failed (current=$current_status baseline=$baseline_status). See perf-results/build-*.log." | tee "$OUT/error.txt"
+  build_status=1
 fi
 
 if [[ $current_status -eq 0 && $baseline_status -eq 0 ]]; then
@@ -203,5 +227,4 @@ if [[ $current_status -eq 0 && $baseline_status -eq 0 ]]; then
   done
 fi
 
-write_summary
-exit 0
+finish "$build_status"
