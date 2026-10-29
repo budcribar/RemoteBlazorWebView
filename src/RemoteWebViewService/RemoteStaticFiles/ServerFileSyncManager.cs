@@ -223,61 +223,67 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
 
             // 1) timeout token instead of CleanupMetadataRequest
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(CacheTimeoutSeconds));
-            timeoutCts.Token.Register(() =>
-            {
-                if (tcs.TrySetException(new TimeoutException("Metadata request timed out.")))
-                {
-                    logger.LogDebug(
-                        "Metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid} timed out.",
-                        requestId, filePath, clientGuid);
-                    if (_metadataRequests.TryGetValue(clientGuid, out var dict))
-                        dict.TryRemove(requestId, out _);
-                }
-            }, useSynchronizationContext: false);
+            timeoutCts.Token.Register(
+                () => ExpireMetadataRequest(clientGuid, requestId, filePath, tcs, logger),
+                useSynchronizationContext: false);
 
             // 2) enqueue write
             _writeChannel.Writer.TryWrite(new WriteRequest
             {
-                Operation = async () =>
-                {
-                    if (_clientResponseStreams.TryGetValue(clientGuid, out var responseStream))
-                    {
-                        var request = new ServerFileReadRequest
-                        {
-                            ClientId = clientGuid,
-                            RequestId = requestId,
-                            Path = filePath,
-                            RequestType = ServerFileReadRequest.Types.RequestType.MetaData,
-                            RequestUri = requestUri ?? string.Empty,
-                            ContentType = contentType ?? string.Empty
-                        };
-
-                        try
-                        {
-                            await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
-                            _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (_metadataRequests.TryGetValue(clientGuid, out var dict))
-                                dict.TryRemove(requestId, out _);
-                            tcs.TrySetException(ex);
-                            throw;
-                        }
-                    }
-                    else
-                    {
-                        if (_metadataRequests.TryGetValue(clientGuid, out var dict))
-                            dict.TryRemove(requestId, out _);
-                        tcs.TrySetException(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
-                    }
-                }
+                Operation = () => SendMetadataRequestAsync(clientGuid, requestId, filePath, requestUri, contentType, tcs)
             });
 
             // 3) dispose the CTS when done
             tcs.Task.ContinueWith(_ => timeoutCts.Dispose(), TaskScheduler.Default);
 
             return tcs.Task;
+        }
+
+        private void ExpireMetadataRequest(string clientGuid, string requestId, string filePath, TaskCompletionSource<FileMetadata> tcs, ILogger<RemoteFileResolver> logger)
+        {
+            if (!tcs.TrySetException(new TimeoutException("Metadata request timed out.")))
+                return;
+
+            logger.LogDebug(
+                "Metadata request (requestId: {RequestId}) for file: {FilePath} from client GUID: {ClientGuid} timed out.",
+                requestId, filePath, clientGuid);
+            if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                dict.TryRemove(requestId, out _);
+        }
+
+        private async Task SendMetadataRequestAsync(string clientGuid, string requestId, string filePath, string? requestUri, string? contentType, TaskCompletionSource<FileMetadata> tcs)
+        {
+            if (_clientResponseStreams.TryGetValue(clientGuid, out var responseStream))
+            {
+                var request = new ServerFileReadRequest
+                {
+                    ClientId = clientGuid,
+                    RequestId = requestId,
+                    Path = filePath,
+                    RequestType = ServerFileReadRequest.Types.RequestType.MetaData,
+                    RequestUri = requestUri ?? string.Empty,
+                    ContentType = contentType ?? string.Empty
+                };
+
+                try
+                {
+                    await responseStream.WriteAsync(request, _cts.Token).ConfigureAwait(false);
+                    _logger.LogDebug("Sent metadata request (requestId: {RequestId}) for file: {FilePath} to client GUID: {ClientGuid}", requestId, filePath, clientGuid);
+                }
+                catch (Exception ex)
+                {
+                    if (_metadataRequests.TryGetValue(clientGuid, out var dict))
+                        dict.TryRemove(requestId, out _);
+                    tcs.TrySetException(ex);
+                    throw;
+                }
+
+                return;
+            }
+
+            if (_metadataRequests.TryGetValue(clientGuid, out var pending))
+                pending.TryRemove(requestId, out _);
+            tcs.TrySetException(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
         }
 
         /// <summary>
@@ -291,7 +297,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             if (string.IsNullOrWhiteSpace(clientGuid) || !_fileDataRequests.TryGetValue(clientGuid, out var clientFileDataRequests) || !clientFileDataRequests.TryAdd(requestId, dataRequest))
             {
                 logger.LogCritical("A file data request with requestId: {RequestId} for client GUID: {ClientGuid} could not be created.", requestId, clientGuid);
-                dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' is not registered for file data."));
+                await dataRequest.Pipe.Writer.CompleteAsync(new InvalidOperationException($"Client GUID '{clientGuid}' is not registered for file data.")).ConfigureAwait(false);
                 return dataRequest;
             }
 
@@ -319,7 +325,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                         {
                             if (_fileDataRequests.TryGetValue(clientGuid, out var dict))
                                 dict.TryRemove(requestId, out _);
-                            dataRequest.Pipe.Writer.Complete(ex);
+                            await dataRequest.Pipe.Writer.CompleteAsync(ex).ConfigureAwait(false);
                             throw;
                         }
                     }
@@ -328,7 +334,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                         if (_fileDataRequests.TryGetValue(clientGuid, out var dict))
                             dict.TryRemove(requestId, out _);
                         _logger.LogWarning("Cannot send file data request. Client GUID: {ClientGuid} is not associated with a response stream.", clientGuid);
-                        dataRequest.Pipe.Writer.Complete(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream."));
+                        await dataRequest.Pipe.Writer.CompleteAsync(new InvalidOperationException($"Client GUID '{clientGuid}' is not associated with a response stream.")).ConfigureAwait(false);
                     }
                 }
             };
@@ -402,6 +408,7 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             }
             catch (OperationCanceledException)
             {
+                // The write loop stops because Dispose already cancelled its token.
             }
 
             _cts.Dispose();
