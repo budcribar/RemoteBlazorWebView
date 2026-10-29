@@ -87,34 +87,7 @@ namespace PeakSWC.RemoteWebView
 
 
         public override async Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
-        { 
-            async Task<List<TaskResponse>> GetTaskResponses(string id)
-            {
-                var responses = new List<TaskResponse>();
-
-                if (!serviceDictionary.TryGetValue(id, out var serviceStateTaskSource) || serviceStateTaskSource == null)
-                    return responses;
-
-                try
-                {
-                    var ss = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
-
-
-                    if (ss.PingTask != null)
-                        responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
-                    if (ss.IPC.BrowserTask != null)
-                        responses.Add(new TaskResponse { Name = "Browser", Status = (TaskStatus)(int)ss.IPC.BrowserTask.Status });
-                    if (ss.IPC.ClientTask != null)
-                        responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.IPC.ClientTask.Status });
-                    if (ss.FileReaderTask != null)
-                        responses.Add(new TaskResponse { Name = "FileReader", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
-                    if (ss.IPC.ProcessMessagesTask != null)
-                        responses.Add(new TaskResponse { Name = "ProcessMessages", Status = (TaskStatus)(int)ss.IPC.ProcessMessagesTask.Status });
-                }
-                catch { }
-                return responses;
-            }
-
+        {
             var p = Process.GetCurrentProcess();
             var response = new ServerResponse
             {
@@ -132,21 +105,48 @@ namespace PeakSWC.RemoteWebView
             response.ConnectionResponses.AddRange(responses);
 
             foreach (var connection in responses)
-                connection.TaskResponses.AddRange(await GetTaskResponses(connection.Id).ConfigureAwait(false));
+                connection.TaskResponses.AddRange(await GetTaskResponses(serviceDictionary, connection.Id).ConfigureAwait(false));
 
             return response;
         }
 
+        private static async Task<List<TaskResponse>> GetTaskResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, string id)
+        {
+            var responses = new List<TaskResponse>();
+
+            if (!serviceDictionary.TryGetValue(id, out var serviceStateTaskSource) || serviceStateTaskSource == null)
+                return responses;
+
+            try
+            {
+                var ss = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+
+                if (ss.PingTask != null)
+                    responses.Add(new TaskResponse { Name = "Ping", Status = (TaskStatus)(int)ss.PingTask.Status });
+                if (ss.IPC.BrowserTask != null)
+                    responses.Add(new TaskResponse { Name = "Browser", Status = (TaskStatus)(int)ss.IPC.BrowserTask.Status });
+                if (ss.IPC.ClientTask != null)
+                    responses.Add(new TaskResponse { Name = "Client", Status = (TaskStatus)(int)ss.IPC.ClientTask.Status });
+                if (ss.FileReaderTask != null)
+                    responses.Add(new TaskResponse { Name = "FileReader", Status = (TaskStatus)(int)ss.FileReaderTask.Status });
+                if (ss.IPC.ProcessMessagesTask != null)
+                    responses.Add(new TaskResponse { Name = "ProcessMessages", Status = (TaskStatus)(int)ss.IPC.ProcessMessagesTask.Status });
+            }
+            catch
+            {
+                // A faulted registration must not fail the whole status response.
+            }
+            return responses;
+        }
+
         private static async Task<List<ConnectionResponse>> GetConnectionResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary)
         {
-            var snapshotTasks = serviceDictionary.Values.ToList();
+            var snapshotTasks = serviceDictionary.Values.Where(static pending => pending.Task.IsCompleted).ToList();
             var results = new List<ServiceState>();
             foreach (var pending in snapshotTasks)
             {
                 try
                 {
-                    if (!pending.Task.IsCompleted)
-                        continue;
                     results.Add(await pending.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false));
                 }
                 catch
