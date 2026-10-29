@@ -24,12 +24,15 @@ The rule going forward:
 
 - The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json`.
 - `VersionPrefix` is `{major}.0.0` unless the dispatch input `version_override` says otherwise.
-- The prerelease label is taken from that SDK version, using the SDK's own spelling. `11.0.100-rc.2.26504.105` becomes `VersionSuffix` `rc.2`. A preview SDK becomes `preview.N`. A GA SDK (no `-preview`, `-rc`, `-alpha`, or `-beta`) leaves `VersionSuffix` empty.
-- `version_override` is a single token such as `11.0.1` or `11.0.0-rc.3`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`.
+- The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `11.0.100-rc.2.26504.105` becomes `VersionSuffix` `rc2` and package version `11.0.0-rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A GA SDK (no `preview`, `rc`, `alpha`, `beta`, or `pre`) leaves `VersionSuffix` empty.
+- `version_override` is a single token such as `11.0.1` or `11.0.0-rc3`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`.
+- `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `11.0.0-rc2` with patch `1` is `11.0.0-rc2-p1` (`VersionSuffix` `rc2-p1`). A GA `11.0.0` with patch `1` is `11.0.0-p1` (`VersionSuffix` `p1`).
+
+`11.0.0-rc2` is already on nuget.org for `PeakSWC.RemoteWebView` and `PeakSWC.RemoteBlazorWebView`. The next net11 package has to be a new version, such as `11.0.0-rc3` or `11.0.0`. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script.
+
+SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1` and leave `patch` empty.
 
 `eng/derive-package-version.sh` implements this and does not edit the tree. The workflow prints the result and uploads it. It does not commit and it does not push. The maintainer commits the two property values in `Directory.Build.props` on the line being released.
-
-The current suffix spelling `rc2` and the rule's spelling `rc.2` are different version identities. See the open question below before the first published package on a line uses the new spelling.
 
 ## What a dispatch does
 
@@ -38,19 +41,20 @@ Dispatch **Release packages** on `cursor/release-workflow-205f` (and, once revie
 | Input | Default | Meaning |
 |---|---|---|
 | `line` | required | `net9`, `net10`, or `net11`. The workflow checks out that branch for the pack. |
-| `version_override` | empty | Replaces the derived version. |
-| `dry_run` | `true` | Packs and uploads artifacts. Skips the Windows test call. Does not push to NuGet. |
+| `version_override` | empty | Replaces the derived version. Use the no-dot spelling, for example `11.0.0-rc3`. |
+| `patch` | empty | Servicing counter. Empty or `0` adds nothing. `1` appends `-p1`. |
+| `dry_run` | `true` | Packs and uploads artifacts. net11 still runs Windows tests. Does not push to NuGet. |
 
 Jobs:
 
 1. **Version and notes.** Derives the version and writes release notes from commits since the last tag. Subjects that mention `LoadTest`, `ceiling`, `req/s`, `requests per`, or `throughput` are omitted. There is no performance claim in the generated notes.
-2. **Windows tests.** Runs only when `line` is `net11` and `dry_run` is false. It calls `.github/workflows/windows-tests.yml` (`workflow_call` on this branch). net9 and net10 still use their own Windows tests workflows, which are not reusable yet. A non-dry-run pack of those lines prints a warning and does not call the net11 suite.
-3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the five projects. Each package's `PackageReleaseNotes` for that pack is the generated notes. The committed csproj notes are not edited. The job uploads the five `.nupkg` files and `SHA256SUMS.txt`.
+2. **Windows tests.** Runs for `net11` whether or not `dry_run` is set. It calls `.github/workflows/windows-tests.yml` (`workflow_call` on this branch). Packing and the artifact upload wait for that job to pass. net9 and net10 still use their own Windows tests workflows, which are not reusable yet. A pack of those lines prints a warning and does not call the net11 suite.
+3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the five projects. For net11 this starts only after Windows tests pass. Each package's `PackageReleaseNotes` for that pack is the generated notes. The committed csproj notes are not edited. The job uploads the five `.nupkg` files and `SHA256SUMS.txt`.
 4. **Push to NuGet.org.** The job condition compares `dry_run` (a boolean) to the sentinel `__nuget_push_disabled__`, which the dispatch form cannot set. GitHub does not schedule the job. A literal `if: false` was not used because actionlint rejects that constant.
 
 ## Daily .NET pulse
 
-BlazorBot runs a separate read-only check of the .NET SDK and runtime for each line. It does not pack, tag, or push. When that check reports a new phase (for example rc.2 becoming rc.3, or an rc becoming GA), the maintainer decides whether to dispatch this workflow. The pulse does not start the release, and the release workflow does not call the pulse.
+BlazorBot runs a separate read-only check of the .NET SDK and runtime for each line. It does not pack, tag, or push. When that check reports a new phase (for example rc2 becoming rc3, or an rc becoming GA), the maintainer decides whether to dispatch this workflow. The pulse does not start the release, and the release workflow does not call the pulse.
 
 ## Trusted publishing setup (one time)
 

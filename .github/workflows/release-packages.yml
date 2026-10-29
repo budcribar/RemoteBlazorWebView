@@ -18,12 +18,17 @@ on:
           - net10
           - net11
       version_override:
-        description: Optional full package version (for example 11.0.1 or 11.0.0-rc.2). Empty derives it from that line's global.json.
+        description: Optional full package version (for example 11.0.1 or 11.0.0-rc3). Empty derives it from that line's global.json.
+        required: false
+        type: string
+        default: ""
+      patch:
+        description: Optional servicing counter. Empty or 0 adds nothing. 1 appends -p1 (11.0.0-rc2-p1 or 11.0.0-p1).
         required: false
         type: string
         default: ""
       dry_run:
-        description: Pack artifacts only. Skips the Windows test call. Never pushes to NuGet.
+        description: Pack artifacts only. net11 still runs Windows tests. Never pushes to NuGet.
         required: true
         type: boolean
         default: true
@@ -54,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck disable=SC1091
-          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}")"
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
           {
             echo "prefix=$PREFIX"
             echo "suffix=$SUFFIX"
@@ -90,7 +95,7 @@ jobs:
   windows-tests:
     name: Windows tests
     needs: prepare
-    if: ${{ inputs.line == 'net11' && inputs.dry_run == false }}
+    if: ${{ inputs.line == 'net11' }}
     uses: ./.github/workflows/windows-tests.yml
     permissions:
       contents: read
@@ -157,7 +162,7 @@ jobs:
         working-directory: line
         run: |
           set -euo pipefail
-          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}")"
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
           echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -169,7 +174,7 @@ jobs:
           "$GITHUB_WORKSPACE/workflow/eng/release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
 
       - name: Other lines are not called from this branch's Windows workflow
-        if: ${{ inputs.line != 'net11' && inputs.dry_run == false }}
+        if: ${{ inputs.line != 'net11' }}
         shell: bash
         run: |
           echo "::warning::Windows tests for ${{ inputs.line }} are not invoked here. Dispatch that line's Windows tests workflow and wait for green before treating this pack as a release. See doc/ReleaseProcess.md."
