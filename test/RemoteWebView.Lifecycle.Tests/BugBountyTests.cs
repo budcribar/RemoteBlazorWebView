@@ -320,9 +320,18 @@ public class BugBountyTests
         context.Response.Body = new MemoryStream();
 
         var waitTask = Endpoints.Wait()(context);
-        var completed = await Task.WhenAny(waitTask, Task.Delay(TimeSpan.FromMilliseconds(600)));
-
-        Assert.Same(waitTask, completed);
+        using var timeout = new CancellationTokenSource();
+        var delay = Task.Delay(TimeSpan.FromMilliseconds(600), timeout.Token);
+        try
+        {
+            var completed = await Task.WhenAny(waitTask, delay);
+            Assert.Same(waitTask, completed);
+        }
+        finally
+        {
+            timeout.Cancel();
+            try { await delay; } catch (OperationCanceledException) { }
+        }
     }
 
     [Fact]
@@ -939,7 +948,18 @@ public class BugBountyTests
             new RemoteFilesOptions());
 
         var statusTask = service.GetServerStatus(new Google.Protobuf.WellKnownTypes.Empty(), new TestCallContext(CancellationToken.None));
-        var completed = await Task.WhenAny(statusTask, Task.Delay(TimeSpan.FromMilliseconds(500)));
+        using var timeout = new CancellationTokenSource();
+        var delay = Task.Delay(TimeSpan.FromMilliseconds(500), timeout.Token);
+        Task completed;
+        try
+        {
+            completed = await Task.WhenAny(statusTask, delay);
+        }
+        finally
+        {
+            timeout.Cancel();
+            try { await delay; } catch (OperationCanceledException) { }
+        }
 
         Assert.Same(statusTask, completed);
         var response = await statusTask;
