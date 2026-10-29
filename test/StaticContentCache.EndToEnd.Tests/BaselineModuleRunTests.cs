@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
@@ -127,11 +128,13 @@ public partial class BaselineModuleRunTests : IAsyncLifetime
         process.StartInfo.ArgumentList.Add("--no-sandbox");
         process.StartInfo.ArgumentList.Add("--disable-gpu");
         process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
+        process.StartInfo.ArgumentList.Add("--no-first-run");
+        process.StartInfo.ArgumentList.Add("--disable-background-networking");
         process.StartInfo.ArgumentList.Add("--user-data-dir=" + profile);
         process.StartInfo.ArgumentList.Add(url);
         process.Start();
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
+        ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
+        ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
         var deadline = DateTime.UtcNow.AddSeconds(15);
         string? result = null;
         while (DateTime.UtcNow < deadline)
@@ -146,7 +149,6 @@ public partial class BaselineModuleRunTests : IAsyncLifetime
         }
         if (!process.HasExited)
             process.Kill(entireProcessTree: true);
-        await Task.WhenAll(stdout, stderr);
         try
         {
             Directory.Delete(profile, recursive: true);
