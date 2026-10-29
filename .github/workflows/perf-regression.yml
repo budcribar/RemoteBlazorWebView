@@ -2,9 +2,9 @@
 # harness. Counts and payload sizes are the stable signal. Elapsed time and
 # allocations are medians of interleaved repeats, reported as current/baseline.
 #
-# The job does not fail the push. The script exits 0, and every step is
-# continue-on-error, so a noisy runner or a broken baseline checkout still
-# leaves the check green. WARN rows are in the step summary and the artifact.
+# A slow timing stays green: WARN is a column in the step summary and the
+# artifact, not a failed push. A failed build or zero samples on either side
+# fails the job. The results artifact is still uploaded.
 
 name: Performance regression
 
@@ -14,9 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       baseline:
-        description: Git ref for the baseline (tag, branch, or SHA). Empty uses origin/net10.
+        description: Git ref for the baseline (branch or SHA). origin/net10 on every line. An empty value does not select a tag.
         required: false
-        default: ""
+        default: "origin/net10"
       repeats:
         description: Interleaved repetitions of each side on this runner (1-20)
         required: false
@@ -39,15 +39,13 @@ jobs:
     name: perf
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: true
 
     steps:
       - name: Checkout
-        continue-on-error: true
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
+          fetch-tags: false
 
       # Default baseline is origin/net10, so the 10.0 SDK and this line's 9.0
       # SDK both have to be installed. Each worktree's global.json selects
@@ -56,27 +54,23 @@ jobs:
       # ClientFileSyncManager on net9 and net10 has no cache-control argument,
       # so the provider scenario is skipped.
       - name: Setup .NET 10
-        continue-on-error: true
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
       - name: Setup .NET 9
-        continue-on-error: true
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
 
       - name: Setup Node
-        continue-on-error: true
         uses: actions/setup-node@v4
         with:
           node-version: 22.3.0
 
       - name: Compare baseline and current
-        continue-on-error: true
         env:
-          BASELINE: ${{ inputs.baseline }}
+          BASELINE: ${{ inputs.baseline || 'origin/net10' }}
           REPEATS: ${{ inputs.repeats || '5' }}
           TIME_TOLERANCE: ${{ inputs.time_tolerance || '0.20' }}
           COUNT_TOLERANCE: ${{ inputs.count_tolerance || '0.05' }}
