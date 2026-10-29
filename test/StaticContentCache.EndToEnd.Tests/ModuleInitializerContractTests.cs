@@ -27,7 +27,7 @@ using CacheRequest = client::PeakSWC.RemoteWebView.BlazorWebViewStaticContentReq
 
 namespace StaticContentCache.EndToEnd.Tests;
 
-public class ModuleInitializerContractTests
+public partial class ModuleInitializerContractTests
 {
     private const string HostPageName = "module-init-contract-host.html";
     private const string HookName = "module-init-contract-hook.js";
@@ -331,7 +331,7 @@ public class ModuleInitializerContractTests
     private sealed record ModuleRead(string Hash, string ETag, string CacheControl);
     private sealed record ObservedRequest(string Path, string Query, string CacheControl);
 
-    private sealed class ContractSession : IAsyncDisposable
+    private sealed partial class ContractSession : IAsyncDisposable
     {
         private readonly WebApplication _app;
         private readonly GrpcChannel _channel;
@@ -478,7 +478,7 @@ public class ModuleInitializerContractTests
             _clients.Add(sync);
         }
 
-        private static Task Seed(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> states, Guid id)
+        private static Task<bool> Seed(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> states, Guid id)
         {
             var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
@@ -507,8 +507,11 @@ public class ModuleInitializerContractTests
             return reports!;
         }
 
+        [GeneratedRegex(@"module-init-result\?report=([^&]*)")]
+        private static partial Regex ModuleInitResultPattern();
+
         private List<string> Reports() => Requests
-            .Select(request => Regex.Match(request.Path + request.Query, @"module-init-result\?report=([^&]*)"))
+            .Select(request => ModuleInitResultPattern().Match(request.Path + request.Query))
             .Where(match => match.Success)
             .Select(match => Uri.UnescapeDataString(match.Groups[1].Value))
             .ToList();
