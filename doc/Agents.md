@@ -15,11 +15,23 @@ The contract is `src/Protos/agent.proto`. The agent and admin repos copy it verb
 - `AgentHub.Connect` is anonymous at the HTTP level. The first message must be `AgentHello`, otherwise the call ends with `InvalidArgument`.
   An enrollment key that isn't on the allow-list ends it with `PermissionDenied`. A new stream for the same `machine_id` replaces the old one.
 - `AgentAdmin` gets the same treatment as `ClientIPC`, the other service the admin site calls: anonymous, gRPC-Web, `CorsPolicy`.
+  `GetAgents` and `WatchAgents` are always readable. `StartSession` and `CancelLaunch` are gated by `AGENT_ADMIN_KEY` (below).
 - An agent shows as offline 90 s after its last message, or as soon as its stream ends. Offline agents stay listed for 7 days.
 - `WatchAgents` sends the full list on every change, and at least every 15 s.
 - `WatchLaunch` replays the latest stage first. It ends after READY, DECLINED, FAILED or ENDED. A later ENDED, after READY, is still recorded.
-- `StartSession` refuses an offline computer ("That computer is offline") and a computer with a running session ("A session is already running").
-  It skips the consent prompt only when the technician asked for unattended **and** the agent was installed with `--consent=unattended`.
+- `StartSession` refuses:
+  - an offline computer ("That computer is offline")
+  - a computer with a running session ("A session is already running")
+  - a computer with a start that hasn't reached READY or a final stage yet ("A start is already in progress for that computer").
+    A start that hasn't reported anything for 3 minutes no longer blocks.
+- When an agent's stream ends, its starts that hadn't reached READY or a final stage are marked FAILED ("The computer disconnected").
+- The decision is `ConsentPolicy.Decide(unattended, ceiling, adminKeyConfigured, adminKeyValid)`:
+
+  | `AGENT_ADMIN_KEY` | `x-admin-key` | Result |
+  |---|---|---|
+  | not set | (ignored) | allowed, always asks the person at the PC |
+  | set | missing or wrong | `PermissionDenied`, "Admin key required" |
+  | set | correct | asks, unless the technician asked for unattended **and** the agent was installed with `--consent=unattended` |
 
 Registrations, launches, declines and failures are written to the log and to the in-memory event log. On Linux they appear on the admin "Events" page.
 
@@ -28,6 +40,7 @@ Registrations, launches, declines and failures are written to the log and to the
 | Variable | Meaning |
 |---|---|
 | `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents. If it's unset or empty, any key is accepted and a warning is logged once. |
+| `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession` and `CancelLaunch` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
 
 ## Keepalive

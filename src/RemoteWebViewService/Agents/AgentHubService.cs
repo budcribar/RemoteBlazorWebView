@@ -83,8 +83,12 @@ namespace PeakSWC.RemoteWebView.Agents
                 streamCts.Cancel();
                 try { await pump.ConfigureAwait(false); } catch { }
 
-                if (registry.Disconnect(connection))
+                if (registry.Disconnect(connection, out var failedLaunches))
+                {
                     AgentEvents.Info(logger, Category, $"Agent disconnected: {hello.MachineName} ({hello.MachineId})");
+                    foreach (var failed in failedLaunches)
+                        LogProgress(hello, failed);
+                }
             }
         }
 
