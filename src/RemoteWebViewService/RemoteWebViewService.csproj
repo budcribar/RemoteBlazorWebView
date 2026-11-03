@@ -88,6 +88,7 @@
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.104.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
+    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
   
     <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.16.1" />
