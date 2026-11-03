@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -116,6 +116,8 @@ namespace PeakSWC.RemoteWebView
 
                 lb.ClearProviders();
                 lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
+                // EventLog is Windows-only; on Linux (containers) log to console instead
+                if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
                 // Configure EventLog provider
                 lb.AddEventLog(eventLogSettings =>
                 {
@@ -129,6 +131,10 @@ namespace PeakSWC.RemoteWebView
                 });
 
             });
+#endif
+#if DEBUG
+            if (!System.OperatingSystem.IsWindows())
+                services.AddLogging(lb => lb.AddProvider(InMemoryEventLog.Provider));
 #endif
             services.AddResponseCompression(options =>
             {
@@ -282,7 +288,8 @@ namespace PeakSWC.RemoteWebView
 
             app.UseRateLimiter();
 #endif
-            app.UseHttpsRedirection();
+            if (!Program.IsContainerMode)
+                app.UseHttpsRedirection();
 
             app.UseResponseCompression();
             app.UseRouting();
