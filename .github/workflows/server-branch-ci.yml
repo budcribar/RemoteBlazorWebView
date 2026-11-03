@@ -1,0 +1,84 @@
+# Builds RemoteWebViewService and runs its service tests on pushes to branches other than main.
+#
+# main auto-deploys the live relay on Railway, so changes to the server are developed on branches.
+# The other workflows run only on net8 / net10 / net10-ci or on demand, so a feature branch
+# otherwise gets no build at all.
+#
+# - test: restore, build and run StaticContentCache.ServiceTests (which references only the server).
+#   The agent registry tests must pass. The rest of that project runs too but does not fail the job:
+#   it has not been run on Linux in CI before (some tests are Windows-only by design).
+# - docker: builds the same Dockerfile Railway uses, without pushing anything.
+
+name: Server branch CI
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'src/RemoteWebViewService/**'
+      - 'src/Protos/**'
+      - 'test/StaticContentCache.ServiceTests/**'
+      - 'Dockerfile'
+      - 'global.json'
+      - 'Directory.Build.props'
+      - '.github/workflows/server-branch-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      # global.json pins 10.0.0 with rollForward latestMinor; 10.0.x satisfies it.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+
+      - name: Build
+        run: >
+          dotnet build test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+          -c Release --no-restore
+          -p:PackAsTool=false -p:GeneratePackageOnBuild=false
+
+      - name: Test agent registry
+        run: >
+          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName~AgentRegistryTests"
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=agent.trx" --results-directory TestResults
+
+      - name: Test the rest of StaticContentCache.ServiceTests (informational)
+        continue-on-error: true
+        run: >
+          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+          -c Release --no-build
+          --filter "FullyQualifiedName!~AgentRegistryTests"
+          --logger "trx;LogFileName=other.trx" --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-test-results
+          path: TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Railway image
+        run: docker build -t remotewebviewservice:ci .

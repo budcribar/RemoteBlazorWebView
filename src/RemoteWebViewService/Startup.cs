@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
+using PeakSWC.RemoteWebView.Agents;
 using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
@@ -116,6 +117,8 @@ namespace PeakSWC.RemoteWebView
 
                 lb.ClearProviders();
                 lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
+                // Agent registrations, launches and declines are logged at Information so they reach the console (Railway logs)
+                lb.AddFilter("PeakSWC.RemoteWebView.Agents", Microsoft.Extensions.Logging.LogLevel.Information);
                 // EventLog is Windows-only; on Linux (containers) log to console instead
                 if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
                 // Configure EventLog provider
@@ -215,6 +218,11 @@ namespace PeakSWC.RemoteWebView
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();
 
+            // Remote PC Diagnostics agents (AgentHub / AgentAdmin)
+            services.AddSingleton(AgentOptions.FromConfiguration(configuration));
+            services.AddSingleton(_ => new AgentRegistry(TimeProvider.System));
+            services.AddHostedService<AgentRegistrySweeper>();
+
 #if STATS
             services.AddSingleton<ServerStats>();
             services.AddSingleton<StatsInterceptor>();
@@ -311,6 +319,10 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                // Agents authenticate with their enrollment key (AGENT_ENROLLMENT_KEYS), checked in AgentHubService.Connect.
+                endpoints.MapGrpcService<AgentHubService>().AllowAnonymous();
+                // Same treatment as ClientIPCService, which the admin site also calls over gRPC-Web.
+                endpoints.MapGrpcService<AgentAdminService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
 
                 endpoints.MapGet("/favicon.ico", Endpoints.Favicon()).AllowAnonymous();
                 endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).ConditionallyRequireAuthorization();

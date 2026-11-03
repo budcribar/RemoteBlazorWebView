@@ -24,7 +24,14 @@ namespace PeakSWC.RemoteWebView
                 // Note: If appsettings.json does not exist in Azure the following configuration will fail with a certificate error
                 // if (!File.Exists("appsettings.json"))
                    webBuilder.ConfigureKestrel(options => 
-                   { 
+                   {
+                       // Remote PC Diagnostics agents hold one AgentHub.Connect stream open indefinitely (heartbeat every 30 s).
+                       // Kestrel does not time out an HTTP/2 connection while a stream is active, and gRPC turns off the
+                       // minimum request body data rate for streaming calls. Server pings keep NAT/proxy mappings warm
+                       // in both directions and close connections whose peer vanished without a FIN.
+                       options.Limits.Http2.KeepAlivePingDelay = TimeSpan.FromSeconds(30);
+                       options.Limits.Http2.KeepAlivePingTimeout = TimeSpan.FromSeconds(60);
+
                        // Container mode (e.g. Railway TCP proxy): Kestrel terminates TLS itself on 0.0.0.0:<port>.
                        var containerCert = LoadContainerCertificate();
                        if (containerCert != null)
