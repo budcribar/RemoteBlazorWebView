@@ -171,6 +171,13 @@ namespace PeakSWC.RemoteWebView
 
         public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                var linuxResponse = new LoggedEventResponse();
+                linuxResponse.EventResponses.AddRange(InMemoryEventLog.GetEventResponses());
+                return Task.FromResult(linuxResponse);
+            }
+
             List<EventResponse> GetEventResponses()
             {
                 using var eventLog = new EventLog("Application");
