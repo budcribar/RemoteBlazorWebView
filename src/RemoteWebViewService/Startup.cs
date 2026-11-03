@@ -288,8 +288,8 @@ namespace PeakSWC.RemoteWebView
 
             app.UseRateLimiter();
 #endif
-            if (!Program.IsContainerMode)
-                app.UseHttpsRedirection();
+
+            app.UseHttpsRedirection();
 
             app.UseResponseCompression();
             app.UseRouting();
