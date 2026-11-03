@@ -22,7 +22,8 @@ namespace PeakSWC.RemoteWebView.Agents
         public bool IsNew { get; } = isNew;
     }
 
-    public sealed record StartSessionOutcome(StartSessionResponse Response, string MachineName, bool RequireConsent);
+    /// <param name="Denied">The admin key was missing or wrong; the service turns this into PermissionDenied.</param>
+    public sealed record StartSessionOutcome(StartSessionResponse Response, string MachineName, bool RequireConsent, bool Denied = false);
 
     public enum CancelLaunchOutcome { NotFound, Queued, AlreadyFinished }
 
@@ -49,11 +50,15 @@ namespace PeakSWC.RemoteWebView.Agents
         public static readonly TimeSpan OfflineAfter = TimeSpan.FromSeconds(90);
         public static readonly TimeSpan ForgetAgentAfter = TimeSpan.FromDays(7);
         public static readonly TimeSpan ForgetLaunchAfter = TimeSpan.FromDays(1);
+        // A start that hasn't reported anything for this long no longer blocks a new one.
+        public static readonly TimeSpan InProgressWindow = TimeSpan.FromMinutes(3);
 
         public const string OfflineError = "That computer is offline";
         public const string BusyError = "A session is already running";
         public const string UnknownAgentError = "That computer isn't registered with the relay";
         public const string NoAgentError = "No computer was chosen";
+        public const string InProgressError = "A start is already in progress for that computer";
+        public const string DisconnectedDetail = "The computer disconnected";
 
         private readonly object gate = new();
         private readonly Dictionary<string, AgentEntry> agents = new(StringComparer.OrdinalIgnoreCase);
@@ -124,8 +129,16 @@ namespace PeakSWC.RemoteWebView.Agents
         }
 
         /// <summary>Called when a Connect stream ends. Returns true when that stream was still the agent's current one.</summary>
-        public bool Disconnect(AgentConnection connection)
+        public bool Disconnect(AgentConnection connection) => Disconnect(connection, out _);
+
+        /// <summary>
+        /// As <see cref="Disconnect(AgentConnection)"/>, and fails the agent's starts that hadn't reached READY or a final stage
+        /// ("The computer disconnected"). A READY launch is left alone: the app may still be running.
+        /// </summary>
+        public bool Disconnect(AgentConnection connection, out IReadOnlyList<LaunchProgress> failedLaunches)
         {
+            var failed = new List<LaunchProgress>();
+            failedLaunches = failed;
             lock (gate)
             {
                 if (!TryGetCurrentNoLock(connection, out var entry))
@@ -134,6 +147,22 @@ namespace PeakSWC.RemoteWebView.Agents
                 entry.ConnectionCts = null;
                 entry.Writer = null;
                 entry.Online = false;
+
+                foreach (var launch in launches.Values)
+                {
+                    if (!IsInFlight(launch, entry.MachineId))
+                        continue;
+                    var stored = PublishNoLock(launch, new LaunchProgress
+                    {
+                        RequestId = launch.RequestId,
+                        Stage = LaunchStage.StageFailed,
+                        SessionId = launch.SessionId,
+                        Detail = DisconnectedDetail,
+                    });
+                    if (stored != null)
+                        failed.Add(stored);
+                }
+
                 NotifyChangedNoLock();
                 return true;
             }
@@ -216,23 +245,35 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string technician, string serverUrl)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string technician, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
         {
-            if (string.IsNullOrWhiteSpace(machineId))
-                return Refused(NoAgentError, string.Empty);
-
             lock (gate)
             {
-                if (!agents.TryGetValue(machineId, out var entry))
+                AgentEntry? entry = null;
+                if (!string.IsNullOrWhiteSpace(machineId))
+                    agents.TryGetValue(machineId, out entry);
+
+                // The admin key is checked before anything about the computer is revealed.
+                var decision = ConsentPolicy.Decide(unattended, entry?.Info.ConsentCeiling ?? ConsentMode.ConsentAlwaysAsk, adminKeyConfigured, adminKeyValid);
+                if (!decision.Allowed)
+                    return new StartSessionOutcome(new StartSessionResponse { Accepted = false, Error = decision.Error ?? ConsentPolicy.AdminKeyRequired }, string.Empty, true, Denied: true);
+
+                if (string.IsNullOrWhiteSpace(machineId))
+                    return Refused(NoAgentError, string.Empty);
+                if (entry == null)
                     return Refused(UnknownAgentError, string.Empty);
                 if (!entry.Online || entry.ConnectionId == 0)
                     return Refused(OfflineError, entry.Info.MachineName);
                 if (entry.Info.SessionRunning)
                     return Refused(BusyError, entry.Info.MachineName);
+                var now = time.GetUtcNow();
+                string id = entry.MachineId;
+                if (launches.Values.Any(l => IsInFlight(l, id) && now - l.Updated < InProgressWindow))
+                    return Refused(InProgressError, entry.Info.MachineName);
 
                 string sessionId = Guid.NewGuid().ToString();
                 string requestId = Guid.NewGuid().ToString();
-                bool requireConsent = ConsentPolicy.RequireConsent(unattended, entry.Info.ConsentCeiling);
+                bool requireConsent = decision.RequireConsent;
                 string baseUrl = (serverUrl ?? string.Empty).TrimEnd('/');
 
                 var launch = new LaunchEntry(requestId, entry.MachineId, sessionId)
@@ -408,6 +449,10 @@ namespace PeakSWC.RemoteWebView.Agents
             }
             return stored;
         }
+
+        // Started on this machine and not yet READY, DECLINED, FAILED or ENDED.
+        private static bool IsInFlight(LaunchEntry launch, string machineId) =>
+            string.Equals(launch.MachineId, machineId, StringComparison.OrdinalIgnoreCase) && !IsWatchTerminal(launch.Latest.Stage);
 
         private bool TryGetCurrentNoLock(AgentConnection connection, out AgentEntry entry)
         {

@@ -21,14 +21,74 @@ public class AgentRegistryTests
 
     // ---------------------------------------------------------------- consent rule
 
+    // Every combination of (unattended, ceiling, admin key configured, admin key valid).
+    // A "valid" key without one configured can't happen in practice; it must still never loosen anything.
     [Theory]
-    [InlineData(false, ConsentMode.ConsentAlwaysAsk, true)]
-    [InlineData(true, ConsentMode.ConsentAlwaysAsk, true)]
-    [InlineData(false, ConsentMode.ConsentUnattendedAllowed, true)]
-    [InlineData(true, ConsentMode.ConsentUnattendedAllowed, false)]
-    public void Consent_is_skipped_only_when_requested_and_allowed_by_the_ceiling(bool unattended, ConsentMode ceiling, bool expected)
+    // No admin key configured: always allowed, always asks.
+    [InlineData(false, ConsentMode.ConsentAlwaysAsk, false, false, true, true)]
+    [InlineData(true, ConsentMode.ConsentAlwaysAsk, false, false, true, true)]
+    [InlineData(false, ConsentMode.ConsentUnattendedAllowed, false, false, true, true)]
+    [InlineData(true, ConsentMode.ConsentUnattendedAllowed, false, false, true, true)]
+    [InlineData(false, ConsentMode.ConsentAlwaysAsk, false, true, true, true)]
+    [InlineData(true, ConsentMode.ConsentAlwaysAsk, false, true, true, true)]
+    [InlineData(false, ConsentMode.ConsentUnattendedAllowed, false, true, true, true)]
+    [InlineData(true, ConsentMode.ConsentUnattendedAllowed, false, true, true, true)]
+    // Admin key configured but missing or wrong: refused.
+    [InlineData(false, ConsentMode.ConsentAlwaysAsk, true, false, false, true)]
+    [InlineData(true, ConsentMode.ConsentAlwaysAsk, true, false, false, true)]
+    [InlineData(false, ConsentMode.ConsentUnattendedAllowed, true, false, false, true)]
+    [InlineData(true, ConsentMode.ConsentUnattendedAllowed, true, false, false, true)]
+    // Admin key valid: skip the prompt only when unattended was asked for and the ceiling allows it.
+    [InlineData(false, ConsentMode.ConsentAlwaysAsk, true, true, true, true)]
+    [InlineData(true, ConsentMode.ConsentAlwaysAsk, true, true, true, true)]
+    [InlineData(false, ConsentMode.ConsentUnattendedAllowed, true, true, true, true)]
+    [InlineData(true, ConsentMode.ConsentUnattendedAllowed, true, true, true, false)]
+    public void Consent_policy_covers_every_combination(bool unattended, ConsentMode ceiling, bool keyConfigured, bool keyValid, bool allowed, bool requireConsent)
     {
-        Assert.Equal(expected, ConsentPolicy.RequireConsent(unattended, ceiling));
+        var decision = ConsentPolicy.Decide(unattended, ceiling, keyConfigured, keyValid);
+        Assert.Equal(allowed, decision.Allowed);
+        Assert.Equal(requireConsent, decision.RequireConsent);
+        Assert.Equal(allowed ? null : ConsentPolicy.AdminKeyRequired, decision.Error);
+    }
+
+    [Fact]
+    public void Admin_key_is_read_from_options_and_compared_exactly()
+    {
+        Assert.False(AgentOptions.Create(null, null).AdminKeyConfigured);
+        Assert.False(AgentOptions.Create(null, null, "  ").AdminKeyConfigured);
+        Assert.False(AgentOptions.Create(null, null).IsAdminKeyValid("anything"));
+
+        var options = AgentOptions.Create(null, null, " s3cret ");
+        Assert.True(options.AdminKeyConfigured);
+        Assert.True(options.IsAdminKeyValid("s3cret"));
+        Assert.False(options.IsAdminKeyValid("s3cret "));
+        Assert.False(options.IsAdminKeyValid("S3CRET"));
+        Assert.False(options.IsAdminKeyValid(""));
+        Assert.False(options.IsAdminKeyValid(null));
+
+        var context = new CallContext(CancellationToken.None);
+        Assert.Null(AgentAdminService.GetAdminKey(context));
+        context.RequestHeaders.Add("x-admin-key", "s3cret");
+        Assert.Equal("s3cret", AgentAdminService.GetAdminKey(context));
+    }
+
+    [Fact]
+    public void StartSession_with_a_wrong_admin_key_is_denied_before_anything_else()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1", ceiling: ConsentMode.ConsentUnattendedAllowed), "10.0.0.1", null);
+
+        var denied = registry.StartSession("m-1", true, "Bob", ServerUrl, adminKeyConfigured: true, adminKeyValid: false);
+        Assert.True(denied.Denied);
+        Assert.Equal(ConsentPolicy.AdminKeyRequired, denied.Response.Error);
+        Assert.True(registry.StartSession("nope", true, "Bob", ServerUrl, true, false).Denied);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        // No admin key configured: unattended is impossible.
+        var asked = registry.StartSession("m-1", true, "Bob", ServerUrl, adminKeyConfigured: false, adminKeyValid: false);
+        Assert.True(asked.Response.Accepted);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.True(command!.Launch.RequireConsent);
     }
 
     // ---------------------------------------------------------------- enrollment keys and options
@@ -151,19 +211,19 @@ public class AgentRegistryTests
     public void StartSession_refuses_an_offline_unknown_or_busy_agent()
     {
         var registry = new AgentRegistry(new ManualTime());
-        Assert.Equal(AgentRegistry.UnknownAgentError, registry.StartSession("nope", false, "Bob", ServerUrl).Response.Error);
-        Assert.Equal(AgentRegistry.NoAgentError, registry.StartSession("", false, "Bob", ServerUrl).Response.Error);
+        Assert.Equal(AgentRegistry.UnknownAgentError, registry.StartSession("nope", false, "Bob", ServerUrl, true, true).Response.Error);
+        Assert.Equal(AgentRegistry.NoAgentError, registry.StartSession("", false, "Bob", ServerUrl, true, true).Response.Error);
 
         var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
         registry.Disconnect(connection);
-        var offline = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var offline = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
         Assert.False(offline.Accepted);
         Assert.Equal(AgentRegistry.OfflineError, offline.Error);
         Assert.True(string.IsNullOrEmpty(offline.RequestId));
 
         connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
         registry.OnHeartbeat(connection, new Heartbeat { SessionRunning = true, SessionId = Guid.NewGuid().ToString() });
-        var busy = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var busy = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
         Assert.False(busy.Accepted);
         Assert.Equal(AgentRegistry.BusyError, busy.Error);
         Assert.False(connection.Commands.TryRead(out _));
@@ -177,7 +237,7 @@ public class AgentRegistryTests
         registry.Register(Hello("m-1"), "10.0.0.1", null);
         time.Advance(AgentRegistry.OfflineAfter);
         registry.Sweep();
-        Assert.Equal(AgentRegistry.OfflineError, registry.StartSession("m-1", false, "Bob", ServerUrl).Response.Error);
+        Assert.Equal(AgentRegistry.OfflineError, registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Error);
     }
 
     [Theory]
@@ -189,7 +249,7 @@ public class AgentRegistryTests
         var registry = new AgentRegistry(new ManualTime());
         var connection = registry.Register(Hello("m-1", ceiling: ceiling), "10.0.0.1", null);
 
-        var response = registry.StartSession("m-1", unattended, "Bob", ServerUrl + "/").Response;
+        var response = registry.StartSession("m-1", unattended, "Bob", ServerUrl + "/", true, true).Response;
 
         Assert.True(response.Accepted, response.Error);
         Assert.True(Guid.TryParse(response.SessionId, out _));
@@ -214,13 +274,92 @@ public class AgentRegistryTests
     {
         var registry = new AgentRegistry(new ManualTime());
         var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
-        var response = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var response = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
         Assert.True(connection.Commands.TryRead(out _));
 
         Assert.Equal(CancelLaunchOutcome.Queued, registry.CancelLaunch(response.RequestId));
         Assert.True(connection.Commands.TryRead(out var cancel));
         Assert.Equal(response.RequestId, cancel!.Cancel.RequestId);
         Assert.Equal(CancelLaunchOutcome.NotFound, registry.CancelLaunch(Guid.NewGuid().ToString()));
+    }
+
+    [Fact]
+    public void StartSession_refuses_while_a_start_is_in_progress_unless_it_went_quiet_for_3_minutes()
+    {
+        var time = new ManualTime();
+        var registry = new AgentRegistry(time);
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var first = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        Assert.True(first.Accepted);
+
+        Assert.Equal(AgentRegistry.InProgressError, registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Error);
+
+        // Progress keeps it in progress.
+        time.Advance(TimeSpan.FromMinutes(2));
+        registry.OnHeartbeat(connection, new Heartbeat());
+        registry.OnProgress(connection, new LaunchProgress { RequestId = first.RequestId, Stage = LaunchStage.StageDownloading, Percent = 10 });
+        time.Advance(TimeSpan.FromMinutes(2));
+        registry.OnHeartbeat(connection, new Heartbeat());
+        Assert.Equal(AgentRegistry.InProgressError, registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Error);
+
+        // Another computer is not affected.
+        registry.Register(Hello("m-2"), "10.0.0.2", null);
+        Assert.True(registry.StartSession("m-2", false, "Bob", ServerUrl, true, true).Response.Accepted);
+
+        // Silent for 3 minutes: no longer blocks.
+        time.Advance(TimeSpan.FromMinutes(1));
+        registry.OnHeartbeat(connection, new Heartbeat());
+        Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
+    }
+
+    [Fact]
+    public async Task Stream_end_fails_starts_that_had_not_reached_a_final_stage()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        using var watch = registry.SubscribeLaunch(start.RequestId)!;
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageDownloading });
+
+        Assert.True(registry.Disconnect(connection, out var failed));
+
+        Assert.Equal(start.RequestId, Assert.Single(failed).RequestId);
+        var seen = await ReadAll(watch.Reader);
+        Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageDownloading, LaunchStage.StageFailed }, seen.Select(p => p.Stage));
+        Assert.Equal(AgentRegistry.DisconnectedDetail, seen[^1].Detail);
+
+        // A start the agent never picked up is failed too, so the next one isn't blocked.
+        connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var second = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        Assert.True(second.Accepted, second.Error);
+        registry.Disconnect(connection, out failed);
+        Assert.Equal(LaunchStage.StageFailed, registry.GetLatestProgress(second.RequestId)!.Stage);
+    }
+
+    [Fact]
+    public void Stream_end_leaves_a_ready_session_alone()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageReady });
+
+        Assert.True(registry.Disconnect(connection, out var failed));
+        Assert.Empty(failed);
+        Assert.Equal(LaunchStage.StageReady, registry.GetLatestProgress(start.RequestId)!.Stage);
+    }
+
+    [Fact]
+    public void A_replaced_stream_ending_does_not_fail_starts()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var old = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        Assert.False(registry.Disconnect(old, out var failed));
+        Assert.Empty(failed);
+        Assert.Equal(LaunchStage.StageQueued, registry.GetLatestProgress(start.RequestId)!.Stage);
     }
 
     // ---------------------------------------------------------------- progress fan-out
@@ -230,7 +369,7 @@ public class AgentRegistryTests
     {
         var registry = new AgentRegistry(new ManualTime());
         var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
-        var start = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
 
         using var first = registry.SubscribeLaunch(start.RequestId)!;
         using var second = registry.SubscribeLaunch(start.RequestId)!;
@@ -270,7 +409,7 @@ public class AgentRegistryTests
     {
         var registry = new AgentRegistry(new ManualTime());
         var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
-        var start = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
         using var watch = registry.SubscribeLaunch(start.RequestId)!;
 
         registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageWaitingForConsent });
@@ -278,7 +417,7 @@ public class AgentRegistryTests
 
         Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageWaitingForConsent, LaunchStage.StageDeclined }, (await ReadAll(watch.Reader)).Select(p => p.Stage));
         Assert.False(registry.GetAgent("m-1")!.SessionRunning);
-        Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl).Response.Accepted);
+        Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
     }
 
     [Fact]
@@ -287,7 +426,7 @@ public class AgentRegistryTests
         var registry = new AgentRegistry(new ManualTime());
         registry.Register(Hello("m-1"), "10.0.0.1", null);
         var other = registry.Register(Hello("m-2"), "10.0.0.2", null);
-        var start = registry.StartSession("m-1", false, "Bob", ServerUrl).Response;
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
 
         Assert.Null(registry.OnProgress(other, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageReady }));
         Assert.Equal(LaunchStage.StageQueued, registry.GetLatestProgress(start.RequestId)!.Stage);
@@ -302,7 +441,8 @@ public class AgentRegistryTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var ct = timeout.Token;
         var options = new CallOptions(cancellationToken: ct);
-        await using var relay = await Relay.StartAsync(AgentOptions.Create("key-1,key-2", ServerUrl + "/"));
+        var admin = new CallOptions(new Metadata { { "x-admin-key", "admin-secret" } }, cancellationToken: ct);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create("key-1,key-2", ServerUrl + "/", "admin-secret"));
         var invoker = relay.Invoker;
 
         using var connect = invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
@@ -310,7 +450,7 @@ public class AgentRegistryTests
 
         await WaitFor(async () => (await invoker.AsyncUnaryCall(GetAgentsMethod, null, options, new Empty())).Agents.Any(a => a.MachineId == "m-1" && a.Online), ct);
 
-        var start = await invoker.AsyncUnaryCall(StartSessionMethod, null, options, new StartSessionRequest { MachineId = "m-1", Unattended = true, Technician = "Bob" });
+        var start = await invoker.AsyncUnaryCall(StartSessionMethod, null, admin, new StartSessionRequest { MachineId = "m-1", Unattended = true, Technician = "Bob" });
         Assert.True(start.Accepted, start.Error);
         Assert.Equal($"{ServerUrl}/app/{start.SessionId}", start.AppUrl);
 
@@ -338,7 +478,7 @@ public class AgentRegistryTests
         Assert.False(await watch.ResponseStream.MoveNext(ct));
 
         await WaitFor(async () => (await invoker.AsyncUnaryCall(GetAgentsMethod, null, options, new Empty())).Agents.Any(a => a.SessionRunning && a.SessionId == start.SessionId), ct);
-        var busy = await invoker.AsyncUnaryCall(StartSessionMethod, null, options, new StartSessionRequest { MachineId = "m-1" });
+        var busy = await invoker.AsyncUnaryCall(StartSessionMethod, null, admin, new StartSessionRequest { MachineId = "m-1" });
         Assert.False(busy.Accepted);
         Assert.Equal(AgentRegistry.BusyError, busy.Error);
 
@@ -370,6 +510,37 @@ public class AgentRegistryTests
         }
 
         Assert.Empty(relay.Registry.GetAgentList().Agents);
+    }
+
+    [Fact]
+    public async Task StartSession_and_CancelLaunch_need_the_admin_key_when_one_is_set()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
+        var none = new CallOptions(cancellationToken: ct);
+        var wrong = new CallOptions(new Metadata { { "x-admin-key", "nope" } }, cancellationToken: ct);
+        var right = new CallOptions(new Metadata { { "x-admin-key", "admin-secret" } }, cancellationToken: ct);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create(null, null, "admin-secret"));
+        relay.Registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var request = new StartSessionRequest { MachineId = "m-1" };
+
+        foreach (var options in new[] { none, wrong })
+        {
+            var ex = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(StartSessionMethod, null, options, request));
+            Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
+            Assert.Equal(ConsentPolicy.AdminKeyRequired, ex.Status.Detail);
+        }
+
+        // Reading stays open.
+        Assert.Single((await relay.Invoker.AsyncUnaryCall(GetAgentsMethod, null, none, new Empty())).Agents);
+
+        var start = await relay.Invoker.AsyncUnaryCall(StartSessionMethod, null, right, request);
+        Assert.True(start.Accepted, start.Error);
+
+        var cancel = new CancelCommand { RequestId = start.RequestId };
+        var denied = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, wrong, cancel));
+        Assert.Equal(StatusCode.PermissionDenied, denied.StatusCode);
+        await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, right, cancel);
     }
 
     [Fact]
@@ -427,6 +598,8 @@ public class AgentRegistryTests
         new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchAgents", Proto(Empty.Parser), Proto(AgentList.Parser));
     private static readonly Method<StartSessionRequest, StartSessionResponse> StartSessionMethod =
         new(MethodType.Unary, "rwvagent.AgentAdmin", "StartSession", Proto(StartSessionRequest.Parser), Proto(StartSessionResponse.Parser));
+    private static readonly Method<CancelCommand, Empty> CancelLaunchMethod =
+        new(MethodType.Unary, "rwvagent.AgentAdmin", "CancelLaunch", Proto(CancelCommand.Parser), Proto(Empty.Parser));
     private static readonly Method<WatchLaunchRequest, LaunchProgress> WatchLaunchMethod =
         new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchLaunch", Proto(WatchLaunchRequest.Parser), Proto(LaunchProgress.Parser));
 

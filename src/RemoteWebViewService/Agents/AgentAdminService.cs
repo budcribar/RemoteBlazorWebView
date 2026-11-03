@@ -14,6 +14,7 @@ namespace PeakSWC.RemoteWebView.Agents
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentAdminService";
         public const string DefaultTechnician = "A technician";
         public static readonly TimeSpan WatchAgentsInterval = TimeSpan.FromSeconds(15);
+        private static int warnedNoAdminKey;
 
         public override Task<AgentList> GetAgents(Empty request, ServerCallContext context) =>
             Task.FromResult(registry.GetAgentList());
@@ -46,8 +47,17 @@ namespace PeakSWC.RemoteWebView.Agents
         {
             string technician = GetTechnician(request, context);
             string serverUrl = GetServerUrl(options, context);
-            var outcome = registry.StartSession(request.MachineId, request.Unattended, technician, serverUrl);
+            bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
+            if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
+                AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
+
+            var outcome = registry.StartSession(request.MachineId, request.Unattended, technician, serverUrl, options.AdminKeyConfigured, adminKeyValid);
             var response = outcome.Response;
+            if (outcome.Denied)
+            {
+                AgentEvents.Warn(logger, $"Diagnostics request on {request.MachineId} refused: missing or wrong {AgentOptions.AdminKeyHeader}");
+                throw new RpcException(new Status(StatusCode.PermissionDenied, response.Error));
+            }
             string who = string.IsNullOrEmpty(outcome.MachineName) ? request.MachineId : $"{outcome.MachineName} ({request.MachineId})";
 
             if (response.Accepted)
@@ -77,12 +87,26 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override Task<Empty> CancelLaunch(CancelCommand request, ServerCallContext context)
         {
+            if (options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+                throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
+
             var outcome = registry.CancelLaunch(request.RequestId);
             if (outcome == CancelLaunchOutcome.NotFound)
                 throw new RpcException(new Status(StatusCode.NotFound, "No launch with that request_id"));
             if (outcome == CancelLaunchOutcome.Queued)
                 AgentEvents.Info(logger, Category, $"Cancel requested for launch {request.RequestId}");
             return Task.FromResult(new Empty());
+        }
+
+        /// <summary>The x-admin-key request header (gRPC metadata), or null.</summary>
+        public static string? GetAdminKey(ServerCallContext context)
+        {
+            foreach (var entry in context.RequestHeaders)
+            {
+                if (!entry.IsBinary && string.Equals(entry.Key, AgentOptions.AdminKeyHeader, StringComparison.OrdinalIgnoreCase))
+                    return entry.Value;
+            }
+            return null;
         }
 
         /// <summary>The signed-in user's name when authentication is on, else what the admin site sent, else "A technician".</summary>
