@@ -114,7 +114,7 @@ namespace PeakSWC.RemoteWebView
                             request.Cookies = serializedCookies;
 #endif
                         }
-                        await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = request.Message, Url = request.Url, Cookies = request.Cookies }).ConfigureAwait(false);
+                        await ForwardMessage(serviceState, request).ConfigureAwait(false);
                         state.SequenceNum++;
                     }
                     else
@@ -128,12 +128,7 @@ namespace PeakSWC.RemoteWebView
 
                     while (state.MessageDictionary.TryRemove(state.SequenceNum, out var queuedRequest))
                     {
-                        await serviceState.IPC.ReceiveMessage(new WebMessageResponse
-                        {
-                            Response = queuedRequest.Message,
-                            Url = queuedRequest.Url,
-                            Cookies = queuedRequest.Cookies
-                        }).ConfigureAwait(false);
+                        await ForwardMessage(serviceState, queuedRequest).ConfigureAwait(false);
                         state.SequenceNum++;
                     }
                 }
@@ -149,6 +144,17 @@ namespace PeakSWC.RemoteWebView
                 logger.LogError(ex, "Exception in SendMessage for Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
+        }
+        private static ValueTask ForwardMessage(ServiceState serviceState, SendSequenceMessageRequest request)
+        {
+            // Browser-only state must follow the same sequence ordering as Blazor events,
+            // but must never reach the desktop Blazor IPC parser.
+            return request.Message.StartsWith(IPC.ScrollMessagePrefix, StringComparison.Ordinal)
+                ? serviceState.IPC.SendMessage(request.Message)
+                : serviceState.IPC.ReceiveMessage(new WebMessageResponse
+                {
+                    Response = request.Message, Url = request.Url, Cookies = request.Cookies
+                });
         }
     }
 }

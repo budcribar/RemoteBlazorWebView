@@ -12,6 +12,9 @@ namespace PeakSWC.RemoteWebView
 {
     public class IPC 
     {
+        public const string ScrollMessagePrefix = "mirror-scroll:";
+        private readonly object browserStateLock = new();
+        private StringRequest? latestScroll;
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
         private readonly ConcurrentQueue<StringRequest> messageHistory = new ConcurrentQueue<StringRequest>();
@@ -24,12 +27,13 @@ namespace PeakSWC.RemoteWebView
         {
             var channel = Channel.CreateUnbounded<StringRequest>();
           
-            foreach (var message in messageHistory)
+            lock (browserStateLock)
             {
-                channel.Writer.TryWrite(message);
+                foreach (var message in messageHistory)
+                    channel.Writer.TryWrite(message);
+                if (latestScroll != null) channel.Writer.TryWrite(latestScroll);
+                observers.TryAdd(brn, channel);
             }
-     
-            observers.TryAdd(brn, channel);
             ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, linkedToken.Token), linkedToken.Token);
         }
 
@@ -92,11 +96,19 @@ namespace PeakSWC.RemoteWebView
                 {
                     await foreach (var m in browserResponseChannel.Reader.ReadAllAsync(token).ConfigureAwait(false))
                     {
-                        if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
-                            messageHistory.Enqueue(m);
-                        foreach (var observer in observers.Values)
+                        lock (browserStateLock)
                         {
-                            observer.Writer.TryWrite(m);
+                            if (m.Request.StartsWith(ScrollMessagePrefix, StringComparison.Ordinal))
+                            {
+                                // Keep one snapshot for late mirrors, not every wheel tick forever.
+                                if (enableMirrors) latestScroll = m;
+                            }
+                            else if (!m.Request.Contains("EndInvokeDotNet") && enableMirrors)
+                                messageHistory.Enqueue(m);
+                            foreach (var observer in observers.Values)
+                            {
+                                observer.Writer.TryWrite(m);
+                            }
                         }
                     }
                 }
