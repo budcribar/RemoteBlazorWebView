@@ -3,7 +3,8 @@
        Run it, then click "Open in browser": the UI is served by this process on a loopback port, no separate server. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- WebView2CompositionControl (used by RemoteBlazorWebView.Wpf) needs the Windows SDK projection (Microsoft.Windows.SDK.NET). -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
