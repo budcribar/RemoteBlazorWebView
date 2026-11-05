@@ -16,6 +16,7 @@ on:
     branches-ignore: [main]
     paths:
       - 'src/RemoteWebViewService/**'
+      - 'src/RemoteWebViewService.Lib/**'
       - 'src/Protos/**'
       - 'test/StaticContentCache.ServiceTests/**'
       - 'Dockerfile'
