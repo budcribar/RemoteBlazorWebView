@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
@@ -29,6 +28,7 @@ using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 #if AUTHORIZATION
+using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Client;
 using System.Net.Http;
@@ -108,9 +108,14 @@ namespace PeakSWC.RemoteWebView
         }
 #endif
 
+        // Set by RemoteWebViewServer.StartAsync when the service runs inside another process.
+        private bool Embedded => configuration.GetValue(RemoteWebViewServer.EmbeddedKey, false);
+
         public void ConfigureServices(IServiceCollection services)
         {
 #if !DEBUG
+            // Embedded: the host app chose the logging providers; don't clear them or add the Event Log.
+            if (!Embedded)
             services.AddLogging(lb =>
             {
 
@@ -133,7 +138,7 @@ namespace PeakSWC.RemoteWebView
             });
 #endif
 #if DEBUG
-            if (!System.OperatingSystem.IsWindows())
+            if (!Embedded && !System.OperatingSystem.IsWindows())
                 services.AddLogging(lb => lb.AddProvider(InMemoryEventLog.Provider));
 #endif
             services.AddResponseCompression(options =>
@@ -288,7 +293,8 @@ namespace PeakSWC.RemoteWebView
 
             app.UseRateLimiter();
 #endif
-            if (!Program.IsContainerMode)
+            // Off in container mode (TLS terminated by Kestrel on a single port) and for the embedded plain-HTTP loopback server.
+            if (!RemoteWebViewServer.IsContainerMode && configuration.GetValue(RemoteWebViewServer.HttpsRedirectionKey, true))
                 app.UseHttpsRedirection();
 
             app.UseResponseCompression();
@@ -305,11 +311,17 @@ namespace PeakSWC.RemoteWebView
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
 
+            // Single-client embedded server: no client listing / file watcher (as on net9SplitNuget).
+            bool adminServices = !Embedded || (app.ApplicationServices.GetService<MaxClientsOptions>()?.MaxClients ?? int.MaxValue) > 1;
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
+                if (adminServices)
+                {
+                    endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
+                    endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
+                }
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
-                endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
 
                 endpoints.MapGet("/favicon.ico", Endpoints.Favicon()).AllowAnonymous();
