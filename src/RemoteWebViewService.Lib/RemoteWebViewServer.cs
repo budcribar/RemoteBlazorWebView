@@ -166,7 +166,7 @@ namespace PeakSWC.RemoteWebView
                     // The host app owns process lifetime: no Ctrl+C / SIGTERM / ProcessExit hooks.
                     services.Replace(ServiceDescriptor.Singleton<IHostLifetime, EmbeddedHostLifetime>());
                     services.AddSingleton(new MaxClientsOptions { MaxClients = options.MaxClients });
-                    services.AddSingleton(new FrameAncestorsOptions(options.FrameAncestors));
+                    services.AddSingleton(new FrameAncestorsOptions(options.FrameAncestors) { AllowOpaqueOrigin = options.AllowOpaqueOrigin });
                     services.AddTransient<IStartupFilter, EmbeddedStartupFilter>();
                 })
                 .ConfigureWebHost(web =>
@@ -262,6 +262,13 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public IReadOnlyList<string> FrameAncestors { get; set; } = [];
 
+        /// <summary>
+        /// With <see cref="FrameAncestors"/> set, also accept script calls with "Origin: null": pages framed in a sandboxed iframe
+        /// without allow-same-origin, whose origin is opaque. Any sandboxed page on any site sends that origin, so only the client
+        /// id in the URL and in each call ties such a request to a client. Defaults to false.
+        /// </summary>
+        public bool AllowOpaqueOrigin { get; set; }
+
         /// <summary>Logging setup for the embedded server's own logger factory. Default: no providers (silent).</summary>
         public Action<ILoggingBuilder>? ConfigureLogging { get; set; }
 
@@ -338,6 +345,9 @@ namespace PeakSWC.RemoteWebView
     public sealed class FrameAncestorsOptions(IReadOnlyList<string> origins)
     {
         public IReadOnlyList<string> Origins { get; } = origins;
+
+        /// <summary>Accept "Origin: null" (see <see cref="RemoteWebViewServerOptions.AllowOpaqueOrigin"/>).</summary>
+        public bool AllowOpaqueOrigin { get; init; }
     }
 
     internal sealed class EmbeddedHostLifetime : IHostLifetime
