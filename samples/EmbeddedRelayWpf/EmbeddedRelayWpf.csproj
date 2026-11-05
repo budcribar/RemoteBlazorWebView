@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!-- Hosts RemoteWebViewService in-process (PeakSWC.RemoteWebViewService.Lib) next to a RemoteBlazorWebView.
+       Run it, then click "Open in browser": the UI is served by this process on a loopback port, no separate server. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Platforms>x64</Platforms>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteBlazorWebView.Wpf\RemoteBlazorWebView.Wpf.csproj" />
+    <ProjectReference Include="..\..\src\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

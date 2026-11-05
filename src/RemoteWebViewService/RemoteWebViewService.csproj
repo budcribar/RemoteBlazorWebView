@@ -59,8 +59,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoAuthorization|x64'" />
   
+  <!-- All service code lives in RemoteWebViewService.Lib so it can also be hosted in-process; this exe is just Program.cs. -->
   <ItemGroup>
-    <Compile Remove="GlobalSuppressions.cs" />
+    <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
@@ -87,7 +88,6 @@
 	  
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.104.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />
-    <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
   
     <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.16.1" />
@@ -98,12 +98,6 @@
 		  </PackagePath>
 		  <Pack>True</Pack>
 	  </None>
-    <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico">
-      <PackagePath>
-      </PackagePath>
-      <Pack>True</Pack>
-    </EmbeddedResource>
-    <EmbeddedResource Include="GlobalSuppressions.cs" />
     <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>
@@ -125,10 +119,6 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
    
-  </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="StaticContentCache.ServiceTests" />
   </ItemGroup>
 
   <ProjectExtensions>
