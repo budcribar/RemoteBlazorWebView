@@ -140,6 +140,31 @@ public class EmbeddedServerTests
         Assert.Equal(HttpStatusCode.OK, await WithOrigin($"http://{server.BaseUri.Authority}")); // same origin
         Assert.Equal(HttpStatusCode.OK, await WithOrigin("https://host.example"));
         Assert.Equal(HttpStatusCode.Forbidden, await WithOrigin("https://evil.example"));
+        Assert.Equal(HttpStatusCode.Forbidden, await WithOrigin("null")); // opaque origin: off by default
+    }
+
+    [Fact]
+    public async Task AllowOpaqueOrigin_accepts_origin_null_and_keeps_the_other_checks()
+    {
+        await using var server = await RemoteWebViewServer.StartAsync(new RemoteWebViewServerOptions
+        {
+            FrameAncestors = ["https://host.example"],
+            AllowOpaqueOrigin = true,
+        });
+        using var http = new HttpClient { BaseAddress = server.BaseUri };
+
+        async Task<HttpStatusCode> WithOrigin(string origin)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, "health");
+            req.Headers.Add("Origin", origin);
+            return (await http.SendAsync(req)).StatusCode;
+        }
+
+        Assert.Equal(HttpStatusCode.OK, await WithOrigin("null"));
+        Assert.Equal(HttpStatusCode.OK, await WithOrigin("https://host.example"));
+        Assert.Equal(HttpStatusCode.Forbidden, await WithOrigin("https://evil.example"));
+        var page = await http.GetAsync("");
+        Assert.Equal("frame-ancestors https://host.example", string.Join(",", page.Headers.GetValues("Content-Security-Policy")));
     }
 
     [Fact]
