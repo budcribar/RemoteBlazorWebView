@@ -1,7 +1,7 @@
 # Builds RemoteWebViewService and runs its service tests on pushes to branches other than main.
 #
 # main auto-deploys the live relay on Railway, so changes to the server are developed on branches.
-# The other workflows run only on net8 / net10 / net10-ci or on demand, so a feature branch
+# The other workflows run only on net8 / net10 / net10-ci / net11 or on demand, so a feature branch
 # otherwise gets no build at all.
 #
 # - test: restore, build and run StaticContentCache.ServiceTests (which references only the server).
@@ -38,10 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # global.json pins 10.0.0 with rollForward latestMinor; 10.0.x satisfies it.
+      # global.json pins the .NET 11 RC 2 SDK (allowPrerelease, rollForward latestMinor).
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       - name: Restore
         run: dotnet restore test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
