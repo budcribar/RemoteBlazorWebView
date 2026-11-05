@@ -7,6 +7,7 @@ COPY global.json Directory.Build.props ./
 COPY icons/ icons/
 COPY README.md ./
 COPY src/Protos/ src/Protos/
+COPY src/RemoteWebViewService.Lib/ src/RemoteWebViewService.Lib/
 COPY src/RemoteWebViewService/ src/RemoteWebViewService/
 RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64
 RUN dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj \
