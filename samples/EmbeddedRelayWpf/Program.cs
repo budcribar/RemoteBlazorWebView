@@ -15,6 +15,9 @@ public static class Program
     public static void Main()
     {
         var app = new Application();
+        // WinExe has no console: show startup/runtime failures instead of exiting silently.
+        app.DispatcherUnhandledException += (_, e) => { MessageBox.Show(e.Exception.ToString(), "EmbeddedRelayWpf error"); e.Handled = true; app.Shutdown(1); };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => MessageBox.Show(e.ExceptionObject.ToString(), "EmbeddedRelayWpf error");
 
         // 1. Start the relay inside this process: loopback, plain HTTP, free ports, no dev cert.
         var sw = Stopwatch.StartNew();
