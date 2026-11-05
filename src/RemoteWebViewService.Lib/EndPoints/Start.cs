@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.Pages;
 using System;
 using System.Collections.Concurrent;
@@ -50,7 +49,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     // Set the service state only after notifying the client stream succeeds
                     serviceState.Cookies = context.Request.Cookies;
                     serviceState.InUse = true;
-                    serviceState.User = context.User.GetDisplayName() ?? "";
+                    serviceState.User = context.User.GetUserDisplayName() ?? "";
 
                     // Notify all channels of the connection
                     foreach (var channel in serviceStateChannel.Values)
