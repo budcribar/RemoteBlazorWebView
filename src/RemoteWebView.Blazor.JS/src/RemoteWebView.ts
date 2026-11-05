@@ -27,7 +27,11 @@ if (!window.RemoteBlazor) {
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true;
-const locationOrigin = window.location.origin;
+// In a sandboxed iframe without allow-same-origin the page's origin is opaque and location.origin is the string "null".
+// The page was still loaded from the relay, so its scheme and host are the relay's.
+const locationOrigin = window.location.origin === 'null'
+    ? `${window.location.protocol}//${window.location.host}`
+    : window.location.origin;
 
 const client = new BrowserIPCClient(window.RemoteBlazor.grpcHost || locationOrigin);
 

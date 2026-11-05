@@ -25,7 +25,9 @@ namespace PeakSWC.RemoteWebView
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
         {
             var maxClients = app.ApplicationServices.GetRequiredService<MaxClientsOptions>().MaxClients;
-            var frameAncestors = app.ApplicationServices.GetRequiredService<FrameAncestorsOptions>().Origins;
+            var frameAncestorsOptions = app.ApplicationServices.GetRequiredService<FrameAncestorsOptions>();
+            var frameAncestors = frameAncestorsOptions.Origins;
+            var allowOpaqueOrigin = frameAncestorsOptions.AllowOpaqueOrigin;
             var clients = app.ApplicationServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
 
             if (maxClients < int.MaxValue)
@@ -56,7 +58,9 @@ namespace PeakSWC.RemoteWebView
                     // Same-origin calls are always allowed: a page served from here and framed by the host
                     // calls back with this server's own origin.
                     var origin = context.Request.Headers.Origin.ToString();
+                    // A sandboxed frame without allow-same-origin sends "Origin: null"; accepted only when the host opted in.
                     if (!string.IsNullOrEmpty(origin) && !IsSameOrigin(context.Request, origin) &&
+                        !(allowOpaqueOrigin && origin == "null") &&
                         !frameAncestors.Contains(origin.TrimEnd('/'), StringComparer.OrdinalIgnoreCase))
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
