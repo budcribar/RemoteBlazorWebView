@@ -1,3 +1,4 @@
+import { initializeScrollSync, receiveScroll } from './ScrollSync';
 import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
@@ -26,7 +27,11 @@ if (!window.RemoteBlazor) {
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true;
-const locationOrigin = window.location.origin;
+// In a sandboxed iframe without allow-same-origin the page's origin is opaque and location.origin is the string "null".
+// The page was still loaded from the relay, so its scheme and host are the relay's.
+const locationOrigin = window.location.origin === 'null'
+    ? `${window.location.protocol}//${window.location.host}`
+    : window.location.origin;
 
 const client = new BrowserIPCClient(window.RemoteBlazor.grpcHost || locationOrigin);
 
@@ -61,8 +66,10 @@ export function sendMessage(message: string) {
 }
 
 function makePageReadOnly() {
+    if (document.getElementById('__remote-mirror-overlay')) return;
     // Create the overlay element
     const overlay = document.createElement('div');
+    overlay.id = '__remote-mirror-overlay';
     overlay.style.position = 'fixed';
     overlay.style.top = '0px';
     overlay.style.left = '0px';
@@ -74,8 +81,9 @@ function makePageReadOnly() {
     // Append the overlay to the body
     document.body.appendChild(overlay);
 
-    // Disable scrolling
-    document.body.style.overflow = 'hidden';
+    // Block local wheel/touch input while allowing synchronized document scrolling.
+    overlay.addEventListener('wheel', event => event.preventDefault(), { passive: false });
+    overlay.addEventListener('touchmove', event => event.preventDefault(), { passive: false });
 
     // Bind events for keyboard
     window.addEventListener('keydown', preventInteraction, true);
@@ -111,10 +119,13 @@ export function initializeRemoteWebView() {
     message.setClientid(window.RemoteBlazor.clientId);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
 
+    if (window.RemoteBlazor.isPrimary) initializeScrollSync(sendMessage);
+
     const stream = client.receiveMessage(message, {});
 
     stream.on('data', (response: StringRequest) => {
         console.info("BrowserIPC.ReceiveMessage: " + response.getRequest());
+        if (receiveScroll(response.getRequest())) return;
         receiveMessage(response.getRequest());
         if (!window.RemoteBlazor.isPrimary)
             makePageReadOnly();

@@ -30,6 +30,49 @@ public class BugBountyTests
     private static readonly string[] MajorArgumentZeroOnly = ["--major", "0"];
 
     [Fact]
+    public async Task Mirror_scroll_is_ordered_relayed_and_never_forwarded_to_desktop()
+    {
+        const string id = "scroll-test";
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true);
+        var ready = new TaskCompletionSource<ServiceState>();
+        ready.SetResult(state);
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = ready };
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
+        var service = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, services, shutdown);
+        var relayed = Channel.CreateUnbounded<string>();
+        var desktop = Channel.CreateUnbounded<string>();
+        state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(m => desktop.Writer.TryWrite(m.Response));
+        using var observer = new CancellationTokenSource();
+        state.IPC.BrowserResponseStream(new BrowserResponseNode(
+            new CallbackStreamWriter<StringRequest>(m => relayed.Writer.TryWrite(m.Request)), "mirror", false), observer);
+
+        SendSequenceMessageRequest Scroll(uint sequence, bool primary = true) => new()
+        {
+            Id = id, ClientId = primary ? "primary" : "mirror", IsPrimary = primary,
+            Sequence = sequence, Message = IPC.ScrollMessagePrefix + sequence
+        };
+        // Sequence 2 must wait for sequence 1, including the queued-message path.
+        Assert.True((await service.SendMessage(Scroll(2), new TestCallContext(CancellationToken.None))).Success);
+        Assert.False(relayed.Reader.TryRead(out _));
+        Assert.True((await service.SendMessage(Scroll(1), new TestCallContext(CancellationToken.None))).Success);
+        Assert.Equal(IPC.ScrollMessagePrefix + "1", await relayed.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.Equal(IPC.ScrollMessagePrefix + "2", await relayed.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.False(desktop.Reader.TryRead(out _));
+        await service.SendMessage(Scroll(3, primary: false), new TestCallContext(CancellationToken.None));
+        Assert.Equal(3u, state.BrowserIPC.SequenceNum);
+        Assert.False(relayed.Reader.TryRead(out _));
+
+        // A late mirror receives only the latest snapshot, without wheel ticks in render history.
+        var late = Channel.CreateUnbounded<string>();
+        using var lateObserver = new CancellationTokenSource();
+        state.IPC.BrowserResponseStream(new BrowserResponseNode(
+            new CallbackStreamWriter<StringRequest>(m => late.Writer.TryWrite(m.Request)), "late", false), lateObserver);
+        Assert.Equal(IPC.ScrollMessagePrefix + "2", await late.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)));
+        Assert.False(late.Reader.TryRead(out _));
+    }
+
+    [Fact]
     public async Task Bug01_GetClients_does_not_drop_connected_clients_when_one_registration_faults()
     {
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();

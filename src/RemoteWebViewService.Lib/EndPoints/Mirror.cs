@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
 using System.Collections.Concurrent;
@@ -40,7 +39,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     {
                         if (string.IsNullOrEmpty(serviceState.User))
                         {
-                            serviceState.User = context.User.GetDisplayName() ?? string.Empty;
+                            serviceState.User = context.User.GetUserDisplayName() ?? string.Empty;
                         }
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 

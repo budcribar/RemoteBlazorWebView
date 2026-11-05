@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!-- Hosts RemoteWebViewService in-process (PeakSWC.RemoteWebViewService.Lib) next to a RemoteBlazorWebView.
+       Run it, then click "Open in browser": the UI is served by this process on a loopback port, no separate server. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- WebView2CompositionControl (used by RemoteBlazorWebView.Wpf) needs the Windows SDK projection (Microsoft.Windows.SDK.NET). -->
+    <TargetFramework>net11.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Platforms>x64</Platforms>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteBlazorWebView.Wpf\RemoteBlazorWebView.Wpf.csproj" />
+    <ProjectReference Include="..\..\src\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
+  <!--
+    Single-file friendly (same approach as RemoteBlazorWebViewTutorial's Embedded configuration): wwwroot is
+    embedded under embedded/wwwroot/ with a manifest and is not published. When <app dir>\wwwroot does not
+    exist (always the case for a single-file exe, which runs from its extraction folder),
+    RemoteWebView.CreateFileProvider serves the embedded copy. _framework/blazor.webview.js comes from
+    RemoteWebView's own embedded copy, so only the app's wwwroot is embedded here.
+  -->
+  <PropertyGroup>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="11.0.0-rc.2.26504.105" />
+    <EmbeddedResource Include="wwwroot\**\*" Link="embedded\wwwroot\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Debug/F5 runs from the loose wwwroot in bin; publish leaves it out so the embedded copy is used. -->
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- Static web assets are copied to publish by their own targets; remove the folder afterwards. -->
+  <Target Name="DropPublishedWwwroot" AfterTargets="Publish">
+    <RemoveDir Directories="$(PublishDir)wwwroot" />
+  </Target>
+</Project>

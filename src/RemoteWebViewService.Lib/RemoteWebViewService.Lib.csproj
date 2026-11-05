@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>PeakSWC.RemoteWebViewService.Lib</AssemblyName>
+    <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
+    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
+
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <PackageId>PeakSWC.RemoteWebViewService.Lib</PackageId>
+    <Authors>Bud Cribar</Authors>
+    <Company>Peak Software Consulting, LLC</Company>
+    <Description>Embeddable RemoteWebViewService. Host the relay server inside your own process (for example a WPF or WinForms app) with RemoteWebViewServer.StartAsync, or run it standalone with RemoteWebViewServer.Run.</Description>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
+    <NoWarn>NU5100</NoWarn>
+    <!-- UseWebAssemblyDebugging only runs in Development; don't copy the 11 MB debug proxy into apps that embed the service.
+         RemoteWebViewService.exe references the package itself and still gets it. -->
+    <BlazorWebAssemblyOmitDebugProxyOutput>true</BlazorWebAssemblyOmitDebugProxyOutput>
+    <!-- AUTHORIZATION is not defined by any configuration today; when it is, the Azure AD B2C code needs Microsoft.Identity.Web. -->
+    <_RwvAuthorization>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)AUTHORIZATION(;|$)'))</_RwvAuthorization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='AzureNoAuth'">
+    <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="GlobalSuppressions.cs" />
+    <None Include="GlobalSuppressions.cs" />
+    <None Remove="Pages\Shared\_LoginPartial.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.84.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.84.0" PrivateAssets="all" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.84.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0-rc.2.26504.105" />
+    <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
+    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(_RwvAuthorization)' == 'true'">
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.16.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico" />
+    <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="StaticContentCache.ServiceTests" />
+  </ItemGroup>
+</Project>

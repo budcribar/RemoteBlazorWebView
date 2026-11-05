@@ -1,0 +1,145 @@
+// Remote PC Diagnostics agent <-> relay (RemoteWebViewService) <-> admin site.
+// Owned by budcribar/RemoteBlazorWebView (src/Protos/agent.proto); copied verbatim into RemotePCDiagnostics (agent) and RemoteWebViewAdmin.
+syntax = "proto3";
+
+option csharp_namespace = "PeakSWC.RemoteWebView.Agent";
+
+package rwvagent;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// ---------------------------------------------------------------------------------------------
+// Used by the agent on the client PC (native gRPC over HTTP/2). One long-lived bidirectional stream:
+// the first message is AgentHello, then heartbeats and launch progress; the relay sends commands.
+// ---------------------------------------------------------------------------------------------
+service AgentHub {
+  rpc Connect(stream AgentMessage) returns (stream HubCommand);
+}
+
+// What the person who installed the agent allows. The relay and technicians can only be stricter, never looser.
+enum ConsentMode {
+  CONSENT_ALWAYS_ASK = 0;          // someone at the PC must click Allow for every session
+  CONSENT_UNATTENDED_ALLOWED = 1;  // a technician may start a session without asking (they can still choose to ask)
+}
+
+enum Lifetime {
+  LIFETIME_PERSISTENT = 0;            // agent stays installed; one app version stays cached
+  LIFETIME_REMOVE_AFTER_SESSION = 1;  // agent uninstalls itself and deletes the cached app after one session (the change journal is kept)
+}
+
+message AgentMessage {
+  oneof body {
+    AgentHello hello = 1;
+    Heartbeat heartbeat = 2;
+    LaunchProgress progress = 3;
+  }
+}
+
+message AgentHello {
+  string machine_id = 1;          // stable GUID generated at install (ProgramData), not a hardware id
+  string enrollment_key = 2;      // from the installer; the relay accepts it if it's on its allow-list (or any key when none is configured)
+  string machine_name = 3;
+  string os_version = 4;          // e.g. "Windows 11 Pro 26H2 (26300)"
+  string signed_in_user = 5;      // DOMAIN\user of the active console session, empty when nobody is signed in
+  string agent_version = 6;
+  string cached_app_version = 7;  // empty when no app is cached
+  ConsentMode consent_ceiling = 8;
+  Lifetime lifetime = 9;
+}
+
+message Heartbeat {
+  string signed_in_user = 1;
+  bool session_running = 2;
+  string session_id = 3;          // the running app's session GUID, if any
+  string cached_app_version = 4;
+}
+
+enum LaunchStage {
+  STAGE_UNKNOWN = 0;
+  STAGE_QUEUED = 1;
+  STAGE_WAITING_FOR_CONSENT = 2;
+  STAGE_DOWNLOADING = 3;
+  STAGE_VERIFYING = 4;
+  STAGE_STARTING = 5;
+  STAGE_READY = 6;      // the app is running and registered with the relay under session_id
+  STAGE_DECLINED = 7;   // the person at the PC said no (or didn't answer in time)
+  STAGE_FAILED = 8;
+  STAGE_ENDED = 9;      // the app exited
+}
+
+message LaunchProgress {
+  string request_id = 1;
+  LaunchStage stage = 2;
+  string detail = 3;     // plain words for the technician ("Downloading 45 of 129 MB", "Nobody is signed in")
+  string session_id = 4;
+  int32 percent = 5;     // 0-100 while downloading, else 0
+}
+
+message HubCommand {
+  oneof body {
+    LaunchCommand launch = 1;
+    CancelCommand cancel = 2;
+  }
+}
+
+message LaunchCommand {
+  string request_id = 1;
+  string session_id = 2;     // GUID the app must use (-i=); the technician opens <server>/app/<session_id>
+  string server_url = 3;     // relay base address the app connects to (-u=)
+  string technician = 4;     // shown in the consent prompt
+  bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
+}
+
+message CancelCommand {
+  string request_id = 1;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Used by the admin site (gRPC-Web).
+// ---------------------------------------------------------------------------------------------
+service AgentAdmin {
+  rpc GetAgents(google.protobuf.Empty) returns (AgentList);
+  rpc WatchAgents(google.protobuf.Empty) returns (stream AgentList);   // full list on every change (and every 15 s)
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+  rpc WatchLaunch(WatchLaunchRequest) returns (stream LaunchProgress); // replays the latest stage first
+  rpc CancelLaunch(CancelCommand) returns (google.protobuf.Empty);
+}
+
+message AgentInfo {
+  string machine_id = 1;
+  string machine_name = 2;
+  string os_version = 3;
+  string signed_in_user = 4;
+  string agent_version = 5;
+  string cached_app_version = 6;
+  bool online = 7;
+  google.protobuf.Timestamp last_seen = 8;
+  ConsentMode consent_ceiling = 9;
+  Lifetime lifetime = 10;
+  bool session_running = 11;
+  string session_id = 12;
+  string ip_address = 13;
+}
+
+message AgentList {
+  repeated AgentInfo agents = 1;
+}
+
+message StartSessionRequest {
+  string machine_id = 1;
+  bool unattended = 2;      // honoured only when the agent's ceiling is CONSENT_UNATTENDED_ALLOWED
+  string technician = 3;    // display name for the consent prompt; the relay fills it from the signed-in user when auth is on
+}
+
+message StartSessionResponse {
+  bool accepted = 1;
+  string error = 2;         // why not ("That computer is offline", "A session is already running")
+  string request_id = 3;
+  string session_id = 4;
+  string app_url = 5;       // <server>/app/<session_id>
+}
+
+message WatchLaunchRequest {
+  string request_id = 1;
+}
