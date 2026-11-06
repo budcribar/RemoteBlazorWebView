@@ -116,6 +116,70 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug02_BrowserIPC_SendMessage_cancelled_wait_does_not_release_unacquired_semaphore()
+    {
+        var id = Guid.NewGuid().ToString();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = id };
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        services[id] = tcs;
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
+        var browserIpc = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, services, shutdown);
+
+        // Hold the semaphore to simulate an active request in the critical section.
+        await state.BrowserIPC.Semaphore.WaitAsync();
+        Assert.Equal(0, state.BrowserIPC.Semaphore.CurrentCount);
+
+        using var cancelledCts = new CancellationTokenSource();
+        cancelledCts.Cancel();
+
+        var response = await browserIpc.SendMessage(
+            new SendSequenceMessageRequest
+            {
+                Id = id,
+                ClientId = "browser-1",
+                IsPrimary = true,
+                Sequence = 1,
+                Message = "test"
+            },
+            new TestCallContext(cancelledCts.Token));
+
+        Assert.False(response.Success);
+        // The cancelled caller never acquired the semaphore, so CurrentCount must still be 0,
+        // and the legitimate holder must be able to release without SemaphoreFullException.
+        Assert.Equal(0, state.BrowserIPC.Semaphore.CurrentCount);
+        var ex = Record.Exception(() => state.BrowserIPC.Semaphore.Release());
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task Bug03_ShutdownService_disposes_service_state_even_when_client_stream_write_throws()
+    {
+        var id = Guid.NewGuid().ToString();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
+        {
+            Id = id,
+            InUse = true
+        };
+        state.IPC.ClientResponseStream = new ThrowingStreamWriter<WebMessageResponse>(new InvalidOperationException("stream broken"));
+        var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ready.SetResult(state);
+        services[id] = ready;
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
+
+        await shutdown.Shutdown(id);
+
+        Assert.False(state.InUse);
+        Assert.True(state.Token.IsCancellationRequested);
+    }
+
+    [Fact]
     public async Task Bug04_IPC_BrowserResponseStream_removes_observer_when_connection_is_cancelled()
     {
         using var serviceCts = new CancellationTokenSource();
@@ -151,6 +215,31 @@ public class BugBountyTests
         var dataRequest = await manager.RequestFileDataAsync(clientId, "wwwroot/app.css", NullLogger<RemoteFileResolver>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await dataRequest.Pipe.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromMilliseconds(500)));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-guid")]
+    public async Task Bug06_Start_and_Mirror_endpoints_reject_invalid_guid_without_polluting_service_dictionary(string? id)
+    {
+        foreach (var endpoint in new[] { Endpoints.Start(), Endpoints.Mirror() })
+        {
+            var clients = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+            var services = new ServiceCollection()
+                .AddSingleton(clients)
+                .AddSingleton(new ConcurrentDictionary<string, Channel<string>>())
+                .BuildServiceProvider();
+
+            var context = new DefaultHttpContext { RequestServices = services };
+            if (id != null)
+                context.Request.RouteValues["id"] = id;
+            context.Response.Body = new MemoryStream();
+
+            await endpoint(context).WaitAsync(TimeSpan.FromMilliseconds(300));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+            Assert.Empty(clients);
+        }
     }
 
     [Fact]
@@ -301,6 +390,51 @@ public class BugBountyTests
         Assert.Equal("req-meta", sent.RequestId);
         Assert.Equal(200, sent.Metadata.StatusCode);
         Assert.True(writer.Completed);
+    }
+
+    [Fact]
+    public async Task Bug15_RemoteFilesMiddleware_resolves_client_guid_from_mirror_and_app_referrers_and_disposes_stream()
+    {
+        var clientId = Guid.NewGuid();
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = clientId.ToString() };
+        state.FileManagerReady.SetResult(true);
+        var stateTcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        stateTcs.SetResult(state);
+        services[clientId.ToString()] = stateTcs;
+
+        using var fileSync = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var trackingStream = new TrackingMemoryStream(Encoding.UTF8.GetBytes("body { margin: 0; }"));
+        var resolver = new StubRemoteFileResolver(
+            fileSync,
+            new FileMetadata { Length = trackingStream.Length, StatusCode = StatusCodes.Status200OK, ETag = "\"etag-1\"" },
+            trackingStream);
+
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var middleware = new RemoteFilesMiddleware(
+            _ => Task.CompletedTask,
+            cache,
+            NullLogger<RemoteFilesMiddleware>.Instance,
+            resolver,
+            fileSync);
+
+        var sp = new ServiceCollection()
+            .AddSingleton(new RemoteFilesOptions { UseServerCache = false, UseClientCache = false })
+            .AddSingleton(services)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<RemoteWebViewService>>(NullLogger<RemoteWebViewService>.Instance)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = sp };
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = "/css/app.css";
+        context.Request.Headers[HeaderNames.Referer] = $"https://localhost:5001/mirror/{clientId}";
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Equal("css/app.css", resolver.LastRequestedSubPath);
+        Assert.True(trackingStream.IsDisposed);
     }
 
     [Fact]
@@ -874,6 +1008,43 @@ public class BugBountyTests
     }
 
     [Fact]
+    public async Task Bug44_StartOrRefresh_endpoint_does_not_set_Refresh_when_initial_host_page_metadata_fails()
+    {
+        var id = Guid.NewGuid().ToString();
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
+        {
+            Id = id,
+            Refresh = false,
+            HtmlHostPath = "wwwroot/index.html"
+        };
+        state.FileManagerReady.SetResult(true);
+
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+        using var syncManager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var resolver = new StubRemoteFileResolver(
+            syncManager,
+            new FileMetadata { StatusCode = StatusCodes.Status404NotFound, Length = -1 },
+            Stream.Null);
+
+        using var services = new ServiceCollection()
+            .AddSingleton(dict)
+            .AddSingleton<RemoteFileResolver>(resolver)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<RemoteWebViewService>>(NullLogger<RemoteWebViewService>.Instance)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Request.RouteValues["id"] = id;
+        context.Response.Body = new MemoryStream();
+
+        await Endpoints.StartOrRefresh()(context);
+
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.False(state.Refresh);
+    }
+
+    [Fact]
     public async Task Bug45_RemoteFilesMiddleware_matches_quoted_and_comma_separated_IfNoneMatch_and_ignores_empty_etag()
     {
         var clientId = Guid.NewGuid();
@@ -1206,6 +1377,53 @@ public class BugBountyTests
         context.Response.Body.Position = 0;
         var statusResponse = System.Text.Json.JsonSerializer.Deserialize<StatusResponse>(context.Response.Body)!;
         Assert.False(statusResponse.Connected);
+    }
+
+    [Fact]
+    public async Task Bug60_Mirror_endpoint_does_not_mutate_state_when_host_file_is_missing_and_tolerates_closed_channel()
+    {
+        var id = Guid.NewGuid().ToString();
+        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true)
+        {
+            Id = id,
+            InUse = true,
+            HtmlHostPath = "wwwroot/index.html"
+        };
+        state.FileManagerReady.SetResult(true);
+        var sentMessages = new List<WebMessageResponse>();
+        state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(sentMessages.Add);
+
+        var tcs = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(state);
+        var dict = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = tcs };
+
+        var channels = new ConcurrentDictionary<string, Channel<string>>();
+        var closed = Channel.CreateUnbounded<string>();
+        closed.Writer.Complete();
+        channels["closed"] = closed;
+
+        using var syncManager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var resolver = new StubRemoteFileResolver(
+            syncManager,
+            new FileMetadata { StatusCode = StatusCodes.Status404NotFound, Length = -1 },
+            Stream.Null);
+
+        using var services = new ServiceCollection()
+            .AddSingleton(dict)
+            .AddSingleton(channels)
+            .AddSingleton<RemoteFileResolver>(resolver)
+            .BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Connection.Id = "mirror-conn-1";
+        context.Request.RouteValues["id"] = id;
+        context.Response.Body = new MemoryStream();
+
+        await Endpoints.Mirror()(context);
+
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.Empty(state.IsMirroredConnection);
+        Assert.Empty(sentMessages);
     }
 
     [Fact]
