@@ -98,10 +98,9 @@ namespace PeakSWC.RemoteWebView
                 if (state == null)
                     return new SendMessageResponse { Id = request.Id, Success = false };
 
+                await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
                 try
                 {
-                    await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
-
                     if (request.Sequence == state.SequenceNum)
                     {
                         if (request.Message == "connected:")
