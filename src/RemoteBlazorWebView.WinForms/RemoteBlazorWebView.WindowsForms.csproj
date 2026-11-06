@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded,Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on maui 9.0.120</PackageReleaseNotes>
+    <PackageReleaseNotes>9.0.22 servicing release. Based on maui 9.0.120. Direct Microsoft .NET 9 servicing references are 9.0.22 (SDK 9.0.320). Microsoft.AspNetCore.Components.WebView.WindowsForms stays 9.0.120 and still brings Microsoft.AspNetCore.Components.WebView 9.0.9. .NET 9 end of support is November 10, 2026.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -50,7 +50,7 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.21" />  
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.22" />  
   </ItemGroup>
 
   <ItemGroup>
