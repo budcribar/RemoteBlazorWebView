@@ -57,6 +57,7 @@ namespace FileSyncServer.Tests.Local
                 }
 
                 Page = pages[0];
+                await TestAppWindowPlacement.FitAsync(AppProcess, Page);
             }
             catch
             {
