@@ -50,7 +50,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>9.0.22 servicing release. Based on maui 9.0.120. Direct Microsoft .NET 9 servicing references are 9.0.22 (SDK 9.0.320). Microsoft.AspNetCore.Components.WebView.WindowsForms stays 9.0.120 and still brings Microsoft.AspNetCore.Components.WebView 9.0.9. .NET 9 end of support is November 10, 2026.</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 9.0.120</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
@@ -77,21 +77,21 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.84.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
 	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.22" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.22" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.22" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.22" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.21" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.21" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.21" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.21" NoWarn="NU1605" />
 	  
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.86.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
   
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.16.1" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.18.0" />
   </ItemGroup>
   <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">

@@ -30,9 +30,9 @@
 		</PackageReference>
 		<PackageReference Include="FluentAssertions" Version="8.11.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
-		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.84.0" />
-		<PackageReference Include="Grpc.Net.Client.Web" Version="2.84.0" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
+		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.85.0" />
+		<PackageReference Include="Grpc.Net.Client.Web" Version="2.85.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.22" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.22" />
 		<PackageReference Include="System.Management" Version="9.0.22" />
@@ -78,13 +78,8 @@
 		<FilePocClientPublishDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Benchmarks\FilePOC\Client\publish'))\</FilePocClientPublishDir>
 	</PropertyGroup>
 
-	<Target Name="PublishFilePocClient"
-			BeforeTargets="GetCopyToOutputDirectoryItems"
-			Inputs="$(FilePocClientProject);$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\ClientFileSyncManager.cs;$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\EtagGenerator.cs;$(MSBuildThisFileDirectory)..\..\src\SharedSource\HostAddressHelper.cs;$(MSBuildThisFileDirectory)..\..\src\Protos\webview.proto"
-			Outputs="$(FilePocClientPublishDir)Client.exe">
-		<MSBuild Projects="$(FilePocClientProject)"
-				 Targets="Restore;Publish"
-				 Properties="Configuration=Release;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true;PublishDir=$(FilePocClientPublishDir);EnableWindowsTargeting=true;Platform=x64;GeneratePackageOnBuild=false" />
+	<Target Name="PublishFilePocClient" BeforeTargets="GetCopyToOutputDirectoryItems" Inputs="$(FilePocClientProject);$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\ClientFileSyncManager.cs;$(MSBuildThisFileDirectory)..\..\src\RemoteWebView\EtagGenerator.cs;$(MSBuildThisFileDirectory)..\..\src\SharedSource\HostAddressHelper.cs;$(MSBuildThisFileDirectory)..\..\src\Protos\webview.proto" Outputs="$(FilePocClientPublishDir)Client.exe">
+		<MSBuild Projects="$(FilePocClientProject)" Targets="Restore;Publish" Properties="Configuration=Release;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true;PublishDir=$(FilePocClientPublishDir);EnableWindowsTargeting=true;Platform=x64;GeneratePackageOnBuild=false" />
 	</Target>
 
 </Project>
