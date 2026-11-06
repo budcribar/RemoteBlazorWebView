@@ -407,7 +407,8 @@ Write-Host "remote.blazor.desktop.js is $((Get-Item -LiteralPath $bundle).Length
 Set-Location $currentDirectory
 
 Write-Host -ForegroundColor GREEN "Publish TestClient"
-Invoke-RunTestsNative dotnet publish -c Release --self-contained true -r win-x64 -p:PublishSingleFile=true .\src\Benchmarks\FilePOC\Client\Client.csproj -o .\src\Benchmarks\FilePOC\Client\publish
+# Quoted so PowerShell does not split -p:PublishSingleFile=true before dotnet sees it.
+Invoke-RunTestsNative dotnet publish -c Release --self-contained true -r win-x64 '-p:PublishSingleFile=true' .\src\Benchmarks\FilePOC\Client\Client.csproj -o .\src\Benchmarks\FilePOC\Client\publish
 
 
 if ($Rust -eq $true)
