@@ -59,6 +59,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+		<!-- RemoteComponentHost (a remote component's process) uses the remote component protocol. -->
+		<ProjectReference Include="..\RemoteBlazorWebView.RemoteComponents\RemoteBlazorWebView.RemoteComponents.csproj" />
 	</ItemGroup>
 
 </Project>
