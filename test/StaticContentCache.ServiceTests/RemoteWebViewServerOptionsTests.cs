@@ -38,6 +38,17 @@ public class RemoteWebViewServerOptionsTests
     }
 
     [Fact]
+    public void Validate_names_the_first_invalid_frame_ancestor_after_valid_ones()
+    {
+        var options = new RemoteWebViewServerOptions
+        {
+            FrameAncestors = ["'self'", "https://app.example.com", "not a uri", "also bad"]
+        };
+        var ex = Assert.Throws<InvalidOperationException>(() => options.Validate());
+        Assert.Equal("Invalid origin: not a uri", ex.Message);
+    }
+
+    [Fact]
     public void Validate_accepts_self_and_an_absolute_origin()
     {
         var options = new RemoteWebViewServerOptions { FrameAncestors = ["'self'", "https://app.example.com"] };
