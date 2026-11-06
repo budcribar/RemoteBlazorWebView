@@ -30,10 +30,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public string HostPage { get; init; } = @"wwwroot\index.html";
 
         /// <summary>Exit when this process (the app) goes away, even if it never got to close the relay. Polls the process list, which
-        /// works under a restricted token that can't open the app's process.</summary>
+        /// works even when this process runs with fewer rights than the app and can't open its process.</summary>
         public int? ParentProcessId { get; init; }
 
-        /// <summary>WebView2's user data folder: required when the default (next to the exe) isn't writable, e.g. under a restricted token.</summary>
+        /// <summary>WebView2's user data folder: required when the default (next to the exe) isn't writable by this process.</summary>
         public string? WebViewDataFolder { get; init; }
 
         /// <summary>The (never shown) window's title.</summary>
