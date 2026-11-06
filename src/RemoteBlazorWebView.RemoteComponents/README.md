@@ -28,23 +28,23 @@ Declare what crosses between the two processes as an interface, in a library bot
 public interface IClock
 {
     string TimeZone { get; }              // a value: app -> component
-    DiagnosticResult? LastResult { get; }
-    Task Rerun();                          // a callback: component -> app
+    Alarm? NextAlarm { get; }             // any JSON-serializable type
+    Task Snooze();                         // a callback: component -> app
     Task Picked(DateTimeOffset when);      // at most one argument
 }
 ```
 
 The source generator in this package writes:
 
-- **`ClockFrame`** for the app, a component with `[Parameter] TimeZone`, `LastResult`, `EventCallback Rerun` and
+- **`ClockFrame`** for the app, a component with `[Parameter] TimeZone`, `NextAlarm`, `EventCallback Snooze` and
   `EventCallback<DateTimeOffset> Picked`:
 
   ```razor
-  <ClockFrame Open="ct => launcher.StartAsync(ct)" TimeZone="@zone" LastResult="@last" Rerun="RunAgain" title="Clock" />
+  <ClockFrame Open="ct => launcher.StartAsync(ct)" TimeZone="@zone" NextAlarm="@alarm" Snooze="OnSnooze" Title="Clock" />
   ```
 
 - **`ClockReceiver`** for the component's process: implements `IClock` with the values the app sent (`Changed` fires when they
-  change); calling `Rerun()` sends the callback. Register it in the host and inject `IClock` (or `ClockReceiver`) in the UI:
+  change); calling `Snooze()` sends the callback. Register it in the host and inject `IClock` (or `ClockReceiver`) in the UI:
 
   ```csharp
   return RemoteComponentHost.Run(new RemoteComponentHostOptions
