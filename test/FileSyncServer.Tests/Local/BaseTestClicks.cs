@@ -96,24 +96,24 @@ namespace FileSyncServer.Tests.Local
 
         private async Task ClickNavAsync(string text)
         {
-            // Diagnostics only. The click sequence below is unchanged.
+            var link = Fixture.Page.Locator("a.nav-link", new PageLocatorOptions { HasText = text });
+            // The Photino sample window is about 400px wide, under Blazor's 641px sidebar
+            // breakpoint, so the link stays at a 0x0 box until the navbar toggler opens it.
+            // That toggler is not in the DOM while the body is still "Loading...".
+            await link.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 30000 });
+
             var before = await DescribePageAsync(text);
             Output.WriteLine("before-click " + text);
             Output.WriteLine(before);
             Console.WriteLine("before-click " + text);
             Console.WriteLine(before);
 
-            var link = Fixture.Page.Locator("a.nav-link", new PageLocatorOptions { HasText = text });
             if (!await link.IsVisibleAsync())
             {
                 var toggler = Fixture.Page.Locator(".navbar-toggler");
-                var togglerVisible = await toggler.IsVisibleAsync();
-                Output.WriteLine($"navbar-toggler visible={togglerVisible} before clicking '{text}'.");
-                if (togglerVisible)
-                {
-                    await toggler.ClickAsync();
-                    Output.WriteLine($"Opened the navbar before clicking '{text}'.");
-                }
+                await toggler.ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+                Output.WriteLine($"Opened the navbar before clicking '{text}'.");
+                await link.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
             }
             try
             {
