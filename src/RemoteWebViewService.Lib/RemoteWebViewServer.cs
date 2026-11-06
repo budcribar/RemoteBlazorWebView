@@ -337,8 +337,9 @@ namespace PeakSWC.RemoteWebView
             ValidateMaxClients(MaxClients);
             if (!UseHttps && Certificate == null && !IPAddress.IsLoopback(Address))
                 throw new InvalidOperationException($"Plain HTTP is only allowed on a loopback address; {Address} needs UseHttps or a Certificate.");
-            foreach (var origin in FrameAncestors.Where(origin => origin != "'self'" && !Uri.IsWellFormedUriString(origin, UriKind.Absolute)))
-                throw new InvalidOperationException($"Invalid origin: {origin}");
+            var invalidOrigin = FrameAncestors.FirstOrDefault(origin => origin != "'self'" && !Uri.IsWellFormedUriString(origin, UriKind.Absolute));
+            if (invalidOrigin != null)
+                throw new InvalidOperationException($"Invalid origin: {invalidOrigin}");
         }
 
         private static void ValidatePort(int port)
