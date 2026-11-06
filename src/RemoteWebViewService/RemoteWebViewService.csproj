@@ -80,10 +80,10 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
 	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.21" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.21" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.21" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.21" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.22" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.22" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.22" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.22" NoWarn="NU1605" />
 	  
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.86.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />

@@ -21,7 +21,8 @@
   </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.21" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="9.0.120" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.22" />
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.85.0" />
