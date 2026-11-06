@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- Remote components: a Blazor component that runs in its own process (a RemoteBlazorWebView client, see
+       PeakSWC.RemoteBlazorWebView.Wpf.RemoteComponentHost) and shows in the app in a sandboxed iframe. Parameters go to it and
+       callbacks come back over the child process's stdin/stdout; the frame only tells the page its height. See README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>PeakSWC.RemoteBlazorWebView.RemoteComponents</RootNamespace>
+    <AssemblyName>PeakSWC.RemoteBlazorWebView.RemoteComponents</AssemblyName>
+    <PackageId>PeakSWC.RemoteBlazorWebView.RemoteComponents</PackageId>
+    <Authors>Bud Cribar</Authors>
+    <Company>Peak Software Consulting, LLC</Company>
+    <Copyright>Peak Software Consulting, LLC</Copyright>
+    <Description>Run a Blazor component in a separate process and show it in a sandboxed iframe, with typed parameters and callbacks.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>favicon-32x32.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Configurations>Debug;Release;Embedded;Developer</Configurations>
+    <Platforms>x64;AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RemoteBlazorWebView.RemoteComponents.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\icons\favicon-32x32.png" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>
