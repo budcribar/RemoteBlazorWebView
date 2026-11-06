@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.RemoteC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.RemoteComponents.Tests", "test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj", "{D5FAB7FE-941E-4464-AC7F-F33F8AA22149}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.RemoteComponents.Generators", "src\RemoteBlazorWebView.RemoteComponents.Generators\RemoteBlazorWebView.RemoteComponents.Generators.csproj", "{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Authorization|linux-x64 = Authorization|linux-x64
@@ -1135,6 +1137,62 @@ Global
 		{D5FAB7FE-941E-4464-AC7F-F33F8AA22149}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D5FAB7FE-941E-4464-AC7F-F33F8AA22149}.Release|x86.ActiveCfg = Release|x64
 		{D5FAB7FE-941E-4464-AC7F-F33F8AA22149}.Release|x86.Build.0 = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|linux-x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|linux-x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|Any CPU.Build.0 = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|x86.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Authorization|x86.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|linux-x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|linux-x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|Any CPU.Build.0 = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|x86.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.AzureNoAuth|x86.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|linux-x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|linux-x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|x86.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Debug|x86.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|linux-x64.ActiveCfg = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|linux-x64.Build.0 = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|x64.ActiveCfg = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|x64.Build.0 = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|Any CPU.ActiveCfg = Developer|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|Any CPU.Build.0 = Developer|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|x86.ActiveCfg = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Developer|x86.Build.0 = Developer|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|linux-x64.ActiveCfg = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|linux-x64.Build.0 = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|x64.ActiveCfg = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|x64.Build.0 = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|Any CPU.ActiveCfg = Embedded|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|Any CPU.Build.0 = Embedded|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|x86.ActiveCfg = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Embedded|x86.Build.0 = Embedded|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|linux-x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|linux-x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|x64.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|x64.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|Any CPU.Build.0 = Debug|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|x86.ActiveCfg = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.NoAuthorization|x86.Build.0 = Debug|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|linux-x64.ActiveCfg = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|linux-x64.Build.0 = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|x64.ActiveCfg = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|x64.Build.0 = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|x86.ActiveCfg = Release|x64
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1160,6 +1218,7 @@ Global
 		{48785BC1-00C8-4E31-BCBC-EF7781EB08A4} = {1F1FA526-FA6C-4B81-9D64-8DF99356CB8A}
 		{CD72EF52-608A-4FF5-A627-4B9502F04938} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 		{D5FAB7FE-941E-4464-AC7F-F33F8AA22149} = {1F1FA526-FA6C-4B81-9D64-8DF99356CB8A}
+		{EE38B798-4EFF-42FB-BB63-E203FDBBDD0E} = {6A79DAD3-9AEF-47C3-9BF4-BF27365F3BF0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {27582E6D-A662-4DF3-834C-74D0A94025A1}

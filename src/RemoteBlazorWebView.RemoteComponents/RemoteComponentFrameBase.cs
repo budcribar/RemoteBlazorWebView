@@ -82,6 +82,9 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
     private bool _watching;
     private int _disposed;
 
+    /// <summary>Reads a callback's argument as <typeparamref name="T"/> (default when there is none).</summary>
+    protected static T ReadArg<T>(JsonElement? arg) => arg is { } a ? a.Deserialize<T>(RemoteComponentJson.Options)! : default!;
+
     /// <summary>The session, once open.</summary>
     protected RemoteComponentSession? Session => _session;
 
