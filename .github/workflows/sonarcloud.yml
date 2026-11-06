@@ -10,7 +10,7 @@
 # branch. sonar.branch.name is not passed.
 #
 # actions/setup-dotnet reads global.json. On net11 that pins the SDK shipped by
-# mcr.microsoft.com/dotnet/sdk:11.0-preview (11.0.100-preview.7.26381.103).
+# mcr.microsoft.com/dotnet/sdk:11.0.100-rc.3 (11.0.100-rc.3.26522.148).
 
 name: SonarCloud
 

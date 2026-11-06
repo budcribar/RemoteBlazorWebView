@@ -38,8 +38,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # global.json pins the SDK in mcr.microsoft.com/dotnet/sdk:11.0-preview
-      # (11.0.100-preview.7.26381.103, allowPrerelease, rollForward latestMinor).
+      # global.json pins 11.0.100-rc.3.26522.148 (allowPrerelease, rollForward latestMinor),
+      # the SDK in mcr.microsoft.com/dotnet/sdk:11.0.100-rc.3. The 11.0-preview tag is older.
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
