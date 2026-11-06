@@ -41,22 +41,196 @@ if ($process) {
     Write-Host -ForegroundColor GREEN "Client is not running"
 }
 
-# Get the current Node.js version
-$currentVersion = node -v
+# Node 22.3.0 via nvm-windows, the manager documented in src/RemoteWebView.Blazor.JS/Build.md.
+# An existing nvm.exe is kept. A missing one is the official 1.2.2 no-install zip
+# (https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-noinstall.zip),
+# checked against that release's published MD5. settings.txt matches install.cmd.
+# The symlink stays under LocalAppData so an existing Program Files Node.js install is left alone.
+$script:RunTestsNodeVersion = '22.3.0'
+$script:RunTestsNvmVersion = '1.2.2'
+$script:RunTestsNvmZipMd5 = 'D654C26A04E35A318D5939F8CEB09934'
 
-# Check if the current version is already 22.3.0
-if ($currentVersion -eq "v22.3.0") {
-    Write-Output "Already using Node.js version 22.3.0"
-} else {
-    # Run the NVM use command
-    try {
-        nvm use 22.3.0
-        Write-Output "Successfully switched to Node.js version 22.3.0"
-    } catch {
-        Write-Error "Failed to switch Node.js version: $_"
-        exit 1
+function Get-RunTestsNodeVersion {
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $node) { return $null }
+    return (& node -v 2>$null)
+}
+
+function Get-RunTestsNvmExecutable {
+    $candidates = @()
+    $command = Get-Command nvm -ErrorAction SilentlyContinue
+    if ($command -and $command.Source) { $candidates += $command.Source }
+    $directories = @()
+    if ($env:NVM_HOME) { $directories += $env:NVM_HOME }
+    foreach ($root in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:APPDATA, $env:LOCALAPPDATA)) {
+        if ($root) { $directories += (Join-Path $root 'nvm') }
+    }
+    foreach ($directory in $directories) {
+        $candidates += (Join-Path $directory 'nvm.exe')
+    }
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+    return $null
+}
+
+function Get-RunTestsNvmSymlink {
+    param([string] $NvmExecutable)
+    if ($env:NVM_SYMLINK) { return $env:NVM_SYMLINK }
+    $settings = Join-Path (Split-Path -Parent $NvmExecutable) 'settings.txt'
+    if (Test-Path -LiteralPath $settings) {
+        foreach ($line in Get-Content -LiteralPath $settings) {
+            if ($line -match '^\s*path:\s*(.+)\s*$') { return $Matches[1].Trim() }
+        }
+    }
+    return $null
+}
+
+function Update-RunTestsSessionPath {
+    param([string[]] $Prepend)
+    $combined = New-Object System.Collections.Generic.List[string]
+    foreach ($entry in @($Prepend)) {
+        if ($entry -and -not $combined.Contains($entry)) { $combined.Add($entry) }
+    }
+    foreach ($scope in @('User', 'Machine')) {
+        $value = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $value) { continue }
+        foreach ($entry in ($value -split ';')) {
+            if ($entry -and -not $combined.Contains($entry)) { $combined.Add($entry) }
+        }
+    }
+    $env:Path = ($combined -join ';')
+}
+
+function Add-RunTestsUserPathEntry {
+    param([string] $Entry)
+    if (-not $Entry) { return }
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $items = @()
+    if ($userPath) { $items = @($userPath -split ';' | Where-Object { $_ }) }
+    if ($items -contains $Entry) { return }
+    $updated = ((@($items) + $Entry) -join ';')
+    [Environment]::SetEnvironmentVariable('Path', $updated, 'User')
+}
+
+function Assert-RunTestsNvmPackage {
+    param([string] $Path)
+    $hash = (Get-FileHash -Algorithm MD5 -Path $Path).Hash
+    if ($hash -ne $script:RunTestsNvmZipMd5) {
+        throw "checksum mismatch for nvm-noinstall.zip (expected MD5 $($script:RunTestsNvmZipMd5), got $hash)."
     }
 }
+
+function Install-RunTestsNvmIfMissing {
+    $existing = Get-RunTestsNvmExecutable
+    if ($existing) {
+        Write-Host "Using existing nvm: $existing"
+        $nvmHome = Split-Path -Parent $existing
+        if (-not $env:NVM_HOME) { $env:NVM_HOME = $nvmHome }
+        $symlink = Get-RunTestsNvmSymlink -NvmExecutable $existing
+        Update-RunTestsSessionPath -Prepend @($nvmHome, $symlink)
+        return $existing
+    }
+
+    if ($env:NVM_HOME) {
+        Write-Error "nvm bootstrap failed: NVM_HOME is '$env:NVM_HOME' but nvm.exe is not there. Existing nvm settings were not replaced."
+        exit 1
+    }
+
+    $nvmHome = Join-Path $env:LOCALAPPDATA 'nvm'
+    $symlink = Join-Path $env:LOCALAPPDATA 'nvm-windows-nodejs'
+    if (Test-Path -LiteralPath $nvmHome) {
+        Write-Error "nvm bootstrap failed: '$nvmHome' already exists and does not contain nvm.exe. It was not overwritten."
+        exit 1
+    }
+    if (Test-Path -LiteralPath $symlink) {
+        Write-Error "nvm bootstrap failed: symlink path '$symlink' already exists. It was not overwritten."
+        exit 1
+    }
+
+    $zip = Join-Path $env:TEMP ("nvm-noinstall-{0}.zip" -f $script:RunTestsNvmVersion)
+    $url = "https://github.com/coreybutler/nvm-windows/releases/download/$($script:RunTestsNvmVersion)/nvm-noinstall.zip"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        Assert-RunTestsNvmPackage -Path $zip
+    } catch {
+        Write-Error "nvm bootstrap failed downloading ${url}: $($_.Exception.Message)"
+        exit 1
+    }
+
+    New-Item -ItemType Directory -Path $nvmHome | Out-Null
+    try {
+        Expand-Archive -LiteralPath $zip -DestinationPath $nvmHome -Force
+    } catch {
+        Write-Error "nvm bootstrap failed extracting ${zip}: $($_.Exception.Message)"
+        exit 1
+    }
+
+    $installed = Join-Path $nvmHome 'nvm.exe'
+    if (-not (Test-Path -LiteralPath $installed)) {
+        Write-Error "nvm bootstrap failed: nvm.exe was not in the official $($script:RunTestsNvmVersion) package after extraction."
+        exit 1
+    }
+
+    $arch = '32'
+    if ([Environment]::Is64BitOperatingSystem) { $arch = '64' }
+    $settings = @(
+        "root: $nvmHome",
+        "path: $symlink",
+        "arch: $arch",
+        "proxy: none"
+    )
+    Set-Content -LiteralPath (Join-Path $nvmHome 'settings.txt') -Value $settings -Encoding ASCII
+
+    [Environment]::SetEnvironmentVariable('NVM_HOME', $nvmHome, 'User')
+    [Environment]::SetEnvironmentVariable('NVM_SYMLINK', $symlink, 'User')
+    $env:NVM_HOME = $nvmHome
+    $env:NVM_SYMLINK = $symlink
+    Add-RunTestsUserPathEntry -Entry $nvmHome
+    Add-RunTestsUserPathEntry -Entry $symlink
+    Update-RunTestsSessionPath -Prepend @($nvmHome, $symlink)
+
+    Write-Host "Installed nvm-windows $($script:RunTestsNvmVersion) at $nvmHome"
+    return (Resolve-Path -LiteralPath $installed).Path
+}
+
+function Switch-RunTestsNodeVersion {
+    $currentVersion = Get-RunTestsNodeVersion
+    if ($currentVersion -eq "v$($script:RunTestsNodeVersion)") {
+        Write-Output "Already using Node.js version $($script:RunTestsNodeVersion)"
+        return
+    }
+
+    $nvm = Install-RunTestsNvmIfMissing
+    $listed = (& $nvm list 2>&1 | Out-String)
+    if ($listed -notmatch "(^|[^\d.])$([regex]::Escape($script:RunTestsNodeVersion))([^\d.]|$)") {
+        & $nvm install $script:RunTestsNodeVersion
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "nvm install $($script:RunTestsNodeVersion) failed with exit code $LASTEXITCODE."
+            exit 1
+        }
+    }
+
+    & $nvm use $script:RunTestsNodeVersion
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "nvm use $($script:RunTestsNodeVersion) failed with exit code $LASTEXITCODE. nvm-windows recreates the Node.js symlink and may need an elevated session."
+        exit 1
+    }
+
+    $symlink = Get-RunTestsNvmSymlink -NvmExecutable $nvm
+    Update-RunTestsSessionPath -Prepend @((Split-Path -Parent $nvm), $symlink)
+    $currentVersion = Get-RunTestsNodeVersion
+    if ($currentVersion -ne "v$($script:RunTestsNodeVersion)") {
+        Write-Error "Node.js is '$currentVersion' after nvm use $($script:RunTestsNodeVersion)."
+        exit 1
+    }
+    Write-Output "Successfully switched to Node.js version $($script:RunTestsNodeVersion)"
+}
+
+Switch-RunTestsNodeVersion
 
 Write-Output "Installing playwright"
 npx playwright install
