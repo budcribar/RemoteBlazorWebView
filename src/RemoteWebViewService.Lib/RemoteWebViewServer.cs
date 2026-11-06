@@ -60,7 +60,7 @@ namespace PeakSWC.RemoteWebView
         {
             webBuilder.ConfigureKestrel(options =>
             {
-                // Remote PC Diagnostics agents hold one AgentHub.Connect stream open indefinitely (heartbeat every 30 s).
+                // Agents hold one AgentHub.Connect stream open indefinitely (heartbeat every 30 s).
                 // Kestrel does not time out an HTTP/2 connection while a stream is active, and gRPC turns off the
                 // minimum request body data rate for streaming calls. Server pings keep NAT/proxy mappings warm
                 // in both directions and close connections whose peer vanished without a FIN.
