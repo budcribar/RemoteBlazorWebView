@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # global.json pins 10.0.0 with rollForward latestMinor; 10.0.x satisfies it.
+      # global.json pins 10.0.403 with rollForward latestMinor; 10.0.x satisfies it.
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x

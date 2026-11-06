@@ -49,9 +49,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins 10.0.0 with rollForward latestMinor. setup-dotnet
-      # installs that version exactly, and SDK 10.0.0 was never published.
-      # 10.0.x is the latest 10.0 SDK, which satisfies the roll-forward.
+      # global.json pins 10.0.403 with rollForward latestMinor. This step
+      # installs the 10.0.x band, which satisfies that roll-forward.
       # The MAUI workload is not required: these tests do not build MAUI apps.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

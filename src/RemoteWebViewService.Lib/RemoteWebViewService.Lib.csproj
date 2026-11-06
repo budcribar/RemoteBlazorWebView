@@ -51,7 +51,7 @@
     <PackageReference Include="Grpc.AspNetCore.Server" Version="2.84.0" />
     <PackageReference Include="Grpc.Tools" Version="2.84.0" PrivateAssets="all" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.84.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
     <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
   </ItemGroup>

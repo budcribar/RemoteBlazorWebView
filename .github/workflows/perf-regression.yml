@@ -47,10 +47,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: false
 
-      # Current and the default baseline (origin/net10) both resolve
-      # global.json 10.0.0 rollForward latestMinor. setup-dotnet installs
-      # that version exactly, and SDK 10.0.0 was never published, so install
-      # the 10.0.x band instead. ClientFileSyncManager on this line has no
+      # global.json pins 10.0.403 with rollForward latestMinor. setup-dotnet
+      # installs the 10.0.x band, which satisfies that roll-forward.
+      # ClientFileSyncManager on this line has no
       # cache-control argument, so the provider scenario is skipped on both sides.
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4

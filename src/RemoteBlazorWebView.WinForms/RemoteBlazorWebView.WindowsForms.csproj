@@ -25,7 +25,7 @@
     <Configurations>Debug;Release;Embedded,Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on maui 10.0.110</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -50,9 +50,9 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.13" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.110" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="10.0.120" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.14" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />

@@ -35,9 +35,9 @@
 		<PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
 		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.84.0" />
 		<PackageReference Include="Grpc.Net.Client.Web" Version="2.84.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.13" />
-		<PackageReference Include="System.Management" Version="10.0.13" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.14" />
+		<PackageReference Include="System.Management" Version="10.0.14" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
 		<PackageReference Include="Microsoft.Playwright" Version="1.63.0" />
 		<PackageReference Include="xunit" Version="2.9.3" />

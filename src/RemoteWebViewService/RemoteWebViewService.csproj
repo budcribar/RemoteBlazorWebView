@@ -50,7 +50,7 @@
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on maui 10.0.110</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
     <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
@@ -81,10 +81,10 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.84.0" />
 	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.13" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.14" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" NoWarn="NU1605" />
 	  
     <PackageReference Include="Microsoft.Graph.Beta" Version="5.104.0-preview" />
     <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />

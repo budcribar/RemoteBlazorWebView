@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on maui 10.0.110</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 
@@ -43,7 +43,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.110" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.120" />
 	</ItemGroup>
 
 	<ItemGroup>
