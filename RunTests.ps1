@@ -341,6 +341,7 @@ function Invoke-RunTestsNative {
 
 Switch-RunTestsNodeVersion
 Install-RunTestsSdkIfMissing
+Ensure-RunTestsAotPrerequisites
 
 # Get the path of the script's directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition

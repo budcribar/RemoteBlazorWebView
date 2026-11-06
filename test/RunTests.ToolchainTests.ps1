@@ -57,4 +57,50 @@ $missingMsvc = Resolve-RunTestsNativeToolchainPaths -MsvcToolsRoot (Join-Path $r
 if ($missingMsvc.Ok) { throw 'missing MSVC was accepted' }
 if ($missingMsvc.Message -notmatch 'link.exe') { throw $missingMsvc.Message }
 
+$instance = Get-RunTestsInstancePathFromLinker -Linker $newLink
+if ((Split-Path -Leaf $instance) -ne 'BuildTools') { throw "instance path was $instance" }
+
+$complete = [pscustomobject]@{ Ok = $true; Linker = $newLink }
+if (@(Get-RunTestsAotComponentsToAdd $complete).Count -ne 0) { throw 'complete toolchain requested an install' }
+$sdkOnly = [pscustomobject]@{ Ok = $false; Linker = $newLink }
+$sdkComponents = @(Get-RunTestsAotComponentsToAdd $sdkOnly)
+if ($sdkComponents.Count -ne 1 -or $sdkComponents[0] -ne 'Microsoft.VisualStudio.Component.Windows11SDK.26100') { throw "sdk components were $($sdkComponents -join ',')" }
+$neither = [pscustomobject]@{ Ok = $false; Linker = $null }
+$both = @(Get-RunTestsAotComponentsToAdd $neither)
+if ($both -notcontains 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64' -or $both -notcontains 'Microsoft.VisualStudio.Component.Windows11SDK.26100') { throw 'missing tools did not request both components' }
+
+Assert-Equal (Get-RunTestsInstallerOutcome 0) 'Success' 'exit 0'
+Assert-Equal (Get-RunTestsInstallerOutcome 3010) 'RebootRequired' 'exit 3010'
+Assert-Equal (Get-RunTestsInstallerOutcome 1641) 'RebootStarted' 'exit 1641'
+Assert-Equal (Get-RunTestsInstallerOutcome 1602) 'Cancelled' 'exit 1602'
+Assert-Equal (Get-RunTestsInstallerOutcome 5004) 'Cancelled' 'exit 5004'
+Assert-Equal (Get-RunTestsInstallerOutcome 1618) 'AnotherInstall' 'exit 1618'
+Assert-Equal (Get-RunTestsInstallerOutcome 1) 'Failed' 'exit 1'
+if (-not (Test-RunTestsMicrosoftSigner -Status 'Valid' -Subject 'CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond')) { throw 'valid Microsoft signature rejected' }
+if (Test-RunTestsMicrosoftSigner -Status 'NotSigned' -Subject 'O=Microsoft Corporation') { throw 'unsigned payload accepted' }
+Assert-Equal (Get-RunTestsBuildToolsBootstrapperUrl '') 'https://aka.ms/vs/18/stable/vs_buildtools.exe' 'default bootstrapper'
+Assert-Equal (Get-RunTestsBuildToolsBootstrapperUrl 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools') 'https://aka.ms/vs/17/release/vs_buildtools.exe' 'vs2022 bootstrapper'
+
+$script:calls = 0
+$already = Install-RunTestsAotPrerequisites -Detect { $complete } -RunInstaller { param($c) $script:calls++; return 0 }
+if (-not $already.Ok -or $already.Installed) { throw 'already-complete path installed something' }
+if ($script:calls -ne 0) { throw 'installer ran when prerequisites were complete' }
+
+$state = 'missing'
+$reboot = Install-RunTestsAotPrerequisites -Detect { if ($state -eq 'ready') { $complete } else { $sdkOnly } } -RunInstaller { param($c) return 3010 }
+if ($reboot.Ok -or -not $reboot.NeedsReboot) { throw 'reboot was treated as success' }
+if ($reboot.Message -notmatch 'reboot') { throw $reboot.Message }
+
+$cancel = Install-RunTestsAotPrerequisites -Detect { $sdkOnly } -RunInstaller { param($c) return 1602 }
+if ($cancel.Ok -or $cancel.Message -notmatch 'canceled') { throw $cancel.Message }
+
+$failed = Install-RunTestsAotPrerequisites -Detect { $sdkOnly } -RunInstaller { param($c) return 1 }
+if ($failed.Ok -or $failed.Message -notmatch 'exit 1') { throw $failed.Message }
+
+$partial = Install-RunTestsAotPrerequisites -Detect { $sdkOnly } -RunInstaller { param($c) return 0 }
+if ($partial.Ok -or $partial.Message -notmatch 'still incomplete') { throw $partial.Message }
+
+$installed = Install-RunTestsAotPrerequisites -Detect { if ($script:ready) { $complete } else { $sdkOnly } } -RunInstaller { param($c) $script:ready = $true; return 0 }
+if (-not $installed.Ok -or -not $installed.Installed) { throw 'successful install was not accepted after re-detect' }
+
 Write-Host 'toolchain_tests_ok'
