@@ -10,6 +10,7 @@
 
 # Set the build env to use project references instead of packages
 $env:EnvBuildMode = $Mode # Developer or Release
+. (Join-Path $PSScriptRoot 'eng\NativeToolchain.ps1')
 
 Write-Host -ForegroundColor GREEN ("Build:",$Build)
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
@@ -428,7 +429,23 @@ if ($Rust -eq $true)
 {
     Write-Host -ForegroundColor GREEN "Publish RemoteWebViewService"
 	# Publish the web site server
-	Invoke-RunTestsNative dotnet publish -c NoAuthorization --self-contained true -r win-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+	# NoAuthorization is PublishAot. findvcvarsall.bat folds vcvarsall's stderr into the
+	# link.exe path, so locate the linker and Windows SDK here and skip that script.
+	$toolchain = Resolve-RunTestsNativeToolchain
+	if (-not $toolchain.Ok) {
+		Write-Error $toolchain.Message
+		exit 1
+	}
+	$savedPath = $env:Path
+	$savedLib = $env:LIB
+	$env:Path = "$($toolchain.LinkerDirectory);$env:Path"
+	$env:LIB = ($toolchain.LibPaths -join ';')
+	try {
+		Invoke-RunTestsNative dotnet publish -c NoAuthorization --self-contained true -r win-x64 '-p:IlcUseEnvironmentalTools=true' .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishNoAuth
+	} finally {
+		$env:Path = $savedPath
+		if ($null -eq $savedLib) { Remove-Item Env:LIB -ErrorAction SilentlyContinue } else { $env:LIB = $savedLib }
+	}
     New-Item -Path "src\RemoteWebViewService\bin\publishNoAuth\wwwroot" -ItemType Directory -Force | Out-Null
 	Invoke-RunTestsNative dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
