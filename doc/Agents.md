@@ -1,9 +1,9 @@
-# Agents (Remote PC Diagnostics)
+# Agents
 
-The relay keeps an in-memory registry of Remote PC Diagnostics agents. An agent is a small Windows service on a client PC.
+The relay keeps an in-memory registry of agents. An agent is a small Windows service on a client PC.
 It holds one gRPC stream open to the relay. A technician picks the PC on the admin site, and the relay tells that agent to
-download and start the diagnostics app. The app then registers under the session GUID it was given, as usual (`/app/{id}`).
-The contract is `src/Protos/agent.proto`. The agent and admin repos copy it verbatim.
+download and start the app. The app then registers under the session GUID it was given, as usual (`/app/{id}`).
+The contract is `src/Protos/agent.proto`. Agent and admin-site projects copy it verbatim.
 
 ## Services
 

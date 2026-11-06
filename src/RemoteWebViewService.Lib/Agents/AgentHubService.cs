@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView.Agents
 {
-    /// <summary>AgentHub: the long-lived stream each Remote PC Diagnostics agent keeps open (native gRPC, anonymous; enrollment key checked here).</summary>
+    /// <summary>AgentHub: the long-lived stream each agent keeps open (native gRPC, anonymous; enrollment key checked here).</summary>
     public class AgentHubService(ILogger<AgentHubService> logger, AgentRegistry registry, AgentOptions options) : AgentHub.AgentHubBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentHubService";

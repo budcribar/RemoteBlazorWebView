@@ -1,0 +1,6 @@
+<Project>
+  <!-- Lets the [RemoteBlazor] source generator read <RemoteBlazorMode>Local|Remote|Runtime</RemoteBlazorMode> from the app's project. -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="RemoteBlazorMode" />
+  </ItemGroup>
+</Project>

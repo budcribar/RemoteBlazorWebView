@@ -32,7 +32,7 @@ await server.StopAsync();                      // or dispose
   `appsettings.json` or environment variables, and does not hook Ctrl+C or process exit.
 - `MaxClients` limits concurrent RemoteWebView clients (a new `CreateWebView` gets 503 / `Unavailable`);
   browser requests for connected clients are never blocked. With `MaxClients = 1` the client-list and
-  file-watcher services are not mapped. The Remote PC Diagnostics agent hub is never mapped when embedded.
+  file-watcher services are not mapped. The agent hub (`doc/Agents.md`) is never mapped when embedded.
 - `FrameAncestors` adds `Content-Security-Policy: frame-ancestors ...` to HTML responses and rejects
   cross-origin script calls whose `Origin` is not listed. Same-origin calls are always allowed.
 

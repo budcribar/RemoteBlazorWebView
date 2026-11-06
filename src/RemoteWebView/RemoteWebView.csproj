@@ -69,6 +69,14 @@
     <InternalsVisibleTo Include="StaticContentCache.Tests" />
   </ItemGroup>
 
+  <!-- The [RemoteBlazor] source generator ships in this package (so the Wpf and WindowsForms packages get it transitively), with a
+       buildTransitive props file that makes the RemoteBlazorMode MSBuild property visible to it. Not referenced by this assembly. -->
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteBlazorWebView.SourceGenerators\RemoteBlazorWebView.SourceGenerators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\RemoteBlazorWebView.SourceGenerators\bin\$(Configuration)\PeakSWC.RemoteBlazorWebView.SourceGenerators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="buildTransitive\PeakSWC.RemoteWebView.props" Pack="true" PackagePath="buildTransitive" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="..\..\icons\favicon-32x32.png">
       <Pack>True</Pack>
