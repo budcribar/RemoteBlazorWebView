@@ -1,7 +1,7 @@
 # Remote components
 
-Run a Blazor component in its own process and show it inside your app, in a sandboxed iframe. Typical use: UI from code you don't
-fully trust (a plugin), run under a restricted token, that must not be able to touch the app's page.
+Run a Blazor component in its own process and show it inside your app, in a sandboxed iframe. Use it when a piece of UI should be
+isolated from the app: it can run with fewer rights than the app, crash without taking the app down, and can't touch the app's page.
 
 ```
  app process                                        component process (RemoteComponentHost)
@@ -14,8 +14,8 @@ fully trust (a plugin), run under a restricted token, that must not be able to t
 ```
 
 - **Data goes over the process's stdin/stdout**, newline-delimited JSON (`RemoteComponentMessage`): the app sends `set` with the
-  contract values that changed, the component sends `call` for a callback. Nothing crosses through the browser, so in a remote
-  session the technician's browser can't forge either side.
+  contract values that changed, the component sends `call` for a callback. Nothing crosses through the browser, so when the app
+  is viewed remotely, the remote browser can't forge either side.
 - **The iframe** is sandboxed without `allow-same-origin` (`RemoteComponentFrame.DefaultSandbox`), so it has an opaque origin. The
   only `postMessage` the app's page accepts from it is its height (`rbwv-remote-height`), matched by the sending window.
 
