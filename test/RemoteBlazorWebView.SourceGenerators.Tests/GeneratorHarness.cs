@@ -68,6 +68,10 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         public System.Windows.Forms.Form? FindForm() => new System.Windows.Forms.Form();
     }
 }
+namespace Microsoft.Web.WebView2.Wpf
+{
+    public class WebView2 { public System.Uri? Source { get; set; } }
+}
 namespace Microsoft.AspNetCore.Components.WebView.Wpf
 {
     public class BlazorWebView { }

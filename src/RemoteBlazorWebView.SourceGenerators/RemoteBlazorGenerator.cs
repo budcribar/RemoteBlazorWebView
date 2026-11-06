@@ -48,7 +48,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             var webView = attribute.ConstructorArguments.Length > 0 ? attribute.ConstructorArguments[0].Value as string ?? "" : "";
             var mode = Mode.Runtime;
             var modeFromAttribute = false;
-            string? serverUri = null, id = null;
+            string? serverUri = null, id = null, reverseMirror = null;
             bool showLink = true, mirror = false, restartOnRefresh = false, shutdownOnDisconnect = false;
             foreach (var named in attribute.NamedArguments)
             {
@@ -59,6 +59,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                     case "Id": id = named.Value.Value as string; break;
                     case "ShowLink": showLink = named.Value.Value is true; break;
                     case "Mirror": mirror = named.Value.Value is true; break;
+                    case "ReverseMirror": reverseMirror = named.Value.Value as string; break;
                     case "RestartOnRefresh": restartOnRefresh = named.Value.Value is true; break;
                     case "ShutdownOnDisconnect": shutdownOnDisconnect = named.Value.Value is true; break;
                 }
@@ -96,6 +97,31 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 }
             }
 
+            // Reverse mirror: a WebView2 the app drives through the server. Missing (the XAML first pass) is handled like a missing view.
+            if (reverseMirror is not null)
+            {
+                if (mirror)
+                {
+                    diagnostics.Add(DiagnosticInfo.Create(Diagnostics.MirrorAndReverseMirror, attributeLocation));
+                    canEmit = false;
+                }
+                var wv2 = FindMember(type, reverseMirror);
+                if (wv2 is null)
+                {
+                    diagnostics.Add(DiagnosticInfo.Create(Diagnostics.MemberNotFound, attributeLocation, reverseMirror, type.Name));
+                    framework = UiFramework.Unknown;
+                }
+                else
+                {
+                    var wv2Type = wv2 is IFieldSymbol f2 ? f2.Type : ((IPropertySymbol)wv2).Type;
+                    if (!HasUriSource(wv2Type))
+                    {
+                        diagnostics.Add(DiagnosticInfo.Create(Diagnostics.NotWebView2, attributeLocation, reverseMirror, wv2Type.ToDisplayString()));
+                        canEmit = false;
+                    }
+                }
+            }
+
             if (serverUri is not null && !Uri.TryCreate(serverUri, UriKind.Absolute, out _))
             {
                 diagnostics.Add(DiagnosticInfo.Create(Diagnostics.BadServerUri, attributeLocation, serverUri));
@@ -111,7 +137,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 type.ContainingNamespace.IsGlobalNamespace ? null : type.ContainingNamespace.ToDisplayString(),
                 new EquatableArray<string>(containing.ToImmutableArray()),
                 type.Name, webView, framework, mode, modeFromAttribute, serverUri, id,
-                showLink, mirror, restartOnRefresh, shutdownOnDisconnect, canEmit,
+                showLink, mirror, reverseMirror, restartOnRefresh, shutdownOnDisconnect, canEmit,
                 LocationInfo.From(attributeLocation),
                 new EquatableArray<DiagnosticInfo>(diagnostics.ToImmutableArray()));
         }
@@ -122,6 +148,14 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 foreach (var m in t.GetMembers(name))
                     if (m is IFieldSymbol or IPropertySymbol { IsIndexer: false }) return m;
             return null;
+        }
+
+        private static bool HasUriSource(ITypeSymbol type)
+        {
+            for (var t = type as INamedTypeSymbol; t is not null; t = t.BaseType)
+                foreach (var m in t.GetMembers("Source"))
+                    if (m is IPropertySymbol { SetMethod: not null, Type: var pt } && pt.ToDisplayString().TrimEnd('?') == "System.Uri") return true;
+            return false;
         }
 
         private static UiFramework FrameworkOf(ITypeSymbol type)
@@ -228,9 +262,17 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             yield return t.Id is null
                 ? "    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? global::System.Guid.Empty; // Guid.Empty: a new id each run"
                 : $"    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? new global::System.Guid({Literal(t.Id)});";
-            if (t.Mirror) yield return "    webView.EnableMirrors = true;";
+            if (t.Mirror || t.ReverseMirror is not null) yield return "    webView.EnableMirrors = true;";
 
-            if (t.ShowLink)
+            if (t.ReverseMirror is not null)
+            {
+                yield return "";
+                yield return "    // Reverse mirror: this window uses the app through the server; the system browser gets the read-only mirror.";
+                yield return $"    webView.ReadyToConnect += (_, e) => {Invoke(wpf, $"this.{t.ReverseMirror}.Source = new global::System.Uri($\"{{e.Url}}app/{{e.Id}}\")")};";
+                yield return "    webView.Connected += (_, e) => global::System.Diagnostics.Process.Start(";
+                yield return "        new global::System.Diagnostics.ProcessStartInfo { FileName = $\"{e.Url}mirror/{e.Id}\", UseShellExecute = true })?.Dispose();";
+            }
+            else if (t.ShowLink)
             {
                 yield return "";
                 yield return "    webView.ReadyToConnect += (sender, e) =>";
