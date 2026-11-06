@@ -19,6 +19,49 @@ fully trust (a plugin), run under a restricted token, that must not be able to t
 - **The iframe** is sandboxed without `allow-same-origin` (`RemoteComponentFrame.DefaultSandbox`), so it has an opaque origin. The
   only `postMessage` the app's page accepts from it is its height (`rbwv-remote-height`), matched by the sending window.
 
+## A contract, and what the generator writes from it
+
+Declare what crosses between the two processes as an interface, in a library both sides reference:
+
+```csharp
+[RemoteComponentContract]
+public interface IClock
+{
+    string TimeZone { get; }              // a value: app -> component
+    DiagnosticResult? LastResult { get; }
+    Task Rerun();                          // a callback: component -> app
+    Task Picked(DateTimeOffset when);      // at most one argument
+}
+```
+
+The source generator in this package writes:
+
+- **`ClockFrame`** for the app, a component with `[Parameter] TimeZone`, `LastResult`, `EventCallback Rerun` and
+  `EventCallback<DateTimeOffset> Picked`:
+
+  ```razor
+  <ClockFrame Open="ct => launcher.StartAsync(ct)" TimeZone="@zone" LastResult="@last" Rerun="RunAgain" title="Clock" />
+  ```
+
+- **`ClockReceiver`** for the component's process: implements `IClock` with the values the app sent (`Changed` fires when they
+  change); calling `Rerun()` sends the callback. Register it in the host and inject `IClock` (or `ClockReceiver`) in the UI:
+
+  ```csharp
+  return RemoteComponentHost.Run(new RemoteComponentHostOptions
+  {
+      ServerUri = relay, GrpcBaseUri = grpc, Id = id, ParentProcessId = appPid, RootComponent = typeof(ClockRoot),
+      ConfigureServices = (services, connection) => services.AddRemoteComponentReceiver<ClockReceiver>(connection),
+  });
+  ```
+
+Values and arguments must be JSON-serializable (`RemoteComponentJson.Options`: web defaults, enums as strings). Values are sent
+when they change (compared as JSON), all of them the first time. Rules the generator enforces: RBWRC001 for a member that isn't a
+get-only property or a `Task` method with at most one argument, RBWRC002 for a generic or nested interface. Names can be set with
+`[RemoteComponentContract(FrameName = "...", ReceiverName = "...")]`.
+
+Razor compiles before source generators run, so a `.razor` file can't use a frame generated in its own project: keep the contract
+in a separate library.
+
 ## The pieces
 
 | Side | Type | Package |
