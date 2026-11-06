@@ -196,4 +196,53 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         var r = GeneratorHarness.Run(Wpf($"[RemoteBlazor(nameof(RemoteBlazorWebView), {options})]"), load: false);
         Assert.Contains(r.GeneratorDiagnostics, d => d.Id == id);
     }
+
+    private const string ReverseMembers = """
+        internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView RemoteBlazorWebView = new();
+        internal Microsoft.Web.WebView2.Wpf.WebView2 WebView = new();
+""";
+
+    [Fact]
+    public void Reverse_mirror_drives_the_app_in_the_WebView2()
+    {
+        var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", ReverseMirror = nameof(WebView))]""", ReverseMembers));
+        NoErrors(r);
+        Assert.Empty(r.GeneratorDiagnostics);
+        var type = r.Assembly!.GetType("App.MainWindow")!;
+        var window = Activator.CreateInstance(type)!;
+        Assert.True((bool)type.GetMethod("InitializeRemoteBlazor", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(window, null)!);
+        dynamic view = type.GetField("RemoteBlazorWebView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(window)!;
+        dynamic webView2 = type.GetField("WebView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(window)!;
+        Assert.True((bool)view.EnableMirrors);
+        Assert.True((bool)view.HasConnected); // opens the browser on the mirror; not fired here, it would start a process
+
+        var id = Guid.NewGuid();
+        view.FireReady(new Uri("https://localhost:5001/"), id);
+        Assert.Equal(new Uri($"https://localhost:5001/app/{id}"), (Uri)webView2.Source);
+        Assert.Null((string?)view.Html); // no link: the WebView2 shows the app
+    }
+
+    [Fact]
+    public void Reverse_mirror_and_mirror_together_is_an_error()
+    {
+        var r = GeneratorHarness.Run(Wpf("[RemoteBlazor(nameof(RemoteBlazorWebView), Mirror = true, ReverseMirror = nameof(WebView))]", ReverseMembers), load: false);
+        Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW009");
+    }
+
+    [Fact]
+    public void Reverse_mirror_must_be_a_WebView2()
+    {
+        var r = GeneratorHarness.Run(Wpf("[RemoteBlazor(nameof(RemoteBlazorWebView), ReverseMirror = nameof(Other))]",
+            "internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView RemoteBlazorWebView = new(); internal string Other = \"\";"), load: false);
+        Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW010");
+    }
+
+    [Fact]
+    public void Missing_reverse_mirror_control_warns_and_generates_a_no_op()
+    {
+        var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", ReverseMirror = "WebView")]"""));
+        NoErrors(r);
+        Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW001");
+        Assert.False(GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow").Remote);
+    }
 }

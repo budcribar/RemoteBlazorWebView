@@ -56,6 +56,14 @@ namespace PeakSWC.RemoteBlazorWebView
         /// <summary>Once a browser connects, show a read-only mirror of the remote UI in the BlazorWebView.</summary>
         public bool Mirror { get; set; }
 
+        /// <summary>
+        /// Reverse mirror: the name of a WebView2 control you put over the BlazorWebView (in XAML or the WinForms designer). The person
+        /// at the PC uses the app in that WebView2, through the server, so the window looks and works like a local app; once it
+        /// connects, the system browser opens the read-only mirror (&lt;server&gt;/mirror/&lt;id&gt;), the view to share. Replaces
+        /// ShowLink; can't be combined with Mirror.
+        /// </summary>
+        public string? ReverseMirror { get; set; }
+
         /// <summary>When the browser is refreshed, start a fresh copy of the app on the same server and id, and close this window.</summary>
         public bool RestartOnRefresh { get; set; }
 

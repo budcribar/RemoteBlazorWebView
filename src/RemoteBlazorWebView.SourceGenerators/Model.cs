@@ -30,6 +30,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
         string? Id,
         bool ShowLink,
         bool Mirror,
+        string? ReverseMirror,
         bool RestartOnRefresh,
         bool ShutdownOnDisconnect,
         bool CanEmit,
@@ -60,6 +61,8 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 "RBW005" => Diagnostics.BadServerUri,
                 "RBW006" => Diagnostics.BadId,
                 "RBW007" => Diagnostics.BadModeProperty,
+                "RBW009" => Diagnostics.MirrorAndReverseMirror,
+                "RBW010" => Diagnostics.NotWebView2,
                 _ => Diagnostics.ServerUriIgnored,
             };
             return Diagnostic.Create(descriptor, Location?.ToLocation(), Args.ToArray<object>());

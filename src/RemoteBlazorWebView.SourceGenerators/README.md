@@ -31,6 +31,7 @@ public partial class MainWindow : Window
 | `Id` | new id each run | A fixed client id (Guid); `-i=<guid>` overrides it |
 | `ShowLink` | `true` | Shows `<server>/app/<id>` as a link in the view until a browser connects |
 | `Mirror` | `false` | `EnableMirrors`, and shows the read-only mirror in the view once a browser connects |
+| `ReverseMirror` | | Name of a WebView2 you put over the BlazorWebView. `EnableMirrors`; the WebView2 opens `<server>/app/<id>`, so the person at the PC uses the app through the server and it looks local; once connected, the system browser opens the read-only `<server>/mirror/<id>` to share. Replaces `ShowLink`; not with `Mirror` |
 | `RestartOnRefresh` | `false` | On browser refresh: `Restart()` (a new copy with the same `-u=`/`-i=`) and close the window |
 | `ShutdownOnDisconnect` | `false` | On disconnect: `Application.Current.Shutdown()` (WPF) or `Application.Exit()` (WinForms) |
 
@@ -42,7 +43,29 @@ ones. That's a one-time edit; the PeakSWC control behaves like Microsoft's when 
 
 Diagnostics: RBW001 member not found (warning), RBW002 member isn't a PeakSWC BlazorWebView, RBW003 class isn't partial,
 RBW004 `Remote` without `ServerUri`, RBW005 bad `ServerUri`, RBW006 bad `Id`, RBW007 unknown `RemoteBlazorMode` value (warning),
-RBW008 `ServerUri` set in `Runtime` mode, where it isn't used (warning).
+RBW008 `ServerUri` set in `Runtime` mode, where it isn't used (warning), RBW009 `Mirror` and `ReverseMirror` together,
+RBW010 `ReverseMirror` isn't a WebView2.
+
+## Reverse mirror
+
+The person at the PC keeps using the app in its own window, and a browser elsewhere gets a read-only view. The generator can't
+add the WebView2 control, so add it to the XAML yourself, over the BlazorWebView:
+
+```xml
+xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+...
+<Grid>
+    <blazor:BlazorWebView x:Name="RemoteBlazorWebView" ... />
+    <wv2:WebView2 x:Name="WebView" />
+</Grid>
+```
+
+```csharp
+[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001",
+    ReverseMirror = nameof(WebView))]
+```
+
+WinForms works the same with a `Microsoft.Web.WebView2.WinForms.WebView2` docked over the BlazorWebView.
 
 When you reference the RemoteBlazorWebView projects instead of the packages, add the generator and the props yourself:
 
