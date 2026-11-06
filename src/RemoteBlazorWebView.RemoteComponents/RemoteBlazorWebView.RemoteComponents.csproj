@@ -35,6 +35,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
   </ItemGroup>
 
+  <!-- The [RemoteComponentContract] source generator ships in this package; not referenced by this assembly. -->
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteBlazorWebView.RemoteComponents.Generators\RemoteBlazorWebView.RemoteComponents.Generators.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <None Include="..\RemoteBlazorWebView.RemoteComponents.Generators\bin\$(Configuration)\PeakSWC.RemoteBlazorWebView.RemoteComponents.Generators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="RemoteBlazorWebView.RemoteComponents.Tests" />
   </ItemGroup>
