@@ -42,7 +42,7 @@ namespace PeakSWC.RemoteWebView.Agents
     }
 
     /// <summary>
-    /// In-memory registry of Remote PC Diagnostics agents and the launches started on them.
+    /// In-memory registry of agents and the launches started on them.
     /// All state is guarded by one lock: agents report every 30 s and launches are rare, so contention is negligible.
     /// </summary>
     public sealed class AgentRegistry
