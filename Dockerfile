@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 # RemoteWebViewService (net11) for Railway TCP proxy: Kestrel does TLS + HTTP/2 on 8443.
+# global.json must request this image's SDK or an older 11.0 SDK. The floating
+# 11.0-preview tag currently ships SDK 11.0.100-preview.7.26381.103.
 FROM mcr.microsoft.com/dotnet/sdk:11.0-preview AS build
 WORKDIR /src
 # Only what the server needs (no npm: the browser JS is streamed by the client app, server has no wwwroot)

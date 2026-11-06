@@ -48,12 +48,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins 11.0.100-rc.2.26504.105 (allowPrerelease, rollForward
-      # latestMinor). The fully qualified RC 2 SDK is installed from the preview
-      # channel; dotnet-quality cannot be combined with that exact version.
-      # No project targets net10.0. The MAUI workload is not required: tests do
-      # not build MAUI apps (ASP.NET Core packages are 11.0.0-rc.2.26504.105;
-      # EditWebView vendors MAUI 11.0.100-rc.2.26513.2 sources when it runs).
+      # global.json pins 11.0.100-preview.7.26381.103 (allowPrerelease, rollForward
+      # latestMinor), the SDK inside mcr.microsoft.com/dotnet/sdk:11.0-preview.
+      # A newer installed 11.0 SDK still builds. No project targets net10.0.
+      # The MAUI workload is not required: tests do not build MAUI apps
+      # (ASP.NET Core packages stay 11.0.0-rc.2.26504.105; EditWebView vendors
+      # MAUI 11.0.100-rc.2.26513.2 sources when it runs).
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:

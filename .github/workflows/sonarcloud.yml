@@ -9,7 +9,8 @@
 # plan's single main branch, and this workflow analyzes net11 as that main
 # branch. sonar.branch.name is not passed.
 #
-# actions/setup-dotnet reads global.json. On net11 that pins the 11.0 RC.
+# actions/setup-dotnet reads global.json. On net11 that pins the SDK shipped by
+# mcr.microsoft.com/dotnet/sdk:11.0-preview (11.0.100-preview.7.26381.103).
 
 name: SonarCloud
 
