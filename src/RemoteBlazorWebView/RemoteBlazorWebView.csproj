@@ -19,7 +19,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>Based on maui 11.0.0 rc2 </PackageReleaseNotes>
+		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5 </PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<Platforms>x64</Platforms>
@@ -31,11 +31,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="11.0.0-rc.2.26504.105" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-rc.2.26504.105" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.2.26504.105" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="11.0.0-rc.2.26504.105" />
-		<PackageReference Include="Microsoft.JSInterop" Version="11.0.0-rc.2.26504.105" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="Microsoft.JSInterop" Version="11.0.0-rc.3.26522.148" />
 		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="Photino.Net" Version="4.0.16" />
 	</ItemGroup>

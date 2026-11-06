@@ -18,7 +18,7 @@ Packed in this order, because WinForms, WPF, and the Photino host project-refere
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.0` and `VersionSuffix` to `rc2`, so the package version is `11.0.0-rc2`.
+`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.0` and `VersionSuffix` to `rc3`, so the unpublished package version is `11.0.0-rc3`. That suffix matches the ASP.NET Core 11.0.0-rc.3 libraries this tree references. `global.json` still pins the preview SDK `11.0.100-preview.7.26381.103`, so `eng/derive-package-version.sh` derives `preview7` from the SDK unless `version_override` is set. This file does not publish either version.
 
 The rule going forward:
 

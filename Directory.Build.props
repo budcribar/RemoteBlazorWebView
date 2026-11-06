@@ -3,7 +3,7 @@
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
     <VersionPrefix>11.0.0</VersionPrefix>
-	<VersionSuffix>rc2</VersionSuffix>
+	<VersionSuffix>rc3</VersionSuffix>
   </PropertyGroup>
 
   <!-- .NET 11 builds DirectWriteForwarder.dll and System.Printing.dll as mixed-mode
