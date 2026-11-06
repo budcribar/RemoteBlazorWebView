@@ -79,7 +79,7 @@ namespace PeakSWC.RemoteWebView
                 if (!serviceStateTaskSource.Task.IsCompleted)
                 {
                     serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(request.Id, serviceStateTaskSource));
-                    serviceStateTaskSource.TrySetCanceled();
+                    serviceStateTaskSource.TrySetCanceled(CancellationToken.None);
                     await state.DisposeAsync().ConfigureAwait(false);
                     return;
                 }

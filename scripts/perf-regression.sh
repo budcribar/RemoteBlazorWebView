@@ -142,7 +142,8 @@ write_summary() {
 }
 
 sample_count() {
-  python3 - "$1" <<'PY'
+  local sample_dir=$1
+  python3 - "$sample_dir" <<'PY'
 import json, sys
 from pathlib import Path
 count = 0

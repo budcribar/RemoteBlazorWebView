@@ -12,12 +12,12 @@ public class FileReadCompletionTests
     // This is the later read, after that metadata check would already have returned 200.
     [Theory]
     [MemberData(nameof(ReadFailures))]
-    public async Task Read_failure_after_metadata_returned_200_sends_empty_completion_normal_404_is_earlier_at_metadata(Exception failure)
+    public async Task Read_failure_after_metadata_returned_200_sends_empty_completion_normal_404_is_earlier_at_metadata(string failure)
     {
         var writer = new ClosedPipeWriter();
         var manager = new ClientFileSyncManager(
             Guid.NewGuid().ToString(),
-            new ExistsThenThrowsProvider(failure),
+            new ExistsThenThrowsProvider(CreateFailure(failure)),
             writer,
             NullLogger.Instance);
 
@@ -31,12 +31,21 @@ public class FileReadCompletionTests
         Assert.Contains(writer.Messages, message => message.FileData != null && message.FileData.FileChunk.Length == 0);
     }
 
-    public static TheoryData<Exception> ReadFailures { get; } = new()
+    public static TheoryData<string> ReadFailures { get; } = new()
     {
-        new FileNotFoundException("missing"),
-        new IOException("io"),
-        new UnauthorizedAccessException("denied"),
-        new InvalidDataException("bad")
+        "missing",
+        "io",
+        "denied",
+        "bad"
+    };
+
+    private static Exception CreateFailure(string failure) => failure switch
+    {
+        "missing" => new FileNotFoundException("missing"),
+        "io" => new IOException("io"),
+        "denied" => new UnauthorizedAccessException("denied"),
+        "bad" => new InvalidDataException("bad"),
+        _ => throw new ArgumentOutOfRangeException(nameof(failure), failure, "Unknown read failure.")
     };
 
     private sealed class ClosedPipeWriter : IClientStreamWriter<ClientFileReadResponse>

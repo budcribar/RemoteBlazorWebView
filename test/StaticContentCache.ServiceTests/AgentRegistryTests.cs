@@ -18,6 +18,7 @@ namespace StaticContentCache.Tests;
 public class AgentRegistryTests
 {
     private const string ServerUrl = "https://server.remoteblazorwebview.com:34544";
+    private static readonly string[] ExpectedClosedKeys = ["alpha", "beta"];
 
     // ---------------------------------------------------------------- consent rule
 
@@ -102,7 +103,7 @@ public class AgentRegistryTests
         Assert.True(AgentOptions.Create(" , ", null).AcceptsAnyKey);
 
         var closed = AgentOptions.Create(" alpha , beta,,", "https://relay.example:34544/");
-        Assert.Equal(new[] { "alpha", "beta" }, closed.EnrollmentKeys);
+        Assert.Equal(ExpectedClosedKeys, closed.EnrollmentKeys);
         Assert.True(closed.IsKeyAccepted("beta"));
         Assert.False(closed.IsKeyAccepted("gamma"));
         Assert.False(closed.IsKeyAccepted(""));

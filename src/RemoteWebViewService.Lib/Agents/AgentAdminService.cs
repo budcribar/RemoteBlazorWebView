@@ -28,18 +28,20 @@ namespace PeakSWC.RemoteWebView.Agents
                 {
                     // Take the signal before the snapshot so a change in between still wakes us.
                     var changed = registry.Changed;
-                    await responseStream.WriteAsync(registry.GetAgentList()).ConfigureAwait(false);
+                    await responseStream.WriteAsync(registry.GetAgentList(), token).ConfigureAwait(false);
                     try
                     {
                         await changed.WaitAsync(WatchAgentsInterval, token).ConfigureAwait(false);
                     }
                     catch (TimeoutException)
                     {
+                        // The interval elapsed with no registry change. Loop and send a fresh snapshot.
                     }
                 }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                // The admin client disconnected.
             }
         }
 
@@ -78,10 +80,11 @@ namespace PeakSWC.RemoteWebView.Agents
             try
             {
                 await foreach (var progress in subscription.Reader.ReadAllAsync(token).ConfigureAwait(false))
-                    await responseStream.WriteAsync(progress).ConfigureAwait(false);
+                    await responseStream.WriteAsync(progress, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                // The admin client disconnected.
             }
         }
 
@@ -144,6 +147,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
             catch (InvalidOperationException)
             {
+                // Not hosted by ASP.NET Core (unit tests).
             }
 
             return "https://" + context.Host;

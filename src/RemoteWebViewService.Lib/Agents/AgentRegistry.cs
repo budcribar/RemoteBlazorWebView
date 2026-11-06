@@ -391,32 +391,8 @@ namespace PeakSWC.RemoteWebView.Agents
 
             lock (gate)
             {
-                foreach (var entry in agents.Values.ToList())
-                {
-                    var silence = now - entry.LastSeen;
-                    if (entry.Online && silence >= OfflineAfter)
-                    {
-                        entry.Online = false;
-                        wentOffline.Add(Describe(entry));
-                    }
-                    else if (!entry.Online && silence >= ForgetAgentAfter)
-                    {
-                        if (entry.ConnectionCts != null)
-                            toCancel.Add(entry.ConnectionCts);
-                        agents.Remove(entry.MachineId);
-                        forgotten.Add(Describe(entry));
-                    }
-                }
-
-                foreach (var launch in launches.Values.ToList())
-                {
-                    if (now - launch.Updated >= ForgetLaunchAfter)
-                    {
-                        foreach (var subscriber in launch.Subscribers)
-                            subscriber.Writer.TryComplete();
-                        launches.Remove(launch.RequestId);
-                    }
-                }
+                SweepAgentsNoLock(now, wentOffline, forgotten, toCancel);
+                SweepLaunchesNoLock(now);
 
                 if (wentOffline.Count > 0 || forgotten.Count > 0)
                     NotifyChangedNoLock();
@@ -425,6 +401,39 @@ namespace PeakSWC.RemoteWebView.Agents
             foreach (var cts in toCancel)
                 cts.Cancel();
             return new SweepResult(wentOffline, forgotten);
+        }
+
+        private void SweepAgentsNoLock(DateTimeOffset now, List<string> wentOffline, List<string> forgotten, List<CancellationTokenSource> toCancel)
+        {
+            foreach (var entry in agents.Values.ToList())
+            {
+                var silence = now - entry.LastSeen;
+                if (entry.Online && silence >= OfflineAfter)
+                {
+                    entry.Online = false;
+                    wentOffline.Add(Describe(entry));
+                }
+                else if (!entry.Online && silence >= ForgetAgentAfter)
+                {
+                    if (entry.ConnectionCts != null)
+                        toCancel.Add(entry.ConnectionCts);
+                    agents.Remove(entry.MachineId);
+                    forgotten.Add(Describe(entry));
+                }
+            }
+        }
+
+        private void SweepLaunchesNoLock(DateTimeOffset now)
+        {
+            foreach (var launch in launches.Values.ToList())
+            {
+                if (now - launch.Updated >= ForgetLaunchAfter)
+                {
+                    foreach (var subscriber in launch.Subscribers)
+                        subscriber.Writer.TryComplete();
+                    launches.Remove(launch.RequestId);
+                }
+            }
         }
 
         private LaunchProgress? PublishNoLock(LaunchEntry launch, LaunchProgress progress)

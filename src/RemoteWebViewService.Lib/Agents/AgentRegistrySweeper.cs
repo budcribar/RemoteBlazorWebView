@@ -35,6 +35,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                // The host is stopping. PeriodicTimer throws when the token fires.
             }
         }
     }

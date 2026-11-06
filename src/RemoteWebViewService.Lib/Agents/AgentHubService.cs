@@ -18,32 +18,12 @@ namespace PeakSWC.RemoteWebView.Agents
         public override async Task Connect(IAsyncStreamReader<AgentMessage> requestStream, IServerStreamWriter<HubCommand> responseStream, ServerCallContext context)
         {
             var callToken = context.CancellationToken;
-
-            if (!await requestStream.MoveNext(callToken).ConfigureAwait(false) || requestStream.Current.BodyCase != AgentMessage.BodyOneofCase.Hello)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "The first message must be AgentHello"));
-
-            var hello = requestStream.Current.Hello;
-            if (string.IsNullOrWhiteSpace(hello.MachineId))
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "AgentHello.machine_id is required"));
-
+            var hello = await ReadHelloAsync(requestStream, callToken).ConfigureAwait(false);
             string ip = GetRemoteIp(context);
-
-            if (options.AcceptsAnyKey)
-            {
-                if (Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
-                    AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: any agent enrollment key is accepted");
-            }
-            else if (!options.IsKeyAccepted(hello.EnrollmentKey))
-            {
-                AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted");
-                throw new RpcException(new Status(StatusCode.PermissionDenied, "The enrollment key was not accepted"));
-            }
+            EnsureEnrollmentAccepted(hello, ip);
 
             var connection = registry.Register(hello, ip, responseStream);
-            AgentEvents.Info(logger, Category,
-                $"Agent {(connection.IsNew ? "registered" : connection.ReplacedExisting ? "reconnected (replaced its previous stream)" : "reconnected")}: " +
-                $"{hello.MachineName} ({hello.MachineId}) from {ip}, user '{hello.SignedInUser}', agent {hello.AgentVersion}, app '{hello.CachedAppVersion}', " +
-                $"consent {hello.ConsentCeiling}, lifetime {hello.Lifetime}");
+            AgentEvents.Info(logger, Category, DescribeRegistration(connection, hello, ip));
 
             using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(callToken, connection.Replaced);
             var token = streamCts.Token;
@@ -52,23 +32,7 @@ namespace PeakSWC.RemoteWebView.Agents
             try
             {
                 while (await requestStream.MoveNext(token).ConfigureAwait(false))
-                {
-                    var message = requestStream.Current;
-                    switch (message.BodyCase)
-                    {
-                        case AgentMessage.BodyOneofCase.Heartbeat:
-                            registry.OnHeartbeat(connection, message.Heartbeat);
-                            break;
-                        case AgentMessage.BodyOneofCase.Progress:
-                            var stored = registry.OnProgress(connection, message.Progress);
-                            if (stored != null)
-                                LogProgress(hello, stored);
-                            break;
-                        case AgentMessage.BodyOneofCase.Hello:
-                            logger.LogWarning("Agent {MachineId} sent a second AgentHello; ignored", hello.MachineId);
-                            break;
-                    }
-                }
+                    HandleMessage(hello, connection, requestStream.Current);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -80,8 +44,15 @@ namespace PeakSWC.RemoteWebView.Agents
             }
             finally
             {
-                streamCts.Cancel();
-                try { await pump.ConfigureAwait(false); } catch { }
+                await streamCts.CancelAsync().ConfigureAwait(false);
+                try
+                {
+                    await pump.ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // PumpCommandsAsync already logged a send failure. Disconnect must still run.
+                }
 
                 if (registry.Disconnect(connection, out var failedLaunches))
                 {
@@ -92,20 +63,79 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
+        private static async Task<AgentHello> ReadHelloAsync(IAsyncStreamReader<AgentMessage> requestStream, CancellationToken callToken)
+        {
+            if (!await requestStream.MoveNext(callToken).ConfigureAwait(false) || requestStream.Current.BodyCase != AgentMessage.BodyOneofCase.Hello)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "The first message must be AgentHello"));
+
+            var hello = requestStream.Current.Hello;
+            if (string.IsNullOrWhiteSpace(hello.MachineId))
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "AgentHello.machine_id is required"));
+            return hello;
+        }
+
+        private void EnsureEnrollmentAccepted(AgentHello hello, string ip)
+        {
+            if (options.AcceptsAnyKey)
+            {
+                if (Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
+                    AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: any agent enrollment key is accepted");
+                return;
+            }
+
+            if (options.IsKeyAccepted(hello.EnrollmentKey))
+                return;
+
+            AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted");
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "The enrollment key was not accepted"));
+        }
+
+        private static string DescribeRegistration(AgentConnection connection, AgentHello hello, string ip)
+        {
+            string how;
+            if (connection.IsNew)
+                how = "registered";
+            else if (connection.ReplacedExisting)
+                how = "reconnected (replaced its previous stream)";
+            else
+                how = "reconnected";
+
+            return $"Agent {how}: {hello.MachineName} ({hello.MachineId}) from {ip}, user '{hello.SignedInUser}', agent {hello.AgentVersion}, app '{hello.CachedAppVersion}', consent {hello.ConsentCeiling}, lifetime {hello.Lifetime}";
+        }
+
+        private void HandleMessage(AgentHello hello, AgentConnection connection, AgentMessage message)
+        {
+            switch (message.BodyCase)
+            {
+                case AgentMessage.BodyOneofCase.Heartbeat:
+                    registry.OnHeartbeat(connection, message.Heartbeat);
+                    break;
+                case AgentMessage.BodyOneofCase.Progress:
+                    var stored = registry.OnProgress(connection, message.Progress);
+                    if (stored != null)
+                        LogProgress(hello, stored);
+                    break;
+                case AgentMessage.BodyOneofCase.Hello:
+                    logger.LogWarning("Agent {MachineId} sent a second AgentHello; ignored", hello.MachineId);
+                    break;
+            }
+        }
+
         private async Task PumpCommandsAsync(AgentConnection connection, IServerStreamWriter<HubCommand> responseStream, CancellationTokenSource streamCts)
         {
             try
             {
                 await foreach (var command in connection.Commands.ReadAllAsync(streamCts.Token).ConfigureAwait(false))
-                    await responseStream.WriteAsync(command).ConfigureAwait(false);
+                    await responseStream.WriteAsync(command, streamCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (streamCts.IsCancellationRequested)
             {
+                // The hub call ended or this stream was replaced.
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Sending a command to agent {MachineId} failed; closing its stream", connection.MachineId);
-                streamCts.Cancel();
+                await streamCts.CancelAsync().ConfigureAwait(false);
             }
         }
 
