@@ -26,6 +26,10 @@ You do not need to build this repo unless you want to customize the RemoteWebVie
 dotnet tool update -g PeakSWC.RemoteWebViewService --version 9.*-* 
 ```
 
+# Switching between local and remote
+
+Mark the window with `[RemoteBlazor(nameof(MyBlazorWebView), ...)]` and call the generated `InitializeRemoteBlazor()` after `InitializeComponent()`; see [the source generator's README](src/RemoteBlazorWebView.SourceGenerators/README.md).
+
 # Samples
 
 Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial 
