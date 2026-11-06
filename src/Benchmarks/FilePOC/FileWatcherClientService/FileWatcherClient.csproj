@@ -11,16 +11,16 @@
 
 	<ItemGroup>
 		<PackageReference Include="Grpc.Net.ClientFactory" Version="2.84.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.21" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.21" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.21" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.22" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.22" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.22" />
 		
 		<PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
 		<PackageReference Include="Grpc.Tools" Version="2.84.0">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="System.Management" Version="9.0.21" />
+		<PackageReference Include="System.Management" Version="9.0.22" />
 		
 	</ItemGroup>
 

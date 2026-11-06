@@ -23,7 +23,7 @@ on:
           - net10
           - net11
       version_override:
-        description: Optional full package version (for example 9.0.22 or 9.0.21-rc2). Empty uses Directory.Build.props when global.json is GA, and global.json when it is a prerelease.
+        description: Optional full package version (for example 9.0.23 or 9.0.22-rc2). Empty uses Directory.Build.props when global.json is GA, and global.json when it is a prerelease.
         required: false
         type: string
         default: ""
