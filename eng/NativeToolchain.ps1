@@ -167,6 +167,24 @@ function Test-RunTestsMicrosoftSigner {
     return ($Status -eq 'Valid' -and $Subject -match 'O=Microsoft Corporation')
 }
 
+function ConvertTo-RunTestsNativeCommandLine {
+    param([string[]] $Arguments)
+    $builder = New-Object System.Text.StringBuilder
+    foreach ($argument in @($Arguments)) {
+        if ($null -eq $argument) { continue }
+        if ($builder.Length -gt 0) { [void]$builder.Append(' ') }
+        if ($argument.Length -gt 0 -and $argument.IndexOfAny([char[]]@(' ', "`t", '"')) -lt 0) {
+            [void]$builder.Append($argument)
+        }
+        else {
+            [void]$builder.Append('"')
+            [void]$builder.Append(($argument -replace '"', '\"'))
+            [void]$builder.Append('"')
+        }
+    }
+    return $builder.ToString()
+}
+
 function Get-RunTestsBuildToolsBootstrapperUrl {
     param([string] $InstallPath)
     # aka.ms links checked against download.visualstudio.microsoft.com.
@@ -212,7 +230,7 @@ function Install-RunTestsAotPrerequisites {
     $components = @(Get-RunTestsAotComponentsToAdd $before)
     Write-Host "Native AOT prerequisites are incomplete. $($before.Message)"
     Write-Host "The official Visual Studio Build Tools installer will add only: $($components -join ', ')."
-    Write-Host 'A progress window opens for that installer. Windows may ask you to approve administrator permission for the installer. This script does not elevate itself.'
+    Write-Host 'The installer window opens and may ask you to approve administrator permission. This script does not elevate itself. --passive is not used; Microsoft does not support that switch for a standard user.'
 
     $exitCode = [int](& $RunInstaller $components)
     $outcome = Get-RunTestsInstallerOutcome $exitCode
@@ -294,8 +312,41 @@ function Invoke-RunTestsVisualStudioInstaller {
     $argumentList = @()
     if ($installPath) { $argumentList += @('modify', '--installPath', $installPath) }
     foreach ($component in $Components) { $argumentList += @('--add', $component) }
-    $argumentList += @('--passive', '--norestart', '--wait')
-    Write-Host "Running signed vs_buildtools.exe $($argumentList -join ' ')"
-    $process = Start-Process -FilePath $bootstrapper -ArgumentList $argumentList -Wait -PassThru
-    return $process.ExitCode
+    # --wait is valid on the bootstrapper. --passive and --quiet are not available
+    # to a standard user, and --norestart has to be paired with one of them, so the
+    # installer window is left interactive and requests elevation itself.
+    $argumentList += '--wait'
+    $commandLine = ConvertTo-RunTestsNativeCommandLine $argumentList
+    Write-Host "Running signed vs_buildtools.exe $commandLine"
+    $start = New-Object System.Diagnostics.ProcessStartInfo
+    $start.FileName = $bootstrapper
+    $start.Arguments = $commandLine
+    $start.UseShellExecute = $true
+    $start.WorkingDirectory = $env:TEMP
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $start
+    if (-not $process.Start()) {
+        Write-Error "The Visual Studio Build Tools bootstrapper did not start."
+        exit 1
+    }
+    $process.WaitForExit()
+    $exitCode = $process.ExitCode
+    if ((Get-RunTestsInstallerOutcome $exitCode) -ne 'Success') {
+        Write-Host (Get-RunTestsInstallerLogHint)
+    }
+    return $exitCode
+}
+
+function Get-RunTestsInstallerLogHint {
+    if (-not $env:TEMP) {
+        return 'TEMP is not set. The installer reason would be in dd_bootstrapper, dd_client, and dd_setup logs.'
+    }
+    $logs = @(Get-ChildItem -Path $env:TEMP -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'dd_bootstrapper*' -or $_.Name -like 'dd_client*' -or $_.Name -like 'dd_setup*' } |
+        Sort-Object LastWriteTime -Descending)
+    if ($logs.Count -eq 0) {
+        return "No dd_bootstrapper, dd_client, or dd_setup logs were found in $env:TEMP. Those are the installer logs needed to see why it exited. Exit 1 alone does not identify the cause."
+    }
+    $paths = ($logs | Select-Object -First 3 | ForEach-Object { $_.FullName }) -join '; '
+    return "Newest installer logs: $paths. Exit 1 alone does not identify the cause; those logs do."
 }

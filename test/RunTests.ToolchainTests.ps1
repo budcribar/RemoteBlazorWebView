@@ -103,4 +103,36 @@ if ($partial.Ok -or $partial.Message -notmatch 'still incomplete') { throw $part
 $installed = Install-RunTestsAotPrerequisites -Detect { if ($script:ready) { $complete } else { $sdkOnly } } -RunInstaller { param($c) $script:ready = $true; return 0 }
 if (-not $installed.Ok -or -not $installed.Installed) { throw 'successful install was not accepted after re-detect' }
 
+$installPath = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools'
+$commandLine = ConvertTo-RunTestsNativeCommandLine @(
+    'modify', '--installPath', $installPath,
+    '--add', 'Microsoft.VisualStudio.Component.Windows11SDK.26100',
+    '--wait'
+)
+if ($commandLine -notmatch '--installPath "C:\\Program Files \(x86\)\\Microsoft Visual Studio\\18\\BuildTools"') {
+    throw "install path was not quoted: $commandLine"
+}
+$python = Get-Command python3 -ErrorAction SilentlyContinue
+if (-not $python) { throw 'python3 is required to check native argv' }
+$argv = Join-Path ([System.IO.Path]::GetTempPath()) 'runtests-argv.py'
+Set-Content -LiteralPath $argv -Value @'
+import sys
+print("COUNT", len(sys.argv) - 1)
+for index, arg in enumerate(sys.argv[1:], 1):
+    print("ARG%d=%s" % (index, arg))
+'@ -Encoding ascii
+$start = New-Object System.Diagnostics.ProcessStartInfo
+$start.FileName = $python.Source
+$start.Arguments = (ConvertTo-RunTestsNativeCommandLine @($argv, 'modify', '--installPath', $installPath, '--add', 'Microsoft.VisualStudio.Component.Windows11SDK.26100', '--wait'))
+$start.UseShellExecute = $false
+$start.RedirectStandardOutput = $true
+$process = [System.Diagnostics.Process]::Start($start)
+$native = $process.StandardOutput.ReadToEnd()
+$process.WaitForExit()
+if ($process.ExitCode -ne 0) { throw $native }
+if ($native -notmatch 'ARG3=C:\\Program Files \(x86\)\\Microsoft Visual Studio\\18\\BuildTools') {
+    throw "native argv split the install path: $native"
+}
+if ($native -notmatch 'COUNT 6') { throw "unexpected argv count: $native" }
+
 Write-Host 'toolchain_tests_ok'
