@@ -61,22 +61,27 @@ jobs:
       - name: Derive the package version
         id: version
         working-directory: line
+        env:
+          TARGET_LINE: ${{ inputs.line }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+          VERSION_PATCH: ${{ inputs.patch }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           # shellcheck disable=SC1091
-          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "$TARGET_LINE" "$PWD" "$VERSION_OVERRIDE" "$VERSION_PATCH")"
           {
             echo "prefix=$PREFIX"
             echo "suffix=$SUFFIX"
             echo "version=$VERSION"
           } >> "$GITHUB_OUTPUT"
           {
-            echo "Line: ${{ inputs.line }}"
+            echo "Line: $TARGET_LINE"
             echo "SDK: ${SDK:-override}"
             echo "VersionPrefix: $PREFIX"
             echo "VersionSuffix: $SUFFIX"
             echo "Package version: $VERSION"
-            echo "dry_run: ${{ inputs.dry_run }}"
+            echo "dry_run: $DRY_RUN"
             echo
             echo "Maintainer commit, not applied by this workflow:"
             echo "  set VersionPrefix and VersionSuffix in Directory.Build.props to the values above."
@@ -181,9 +186,13 @@ jobs:
         id: version
         shell: bash
         working-directory: line
+        env:
+          TARGET_LINE: ${{ inputs.line }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+          VERSION_PATCH: ${{ inputs.patch }}
         run: |
           set -euo pipefail
-          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "${{ inputs.line }}" "$PWD" "${{ inputs.version_override }}" "${{ inputs.patch }}")"
+          eval "$("$GITHUB_WORKSPACE/workflow/eng/derive-package-version.sh" "$TARGET_LINE" "$PWD" "$VERSION_OVERRIDE" "$VERSION_PATCH")"
           echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -197,8 +206,10 @@ jobs:
       - name: Other lines are not called from this branch's Windows workflow
         if: ${{ inputs.line != 'net11' }}
         shell: bash
+        env:
+          TARGET_LINE: ${{ inputs.line }}
         run: |
-          echo "::warning::Windows tests for ${{ inputs.line }} are not invoked here. Dispatch that line's Windows tests workflow and wait for green before treating this pack as a release. See doc/ReleaseProcess.md."
+          echo "::warning::Windows tests for $TARGET_LINE are not invoked here. Dispatch that line's Windows tests workflow and wait for green before treating this pack as a release. See doc/ReleaseProcess.md."
 
       - name: Pack the five packages
         shell: pwsh
@@ -272,7 +283,7 @@ jobs:
 
       - name: NuGet login (OIDC, short-lived key)
         id: login
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           # Repository variable, not a secret. Value is budcribar.
           user: ${{ vars.NUGET_USER }}

@@ -30,7 +30,11 @@ namespace PeakSWC.RemoteWebView
                 return;
 
             Entries.Enqueue((DateTime.SpecifyKind(timestampUtc, DateTimeKind.Utc), list));
-            while (Entries.Count > MaxEntries && Entries.TryDequeue(out _)) { }
+            while (Entries.Count > MaxEntries)
+            {
+                if (!Entries.TryDequeue(out _))
+                    break;
+            }
         }
 
         public static List<EventResponse> GetEventResponses()

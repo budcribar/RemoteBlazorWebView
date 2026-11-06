@@ -117,32 +117,34 @@ namespace PeakSWC.RemoteWebView
 #if !DEBUG
             // Embedded: the host app chose the logging providers; don't clear them or add the Event Log.
             if (!Embedded)
-            services.AddLogging(lb =>
             {
-
-                lb.ClearProviders();
-                lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
-                // Agent registrations, launches and declines are logged at Information so they reach the console (Railway logs)
-                lb.AddFilter("PeakSWC.RemoteWebView.Agents", Microsoft.Extensions.Logging.LogLevel.Information);
-                // EventLog is Windows-only; on Linux (containers) log to console instead
-                if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
-                // Configure EventLog provider
-                lb.AddEventLog(eventLogSettings =>
+                services.AddLogging(lb =>
                 {
-                    eventLogSettings.SourceName = "RemoteWebViewService"; 
-                    eventLogSettings.LogName = "Application"; 
-                    eventLogSettings.Filter = (category, level) =>
+                    lb.ClearProviders();
+                    lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
+                    // Agent registrations, launches and declines are logged at Information so they reach the console (Railway logs)
+                    lb.AddFilter("PeakSWC.RemoteWebView.Agents", Microsoft.Extensions.Logging.LogLevel.Information);
+                    // EventLog is Windows-only; on Linux (containers) log to console instead
+                    if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
+                    // Configure EventLog provider
+                    lb.AddEventLog(eventLogSettings =>
                     {
-                        return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
-                        //return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
-                    };
+                        eventLogSettings.SourceName = "RemoteWebViewService";
+                        eventLogSettings.LogName = "Application";
+                        eventLogSettings.Filter = (category, level) =>
+                        {
+                            return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
+                            //return level >= Microsoft.Extensions.Logging.LogLevel.Warning;
+                        };
+                    });
                 });
-
-            });
+            }
 #endif
 #if DEBUG
             if (!Embedded && !System.OperatingSystem.IsWindows())
+            {
                 services.AddLogging(lb => lb.AddProvider(InMemoryEventLog.Provider));
+            }
 #endif
             services.AddResponseCompression(options =>
             {

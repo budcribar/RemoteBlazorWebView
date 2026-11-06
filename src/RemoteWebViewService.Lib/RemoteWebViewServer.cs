@@ -84,15 +84,7 @@ namespace PeakSWC.RemoteWebView
                     //listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3; // http3 needs a real certificate
                     listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                 });
-                string certPath = "C:\\Certificates\\DevCertificate_192.168.1.35.pfx";
-                if (File.Exists(certPath))
-                {
-                    options.Listen(IPAddress.Parse("192.168.1.35"), 5002, listenOptions =>
-                    {
-                        listenOptions.UseHttps(certPath, "YourStrongPassword");
-                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-                    });
-                }
+                ListenWithOptionalDevCertificate(options);
             });
 
             webBuilder.UseStartup<Startup>();
@@ -117,6 +109,47 @@ namespace PeakSWC.RemoteWebView
             if (!string.IsNullOrEmpty(pfxB64))
                 return X509CertificateLoader.LoadPkcs12(Convert.FromBase64String(pfxB64), Environment.GetEnvironmentVariable("REMOTEWEBVIEW_TLS_PFX_PASSWORD"));
             return null;
+        }
+
+        // Optional extra HTTPS endpoint for a developer certificate. Nothing is bound unless
+        // REMOTEWEBVIEW_DEV_LISTEN_ADDRESS and REMOTEWEBVIEW_DEV_CERT_PATH are set and the file exists.
+        // REMOTEWEBVIEW_DEV_LISTEN_PORT defaults to 5002. REMOTEWEBVIEW_DEV_CERT_PASSWORD may be empty.
+        private static void ListenWithOptionalDevCertificate(KestrelServerOptions options)
+        {
+            string? certificatePath = Environment.GetEnvironmentVariable("REMOTEWEBVIEW_DEV_CERT_PATH");
+            if (!TryParseDevCertificateListen(
+                    Environment.GetEnvironmentVariable("REMOTEWEBVIEW_DEV_LISTEN_ADDRESS"),
+                    certificatePath,
+                    Environment.GetEnvironmentVariable("REMOTEWEBVIEW_DEV_LISTEN_PORT"),
+                    out var address,
+                    out var port)
+                || address == null
+                || string.IsNullOrWhiteSpace(certificatePath)
+                || !File.Exists(certificatePath))
+                return;
+
+            string password = Environment.GetEnvironmentVariable("REMOTEWEBVIEW_DEV_CERT_PASSWORD") ?? string.Empty;
+            options.Listen(address, port, listenOptions =>
+            {
+                listenOptions.UseHttps(certificatePath, password);
+                listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+            });
+        }
+
+        internal static bool TryParseDevCertificateListen(string? address, string? certificatePath, string? portText, out IPAddress? parsedAddress, out int port)
+        {
+            parsedAddress = null;
+            port = 0;
+            if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(certificatePath) || !IPAddress.TryParse(address.Trim(), out parsedAddress))
+                return false;
+            if (string.IsNullOrWhiteSpace(portText))
+            {
+                port = 5002;
+                return true;
+            }
+
+            return int.TryParse(portText.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out port)
+                && port is >= 1 and <= 65535;
         }
 
         private static void ConfigureKeepAlive(KestrelServerOptions options)
@@ -144,65 +177,8 @@ namespace PeakSWC.RemoteWebView
             options.Validate();
 
             bool https = options.UseHttps || options.Certificate != null;
-            ListenOptions? browserListen = null, grpcListen = null;
-            var settings = new Dictionary<string, string?>
-            {
-                [EmbeddedKey] = "true",
-                [HttpsRedirectionKey] = https ? "true" : "false",
-            };
-            foreach (var kv in options.Configuration)
-                settings[kv.Key] = kv.Value;
-
-            var host = new HostBuilder()
-                .UseContentRoot(AppContext.BaseDirectory)
-                .ConfigureHostConfiguration(c => c.AddInMemoryCollection(settings))
-                .ConfigureAppConfiguration(c => c.AddInMemoryCollection(settings))
-                .ConfigureLogging(lb =>
-                {
-                    if (options.ConfigureLogging != null) options.ConfigureLogging(lb);
-                })
-                .ConfigureServices(services =>
-                {
-                    // The host app owns process lifetime: no Ctrl+C / SIGTERM / ProcessExit hooks.
-                    services.Replace(ServiceDescriptor.Singleton<IHostLifetime, EmbeddedHostLifetime>());
-                    services.AddSingleton(new MaxClientsOptions { MaxClients = options.MaxClients });
-                    services.AddSingleton(new FrameAncestorsOptions(options.FrameAncestors) { AllowOpaqueOrigin = options.AllowOpaqueOrigin });
-                    services.AddTransient<IStartupFilter, EmbeddedStartupFilter>();
-                })
-                .ConfigureWebHost(web =>
-                {
-                    web.UseKestrel(k =>
-                    {
-                        ConfigureKeepAlive(k);
-                        k.Listen(options.Address, options.Port, listen =>
-                        {
-                            browserListen = listen;
-                            if (https)
-                            {
-                                // TLS: ALPN picks HTTP/1.1 (browsers) or HTTP/2 (gRPC client) on one port.
-                                listen.Protocols = HttpProtocols.Http1AndHttp2;
-                                if (options.Certificate != null) listen.UseHttps(options.Certificate);
-                                else listen.UseHttps();
-                            }
-                            else
-                            {
-                                // Cleartext has no ALPN, and Kestrel answers HTTP/2 prior knowledge on an Http1AndHttp2
-                                // endpoint with HTTP_1_1_REQUIRED. So browsers (HTTP/1.1, gRPC-Web) get this port and
-                                // the native gRPC client gets a second, HTTP/2-only (h2c) port below.
-                                listen.Protocols = HttpProtocols.Http1;
-                            }
-                        });
-                        if (!https)
-                            k.Listen(options.Address, options.GrpcPort, listen =>
-                            {
-                                grpcListen = listen;
-                                listen.Protocols = HttpProtocols.Http2;
-                            });
-                    });
-                    web.UseStartup<Startup>();
-                })
-                .Build();
-
+            var bound = new BoundEndpoints();
+            var host = BuildEmbeddedHost(options, https, bound);
             try
             {
                 await host.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -214,9 +190,88 @@ namespace PeakSWC.RemoteWebView
             }
 
             // Kestrel writes the bound endpoint (real port when 0 was asked for) back into each ListenOptions.
-            Uri baseUri = ToUri(https ? "https" : "http", browserListen!);
-            Uri grpcUri = grpcListen != null ? ToUri("http", grpcListen) : baseUri;
+            Uri baseUri = ToUri(https ? "https" : "http", bound.Browser!);
+            Uri grpcUri = bound.Grpc != null ? ToUri("http", bound.Grpc) : baseUri;
             return new EmbeddedRemoteWebViewServer(host, baseUri, grpcUri);
+        }
+
+        private static IHost BuildEmbeddedHost(RemoteWebViewServerOptions options, bool https, BoundEndpoints bound)
+        {
+            var settings = EmbeddedSettings(options, https);
+            return new HostBuilder()
+                .UseContentRoot(AppContext.BaseDirectory)
+                .ConfigureHostConfiguration(c => c.AddInMemoryCollection(settings))
+                .ConfigureAppConfiguration(c => c.AddInMemoryCollection(settings))
+                .ConfigureLogging(lb =>
+                {
+                    if (options.ConfigureLogging != null) options.ConfigureLogging(lb);
+                })
+                .ConfigureServices(services => AddEmbeddedServices(services, options))
+                .ConfigureWebHost(web =>
+                {
+                    web.UseKestrel(k => ConfigureEmbeddedKestrel(k, options, https, bound));
+                    web.UseStartup<Startup>();
+                })
+                .Build();
+        }
+
+        private static Dictionary<string, string?> EmbeddedSettings(RemoteWebViewServerOptions options, bool https)
+        {
+            var settings = new Dictionary<string, string?>
+            {
+                [EmbeddedKey] = "true",
+                [HttpsRedirectionKey] = https ? "true" : "false",
+            };
+            foreach (var kv in options.Configuration)
+                settings[kv.Key] = kv.Value;
+            return settings;
+        }
+
+        private static void AddEmbeddedServices(IServiceCollection services, RemoteWebViewServerOptions options)
+        {
+            // The host app owns process lifetime: no Ctrl+C / SIGTERM / ProcessExit hooks.
+            services.Replace(ServiceDescriptor.Singleton<IHostLifetime, EmbeddedHostLifetime>());
+            services.AddSingleton(new MaxClientsOptions { MaxClients = options.MaxClients });
+            services.AddSingleton(new FrameAncestorsOptions(options.FrameAncestors) { AllowOpaqueOrigin = options.AllowOpaqueOrigin });
+            services.AddTransient<IStartupFilter, EmbeddedStartupFilter>();
+        }
+
+        private static void ConfigureEmbeddedKestrel(KestrelServerOptions kestrel, RemoteWebViewServerOptions options, bool https, BoundEndpoints bound)
+        {
+            ConfigureKeepAlive(kestrel);
+            kestrel.Listen(options.Address, options.Port, listen =>
+            {
+                bound.Browser = listen;
+                if (https)
+                    ListenForHttps(listen, options.Certificate);
+                else
+                {
+                    // Cleartext has no ALPN, and Kestrel answers HTTP/2 prior knowledge on an Http1AndHttp2
+                    // endpoint with HTTP_1_1_REQUIRED. So browsers (HTTP/1.1, gRPC-Web) get this port and
+                    // the native gRPC client gets a second, HTTP/2-only (h2c) port below.
+                    listen.Protocols = HttpProtocols.Http1;
+                }
+            });
+            if (!https)
+                kestrel.Listen(options.Address, options.GrpcPort, listen =>
+                {
+                    bound.Grpc = listen;
+                    listen.Protocols = HttpProtocols.Http2;
+                });
+        }
+
+        private static void ListenForHttps(ListenOptions listen, X509Certificate2? certificate)
+        {
+            // TLS: ALPN picks HTTP/1.1 (browsers) or HTTP/2 (gRPC client) on one port.
+            listen.Protocols = HttpProtocols.Http1AndHttp2;
+            if (certificate != null) listen.UseHttps(certificate);
+            else listen.UseHttps();
+        }
+
+        private sealed class BoundEndpoints
+        {
+            public ListenOptions? Browser { get; set; }
+            public ListenOptions? Grpc { get; set; }
         }
 
         private static Uri ToUri(string scheme, ListenOptions listen)
@@ -277,16 +332,31 @@ namespace PeakSWC.RemoteWebView
 
         internal void Validate()
         {
-            if (Port is < 0 or > 65535) throw new ArgumentOutOfRangeException(nameof(Port));
-            if (GrpcPort is < 0 or > 65535) throw new ArgumentOutOfRangeException(nameof(GrpcPort));
-            if (MaxClients < 1) throw new ArgumentOutOfRangeException(nameof(MaxClients));
+            ValidatePort(Port);
+            ValidateGrpcPort(GrpcPort);
+            ValidateMaxClients(MaxClients);
             if (!UseHttps && Certificate == null && !IPAddress.IsLoopback(Address))
                 throw new InvalidOperationException($"Plain HTTP is only allowed on a loopback address; {Address} needs UseHttps or a Certificate.");
-            foreach (var origin in FrameAncestors)
-            {
-                if (origin != "'self'" && !Uri.IsWellFormedUriString(origin, UriKind.Absolute))
-                    throw new InvalidOperationException($"Invalid origin: {origin}");
-            }
+            foreach (var origin in FrameAncestors.Where(origin => origin != "'self'" && !Uri.IsWellFormedUriString(origin, UriKind.Absolute)))
+                throw new InvalidOperationException($"Invalid origin: {origin}");
+        }
+
+        private static void ValidatePort(int port)
+        {
+            if (port is < 0 or > 65535)
+                throw new ArgumentOutOfRangeException(nameof(port));
+        }
+
+        private static void ValidateGrpcPort(int grpcPort)
+        {
+            if (grpcPort is < 0 or > 65535)
+                throw new ArgumentOutOfRangeException(nameof(grpcPort));
+        }
+
+        private static void ValidateMaxClients(int maxClients)
+        {
+            if (maxClients < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxClients));
         }
     }
 

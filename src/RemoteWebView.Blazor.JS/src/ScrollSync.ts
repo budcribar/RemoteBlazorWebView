@@ -75,18 +75,24 @@ export function initializeScrollSync(send: (message: string) => void): void {
     watch(document, []);
 }
 
+function documentInFrameChain(start: Document, frames: number[][]): Document | null {
+    let doc: Document | null = start;
+    for (const framePath of frames) {
+        const frame = doc && resolveElement(doc, framePath);
+        if (frame?.tagName !== 'IFRAME') return null;
+        try { doc = (frame as HTMLIFrameElement).contentDocument; }
+        catch { return null; }
+        if (!doc) return null;
+    }
+    return doc;
+}
+
 export function receiveScroll(message: string): boolean {
     if (!message.startsWith(scrollMessagePrefix)) return false;
     if (window.RemoteBlazor.isPrimary) return true;
     const positions: ScrollPosition[] = JSON.parse(message.substring(scrollMessagePrefix.length));
     for (const position of positions) {
-        let doc: Document | null = document;
-        for (const framePath of position.frames) {
-            const frame = doc && resolveElement(doc, framePath);
-            if (frame?.tagName !== 'IFRAME') { doc = null; break; }
-            try { doc = (frame as HTMLIFrameElement).contentDocument; }
-            catch { doc = null; }
-        }
+        const doc = documentInFrameChain(document, position.frames);
         if (!doc) continue;
         const element = resolveElement(doc, position.path);
         if (element?.tagName !== position.tag || element.id !== position.id) continue;
