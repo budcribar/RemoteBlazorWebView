@@ -225,7 +225,7 @@ namespace PeakSWC.RemoteWebView
             services.AddSingleton(serviceStateChannel);
             services.AddSingleton<ShutdownService>();
 
-            // Remote PC Diagnostics agents (AgentHub / AgentAdmin)
+            // Agents (AgentHub / AgentAdmin)
             services.AddSingleton(AgentOptions.FromConfiguration(configuration));
             services.AddSingleton(_ => new AgentRegistry(TimeProvider.System));
             if (!Embedded)

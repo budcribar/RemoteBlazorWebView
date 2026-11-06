@@ -1,5 +1,5 @@
-// Remote PC Diagnostics agent <-> relay (RemoteWebViewService) <-> admin site.
-// Owned by budcribar/RemoteBlazorWebView (src/Protos/agent.proto); copied verbatim into RemotePCDiagnostics (agent) and RemoteWebViewAdmin.
+// Agent <-> relay (RemoteWebViewService) <-> admin site.
+// Owned by budcribar/RemoteBlazorWebView (src/Protos/agent.proto); agent and admin-site projects copy it verbatim.
 syntax = "proto3";
 
 option csharp_namespace = "PeakSWC.RemoteWebView.Agent";
