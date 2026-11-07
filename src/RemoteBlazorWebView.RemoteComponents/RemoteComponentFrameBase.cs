@@ -17,6 +17,31 @@ public static class RemoteComponentFrame
 
     public const int DefaultMinHeight = 120, DefaultMaxHeight = 4000, DefaultInitialHeight = 360;
 
+    /// <summary>
+    /// The frame's address for the app's own page. The frame is rendered without <c>src</c>: the page that shows it sets <c>src</c> from
+    /// this attribute, or from <see cref="MirrorSourceAttribute"/> when the page is a read-only mirror, so a mirror never loads the
+    /// component's own page (which the relay would take as a reload).
+    /// </summary>
+    public const string SourceAttribute = "data-rbwv-src";
+
+    /// <summary>The frame's address for a mirror of the app's page (<see cref="RemoteComponentSession.MirrorSource"/>); absent when
+    /// there is none, and the frame then stays empty in a mirror.</summary>
+    public const string MirrorSourceAttribute = "data-rbwv-mirror-src";
+
+    /// <summary>
+    /// The relay's mirror address for a component page at <paramref name="source"/>: <c>&lt;base&gt;/&lt;id&gt;</c> becomes
+    /// <c>&lt;base&gt;/mirror/&lt;id&gt;</c> (query kept). Null when the last path segment isn't a client id (a GUID).
+    /// </summary>
+    public static Uri? MirrorSourceFor(Uri source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!source.IsAbsoluteUri) return null;
+        var path = source.AbsolutePath.TrimEnd('/');
+        var slash = path.LastIndexOf('/');
+        if (slash < 0 || !Guid.TryParse(path[(slash + 1)..], out _)) return null;
+        return new UriBuilder(source) { Path = path[..(slash + 1)] + "mirror/" + path[(slash + 1)..] }.Uri;
+    }
+
     /// <summary>The frame height for a height the component asked for: clamped; anything that isn't a finite number gets the minimum.</summary>
     public static int ClampHeight(double requested, int min = DefaultMinHeight, int max = DefaultMaxHeight) =>
         double.IsFinite(requested) ? (int)Math.Clamp(Math.Ceiling(requested), min, max) : min;
@@ -158,9 +183,11 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
         builder.AddAttribute(12, "title", Title);
         builder.AddAttribute(13, "sandbox", Sandbox);
         builder.AddAttribute(14, "referrerpolicy", "no-referrer");
-        builder.AddAttribute(15, "src", _session.Source.ToString());
-        builder.AddAttribute(16, "style", $"width: 100%; border: 0; display: block; height: {_height}px");
-        builder.AddElementReferenceCapture(17, r => _frame = r);
+        // No src: the page sets it (remotecomponents.js on the app's page, the RemoteWebView script on a mirror), see SourceAttribute.
+        builder.AddAttribute(15, RemoteComponentFrame.SourceAttribute, _session.Source.ToString());
+        if (_session.MirrorSource is { } mirror) builder.AddAttribute(16, RemoteComponentFrame.MirrorSourceAttribute, mirror.ToString());
+        builder.AddAttribute(17, "style", $"width: 100%; border: 0; display: block; height: {_height}px");
+        builder.AddElementReferenceCapture(18, r => _frame = r);
         builder.CloseElement();
     }
 

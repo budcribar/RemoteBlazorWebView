@@ -19,6 +19,15 @@ isolated from the app: it can run with fewer rights than the app, crash without 
 - **The iframe** is sandboxed without `allow-same-origin` (`RemoteComponentFrame.DefaultSandbox`), so it has an opaque origin. The
   only `postMessage` the app's page accepts from it is its height (`rbwv-remote-height`), matched by the sending window.
 
+## Mirrors
+
+When the app's page is mirrored (a read-only `/mirror/<id>` view), the mirror renders the same page, frame included. If the mirror
+loaded the component's page as well, the relay would take that as a reload and the component's process would restart. So the frame
+is rendered without `src`: `data-rbwv-src` holds the component's page, and `data-rbwv-mirror-src` the relay's read-only view of it
+(`RemoteComponentSession.MirrorSource`, by default `<relay>/mirror/<id>`). The app's page loads the first (`remotecomponents.js`); a
+mirror page loads the second (the RemoteWebView script), or nothing when the session has no mirror source. The component's process
+allows mirrors by default (`RemoteComponentHostOptions.EnableMirrors`). Mirrors can't click or type in it, like the rest of the mirror.
+
 ## A contract, and what the generator writes from it
 
 Declare what crosses between the two processes as an interface, in a library both sides reference:

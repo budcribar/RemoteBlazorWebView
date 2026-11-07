@@ -36,6 +36,13 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         /// <summary>WebView2's user data folder: required when the default (next to the exe) isn't writable by this process.</summary>
         public string? WebViewDataFolder { get; init; }
 
+        /// <summary>
+        /// Let read-only mirrors of the app's page show this component too: they frame the relay's mirror view of it
+        /// (RemoteComponentSession.MirrorSource) and can't click or type in it. Default true: the component is only reachable from the app's
+        /// page, so its mirrors are the app's mirrors. False makes the frame on a mirror show the relay's "Mirroring is not enabled".
+        /// </summary>
+        public bool EnableMirrors { get; init; } = true;
+
         /// <summary>The (never shown) window's title.</summary>
         public string Title { get; init; } = "Remote component";
 
@@ -92,6 +99,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                     ServerUri = options.ServerUri,
                     GrpcBaseUri = options.GrpcBaseUri ?? options.ServerUri,
                     Id = options.Id,
+                    EnableMirrors = options.EnableMirrors,
                 };
                 webView.RootComponents.Add(new RootComponent { Selector = options.Selector, ComponentType = options.RootComponent });
                 webView.Connected += (_, e) => log($"frame connected from {e.IpAddress}");
