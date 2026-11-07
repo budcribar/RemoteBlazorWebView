@@ -62,7 +62,10 @@ public class RemoteComponentTests
             .AddUnmatched("data-testid", "frame"));
 
         var frame = cut.Find("iframe");
-        Assert.Equal("http://127.0.0.1:5000/abc", frame.GetAttribute("src"));
+        // No src: the page sets it from data-rbwv-src (a mirror uses data-rbwv-mirror-src), so a mirror never reloads the component.
+        Assert.Null(frame.GetAttribute("src"));
+        Assert.Equal("http://127.0.0.1:5000/abc", frame.GetAttribute(RemoteComponentFrame.SourceAttribute));
+        Assert.Null(frame.GetAttribute(RemoteComponentFrame.MirrorSourceAttribute)); // "abc" isn't a client id
         Assert.Equal(RemoteComponentFrame.DefaultSandbox, frame.GetAttribute("sandbox"));
         Assert.Equal("no-referrer", frame.GetAttribute("referrerpolicy"));
         Assert.Equal("frame", frame.GetAttribute("data-testid"));
@@ -119,5 +122,38 @@ public class RemoteComponentTests
             new RemoteComponentConnection(null, null), () => { stopped = true; return ValueTask.CompletedTask; }))));
         await cut.Instance.DisposeAsync();
         Assert.True(stopped);
+    }
+
+    [Theory]
+    [InlineData("http://127.0.0.1:5000/9bfd9d43-0289-4a80-92d8-6e617729da12", "http://127.0.0.1:5000/mirror/9bfd9d43-0289-4a80-92d8-6e617729da12")]
+    [InlineData("https://relay.example.com:34544/9bfd9d43-0289-4a80-92d8-6e617729da12/", "https://relay.example.com:34544/mirror/9bfd9d43-0289-4a80-92d8-6e617729da12")]
+    [InlineData("https://relay.example.com/base/9bfd9d43-0289-4a80-92d8-6e617729da12?x=1", "https://relay.example.com/base/mirror/9bfd9d43-0289-4a80-92d8-6e617729da12?x=1")]
+    [InlineData("http://127.0.0.1:5000/abc", null)]
+    [InlineData("http://127.0.0.1:5000/", null)]
+    public void The_mirror_source_is_the_relays_mirror_view(string source, string? mirror) =>
+        Assert.Equal(mirror, RemoteComponentFrame.MirrorSourceFor(new Uri(source))?.ToString());
+
+    [Fact]
+    public void The_frame_carries_its_mirror_source()
+    {
+        var id = Guid.NewGuid();
+        using var ctx = new BunitContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri($"http://127.0.0.1:5000/{id}"),
+            new RemoteComponentConnection(null, null)))));
+        var frame = cut.Find("iframe");
+        Assert.Null(frame.GetAttribute("src"));
+        Assert.Equal($"http://127.0.0.1:5000/{id}", frame.GetAttribute(RemoteComponentFrame.SourceAttribute));
+        Assert.Equal($"http://127.0.0.1:5000/mirror/{id}", frame.GetAttribute(RemoteComponentFrame.MirrorSourceAttribute));
+    }
+
+    [Fact]
+    public void A_session_without_a_mirror_source_renders_none()
+    {
+        using var ctx = new BunitContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri($"http://127.0.0.1:5000/{Guid.NewGuid()}"),
+            new RemoteComponentConnection(null, null)) { MirrorSource = null })));
+        Assert.Null(cut.Find("iframe").GetAttribute(RemoteComponentFrame.MirrorSourceAttribute));
     }
 }

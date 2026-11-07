@@ -97,6 +97,16 @@ public sealed class RemoteComponentSession(Uri source, RemoteComponentConnection
 {
     /// <summary>The page to frame (the component process's RemoteBlazorWebView page on the relay).</summary>
     public Uri Source { get; } = source;
+
+    /// <summary>
+    /// What a mirror of the app's page frames instead of <see cref="Source"/>: the relay's read-only view of the same component. A mirror
+    /// renders the same page as the app, frame included; if it loaded <see cref="Source"/> too, the relay would take that as a reload and
+    /// the component's process would restart. Defaults to <c>&lt;relay&gt;/mirror/&lt;id&gt;</c> when <see cref="Source"/> ends in a client id
+    /// (<see cref="RemoteComponentFrame.MirrorSourceFor"/>); null leaves the frame empty in a mirror. The component's process must allow
+    /// mirrors (RemoteComponentHostOptions.EnableMirrors) for the mirror to show it.
+    /// </summary>
+    public Uri? MirrorSource { get; init; } = RemoteComponentFrame.MirrorSourceFor(source);
+
     public RemoteComponentConnection Connection { get; } = connection;
     private int _disposed;
 
