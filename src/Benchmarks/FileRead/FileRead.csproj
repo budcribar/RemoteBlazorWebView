@@ -10,11 +10,11 @@
 
 	<ItemGroup>
 		<Protobuf Include="..\Protos\webview.proto" GrpcServices="Client" Link="Protos\webview.proto" />
-		<PackageReference Include="BenchmarkDotNet.Annotations" Version="0.13.11" />
-		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.11" />
+		<PackageReference Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
+		<PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
-		<PackageReference Include="Grpc.Tools" Version="2.84.0">
+		<PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
+		<PackageReference Include="Grpc.Tools" Version="2.85.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
