@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Library</OutputType>
@@ -29,8 +29,11 @@
     <!-- UseWebAssemblyDebugging only runs in Development; don't copy the 11 MB debug proxy into apps that embed the service.
          RemoteWebViewService.exe references the package itself and still gets it. -->
     <BlazorWebAssemblyOmitDebugProxyOutput>true</BlazorWebAssemblyOmitDebugProxyOutput>
-    <!-- AUTHORIZATION is not defined by any configuration today; when it is, the Azure AD B2C code needs Microsoft.Identity.Web. -->
+    <!-- The Azure AD B2C code (#if AUTHORIZATION) needs Microsoft.Identity.Web, OpenIdConnect and Newtonsoft.Json.
+         The SDK adds the AUTHORIZATION define for the Authorization configuration (ImplicitConfigurationDefine) only after
+         this file is evaluated, so DefineConstants can't be inspected here; check the configuration name as well. -->
     <_RwvAuthorization>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)AUTHORIZATION(;|$)'))</_RwvAuthorization>
+    <_RwvAuthorization Condition="'$(Configuration)' == 'Authorization'">true</_RwvAuthorization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='AzureNoAuth'">
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
@@ -48,17 +51,18 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.84.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.84.0" PrivateAssets="all" />
-    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.84.0" />
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.85.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.85.0" PrivateAssets="all" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
     <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(_RwvAuthorization)' == 'true'">
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.16.1" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.18.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" NoWarn="NU1605" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
