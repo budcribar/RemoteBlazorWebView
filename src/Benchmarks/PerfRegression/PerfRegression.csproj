@@ -12,7 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\RemoteWebView\RemoteWebView.csproj">
