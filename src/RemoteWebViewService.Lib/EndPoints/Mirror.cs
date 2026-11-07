@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -31,7 +32,12 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     // Wait for the task to be completed or time out using the extension method
                     var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-                    if (serviceState.EnableMirrors && serviceState.InUse)
+                    // A browser has the client's page: started from /app/{id} (InUse), or loaded straight from /{id} (Refresh), which is
+                    // how a remote component's frame loads it. The frame and its mirror render at the same time, so give the app's page a
+                    // moment to get there first.
+                    if (serviceState.EnableMirrors)
+                        await WaitForPrimaryPageAsync(serviceState, TimeSpan.FromSeconds(10), context.RequestAborted).ConfigureAwait(false);
+                    if (serviceState.EnableMirrors && HasPrimaryPage(serviceState))
                     {
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
@@ -86,5 +92,17 @@ namespace PeakSWC.RemoteWebView.EndPoints
         };
 
     }
-}
+
+        private static bool HasPrimaryPage(ServiceState serviceState) => serviceState.InUse || serviceState.Refresh;
+
+        private static async Task WaitForPrimaryPageAsync(ServiceState serviceState, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (!HasPrimaryPage(serviceState) && DateTime.UtcNow < deadline && !cancellationToken.IsCancellationRequested)
+            {
+                try { await Task.Delay(100, cancellationToken).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return; }
+            }
+        }
+    }
 }

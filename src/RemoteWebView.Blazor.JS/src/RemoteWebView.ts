@@ -1,4 +1,5 @@
 import { initializeScrollSync, receiveScroll } from './ScrollSync';
+import { watchMirrorFrames } from './RemoteComponentFrames';
 import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
@@ -107,6 +108,8 @@ export function initializeRemoteWebView() {
         id = pathParts[2];
         window.RemoteBlazor.isPrimary = false;
         makePageReadOnly();
+        // Before any render batch arrives: remote component frames on a mirror load the relay's mirror view, never the component's page.
+        watchMirrorFrames();
     }
 
     window.RemoteBlazor.clientId = crypto.randomUUID();
