@@ -25,7 +25,9 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
-    <NoWarn>NU5100</NoWarn>
+    <NoWarn>$(NoWarn);NU5100</NoWarn>
+    <!-- The agent registry (Agents/, agent.proto) is marked [Experimental("RWV001")]; the library itself uses it freely. -->
+    <NoWarn>$(NoWarn);RWV001</NoWarn>
     <!-- UseWebAssemblyDebugging only runs in Development; don't copy the 11 MB debug proxy into apps that embed the service.
          RemoteWebViewService.exe references the package itself and still gets it. -->
     <BlazorWebAssemblyOmitDebugProxyOutput>true</BlazorWebAssemblyOmitDebugProxyOutput>
