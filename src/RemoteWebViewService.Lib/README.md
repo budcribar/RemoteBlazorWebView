@@ -36,6 +36,12 @@ await server.StopAsync();                      // or dispose
 - `FrameAncestors` adds `Content-Security-Policy: frame-ancestors ...` to HTML responses and rejects
   cross-origin script calls whose `Origin` is not listed. Same-origin calls are always allowed.
 
+## Experimental: agent registry
+
+The agent registry (`AgentHub` / `AgentAdmin`, see `doc/Agents.md` in the repository) is **experimental** and may change or be
+removed in any release. Its public types are marked `[Experimental("RWV001")]`, so using them produces compiler diagnostic
+`RWV001`; add `<NoWarn>$(NoWarn);RWV001</NoWarn>` to opt in. The rest of this package is not affected.
+
 ## Standalone
 
 ```csharp
