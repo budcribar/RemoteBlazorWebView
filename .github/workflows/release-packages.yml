@@ -221,6 +221,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $notes = Get-Content -Raw "$env:GITHUB_WORKSPACE/PackageReleaseNotes.txt"
+          # MSBuild splits a -p: value on ',' and ';' (MSB1006 when a commit subject has a comma), so escape them; MSBuild
+          # unescapes %XX in global properties, and the package gets the notes unchanged.
+          $notes = $notes.Replace('%', '%25').Replace(';', '%3B').Replace(',', '%2C')
           $projects = @(
             'src/RemoteWebView/RemoteWebView.csproj',
             'src/RemoteWebViewService.Lib/RemoteWebViewService.Lib.csproj',
