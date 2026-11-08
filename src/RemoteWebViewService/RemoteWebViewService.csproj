@@ -51,7 +51,6 @@
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
-    <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureNoAuth|x64'">

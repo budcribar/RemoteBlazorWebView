@@ -5,7 +5,6 @@
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 	<DefineConstants>$(DefineConstants);WEBVIEW2_WINFORMS</DefineConstants>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Description>Build Remote Windows Forms applications with Blazor and WebView2.</Description>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>annotations</Nullable>
     <LangVersion>preview</LangVersion>
@@ -22,7 +21,7 @@
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
-    <Configurations>Debug;Release;Embedded,Developer</Configurations>
+    <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
