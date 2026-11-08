@@ -3,12 +3,14 @@ using PeakSWC.RemoteWebView.Agent;
 namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>The outcome of <see cref="ConsentPolicy.Decide"/>: either a refusal (<see cref="Error"/>) or whether to ask.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public readonly record struct StartDecision(bool Allowed, bool RequireConsent, string? Error)
     {
         public static StartDecision Refuse(string error) => new(false, true, error);
         public static StartDecision Allow(bool requireConsent) => new(true, requireConsent, null);
     }
 
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public static class ConsentPolicy
     {
         public const string AdminKeyRequired = "Admin key required";

@@ -1,4 +1,4 @@
-# Manually dispatched package release. Packs the five PeakSWC packages and
+# Manually dispatched package release. Packs the seven PeakSWC packages and
 # uploads them. The tutorial repository is not checked out and is not packed.
 #
 # The NuGet push job is unreachable. Its condition never matches, including
@@ -94,14 +94,18 @@ jobs:
           "$GITHUB_WORKSPACE/workflow/eng/apply-release-notes.sh" "$PWD" "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
           git diff -- \
             src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService.Lib/RemoteWebViewService.Lib.csproj \
             src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj \
             src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
             src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
             src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj \
             > "$GITHUB_WORKSPACE/release-notes.patch"
           git checkout -- \
             src/RemoteWebView/RemoteWebView.csproj \
+            src/RemoteWebViewService.Lib/RemoteWebViewService.Lib.csproj \
             src/RemoteWebViewService/RemoteWebViewService.csproj \
+            src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj \
             src/RemoteBlazorWebView/RemoteBlazorWebView.csproj \
             src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj \
             src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj
@@ -211,7 +215,7 @@ jobs:
         run: |
           echo "::warning::Windows tests for $TARGET_LINE are not invoked here. Dispatch that line's Windows tests workflow and wait for green before treating this pack as a release. See doc/ReleaseProcess.md."
 
-      - name: Pack the five packages
+      - name: Pack the seven packages
         shell: pwsh
         working-directory: line
         run: |
@@ -219,7 +223,9 @@ jobs:
           $notes = Get-Content -Raw "$env:GITHUB_WORKSPACE/PackageReleaseNotes.txt"
           $projects = @(
             'src/RemoteWebView/RemoteWebView.csproj',
+            'src/RemoteWebViewService.Lib/RemoteWebViewService.Lib.csproj',
             'src/RemoteWebViewService/RemoteWebViewService.csproj',
+            'src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj',
             'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
             'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
             'src/RemoteBlazorWebView/RemoteBlazorWebView.csproj'
@@ -239,8 +245,8 @@ jobs:
           }
           if ($failed) { exit 1 }
           $packages = Get-ChildItem "$env:GITHUB_WORKSPACE/packages/*.nupkg"
-          if ($packages.Count -ne 5) {
-            Write-Error "Expected 5 nupkg files and found $($packages.Count)."
+          if ($packages.Count -ne 7) {
+            Write-Error "Expected 7 nupkg files and found $($packages.Count)."
             exit 1
           }
           $sums = foreach ($package in $packages) {
@@ -293,7 +299,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $packages = Get-ChildItem -Path packages -Filter *.nupkg -Recurse
-          if ($packages.Count -ne 5) { throw "Expected 5 packages and found $($packages.Count)." }
+          if ($packages.Count -ne 7) { throw "Expected 7 packages and found $($packages.Count)." }
           foreach ($package in $packages) {
             dotnet nuget push $package.FullName `
               --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" `

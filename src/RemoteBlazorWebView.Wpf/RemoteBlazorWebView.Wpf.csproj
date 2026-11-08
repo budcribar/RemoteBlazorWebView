@@ -25,7 +25,6 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
 		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5 </PackageReleaseNotes>
-		<DebugType>full</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -59,6 +58,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />
+		<!-- RemoteComponentHost (a remote component's process) uses the remote component protocol. -->
+		<ProjectReference Include="..\RemoteBlazorWebView.RemoteComponents\RemoteBlazorWebView.RemoteComponents.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -51,7 +51,6 @@
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5</PackageReleaseNotes>
-    <DebugType>full</DebugType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureNoAuth|x64'">

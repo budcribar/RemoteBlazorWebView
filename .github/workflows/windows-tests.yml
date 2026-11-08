@@ -114,11 +114,14 @@ jobs:
             'src/RemoteWebView/RemoteWebView.csproj',
             'src/RemoteWebViewService/RemoteWebViewService.csproj',
             'src/EditWebView/EditWebView.csproj',
+            'src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj',
             'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
             'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
             'src/Benchmarks/FilePOC/Client/Client.csproj',
             'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
             'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+            'test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj',
+            'test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj',
             'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
             'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj',
             'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
@@ -134,6 +137,31 @@ jobs:
             }
             dotnet build $project @args
           }
+
+      - name: Test source generators and remote components
+        if: steps.build.outcome == 'success'
+        run: |
+          # Both suites always run. PowerShell otherwise keeps only the last native exit code.
+          $failed = $false
+          dotnet test test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            --logger "trx;LogFileName=RemoteBlazorWebView.SourceGenerators.Tests.trx" `
+            --results-directory TestResults/RemoteBlazorWebView.SourceGenerators.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          dotnet test test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            --logger "trx;LogFileName=RemoteBlazorWebView.RemoteComponents.Tests.trx" `
+            --results-directory TestResults/RemoteBlazorWebView.RemoteComponents.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          if ($failed) { exit 1 }
 
       # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
       # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.

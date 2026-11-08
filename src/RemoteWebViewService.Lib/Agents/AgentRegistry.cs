@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>One live AgentHub.Connect stream, as handed out by <see cref="AgentRegistry.Register"/>.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed class AgentConnection(string machineId, long id, ChannelReader<HubCommand> commands, CancellationToken replaced, bool replacedExisting, bool isNew)
     {
         public string MachineId { get; } = machineId;
@@ -23,12 +24,16 @@ namespace PeakSWC.RemoteWebView.Agents
     }
 
     /// <param name="Denied">The admin key was missing or wrong; the service turns this into PermissionDenied.</param>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed record StartSessionOutcome(StartSessionResponse Response, string MachineName, bool RequireConsent, bool Denied = false);
 
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public enum CancelLaunchOutcome { NotFound, Queued, AlreadyFinished }
 
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed record SweepResult(IReadOnlyList<string> WentOffline, IReadOnlyList<string> Forgotten);
 
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed class LaunchSubscription : IDisposable
     {
         private readonly Action onDispose;
@@ -42,9 +47,10 @@ namespace PeakSWC.RemoteWebView.Agents
     }
 
     /// <summary>
-    /// In-memory registry of Remote PC Diagnostics agents and the launches started on them.
+    /// In-memory registry of agents and the launches started on them.
     /// All state is guarded by one lock: agents report every 30 s and launches are rare, so contention is negligible.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed class AgentRegistry
     {
         public static readonly TimeSpan OfflineAfter = TimeSpan.FromSeconds(90);
