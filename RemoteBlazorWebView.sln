@@ -59,6 +59,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.SourceGenerators", "src\RemoteBlazorWebView.SourceGenerators\RemoteBlazorWebView.SourceGenerators.csproj", "{235CAFCF-C0F3-4E44-BB7A-CB70C84D0F12}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.SourceGenerators.Tests", "test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj", "{48785BC1-00C8-4E31-BCBC-EF7781EB08A4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.RemoteComponents", "src\RemoteBlazorWebView.RemoteComponents\RemoteBlazorWebView.RemoteComponents.csproj", "{CD72EF52-608A-4FF5-A627-4B9502F04938}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteBlazorWebView.RemoteComponents.Tests", "test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj", "{D5FAB7FE-941E-4464-AC7F-F33F8AA22149}"

@@ -4,7 +4,7 @@
        PeakSWC.RemoteBlazorWebView.Wpf.RemoteComponentHost) and shows in the app in a sandboxed iframe. Parameters go to it and
        callbacks come back over the child process's stdin/stdout; the frame only tells the page its height. See README.md. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -22,7 +22,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView, RemoteComponents</PackageTags>
-    <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <Platforms>x64;AnyCPU</Platforms>
@@ -33,8 +33,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.14" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-rc.3.26522.148" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0-rc.3.26522.148" />
   </ItemGroup>
 
   <!-- The [RemoteComponentContract] source generator ships in this package; not referenced by this assembly. -->

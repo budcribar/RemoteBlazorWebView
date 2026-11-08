@@ -7,6 +7,6 @@ namespace PeakSWC.RemoteWebView.Agents
     internal static class ExperimentalApi
     {
         public const string AgentRegistry = "RWV001";
-        public const string UrlFormat = "https://github.com/budcribar/RemoteBlazorWebView/blob/net10/doc/Agents.md#experimental";
+        public const string UrlFormat = "https://github.com/budcribar/RemoteBlazorWebView/blob/net11/doc/Agents.md#experimental";
     }
 }
