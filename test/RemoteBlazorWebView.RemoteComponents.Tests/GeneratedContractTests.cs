@@ -127,4 +127,31 @@ using PeakSWC.RemoteBlazorWebView.RemoteComponents;
         Assert.Contains(Generate("[PeakSWC.RemoteBlazorWebView.RemoteComponents.RemoteComponentContract] public interface IG<T> { T V { get; } }").Diagnostics, d => d.Id == "RBWRC002");
         Assert.Contains(Generate("public class O { [PeakSWC.RemoteBlazorWebView.RemoteComponents.RemoteComponentContract] public interface IN { int V { get; } } }").Diagnostics, d => d.Id == "RBWRC002");
     }
+
+    [Theory]
+    [InlineData("string Title { get; }")]
+    [InlineData("string Sandbox { get; }")]
+    [InlineData("System.Threading.Tasks.Task Open();")]
+    [InlineData("string Connection { get; }")]
+    public void Reserved_base_member_names_are_errors(string member)
+    {
+        var (diagnostics, trees) = Generate($$"""
+using PeakSWC.RemoteBlazorWebView.RemoteComponents;
+[RemoteComponentContract] public interface IReserved { {{member}} }
+""");
+        Assert.Contains(diagnostics, d => d.Id == "RBWRC003");
+        Assert.Equal(0, trees);
+    }
+
+    [Fact]
+    public void Keyword_parameter_names_in_callbacks_compile_without_errors()
+    {
+        var (diagnostics, trees) = Generate("""
+using PeakSWC.RemoteBlazorWebView.RemoteComponents;
+namespace N;
+[RemoteComponentContract] public interface IKeywords { System.Threading.Tasks.Task Picked(string @event); }
+""");
+        Assert.Empty(diagnostics);
+        Assert.Equal(2, trees);
+    }
 }

@@ -36,6 +36,21 @@ namespace PeakSWC.RemoteBlazorWebView.RemoteComponents.Generators
             "'{0}' must be a non-generic interface that isn't nested in a type, for [RemoteComponentContract]",
             "RemoteComponents", DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+        private static readonly DiagnosticDescriptor ReservedMember = new(
+            "RBWRC003", "Member name is used by the remote component base class",
+            "'{0}' is already defined on RemoteComponentFrameBase or RemoteComponentReceiverBase; choose another name for the contract member",
+            "RemoteComponents", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+        private static readonly HashSet<string> ReservedNames = new(StringComparer.Ordinal)
+        {
+            "Open", "Title", "Sandbox", "MinHeight", "MaxHeight", "InitialHeight", "ProblemContent", "AdditionalAttributes",
+            "Session", "Problem", "GetContractValues", "OnCallAsync", "ReadArg", "BuildRenderTree", "OnParametersSet",
+            "OnParametersSetAsync", "OnInitialized", "OnInitializedAsync", "OnAfterRender", "OnAfterRenderAsync",
+            "SetParametersAsync", "StateHasChanged", "ShouldRender", "InvokeAsync", "DisposeAsync",
+            "Connection", "Changed", "HasValues", "BadValue", "Start", "OnMessageAsync", "Apply", "SendCallAsync", "Read",
+            "Equals", "GetHashCode", "GetType", "ToString", "MemberwiseClone",
+        };
+
         private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
@@ -87,6 +102,11 @@ namespace PeakSWC.RemoteBlazorWebView.RemoteComponents.Generators
                 if (member.IsStatic) continue;
                 if (member is IMethodSymbol { MethodKind: MethodKind.PropertyGet or MethodKind.PropertySet or MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise }) continue;
                 if (!seen.Add(member.Name)) continue;
+                if (ReservedNames.Contains(member.Name))
+                {
+                    problems.Add(new Problem(ReservedMember, member.Locations.FirstOrDefault() ?? location, member.ToDisplayString()));
+                    continue;
+                }
                 switch (member)
                 {
                     case IPropertySymbol p when p.GetMethod is not null && p.SetMethod is null && !p.IsIndexer && p.Type.TypeKind != TypeKind.Pointer:
@@ -186,7 +206,7 @@ namespace PeakSWC.RemoteBlazorWebView.RemoteComponents.Generators
             foreach (var cb in c.Callbacks)
                 sb.AppendLine(cb.ArgType is null
                     ? $"    public global::System.Threading.Tasks.Task {cb.Name}() => SendCallAsync(\"{cb.Name}\");"
-                    : $"    public global::System.Threading.Tasks.Task {cb.Name}({cb.ArgType} {cb.ArgName}) => SendCallAsync(\"{cb.Name}\", {cb.ArgName});");
+                    : $"    public global::System.Threading.Tasks.Task {cb.Name}({cb.ArgType} @{cb.ArgName}) => SendCallAsync(\"{cb.Name}\", @{cb.ArgName});");
             sb.AppendLine();
             sb.AppendLine("    protected override bool Apply(string name, global::System.Text.Json.JsonElement value)");
             sb.AppendLine("    {");
