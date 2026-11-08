@@ -1,3 +1,4 @@
+using System.Reflection;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -86,11 +87,17 @@ namespace PeakSWC.RemoteWebView
         }
 
 
+        // The relay's own version (Directory.Build.props VersionPrefix, plus +<commit> when the Docker build passes SourceRevisionId).
+        private static readonly string ServerVersionString =
+            typeof(ClientIPCService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? typeof(ClientIPCService).Assembly.GetName().Version?.ToString() ?? "unknown";
+
         public override async Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
         {
             var p = Process.GetCurrentProcess();
             var response = new ServerResponse
             {
+                ServerVersion = ServerVersionString,
                 Handles = p.HandleCount,
                 PeakWorkingSet = p.PeakWorkingSet64,
                 Threads = p.Threads.Count,

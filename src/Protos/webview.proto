@@ -227,6 +227,7 @@ message ServerResponse {
     double upTime = 7;
     bool client_cache_enabled = 8;
     bool server_cache_enabled = 9;
+    string server_version = 10;
 }
 
 message EventResponse {
