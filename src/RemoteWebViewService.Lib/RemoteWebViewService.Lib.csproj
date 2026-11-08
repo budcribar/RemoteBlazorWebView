@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>
     <OutputType>Library</OutputType>
@@ -25,6 +25,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
+    <PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
     <NoWarn>$(NoWarn);NU5100</NoWarn>
     <!-- The agent registry (Agents/, agent.proto) is marked [Experimental("RWV001")]; the library itself uses it freely. -->
     <NoWarn>$(NoWarn);RWV001</NoWarn>

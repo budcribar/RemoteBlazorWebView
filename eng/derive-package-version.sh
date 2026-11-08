@@ -101,7 +101,9 @@ fi
 version_key=$(printf '%s' "$version" | tr '[:upper:]' '[:lower:]')
 packages=(
   peakswc.remotewebview
+  peakswc.remotewebviewservice.lib
   peakswc.remotewebviewservice
+  peakswc.remoteblazorwebview.remotecomponents
   peakswc.remoteblazorwebview.windowsforms
   peakswc.remoteblazorwebview.wpf
   peakswc.remoteblazorwebview

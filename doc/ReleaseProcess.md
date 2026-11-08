@@ -1,18 +1,20 @@
 # Release process
 
-This describes how a maintainer publishes the five PeakSWC packages. The tutorial repository is not a NuGet package. It is updated on GitHub after the packages exist.
+This describes how a maintainer publishes the seven PeakSWC packages. The tutorial repository is not a NuGet package. It is updated on GitHub after the packages exist.
 
 The workflow that packs the packages is [release-packages.yml](../.github/workflows/release-packages.yml). Its NuGet push job does not run.
 
-## The five packages
+## The seven packages
 
-Packed in this order, because WinForms, WPF, and the Photino host project-reference `RemoteWebView`:
+Packed in this order, because `RemoteWebViewService` project-references `RemoteWebViewService.Lib`, and WinForms, WPF (which also project-references `RemoteBlazorWebView.RemoteComponents`), and the Photino host project-reference `RemoteWebView`:
 
 1. `PeakSWC.RemoteWebView`
-2. `PeakSWC.RemoteWebViewService`
-3. `PeakSWC.RemoteBlazorWebView.WindowsForms`
-4. `PeakSWC.RemoteBlazorWebView.Wpf`
-5. `PeakSWC.RemoteBlazorWebView`
+2. `PeakSWC.RemoteWebViewService.Lib`
+3. `PeakSWC.RemoteWebViewService`
+4. `PeakSWC.RemoteBlazorWebView.RemoteComponents`
+5. `PeakSWC.RemoteBlazorWebView.WindowsForms`
+6. `PeakSWC.RemoteBlazorWebView.Wpf`
+7. `PeakSWC.RemoteBlazorWebView`
 
 `RemoteBlazorWebView` is built before anyone builds the tutorial. The tutorial itself is never packed. The pack job checks it out only because the three UI packages include its `README.md` through a path next to this repo. That checkout is not modified and is not pushed.
 
@@ -47,12 +49,12 @@ Dispatch **Release packages** on `cursor/release-workflow-205f` (and, once revie
 
 Jobs:
 
-1. **Version and notes.** Derives the version and writes release notes: a `Based on maui <version>` line, then commit subjects since the last tag. Subjects that mention `LoadTest`, `ceiling`, `req/s`, `requests per`, or `throughput` are omitted. There is no performance claim in the generated notes. Notes stay within 4000 characters; a longer list is cut and linked to the tag compare view. The job uploads `PackageReleaseNotes.txt` and `release-notes.patch`. It also leaves `eng/apply-release-notes.sh` for the same edit. The workflow does not commit or push that edit. The maintainer applies the patch, or runs the script, and commits so the five `PackageReleaseNotes` properties match the published text.
+1. **Version and notes.** Derives the version and writes release notes: a `Based on maui <version>` line, then commit subjects since the last tag. Subjects that mention `LoadTest`, `ceiling`, `req/s`, `requests per`, or `throughput` are omitted. There is no performance claim in the generated notes. Notes stay within 4000 characters; a longer list is cut and linked to the tag compare view. The job uploads `PackageReleaseNotes.txt` and `release-notes.patch`. It also leaves `eng/apply-release-notes.sh` for the same edit. The workflow does not commit or push that edit. The maintainer applies the patch, or runs the script, and commits so the seven `PackageReleaseNotes` properties match the published text.
 2. **Windows tests.** Runs for `net11` whether or not `dry_run` is set. It calls `.github/workflows/windows-tests.yml` (`workflow_call` on this branch). Packing and the artifact upload wait for that job to pass. net9 and net10 still use their own Windows tests workflows, which are not reusable yet. A pack of those lines prints a warning and does not call the net11 suite.
-3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the five projects. For net11 this starts only after Windows tests pass. Each package's `PackageReleaseNotes` for that pack is the generated notes, so the artifact matches the text the maintainer is asked to commit. The job uploads the five `.nupkg` files and `SHA256SUMS.txt`.
+3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the seven projects. For net11 this starts only after Windows tests pass. Each package's `PackageReleaseNotes` for that pack is the generated notes, so the artifact matches the text the maintainer is asked to commit. The job uploads the seven `.nupkg` files and `SHA256SUMS.txt`.
 4. **Push to NuGet.org.** The job condition compares `dry_run` (a boolean) to the sentinel `__nuget_push_disabled__`, which the dispatch form cannot set. GitHub does not schedule the job. A literal `if: false` was not used because actionlint rejects that constant.
 
-After the run, download `PackageReleaseNotes.txt` and `release-notes.patch` from the `release-plan-<line>` artifact. On the line being released, either `git apply release-notes.patch` or `eng/apply-release-notes.sh . PackageReleaseNotes.txt`. Review the five `PackageReleaseNotes` edits, commit them with the `Directory.Build.props` version, and push that commit yourself. The workflow never does that commit.
+After the run, download `PackageReleaseNotes.txt` and `release-notes.patch` from the `release-plan-<line>` artifact. On the line being released, either `git apply release-notes.patch` or `eng/apply-release-notes.sh . PackageReleaseNotes.txt`. Review the seven `PackageReleaseNotes` edits, commit them with the `Directory.Build.props` version, and push that commit yourself. The workflow never does that commit.
 
 ## Daily .NET pulse
 

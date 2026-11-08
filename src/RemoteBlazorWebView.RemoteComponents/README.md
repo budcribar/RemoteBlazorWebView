@@ -65,7 +65,8 @@ The source generator in this package writes:
 
 Values and arguments must be JSON-serializable (`RemoteComponentJson.Options`: web defaults, enums as strings). Values are sent
 when they change (compared as JSON), all of them the first time. Rules the generator enforces: RBWRC001 for a member that isn't a
-get-only property or a `Task` method with at most one argument, RBWRC002 for a generic or nested interface. Names can be set with
+get-only property or a `Task` method with at most one argument, RBWRC002 for a generic or nested interface, RBWRC003 for a member name
+already defined on `RemoteComponentFrameBase` or `RemoteComponentReceiverBase`. Names can be set with
 `[RemoteComponentContract(FrameName = "...", ReceiverName = "...")]`.
 
 Razor compiles before source generators run, so a `.razor` file can't use a frame generated in its own project: keep the contract

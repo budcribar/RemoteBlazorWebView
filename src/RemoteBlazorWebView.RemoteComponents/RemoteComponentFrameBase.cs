@@ -150,15 +150,19 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
         try
         {
             Dictionary<string, JsonElement>? set = null;
+            Dictionary<string, string>? texts = null;
             foreach (var (name, value, type) in GetContractValues())
             {
                 var element = JsonSerializer.SerializeToElement(value, type, RemoteComponentJson.Options);
                 var text = element.GetRawText();
                 if (_sent.TryGetValue(name, out var previous) && previous == text) continue;
-                _sent[name] = text;
+                (texts ??= new(StringComparer.Ordinal))[name] = text;
                 (set ??= new(StringComparer.Ordinal))[name] = element;
             }
-            if (set is not null) await session.Connection.SendAsync(new RemoteComponentMessage { Set = set }, _cts.Token);
+            if (set is not null && await session.Connection.SendAsync(new RemoteComponentMessage { Set = set }, _cts.Token))
+            {
+                foreach (var (name, text) in texts!) _sent[name] = text;
+            }
         }
         finally { _sendGate.Release(); }
     }

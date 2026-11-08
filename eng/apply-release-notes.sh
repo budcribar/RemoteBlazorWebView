@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write a notes file into PackageReleaseNotes in the five packable projects.
+# Write a notes file into PackageReleaseNotes in the seven packable projects.
 # Does not commit or push. The maintainer reviews the diff and commits it.
 # Usage: apply-release-notes.sh <repo-root> <notes-file>
 set -euo pipefail
@@ -14,7 +14,9 @@ text = pathlib.Path(sys.argv[2]).read_text().strip()
 escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 files = [
     "src/RemoteWebView/RemoteWebView.csproj",
+    "src/RemoteWebViewService.Lib/RemoteWebViewService.Lib.csproj",
     "src/RemoteWebViewService/RemoteWebViewService.csproj",
+    "src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj",
     "src/RemoteBlazorWebView/RemoteBlazorWebView.csproj",
     "src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj",
     "src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj",
