@@ -3,7 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile",
-    "watchPatterns": ["src/RemoteWebViewService/**", "src/Protos/**", "Dockerfile", "railway.json"]
+    "watchPatterns": ["src/RemoteWebViewService/**", "src/RemoteWebViewService.Lib/**", "src/Protos/**", "Dockerfile", "railway.json"]
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
