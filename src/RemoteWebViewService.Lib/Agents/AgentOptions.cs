@@ -7,6 +7,7 @@ using System.Text;
 
 namespace PeakSWC.RemoteWebView.Agents
 {
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed class AgentOptions
     {
         public const string EnrollmentKeysVariable = "AGENT_ENROLLMENT_KEYS";

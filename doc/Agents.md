@@ -5,6 +5,22 @@ It holds one gRPC stream open to the relay. A technician picks the PC on the adm
 download and start the app. The app then registers under the session GUID it was given, as usual (`/app/{id}`).
 The contract is `src/Protos/agent.proto`. Agent and admin-site projects copy it verbatim.
 
+## Experimental
+
+> **The agent registry is an experimental feature.** `AgentHub`, `AgentAdmin`, the `PeakSWC.RemoteWebView.Agents` types and the
+> messages generated from `agent.proto` may change or be removed in any release, including minor and patch releases.
+
+Using these types from code produces compiler diagnostic `RWV001`. To opt in, suppress it in the project that uses them:
+
+```xml
+<PropertyGroup>
+  <NoWarn>$(NoWarn);RWV001</NoWarn>
+</PropertyGroup>
+```
+
+or around the use site with `#pragma warning disable RWV001`. Projects that copy `agent.proto` and generate their own
+client code don't get the diagnostic, but the contract is just as likely to change.
+
 ## Services
 
 | Service | Used by | Transport | Endpoint |

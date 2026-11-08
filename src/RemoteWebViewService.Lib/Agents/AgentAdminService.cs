@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>AgentAdmin: what the admin site (gRPC-Web) uses to list computers and start diagnostics on one.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options) : AgentAdmin.AgentAdminBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentAdminService";

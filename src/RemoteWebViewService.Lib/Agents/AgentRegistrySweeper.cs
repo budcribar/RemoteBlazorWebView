@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>Marks agents offline 90 s after their last message and forgets them after 7 days.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed class AgentRegistrySweeper(AgentRegistry registry, ILogger<AgentRegistrySweeper> logger) : BackgroundService
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentRegistrySweeper";
