@@ -63,7 +63,7 @@ public abstract class RemoteComponentReceiverBase(RemoteComponentConnection conn
 public static class RemoteComponentServiceCollectionExtensions
 {
     /// <summary>Registers the connection and the generated receiver <typeparamref name="TReceiver"/> (also as each interface it
-    /// implements, i.e. the contract), started on first use.</summary>
+    /// implements, i.e. the contract, and as <see cref="RemoteComponentReceiverBase"/>), started on first use.</summary>
     public static IServiceCollection AddRemoteComponentReceiver<TReceiver>(this IServiceCollection services, RemoteComponentConnection connection)
         where TReceiver : RemoteComponentReceiverBase
     {
@@ -74,6 +74,7 @@ public static class RemoteComponentServiceCollectionExtensions
             receiver.Start();
             return receiver;
         });
+        services.AddSingleton<RemoteComponentReceiverBase>(sp => sp.GetRequiredService<TReceiver>());
         foreach (var contract in typeof(TReceiver).GetInterfaces())
             services.AddSingleton(contract, sp => sp.GetRequiredService<TReceiver>());
         return services;

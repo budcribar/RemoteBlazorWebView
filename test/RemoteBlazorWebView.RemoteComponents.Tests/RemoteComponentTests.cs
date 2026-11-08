@@ -85,6 +85,21 @@ public class RemoteComponentTests
     }
 
     [Fact]
+    public async Task A_registered_receiver_is_also_found_as_the_base_and_sees_its_input_end()
+    {
+        // RemoteComponentHost (ExitWhenInputCloses) starts every receiver this way, so the input is read and its end noticed.
+        var connection = new RemoteComponentConnection(new StringReader(""), null);
+        var ended = false;
+        connection.Closed += () => ended = true;
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddRemoteComponentReceiver<ClockReceiver>(connection);
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var receivers = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetServices<RemoteComponentReceiverBase>(provider).ToList();
+        Assert.Same(Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ClockReceiver>(provider), Assert.Single(receivers));
+        await Eventually(() => ended);
+    }
+
+    [Fact]
     public void A_failed_open_shows_the_problem()
     {
         using var ctx = new BunitContext();

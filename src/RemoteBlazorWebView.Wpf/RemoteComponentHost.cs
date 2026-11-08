@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -30,8 +31,17 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public string HostPage { get; init; } = @"wwwroot\index.html";
 
         /// <summary>Exit when this process (the app) goes away, even if it never got to close the relay. Polls the process list, which
-        /// works even when this process runs with fewer rights than the app and can't open its process.</summary>
+        /// works even when this process runs with fewer rights than the app and can't open its process. When the app holds this process's
+        /// input, <see cref="ExitWhenInputCloses"/> does the same without polling.</summary>
         public int? ParentProcessId { get; init; }
+
+        /// <summary>
+        /// Exit when <see cref="Input"/> (by default stdin) ends. Windows closes a pipe's write end when the process holding it exits, also
+        /// when it crashes or is killed, so an app that starts this process with a pipe on its stdin and keeps the write end open for the
+        /// component's lifetime gets the same as <see cref="ParentProcessId"/>, at once and without polling. Off by default: a process
+        /// started without redirected input would see its input end right away. The input is read even when no receiver is registered.
+        /// </summary>
+        public bool ExitWhenInputCloses { get; init; }
 
         /// <summary>WebView2's user data folder: required when the default (next to the exe) isn't writable by this process.</summary>
         public string? WebViewDataFolder { get; init; }
@@ -87,15 +97,25 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
                 app.DispatcherUnhandledException += (_, e) => { log("crash: " + e.Exception); e.Handled = true; app.Shutdown(ExitFailed); };
                 if (options.ParentProcessId is { } parent) ExitWithParent(app, parent, log);
+                if (options.ExitWhenInputCloses)
+                    connection.Closed += () => { log("the input ended: the app exited or closed it"); app.Dispatcher.BeginInvoke(() => app.Shutdown(ExitOk)); };
 
                 var services = new ServiceCollection();
                 services.AddRemoteWpfBlazorWebView();
                 services.AddSingleton(connection);
                 options.ConfigureServices?.Invoke(services, connection);
+                var provider = services.BuildServiceProvider();
+                if (options.ExitWhenInputCloses)
+                {
+                    // Something must read the input to see it end: the receivers (started now rather than on first use), or else a reader
+                    // that ignores what it reads.
+                    var receivers = provider.GetServices<RemoteComponentReceiverBase>().ToList();
+                    if (receivers.Count == 0) _ = Task.Run(() => connection.RunAsync(_ => Task.CompletedTask));
+                }
 
                 var webView = new BlazorWebView
                 {
-                    Services = services.BuildServiceProvider(),
+                    Services = provider,
                     ServerUri = options.ServerUri,
                     GrpcBaseUri = options.GrpcBaseUri ?? options.ServerUri,
                     Id = options.Id,
