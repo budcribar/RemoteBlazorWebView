@@ -58,7 +58,7 @@ The source generator in this package writes:
   ```csharp
   return RemoteComponentHost.Run(new RemoteComponentHostOptions
   {
-      ServerUri = relay, GrpcBaseUri = grpc, Id = id, ParentProcessId = appPid, RootComponent = typeof(ClockRoot),
+      ServerUri = relay, GrpcBaseUri = grpc, Id = id, ExitWhenInputCloses = true, RootComponent = typeof(ClockRoot),
       ConfigureServices = (services, connection) => services.AddRemoteComponentReceiver<ClockReceiver>(connection),
   });
   ```
@@ -78,6 +78,10 @@ in a separate library.
 | App | `RemoteComponentFrameBase`: the iframe, sends values, raises callbacks. `Open` starts the process and returns a `RemoteComponentSession` (the frame's address and the `RemoteComponentConnection` to the process) | this one |
 | Component process | `RemoteComponentHost.Run(options)`: the never-shown WPF window with a RemoteBlazorWebView client of the relay; exits when the frame closes or reloads, or the app exits | PeakSWC.RemoteBlazorWebView.Wpf |
 | Component process | `RemoteComponentReceiverBase`: holds the values the app sent, raises `Changed`, sends callbacks; `services.AddRemoteComponentReceiver<T>(connection)` | this one |
+
+How the component's process notices that the app has gone: with `ExitWhenInputCloses = true` it exits when its stdin ends, which
+Windows does as soon as the app exits, crashes or is killed (the app must keep its end of the pipe open while the component is shown,
+as `RemoteComponentSession` does). Without a pipe on stdin, `ParentProcessId` polls the process list every 2 seconds instead.
 
 How the app starts the process (token, folder, relay) is up to it: `Open` is a function you pass to the frame. The relay is usually
 an embedded one (`PeakSWC.RemoteWebViewService.Lib`) with `FrameAncestors` set to the app's origin and `AllowOpaqueOrigin = true`.
