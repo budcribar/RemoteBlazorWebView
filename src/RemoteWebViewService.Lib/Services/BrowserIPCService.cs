@@ -33,11 +33,15 @@ namespace PeakSWC.RemoteWebView
 
                 serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
 
-                // The machine owner holds control from the start: if no one controls yet when the owner's surface
-                // connects, promote it so the local user can drive immediately and hand control to the technician when
-                // ready. PromoteAsync also broadcasts the roster; otherwise just tell every connection who is now present.
-                if (request.IsOwner && string.IsNullOrEmpty(serviceState.PrimaryClientId))
+                // The machine owner holds control from the start. The owner's surface may connect after the technician
+                // (in mirror mode it connects only once the technician is present), so promote it on its first
+                // connection even if the technician already claimed control - but only once, so a later owner reconnect
+                // does not grab control back. PromoteAsync also broadcasts the roster; otherwise just tell everyone present.
+                if (request.IsOwner && !serviceState.OwnerControlInitialized)
+                {
+                    serviceState.OwnerControlInitialized = true;
                     await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
+                }
                 else
                     serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
 
