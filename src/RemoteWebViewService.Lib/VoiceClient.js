@@ -3,7 +3,11 @@
     const session = script.dataset.session;
     const host = script.dataset.host === 'true';
     const controllerKey = script.dataset.key;
+    // Set when the WPF host injects this client into the owner's main surface (in-bubble voice). Only the local host
+    // can furnish it, so it is never served over the network. Absent on the bare host popup, which uses chrome.webview.
+    const hostKey = script.dataset.hostKey;
     script.removeAttribute('data-key');
+    script.removeAttribute('data-host-key');
     // When the control bubble is on the page it renders the voice controls; keep all the call logic here but hide this
     // panel and expose a small API (window.RemoteVoice) for the bubble to drive. The standalone panel is the fallback
     // (e.g. the bare host popup) when there is no bubble.
@@ -236,8 +240,11 @@
     }
 
     display('offline', 'Connecting voice controls…');
-    if (host)
-        window.chrome.webview.addEventListener('message', event => connect(event.data));
-    else
+    if (host) {
+        // In-surface (bubble) voice gets the key from the injected script; the standalone popup gets it postMessage'd.
+        if (hostKey) connect(hostKey);
+        else window.chrome.webview.addEventListener('message', event => connect(event.data));
+    } else {
         connect(controllerKey);
+    }
 })();

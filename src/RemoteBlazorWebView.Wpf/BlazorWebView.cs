@@ -205,10 +205,10 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider,externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized, logger);
         }
 
-        private VoiceWindow? _voiceWindow;
         private string? _voiceHostKey;
+        private bool _voiceMicHooked;
 
-        /// <summary>Enables a local voice window for remote sessions. Set before HostPage.</summary>
+        /// <summary>Enables in-session voice for remote sessions (shown in the control bubble). Set before HostPage.</summary>
         public bool EnableVoice
         {
             get => _voiceHostKey is not null;
@@ -222,38 +222,56 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 ? _voiceHostKey ?? string.Empty
                 : string.Empty;
 
-        private void CloseVoiceWindow()
+        // In-surface voice: the control bubble renders the voice controls, so the voice client is injected into this
+        // same WebView rather than a separate window. The host key is furnished by the locally-injected script (never
+        // served over the network — only the host can supply it); the surface grants the mic for the relay origin on
+        // first, user-initiated use.
+        private void StartInSurfaceVoice(Uri server, string key)
         {
-            _voiceWindow?.Close();
-            _voiceWindow = null;
+            if (WebView.CoreWebView2 is not { } core)
+                return;
+
+            if (!_voiceMicHooked)
+            {
+                _voiceMicHooked = true;
+                var authority = server.GetLeftPart(UriPartial.Authority);
+                core.PermissionRequested += (_, e) =>
+                {
+                    if (e.PermissionKind == CoreWebView2PermissionKind.Microphone && e.IsUserInitiated &&
+                        Uri.TryCreate(e.Uri, UriKind.Absolute, out var requester) &&
+                        requester.GetLeftPart(UriPartial.Authority) == authority)
+                    {
+                        e.SavesInProfile = false;
+                        e.State = CoreWebView2PermissionState.Default; // prompt the owner on first use
+                    }
+                };
+            }
+
+            var js =
+                "(function(){if(document.getElementById('__remote-voice-client'))return;" +
+                "var s=document.createElement('script');s.id='__remote-voice-client';s.defer=true;" +
+                "s.src='/voice/client.js';s.dataset.session=" + JsString(Id.ToString()) + ";" +
+                "s.dataset.host='true';s.dataset.hostKey=" + JsString(key) + ";" +
+                "document.body.appendChild(s);})();";
+            _ = core.ExecuteScriptAsync(js);
         }
 
-        protected override async ValueTask DisposeAsyncCore()
-        {
-            CloseVoiceWindow();
-            await base.DisposeAsyncCore();
-        }
+        private static string JsString(string value) => System.Text.Json.JsonSerializer.Serialize(value);
 
         public void FireConnected(ConnectedEventArgs args)
         {
             Dispatcher.Invoke(() =>
             {
                 if (((IVoiceHost)this).VoiceHostKey is { Length: > 0 } key && ServerUri is Uri server &&
-                    WebView.CoreWebView2?.Environment is { } environment && _voiceWindow is null)
+                    WebView.CoreWebView2 is not null)
                 {
-                    var owner = Window.GetWindow(this);
-                    _voiceWindow = new VoiceWindow(new Uri(server, $"/voice/{Id}/host"), key, environment, Logger);
-                    if (owner?.IsVisible == true)
-                        _voiceWindow.Owner = owner;
-                    _voiceWindow.Closed += (_, _) => _voiceWindow = null;
                     try
                     {
-                        _voiceWindow.Show();
+                        StartInSurfaceVoice(server, key);
                     }
-                    catch (InvalidOperationException ex)
+                    catch (Exception ex)
                     {
-                        Logger.LogWarning(ex, "Unable to open the local voice window");
-                        CloseVoiceWindow();
+                        Logger.LogWarning(ex, "Unable to start in-surface voice");
                     }
                 }
                 Connected?.Invoke(this, args);
@@ -264,7 +282,6 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         {
             Dispatcher.Invoke(() =>
             {
-                CloseVoiceWindow();
                 if (!IsRefreshing)
                     Disconnected?.Invoke(this, args);
             });
@@ -273,11 +290,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         public void FireRefreshed(RefreshedEventArgs args)
         {
             IsRefreshing = true;
-            Dispatcher.Invoke(() =>
-            {
-                CloseVoiceWindow();
-                Refreshed?.Invoke(this, args);
-            });
+            Dispatcher.Invoke(() => Refreshed?.Invoke(this, args));
         }
 
         public void FireReadyToConnect(ReadyToConnectEventArgs args)
