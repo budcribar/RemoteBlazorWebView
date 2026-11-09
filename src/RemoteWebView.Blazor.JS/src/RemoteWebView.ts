@@ -3,7 +3,9 @@ import { watchMirrorFrames } from './RemoteComponentFrames';
 import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
-import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest } from "./generated/webview_pb";
+import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest } from "./generated/webview_pb";
+import { initControlBubble, setParticipants, setPrimary as bubbleSetPrimary, Participant } from './ControlBubble';
+import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
 import { showErrorNotification } from '../Web.JS/src/BootErrors';
 import { sendAttachPage } from '../Web.JS/src/Platform/WebView/WebViewIpcSender';
@@ -12,6 +14,7 @@ interface RemoteBlazor {
     sequenceNum: number;
     clientId: string;
     isPrimary: boolean;
+    isOwner: boolean;
     grpcHost?: string;
 }
 
@@ -21,6 +24,10 @@ declare global {
     }
 }
 
+// Set before the deferred voice client runs, so it exposes window.RemoteVoice instead of drawing its own panel.
+// (The Window.RemoteVoiceHeadless/RemoteVoice globals are declared in ControlBubble.ts, imported below.)
+window.RemoteVoiceHeadless = true;
+
 if (!window.RemoteBlazor) {
     window.RemoteBlazor = {} as RemoteBlazor;
 }
@@ -28,6 +35,7 @@ if (!window.RemoteBlazor) {
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true;
+window.RemoteBlazor.isOwner = false;
 // In a sandboxed iframe without allow-same-origin the page's origin is opaque and location.origin is the string "null".
 // The page was still loaded from the relay, so its scheme and host are the relay's.
 const locationOrigin = window.location.origin === 'null'
@@ -66,6 +74,62 @@ export function sendMessage(message: string) {
     });
 }
 
+// Scroll sync must start once, when this connection is (or becomes) the controller — not twice if control
+// returns to it later.
+let scrollSyncStarted = false;
+function ensureScrollSync() {
+    if (!scrollSyncStarted) {
+        initializeScrollSync(sendMessage);
+        scrollSyncStarted = true;
+    }
+}
+
+// Control transfer: ask the relay to hand control to targetClientId. The relay decides whether it is allowed.
+export function requestPrimary(targetClientId: string) {
+    const req = new SetPrimaryRequest();
+    let id = window.location.pathname.split('/')[1];
+    if (id == 'mirror') id = window.location.pathname.split('/')[2];
+    req.setId(id);
+    req.setClientid(window.RemoteBlazor.clientId);
+    req.setTarget(targetClientId);
+    client.setPrimary(req, {}, (err: RpcError | null, _response: Empty) => {
+        if (err) console.log("SetPrimary grpc error", err.code, err.message);
+    });
+}
+
+// Intercept the relay's control-channel messages before they reach the Blazor IPC parser.
+function receiveControl(message: string): boolean {
+    if (message.startsWith('primaryChanged:')) {
+        const primaryId = message.substring('primaryChanged:'.length);
+        const nowPrimary = primaryId === window.RemoteBlazor.clientId;
+        if (nowPrimary && !window.RemoteBlazor.isPrimary) {
+            // Gained control: realign the outgoing sequence with the relay's reset, then take local input back.
+            window.RemoteBlazor.sequenceNum = 1;
+            window.RemoteBlazor.isPrimary = true;
+            makePageEditable();
+            ensureScrollSync();
+        } else if (!nowPrimary && window.RemoteBlazor.isPrimary) {
+            window.RemoteBlazor.isPrimary = false;
+            makePageReadOnly();
+        }
+        bubbleSetPrimary(window.RemoteBlazor.isPrimary);
+        return true;
+    }
+    if (message.startsWith('participants:')) {
+        try {
+            setParticipants(JSON.parse(message.substring('participants:'.length)) as Participant[]);
+        } catch { /* ignore a malformed roster */ }
+        return true;
+    }
+    return false;
+}
+
+// Module scope so makePageEditable can remove exactly these listeners.
+function preventInteraction(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+}
+
 function makePageReadOnly() {
     if (document.getElementById('__remote-mirror-overlay')) return;
     // Create the overlay element
@@ -76,6 +140,7 @@ function makePageReadOnly() {
     overlay.style.left = '0px';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
+    // Below the control bubble (which stays clickable) but above page content.
     overlay.style.zIndex = '10000';
     overlay.style.background = 'transparent';
     overlay.style.cursor = 'not-allowed';
@@ -90,13 +155,17 @@ function makePageReadOnly() {
     window.addEventListener('keydown', preventInteraction, true);
     window.addEventListener('keyup', preventInteraction, true);
 
-    function preventInteraction(event: Event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
     document.body.style.userSelect = 'none';
     document.body.setAttribute('oncontextmenu', 'return false;');
+}
+
+// Inverse of makePageReadOnly: restore local input when this connection becomes the controller.
+function makePageEditable() {
+    document.getElementById('__remote-mirror-overlay')?.remove();
+    window.removeEventListener('keydown', preventInteraction, true);
+    window.removeEventListener('keyup', preventInteraction, true);
+    document.body.style.userSelect = '';
+    document.body.removeAttribute('oncontextmenu');
 }
 
 export function initializeRemoteWebView() {
@@ -113,6 +182,14 @@ export function initializeRemoteWebView() {
     }
 
     window.RemoteBlazor.clientId = crypto.randomUUID();
+    // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control.
+    window.RemoteBlazor.isOwner = new URLSearchParams(window.location.search).get('role') === 'owner';
+
+    initControlBubble({
+        myClientId: window.RemoteBlazor.clientId,
+        isOwner: window.RemoteBlazor.isOwner,
+        requestPrimary,
+    });
 
     sendMessage("connected:");
     sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
@@ -121,13 +198,15 @@ export function initializeRemoteWebView() {
     message.setId(id);
     message.setClientid(window.RemoteBlazor.clientId);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
+    message.setIsowner(window.RemoteBlazor.isOwner);
 
-    if (window.RemoteBlazor.isPrimary) initializeScrollSync(sendMessage);
+    if (window.RemoteBlazor.isPrimary) ensureScrollSync();
 
     const stream = client.receiveMessage(message, {});
 
     stream.on('data', (response: StringRequest) => {
         console.info("BrowserIPC.ReceiveMessage: " + response.getRequest());
+        if (receiveControl(response.getRequest())) return;
         if (receiveScroll(response.getRequest())) return;
         receiveMessage(response.getRequest());
         if (!window.RemoteBlazor.isPrimary)

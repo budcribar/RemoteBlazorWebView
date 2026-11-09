@@ -22,6 +22,11 @@ namespace PeakSWC.RemoteWebView
         public string Url { get; init; } = string.Empty;
         public bool InUse { get; set; } = false;
         public bool Refresh { get; set; } = false;
+        // Control transfer: the connection (browser clientId) that currently controls the session (its input reaches the WebView).
+        // Empty until the first primary connection claims it. Reassigned by BrowserIPC.SetPrimary.
+        public string PrimaryClientId { get; set; } = string.Empty;
+        // The connection launched by the machine owner (the local control surface). It may always reclaim control; the tech never may.
+        public string OwnerClientId { get; set; } = string.Empty;
         public string Id { get; init; } = string.Empty;
         public ConcurrentBag<string> IsMirroredConnection { get; set; } = [];
         public bool EnableMirrors { get; set; } = false;       

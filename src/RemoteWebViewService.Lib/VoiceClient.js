@@ -3,7 +3,16 @@
     const session = script.dataset.session;
     const host = script.dataset.host === 'true';
     const controllerKey = script.dataset.key;
+    // Set when the WPF host injects this client into the owner's main surface (in-bubble voice). Only the local host
+    // can furnish it, so it is never served over the network. Absent on the bare host popup, which uses chrome.webview.
+    const hostKey = script.dataset.hostKey;
     script.removeAttribute('data-key');
+    script.removeAttribute('data-host-key');
+    // When the control bubble is on the page it renders the voice controls; keep all the call logic here but hide this
+    // panel and expose a small API (window.RemoteVoice) for the bubble to drive. The standalone panel is the fallback
+    // (e.g. the bare host popup) when there is no bubble.
+    const headless = window.RemoteVoiceHeadless === true;
+    const subscribers = [];
     const panel = document.createElement('section');
     panel.setAttribute('aria-label', 'Remote voice');
     panel.style.cssText = host
@@ -21,6 +30,8 @@
     audio.autoplay = true;
     panel.append(status, ' ', action, ' ', mute, ' ', end, audio);
     document.body.append(panel);
+    // Keep the panel in the DOM so <audio> can play, but hidden when the bubble owns the controls.
+    if (headless) panel.style.display = 'none';
 
     let socket;
     let iceServers;
@@ -41,6 +52,21 @@
         end.textContent = next === 'ringing' ? 'Decline' : 'Hang up';
         mute.hidden = !mic;
         mute.textContent = mic?.getAudioTracks()[0]?.enabled === false ? 'Unmute' : 'Mute';
+        notify();
+    }
+
+    function snapshot() {
+        return {
+            state,
+            statusText: status.textContent,
+            actLabel: action.textContent, canAct: !action.hidden,
+            endLabel: end.textContent, canEnd: !end.hidden,
+            muteLabel: mute.textContent, canMute: !mute.hidden,
+        };
+    }
+
+    function notify() {
+        if (headless) for (const cb of subscribers) cb(snapshot());
     }
 
     function send(type, payload = {}) {
@@ -203,9 +229,22 @@
         socket?.close();
     });
 
+    if (headless) {
+        window.RemoteVoice = {
+            subscribe(cb) { subscribers.push(cb); cb(snapshot()); },
+            act() { if (action.onclick) action.onclick(); },
+            hangup() { if (end.onclick) end.onclick(); },
+            toggleMute() { if (mute.onclick) mute.onclick(); },
+        };
+        window.dispatchEvent(new Event('remotevoiceready'));
+    }
+
     display('offline', 'Connecting voice controls…');
-    if (host)
-        window.chrome.webview.addEventListener('message', event => connect(event.data));
-    else
+    if (host) {
+        // In-surface (bubble) voice gets the key from the injected script; the standalone popup gets it postMessage'd.
+        if (hostKey) connect(hostKey);
+        else window.chrome.webview.addEventListener('message', event => connect(event.data));
+    } else {
         connect(controllerKey);
+    }
 })();
