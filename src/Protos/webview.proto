@@ -63,6 +63,18 @@ message ReceiveMessageRequest {
     string id = 1;
     string clientId = 2;
     bool isPrimary = 3;
+    // Control transfer: a connection launched by the machine owner (the local control surface) sets this.
+    // Only the owner connection may unilaterally reclaim control; the tech never can. See SetPrimary.
+    bool isOwner = 4;
+}
+
+// Control transfer (hand-off): requester asks the relay to make 'target' the primary (controlling) connection.
+// The relay enforces policy: the current primary may pass control to anyone; the owner may always reclaim it
+// to itself; no other connection may seize it.
+message SetPrimaryRequest {
+    string id = 1;
+    string clientId = 2;  // the requesting connection
+    string target = 3;    // the connection to make primary
 }
 
 message SendMessageResponse {
@@ -157,6 +169,7 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(ReceiveMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
+    rpc SetPrimary(SetPrimaryRequest) returns (google.protobuf.Empty);
 }
 
 enum ClientState {

@@ -64,6 +64,37 @@ namespace PeakSWC.RemoteWebView
             await browserResponseChannel.Writer.WriteAsync(new StringRequest { Request = message }, cancellationToken).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// True when a browser connection with this clientId is currently attached.
+        /// </summary>
+        public bool HasConnection(string clientId)
+        {
+            lock (browserStateLock)
+            {
+                foreach (var brn in observers.Keys)
+                    if (brn.ClientId == clientId) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Control transfer: make <paramref name="primaryClientId"/> the controlling connection. Flips each attached
+        /// connection's primary flag (so render fan-out routing stays correct) and tells every browser who now has
+        /// control via a "primaryChanged:" message. Sent straight to each observer, not through message history, so a
+        /// later-joining mirror is not replayed a stale hand-off.
+        /// </summary>
+        public void SetPrimary(string primaryClientId)
+        {
+            var notice = new StringRequest { Request = $"primaryChanged:{primaryClientId}" };
+            lock (browserStateLock)
+            {
+                foreach (var brn in observers.Keys)
+                    brn.IsPrimary = brn.ClientId == primaryClientId;
+                foreach (var observer in observers.Values)
+                    observer.Writer.TryWrite(notice);
+            }
+        }
+
         public IPC(CancellationToken token, ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
             cancellationToken = token;
