@@ -94,9 +94,25 @@
     {
         if (!firstRender) return;
         _selfRef = DotNetObjectReference.Create(this);
-        _module = await JS.InvokeAsync<IJSObjectReference>(
-            "import", "./_content/PeakSWC.RemoteBlazorWebView.RemoteComponents/sessionControlBar.js");
-        _binding = await _module.InvokeAsync<IJSObjectReference>("init", _selfRef);
+        // The app runs in the host process while browsers come and go (the local window navigates to /mirror, the
+        // technician refreshes), so interop can fail at any time. A UI widget must never take the host down.
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/PeakSWC.RemoteBlazorWebView.RemoteComponents/sessionControlBar.js");
+            _binding = await _module.InvokeAsync<IJSObjectReference>("init", _selfRef);
+        }
+        catch (Exception ex) when (IsInteropFailure(ex)) { }
+    }
+
+    private static bool IsInteropFailure(Exception ex) =>
+        ex is JSException or JSDisconnectedException or InvalidOperationException or TaskCanceledException or ObjectDisposedException;
+
+    private async Task CallJs(string identifier, params object?[] args)
+    {
+        if (_module is null) return;
+        try { await _module.InvokeVoidAsync(identifier, args); }
+        catch (Exception ex) when (IsInteropFailure(ex)) { }
     }
 
     [JSInvokable]
@@ -110,27 +126,27 @@
 
     private async Task GiveControl()
     {
-        if (_module is null || Other is null) return;
-        await _module.InvokeVoidAsync("requestPrimary", Other.Id);
+        if (Other is null) return;
+        await CallJs("requestPrimary", Other.Id);
     }
 
     private async Task TakeControl()
     {
-        if (_module is null || _state is null) return;
-        await _module.InvokeVoidAsync("requestPrimary", _state.MyClientId);
+        if (_state is null) return;
+        await CallJs("requestPrimary", _state.MyClientId);
     }
 
     private async Task CopyLink()
     {
         if (_module is null) return;
-        await _module.InvokeVoidAsync("copyShareLink");
+        await CallJs("copyShareLink");
         _copied = true;
         StateHasChanged();
     }
 
-    private async Task VoiceAct()  { if (_module is not null) await _module.InvokeVoidAsync("voiceAct"); }
-    private async Task VoiceMute() { if (_module is not null) await _module.InvokeVoidAsync("voiceMute"); }
-    private async Task VoiceEnd()  { if (_module is not null) await _module.InvokeVoidAsync("voiceEnd"); }
+    private Task VoiceAct()  => CallJs("voiceAct");
+    private Task VoiceMute() => CallJs("voiceMute");
+    private Task VoiceEnd()  => CallJs("voiceEnd");
 
     public async ValueTask DisposeAsync()
     {
