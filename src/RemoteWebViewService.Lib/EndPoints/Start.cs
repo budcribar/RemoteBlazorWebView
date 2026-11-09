@@ -53,6 +53,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         channel.Writer.TryWrite($"Connect:{guid}");
                     }
 
+                    serviceState.Voice?.GrantController(context, guid);
+
                     // Redirect to the specific GUID page
                     context.Response.Redirect($"/{guid}", permanent: false);
                 }

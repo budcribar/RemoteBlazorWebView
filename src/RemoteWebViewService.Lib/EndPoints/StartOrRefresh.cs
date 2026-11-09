@@ -51,9 +51,12 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         // TODO edit causes Length to be different than FileInfo
                         // context.Response.ContentLength = fileInfo.Length;
                         var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                        var voiceKey = serviceState.Voice?.TakeControllerPage(context, guid.ToString());
                         using Stream stream = fileStream.Stream;
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                         serviceState.Refresh = true;
+                        if (voiceKey is not null)
+                            await context.Response.WriteAsync(VoiceRoom.ControllerScript(guid, voiceKey)).ConfigureAwait(false);
                     }
                     else
                     {

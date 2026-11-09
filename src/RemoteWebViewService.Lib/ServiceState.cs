@@ -40,6 +40,7 @@ namespace PeakSWC.RemoteWebView
         public TimeSpan TotalFileReadTime { get; set; } = TimeSpan.Zero;
         public TimeSpan MaxFileReadTime { get; set; } = TimeSpan.Zero;
         public Channel<FileEntry> FileCollection { get; set; } = Channel.CreateUnbounded<FileEntry>();
+        internal VoiceRoom? Voice { get; init; }
         public IPC IPC { get; }
         public BrowserIPCState BrowserIPC { get; init; } = new();
 

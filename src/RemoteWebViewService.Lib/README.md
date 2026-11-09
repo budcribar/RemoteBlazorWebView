@@ -48,3 +48,11 @@ removed in any release. Its public types are marked `[Experimental("RWV001")]`, 
 RemoteWebViewServer.Run(args);   // what RemoteWebViewService.exe does
 RemoteWebViewServer.Run(5001, maxNumClients: 1, frameAncestors: ["'self'"]);   // blocking, HTTPS on loopback
 ```
+
+## Two-way voice for WPF sessions
+
+Set `BlazorWebView.EnableVoice = true` before setting `HostPage`. Use HTTPS for the browser and host connections, and deploy a relay built with voice support. Open the controller through `/app/{id}` to get its one-time voice grant. In deployments without sign-in, treat the controller link as a credential. Mirror pages have no voice controls or grant.
+
+The controller can request a call. The person at the PC accepts or declines in a separate local WebView2 window. Both sides can mute or hang up, and closing either endpoint ends the call. Voice uses the default input and output devices. The relay forwards call setup messages and WebRTC carries audio directly or through TURN.
+
+Configure `Voice__StunUrl` for STUN and `Voice__TurnUrl` with `Voice__TurnSecret` for a TURN server that supports shared-secret credentials. For example, use `turns:turn.example.com:443?transport=tcp` for a TURN TLS listener on port 443. Keep the TURN secret on the relay. Configure the HTTPS proxy to forward WebSocket upgrades and preserve the public Host header on `/voice/{id}/signal`.

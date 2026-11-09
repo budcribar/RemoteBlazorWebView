@@ -22,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
-    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
+    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView, IVoiceHost
     {
         public CoreWebView2CookieManager CookieManager  => WebView.CoreWebView2.CookieManager;
         private bool IsRefreshing { get; set; } = false;
@@ -205,21 +205,79 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider,externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized, logger);
         }
 
+        private VoiceWindow? _voiceWindow;
+        private string? _voiceHostKey;
+
+        /// <summary>Enables a local voice window for remote sessions. Set before HostPage.</summary>
+        public bool EnableVoice
+        {
+            get => _voiceHostKey is not null;
+            set => _voiceHostKey = value
+                ? _voiceHostKey ?? Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                : null;
+        }
+
+        string IVoiceHost.VoiceHostKey =>
+            ServerUri?.Scheme == Uri.UriSchemeHttps && GrpcBaseUri?.Scheme == Uri.UriSchemeHttps
+                ? _voiceHostKey ?? string.Empty
+                : string.Empty;
+
+        private void CloseVoiceWindow()
+        {
+            _voiceWindow?.Close();
+            _voiceWindow = null;
+        }
+
+        protected override async ValueTask DisposeAsyncCore()
+        {
+            CloseVoiceWindow();
+            await base.DisposeAsyncCore();
+        }
+
         public void FireConnected(ConnectedEventArgs args)
         {
-            Dispatcher.Invoke(() => Connected?.Invoke(this, args));
+            Dispatcher.Invoke(() =>
+            {
+                if (((IVoiceHost)this).VoiceHostKey is { Length: > 0 } key && ServerUri is Uri server &&
+                    WebView.CoreWebView2?.Environment is { } environment && _voiceWindow is null)
+                {
+                    var owner = Window.GetWindow(this);
+                    _voiceWindow = new VoiceWindow(new Uri(server, $"/voice/{Id}/host"), key, environment, Logger);
+                    if (owner?.IsVisible == true)
+                        _voiceWindow.Owner = owner;
+                    _voiceWindow.Closed += (_, _) => _voiceWindow = null;
+                    try
+                    {
+                        _voiceWindow.Show();
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        Logger.LogWarning(ex, "Unable to open the local voice window");
+                        CloseVoiceWindow();
+                    }
+                }
+                Connected?.Invoke(this, args);
+            });
         }
 
         public void FireDisconnected(DisconnectedEventArgs args)
         {
-            if (!IsRefreshing)
-                Dispatcher.Invoke(() => Disconnected?.Invoke(this, args));
+            Dispatcher.Invoke(() =>
+            {
+                CloseVoiceWindow();
+                if (!IsRefreshing)
+                    Disconnected?.Invoke(this, args);
+            });
         }
 
         public void FireRefreshed(RefreshedEventArgs args)
         {
             IsRefreshing = true;
-            Dispatcher.Invoke(() => Refreshed?.Invoke(this, args));
+            Dispatcher.Invoke(() =>
+            {
+                CloseVoiceWindow();
+                Refreshed?.Invoke(this, args);
+            });
         }
 
         public void FireReadyToConnect(ReadyToConnectEventArgs args)

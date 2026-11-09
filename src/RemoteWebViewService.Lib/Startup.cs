@@ -319,6 +319,11 @@ namespace PeakSWC.RemoteWebView
             app.UseAuthentication();
             app.UseAuthorization();
 #endif
+            app.UseWebSockets(new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(15),
+                KeepAliveTimeout = TimeSpan.FromSeconds(15)
+            });
             app.UseGrpcWeb();
             app.UseBlazorFrameworkFiles();
 
@@ -343,6 +348,9 @@ namespace PeakSWC.RemoteWebView
                 }
 
                 endpoints.MapGet("/favicon.ico", Endpoints.Favicon()).AllowAnonymous();
+                endpoints.MapGet("/voice/client.js", VoiceRoom.Script()).AllowAnonymous();
+                endpoints.MapGet("/voice/{id:guid}/host", VoiceRoom.HostPage()).AllowAnonymous();
+                endpoints.Map("/voice/{id:guid}/signal", VoiceRoom.Signal()).AllowAnonymous();
                 endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).ConditionallyRequireAuthorization();
                 endpoints.MapGet("/app/{id:guid}", Endpoints.Start()).ConditionallyRequireAuthorization();
 
