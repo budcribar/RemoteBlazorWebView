@@ -44,6 +44,7 @@ namespace PeakSWC.RemoteWebView
 
             ServiceState state = new(logger, request.EnableMirrors)
             {
+                Voice = VoiceRoom.Create(request.VoiceHostKey, context.CancellationToken),
                 HtmlHostPath = request.HtmlHostPath,
                 Markup = request.Markup,
                 InUse = false,

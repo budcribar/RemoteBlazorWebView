@@ -70,6 +70,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="VoiceClient.js" LogicalName="VoiceClient.js" />
     <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico" />
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png" Pack="true" PackagePath="" />
     <None Include="README.md" Pack="true" PackagePath="" />

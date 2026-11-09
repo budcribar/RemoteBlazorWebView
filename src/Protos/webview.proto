@@ -32,6 +32,7 @@ message CreateWebViewRequest {
   string processName = 6;
   string hostName = 7;
   bool enableMirrors = 8;
+  string voiceHostKey = 9;
 }
 
 message WebMessageResponse {
