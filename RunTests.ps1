@@ -29,16 +29,8 @@ if ($process) {
 # Check if visual studio is running. It will prevent remote.blazor.desktop.js from building in production mode
 $process = Get-Process -Name devenv -ErrorAction SilentlyContinue
 if ($process) {
-    if ($Build) {
-        # -Build skips the test block (see "if ($Build -ne $true)" below), so the "can't test with VS" rule
-        # doesn't apply. VS can still lock dist\ and break the production bundle, so warn and let the
-        # "remote.blazor.desktop.js was not produced" check downstream fail loudly if it actually does.
-        Write-Host -ForegroundColor YELLOW "Visual Studio is running. Tests are skipped in -Build mode; close VS if the remote.blazor.desktop.js build fails (it can lock dist\)."
-    }
-    else {
-        Write-Host  -ForegroundColor RED "Cannot run tests with Visual Studio running"
-        exit 1
-    }
+    Write-Host  -ForegroundColor RED "Cannot run tests with Visual Studio running"
+    exit 1
 }
 # Check if the process is running
 $process = Get-Process -Name Client -ErrorAction SilentlyContinue
