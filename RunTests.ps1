@@ -5,6 +5,38 @@
 		[switch] $Rust = $false
     )
 
+# Big PASSED / FAILED banner at the end of every run. Every early "exit" in this script still runs the finally
+# block below, so a failure anywhere shows FAILED; only reaching the very end shows PASSED.
+function Show-RunTestsResult {
+    param([bool] $Passed)
+    $what = if ($Build) { 'BUILD' } else { 'BUILD + TESTS' }
+    if ($Passed) {
+        $color = 'Green'
+        $art = @(
+            '  ######     ###     ######   ######  ########  ######  ',
+            '  ##   ##   ## ##   ##       ##       ##        ##   ## ',
+            '  ######   ##   ##   #####    #####   ######    ##   ## ',
+            '  ##       #######       ##       ##  ##        ##   ## ',
+            '  ##       ##   ##  ######   ######   ########  ######  ')
+    } else {
+        $color = 'Red'
+        $art = @(
+            '  #######    ###    ##  ##       ########  ######  ',
+            '  ##        ## ##   ##  ##       ##        ##   ## ',
+            '  #####    ##   ##  ##  ##       ######    ##   ## ',
+            '  ##       #######  ##  ##       ##        ##   ## ',
+            '  ##       ##   ##  ##  #######  ########  ######  ')
+    }
+    Write-Host ''
+    $art | ForEach-Object { Write-Host $_ -ForegroundColor $color }
+    Write-Host ''
+    Write-Host ("  {0} {1}" -f $what, $(if ($Passed) { 'PASSED' } else { 'FAILED - scroll up for the first red error' })) -ForegroundColor $color
+    Write-Host ''
+}
+
+$script:RunTestsSucceeded = $false
+try {
+
 # .\RunTests.ps1  -Build:$true
 # .\RunTests.ps1  -Mode Release
 
@@ -586,4 +618,10 @@ $compress = @{
 
 if ($env:EnvBuildMode -eq 'Release') {
 	Compress-Archive @compress -Force
+}
+
+$script:RunTestsSucceeded = $true
+}
+finally {
+    Show-RunTestsResult -Passed $script:RunTestsSucceeded
 }
