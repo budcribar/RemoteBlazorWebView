@@ -1,0 +1,170 @@
+@using System.Linq
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@namespace PeakSWC.RemoteBlazorWebView.RemoteComponents
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    Reusable control-transfer + voice bar for a RemoteBlazorWebView session. Renders by state (no CSS show/hide): the
+    current controller sees "Give control to ...", the owner sees "Take control" when they do not hold it, and voice
+    controls appear when a call is available. State comes from the headless window.RemoteControl / window.RemoteVoice
+    globals via a small JS module. Style it through the rbwv-control-* classes and place it anywhere in your layout.
+*@
+
+@if (_state is not null)
+{
+    <div class="rbwv-control-bar @CssClass" role="group" aria-label="Session controls">
+        <span class="rbwv-control-status">@StatusText</span>
+
+        @if (ShowGive)
+        {
+            <button type="button" class="rbwv-control-btn rbwv-control-give" @onclick="GiveControl">Give control to @OtherLabel</button>
+        }
+        @if (ShowTake)
+        {
+            <button type="button" class="rbwv-control-btn rbwv-control-take" @onclick="TakeControl">Take control</button>
+        }
+        @if (ShowShareLink && !string.IsNullOrEmpty(_state.ShareUrl))
+        {
+            <button type="button" class="rbwv-control-btn rbwv-control-copy" @onclick="CopyLink">@(_copied ? "Copied" : "Copy link")</button>
+        }
+
+        @if (_voice is not null)
+        {
+            @if (!string.IsNullOrEmpty(_voice.StatusText))
+            {
+                <span class="rbwv-voice-status">@_voice.StatusText</span>
+            }
+            @if (_voice.CanAct)
+            {
+                <button type="button" class="rbwv-control-btn rbwv-voice-act" @onclick="VoiceAct">@_voice.ActLabel</button>
+            }
+            @if (_voice.CanMute)
+            {
+                <button type="button" class="rbwv-control-btn rbwv-voice-mute" @onclick="VoiceMute">@_voice.MuteLabel</button>
+            }
+            @if (_voice.CanEnd)
+            {
+                <button type="button" class="rbwv-control-btn rbwv-voice-end" @onclick="VoiceEnd">@_voice.EndLabel</button>
+            }
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Show a "Copy link" button for the technician's join URL. Set this on the owner surface only.</summary>
+    [Parameter] public bool ShowShareLink { get; set; }
+
+    /// <summary>Extra CSS class(es) for the bar container, so the host app can style and place it.</summary>
+    [Parameter] public string? CssClass { get; set; }
+
+    private ControlState? _state;
+    private VoiceState? _voice;
+    private bool _copied;
+    private DotNetObjectReference<SessionControlBar>? _selfRef;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _binding;
+
+    private bool IHaveControl => _state?.IHaveControl ?? false;
+    private bool IsOwner => _state?.IsOwner ?? false;
+
+    private Participant? Other => _state?.Participants.FirstOrDefault(p =>
+        IsOwner ? (!p.Owner && p.Id != _state!.MyClientId)
+                : (p.Owner && p.Id != _state!.MyClientId));
+
+    private Participant? Controller => _state?.Participants.FirstOrDefault(p => p.Primary);
+
+    private string OtherLabel => IsOwner ? "the technician" : "the user";
+
+    private string StatusText =>
+        IHaveControl ? "You have control"
+        : Controller is { } c ? (c.Owner ? "The user has control" : "The technician has control")
+        : "No one has control";
+
+    // Give: only the current controller, and only when there is another party to hand off to.
+    private bool ShowGive => IHaveControl && Other is not null;
+
+    // Take: only the owner may reclaim, and only when they do not already hold control.
+    private bool ShowTake => IsOwner && !IHaveControl;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _selfRef = DotNetObjectReference.Create(this);
+        _module = await JS.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/PeakSWC.RemoteBlazorWebView.RemoteComponents/sessionControlBar.js");
+        _binding = await _module.InvokeAsync<IJSObjectReference>("init", _selfRef);
+    }
+
+    [JSInvokable]
+    public Task OnState(ControlState? control, VoiceState? voice)
+    {
+        _state = control;
+        _voice = voice;
+        _copied = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GiveControl()
+    {
+        if (_module is null || Other is null) return;
+        await _module.InvokeVoidAsync("requestPrimary", Other.Id);
+    }
+
+    private async Task TakeControl()
+    {
+        if (_module is null || _state is null) return;
+        await _module.InvokeVoidAsync("requestPrimary", _state.MyClientId);
+    }
+
+    private async Task CopyLink()
+    {
+        if (_module is null) return;
+        await _module.InvokeVoidAsync("copyShareLink");
+        _copied = true;
+        StateHasChanged();
+    }
+
+    private async Task VoiceAct()  { if (_module is not null) await _module.InvokeVoidAsync("voiceAct"); }
+    private async Task VoiceMute() { if (_module is not null) await _module.InvokeVoidAsync("voiceMute"); }
+    private async Task VoiceEnd()  { if (_module is not null) await _module.InvokeVoidAsync("voiceEnd"); }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { if (_binding is not null) await _binding.InvokeVoidAsync("dispose"); } catch { }
+        try { if (_binding is not null) await _binding.DisposeAsync(); } catch { }
+        try { if (_module is not null) await _module.DisposeAsync(); } catch { }
+        _selfRef?.Dispose();
+    }
+
+    public sealed class Participant
+    {
+        public string Id { get; set; } = "";
+        public bool Owner { get; set; }
+        public bool Primary { get; set; }
+    }
+
+    public sealed class ControlState
+    {
+        public List<Participant> Participants { get; set; } = new();
+        public string MyClientId { get; set; } = "";
+        public bool IsOwner { get; set; }
+        public bool IHaveControl { get; set; }
+        public string? ShareUrl { get; set; }
+    }
+
+    public sealed class VoiceState
+    {
+        public string State { get; set; } = "";
+        public string StatusText { get; set; } = "";
+        public string ActLabel { get; set; } = "";
+        public bool CanAct { get; set; }
+        public string EndLabel { get; set; } = "";
+        public bool CanEnd { get; set; }
+        public string MuteLabel { get; set; } = "";
+        public bool CanMute { get; set; }
+    }
+}

@@ -4,7 +4,7 @@ import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest } from "./generated/webview_pb";
-import { initControlBubble, setParticipants, setPrimary as bubbleSetPrimary, Participant } from './ControlBubble';
+import { initControl, setParticipants, setPrimary, Participant } from './RemoteControl';
 import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
 import { showErrorNotification } from '../Web.JS/src/BootErrors';
@@ -25,7 +25,7 @@ declare global {
 }
 
 // Set before the deferred voice client runs, so it exposes window.RemoteVoice instead of drawing its own panel.
-// (The Window.RemoteVoiceHeadless/RemoteVoice globals are declared in ControlBubble.ts, imported below.)
+// (The Window.RemoteVoiceHeadless/RemoteVoice globals are declared in RemoteControl.ts, imported below.)
 window.RemoteVoiceHeadless = true;
 
 if (!window.RemoteBlazor) {
@@ -98,7 +98,7 @@ export function requestPrimary(targetClientId: string) {
 }
 
 // Apply a controller change to this page: take local input back when we gain control, lock it when we lose it,
-// and keep the control bubble in step. Driven by both 'primaryChanged:' and the 'participants:' roster.
+// and publish control state for the app's UI. Driven by both 'primaryChanged:' and the 'participants:' roster.
 function applyPrimary(nowPrimary: boolean) {
     if (nowPrimary && !window.RemoteBlazor.isPrimary) {
         // Gained control: realign the outgoing sequence with the relay's reset, then take local input back.
@@ -110,7 +110,7 @@ function applyPrimary(nowPrimary: boolean) {
         window.RemoteBlazor.isPrimary = false;
         makePageReadOnly();
     }
-    bubbleSetPrimary(window.RemoteBlazor.isPrimary);
+    setPrimary(window.RemoteBlazor.isPrimary);
 }
 
 // Intercept the relay's control-channel messages before they reach the Blazor IPC parser.
@@ -195,9 +195,13 @@ export function initializeRemoteWebView() {
     // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control.
     window.RemoteBlazor.isOwner = new URLSearchParams(window.location.search).get('role') === 'owner';
 
-    initControlBubble({
+    // The technician joins at the controller (/app) page; expose it so an owner surface can offer a "Copy link".
+    const shareUrl = `${locationOrigin}/app/${id}`;
+
+    initControl({
         myClientId: window.RemoteBlazor.clientId,
         isOwner: window.RemoteBlazor.isOwner,
+        shareUrl,
         requestPrimary,
     });
 
