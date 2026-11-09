@@ -33,6 +33,14 @@ namespace PeakSWC.RemoteWebView
 
                 serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
 
+                // The machine owner holds control from the start: if no one controls yet when the owner's surface
+                // connects, promote it so the local user can drive immediately and hand control to the technician when
+                // ready. PromoteAsync also broadcasts the roster; otherwise just tell every connection who is now present.
+                if (request.IsOwner && string.IsNullOrEmpty(serviceState.PrimaryClientId))
+                    await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
+                else
+                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+
                 try
                 {
                     await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
@@ -68,12 +76,17 @@ namespace PeakSWC.RemoteWebView
         private async Task OnConnectionClosed(ServiceState serviceState, string id, string clientId, Exception? ex)
         {
             if (serviceState.PrimaryClientId != clientId)
-                return; // a mirror (or already-demoted connection) left; the session continues.
+            {
+                // A mirror (or already-demoted connection) left; the session continues. Refresh the roster, dropping
+                // the leaver, which may not have been removed from the observer set yet.
+                serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId: clientId);
+                return;
+            }
 
             var owner = serviceState.OwnerClientId;
             if (!string.IsNullOrEmpty(owner) && owner != clientId && serviceState.IPC.HasConnection(owner))
             {
-                await PromoteAsync(serviceState, owner).ConfigureAwait(false);
+                await PromoteAsync(serviceState, owner, excludeClientId: clientId).ConfigureAwait(false);
                 logger.LogInformation("Controlling connection {ClientId} left; control reverted to owner {Owner}. Id: {Id}", clientId, owner, id);
                 return;
             }
@@ -90,7 +103,7 @@ namespace PeakSWC.RemoteWebView
         /// SendMessage gate; the sequence counter is then reset so the new controller (which resets its own outgoing
         /// sequence on the primaryChanged notice) lines up at 1; finally browsers are told who now has control.
         /// </summary>
-        private static async Task PromoteAsync(ServiceState serviceState, string targetClientId)
+        private static async Task PromoteAsync(ServiceState serviceState, string targetClientId, string? excludeClientId = null)
         {
             serviceState.PrimaryClientId = targetClientId;
 
@@ -107,6 +120,7 @@ namespace PeakSWC.RemoteWebView
             }
 
             serviceState.IPC.SetPrimary(targetClientId);
+            serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId);
         }
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
@@ -136,7 +150,10 @@ namespace PeakSWC.RemoteWebView
 
                 // The first primary connection to send claims control for the session.
                 if (request.IsPrimary && string.IsNullOrEmpty(serviceState.PrimaryClientId))
+                {
                     serviceState.PrimaryClientId = request.ClientId;
+                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                }
 
                 // Only the controlling connection's input reaches the WebView; every other connection is read-only.
                 // Control moves at runtime via SetPrimary, so this is keyed on the live PrimaryClientId, not the

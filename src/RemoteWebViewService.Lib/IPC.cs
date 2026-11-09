@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Drawing;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -90,6 +91,37 @@ namespace PeakSWC.RemoteWebView
             {
                 foreach (var brn in observers.Keys)
                     brn.IsPrimary = brn.ClientId == primaryClientId;
+                foreach (var observer in observers.Values)
+                    observer.Writer.TryWrite(notice);
+            }
+        }
+
+        /// <summary>
+        /// Control transfer: tell every attached browser the current roster — each connection's clientId and whether it
+        /// is the owner (the local control surface) or the current controller — so each control bubble can show who is
+        /// present and who holds control, and name the other party for a hand-off. <paramref name="excludeClientId"/> is
+        /// a connection that is leaving and may not have been removed from the observer set yet.
+        /// </summary>
+        public void BroadcastParticipants(string ownerClientId, string primaryClientId, string? excludeClientId = null)
+        {
+            var sb = new StringBuilder("participants:[");
+            lock (browserStateLock)
+            {
+                bool first = true;
+                foreach (var brn in observers.Keys)
+                {
+                    if (brn.ClientId == excludeClientId)
+                        continue;
+                    if (!first)
+                        sb.Append(',');
+                    first = false;
+                    sb.Append("{\"id\":").Append(JsonSerializer.Serialize(brn.ClientId))
+                      .Append(",\"owner\":").Append(brn.ClientId == ownerClientId ? "true" : "false")
+                      .Append(",\"primary\":").Append(brn.ClientId == primaryClientId ? "true" : "false")
+                      .Append('}');
+                }
+                sb.Append(']');
+                var notice = new StringRequest { Request = sb.ToString() };
                 foreach (var observer in observers.Values)
                     observer.Writer.TryWrite(notice);
             }

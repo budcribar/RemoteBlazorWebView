@@ -97,27 +97,37 @@ export function requestPrimary(targetClientId: string) {
     });
 }
 
+// Apply a controller change to this page: take local input back when we gain control, lock it when we lose it,
+// and keep the control bubble in step. Driven by both 'primaryChanged:' and the 'participants:' roster.
+function applyPrimary(nowPrimary: boolean) {
+    if (nowPrimary && !window.RemoteBlazor.isPrimary) {
+        // Gained control: realign the outgoing sequence with the relay's reset, then take local input back.
+        window.RemoteBlazor.sequenceNum = 1;
+        window.RemoteBlazor.isPrimary = true;
+        makePageEditable();
+        ensureScrollSync();
+    } else if (!nowPrimary && window.RemoteBlazor.isPrimary) {
+        window.RemoteBlazor.isPrimary = false;
+        makePageReadOnly();
+    }
+    bubbleSetPrimary(window.RemoteBlazor.isPrimary);
+}
+
 // Intercept the relay's control-channel messages before they reach the Blazor IPC parser.
 function receiveControl(message: string): boolean {
     if (message.startsWith('primaryChanged:')) {
         const primaryId = message.substring('primaryChanged:'.length);
-        const nowPrimary = primaryId === window.RemoteBlazor.clientId;
-        if (nowPrimary && !window.RemoteBlazor.isPrimary) {
-            // Gained control: realign the outgoing sequence with the relay's reset, then take local input back.
-            window.RemoteBlazor.sequenceNum = 1;
-            window.RemoteBlazor.isPrimary = true;
-            makePageEditable();
-            ensureScrollSync();
-        } else if (!nowPrimary && window.RemoteBlazor.isPrimary) {
-            window.RemoteBlazor.isPrimary = false;
-            makePageReadOnly();
-        }
-        bubbleSetPrimary(window.RemoteBlazor.isPrimary);
+        applyPrimary(primaryId === window.RemoteBlazor.clientId);
         return true;
     }
     if (message.startsWith('participants:')) {
         try {
-            setParticipants(JSON.parse(message.substring('participants:'.length)) as Participant[]);
+            const roster = JSON.parse(message.substring('participants:'.length)) as Participant[];
+            setParticipants(roster);
+            // The roster is authoritative for who holds control: reconcile this page with it, so a just-joined
+            // connection that still defaults to primary (the /app page) is locked while the owner holds control.
+            const me = roster.find(p => p.id === window.RemoteBlazor.clientId);
+            if (me) applyPrimary(me.primary);
         } catch { /* ignore a malformed roster */ }
         return true;
     }
