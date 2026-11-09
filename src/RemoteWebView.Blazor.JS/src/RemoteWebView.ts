@@ -24,6 +24,10 @@ declare global {
     }
 }
 
+// Set before the deferred voice client runs, so it exposes window.RemoteVoice instead of drawing its own panel.
+// (The Window.RemoteVoiceHeadless/RemoteVoice globals are declared in ControlBubble.ts, imported below.)
+window.RemoteVoiceHeadless = true;
+
 if (!window.RemoteBlazor) {
     window.RemoteBlazor = {} as RemoteBlazor;
 }

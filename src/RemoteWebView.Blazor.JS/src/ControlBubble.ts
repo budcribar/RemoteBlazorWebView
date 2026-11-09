@@ -10,6 +10,29 @@ export interface Participant {
     primary: boolean;
 }
 
+// The headless voice client (VoiceClient.js) exposes this once it is on the page; the dock renders its controls.
+export interface VoiceState {
+    state: string;
+    statusText: string;
+    actLabel: string; canAct: boolean;
+    endLabel: string; canEnd: boolean;
+    muteLabel: string; canMute: boolean;
+}
+
+export interface RemoteVoiceApi {
+    subscribe(cb: (s: VoiceState) => void): void;
+    act(): void;
+    hangup(): void;
+    toggleMute(): void;
+}
+
+declare global {
+    interface Window {
+        RemoteVoiceHeadless?: boolean;
+        RemoteVoice?: RemoteVoiceApi;
+    }
+}
+
 interface BubbleOptions {
     myClientId: string;
     isOwner: boolean;
@@ -30,7 +53,12 @@ let root: HTMLElement | null = null;
 let statusEl: HTMLElement | null = null;
 let giveBtn: HTMLButtonElement | null = null;
 let takeBtn: HTMLButtonElement | null = null;
-let voiceSlot: HTMLElement | null = null; // filled in by the voice integration
+let voiceSlot: HTMLElement | null = null;
+let voiceStatus: HTMLElement | null = null;
+let voiceAct: HTMLButtonElement | null = null;
+let voiceMuteBtn: HTMLButtonElement | null = null;
+let voiceEnd: HTMLButtonElement | null = null;
+let voiceBound = false;
 
 function other(): Participant | undefined {
     // The other control party. From the owner, that is the non-owner (the technician); from the technician, the owner.
@@ -68,7 +96,18 @@ function build() {
 
     voiceSlot = document.createElement('span');
     voiceSlot.id = '__remote-control-voice-slot';
-    voiceSlot.style.cssText = 'display:flex;align-items:center;gap:8px';
+    voiceSlot.style.cssText = 'display:flex;align-items:center;gap:8px;border-left:1px solid #39404d;padding-left:8px';
+
+    // Voice controls, driven by window.RemoteVoice; hidden until voice is present and reports state.
+    voiceStatus = document.createElement('span');
+    voiceStatus.style.cssText = 'white-space:nowrap;opacity:.85';
+    voiceStatus.hidden = true;
+    voiceAct = button('Voice call', () => window.RemoteVoice?.act());
+    voiceMuteBtn = button('Mute', () => window.RemoteVoice?.toggleMute());
+    voiceEnd = button('Hang up', () => window.RemoteVoice?.hangup());
+    voiceAct.hidden = voiceMuteBtn.hidden = voiceEnd.hidden = true;
+    voiceSlot.hidden = true; // shown once voice binds
+    voiceSlot.append(voiceStatus, voiceAct, voiceMuteBtn, voiceEnd);
 
     root.append(statusEl, giveBtn, takeBtn, voiceSlot);
     document.body.appendChild(root);
@@ -98,16 +137,30 @@ function startSwitch(targetClientId: string) {
     opts.requestPrimary(targetClientId);
 }
 
-/** The bubble's mount point for the voice controls (call/mute/end). Created lazily so voice can attach any time. */
-export function voiceMount(): HTMLElement | null {
-    build();
-    return voiceSlot;
+// The voice client loads separately (relay-injected on the controller, WPF-injected on the owner) and may appear
+// before or after the dock, so bind on its ready event as well as checking for it now.
+function bindVoice() {
+    if (voiceBound || !window.RemoteVoice) return;
+    voiceBound = true;
+    if (voiceSlot) voiceSlot.hidden = false;
+    window.RemoteVoice.subscribe(renderVoice);
+}
+
+function renderVoice(s: VoiceState) {
+    if (!voiceStatus || !voiceAct || !voiceMuteBtn || !voiceEnd) return;
+    voiceStatus.textContent = s.statusText || '';
+    voiceStatus.hidden = !s.statusText;
+    voiceAct.textContent = s.actLabel; voiceAct.hidden = !s.canAct;
+    voiceMuteBtn.textContent = s.muteLabel; voiceMuteBtn.hidden = !s.canMute;
+    voiceEnd.textContent = s.endLabel; voiceEnd.hidden = !s.canEnd;
 }
 
 export function initControlBubble(options: BubbleOptions) {
     opts = options;
     build();
     render();
+    if (window.RemoteVoice) bindVoice();
+    else window.addEventListener('remotevoiceready', bindVoice);
 }
 
 /** Relay roster update ("participants:"). */
