@@ -216,9 +216,11 @@ namespace FileSyncServer.Tests.Remote
             await owner.Locator(".btn").ClickAsync();
             await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
 
-            // The button is opt-in: an app asks for it on the bar's placeholder. The tutorial app has no placeholder, so add one.
+            // The button is opt-in: an app asks for it on the bar's placeholder. The tutorial app has no placeholder, so add one,
+            // pinned to the top of the window: the bar sits exactly over its placeholder, and one at the end of the page would
+            // put the bar below what the browser shows.
             await Expect(owner.Locator(".rbwv-control-restart")).ToHaveCountAsync(0);
-            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" data-restart=\"true\"></div>')");
+            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" data-restart=\"true\" style=\"position:fixed;top:4px;right:8px\"></div>')");
 
             await owner.Locator(".rbwv-control-restart").ClickAsync();
             await Expect(owner.Locator(".rbwv-control-question")).ToHaveTextAsync("Restart the app?", Soon);

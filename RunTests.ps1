@@ -2,6 +2,9 @@
  param(
         [string] $Mode = 'Developer',
         [switch] $Build = $false,
+        # Runs only part of the desktop and browser suite (a dotnet test --filter expression), for a quick check before the
+        # full run, e.g. -Filter "FullyQualifiedName~SharedControl|Name=Test1Client". The quick suites still run in full.
+        [string] $Filter = '',
 		[switch] $Rust = $false
     )
 
@@ -609,7 +612,12 @@ if ($Build -ne $true) {
 
     # Run the first test
     $logfile1 = "FileSyncServerTestLog_$timestamp.html"
-    & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1"
+    if ($Filter) {
+        Write-Host -ForegroundColor Yellow "Partial run: only tests matching '$Filter'. Run again without -Filter before a release."
+        & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1" --filter $Filter
+    } else {
+        & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1"
+    }
     $testExit = $LASTEXITCODE
     if ($testExit -ne 0) {
         Write-Error "dotnet test failed with exit code $testExit. The HTML log was not opened."
