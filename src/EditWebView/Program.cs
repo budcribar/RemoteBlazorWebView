@@ -14,6 +14,9 @@ static class Program
     {
         try
         {
+            // What already differs from the last commit, so the summary can say when not everything in it is from this run.
+            var changedBefore = ChangeReport.ChangedBefore(RepoPath);
+
             string latestAspNetCoreUrl = await Utility.GetLatestFrameworkVersionAsync(AspNetCoreRepo, TargetMajorVersion);
             Console.WriteLine($"Latest ASP.NET Core Version {TargetMajorVersion} URL: {latestAspNetCoreUrl}");
 
@@ -23,6 +26,8 @@ static class Program
             await ProcessAspNetFramework(latestAspNetCoreUrl);
             await ProcessMauiFramework(latestMauiUrl);
             UpdateLocalFiles();
+
+            ChangeReport.Print(RepoPath, ChangeReport.TagFromUrl(latestAspNetCoreUrl), ChangeReport.TagFromUrl(latestMauiUrl), changedBefore);
         }
         catch (Exception ex)
         {
@@ -126,6 +131,7 @@ static class Program
         if (File.Exists(reconnectEvent))
         {
             Console.WriteLine($"  ok (upstream has it): {Path.GetFileName(reconnectEvent)}");
+            ChangeReport.Patches.Add((Path.GetFileName(reconnectEvent), "not needed, upstream has the file", false));
         }
         else
         {
@@ -140,6 +146,7 @@ static class Program
                 "  remote?: boolean;\n" +
                 "}\n");
             Console.WriteLine($"  added: {Path.GetFileName(reconnectEvent)}");
+            ChangeReport.Patches.Add((Path.GetFileName(reconnectEvent), "added", false));
         }
     }
 
@@ -150,6 +157,7 @@ static class Program
         if (!File.Exists(path))
         {
             WarnPatch($"PATCH NOT APPLIED: {name} is not in the upstream tree any more ({path}).");
+            ChangeReport.Patches.Add((name, "NOT APPLIED, the file is no longer in the upstream tree", true));
             return;
         }
 
@@ -159,14 +167,17 @@ static class Program
             string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
             File.WriteAllText(path, text.Replace(upstream, ours.Replace("\n", newline), StringComparison.Ordinal));
             Console.WriteLine($"  patched: {name}");
+            ChangeReport.Patches.Add((name, "applied", false));
         }
         else if (text.Contains(appliedMarker, StringComparison.Ordinal))
         {
             Console.WriteLine($"  ok (already patched): {name}");
+            ChangeReport.Patches.Add((name, "already in place", false));
         }
         else
         {
             WarnPatch($"PATCH NOT APPLIED: {name} no longer contains the upstream text this patch replaces: {upstream.Trim()}");
+            ChangeReport.Patches.Add((name, "NOT APPLIED, upstream changed the text it replaces", true));
         }
     }
 
