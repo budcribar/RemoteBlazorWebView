@@ -16,6 +16,8 @@ interface RemoteBlazor {
     clientId: string;
     isPrimary: boolean;
     isOwner: boolean;
+    /** This page was opened as a read-only /mirror page. Fixed for the page's life, unlike isPrimary, which follows control. */
+    isMirrorPage: boolean;
     grpcHost?: string;
 }
 
@@ -37,6 +39,7 @@ window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
 window.RemoteBlazor.isPrimary = true;
 window.RemoteBlazor.isOwner = false;
+window.RemoteBlazor.isMirrorPage = false;
 // In a sandboxed iframe without allow-same-origin the page's origin is opaque and location.origin is the string "null".
 // The page was still loaded from the relay, so its scheme and host are the relay's.
 const locationOrigin = window.location.origin === 'null'
@@ -187,6 +190,7 @@ export function initializeRemoteWebView() {
     const startedAsMirror = id === 'mirror';
     if (startedAsMirror) {
         id = pathParts[2];
+        window.RemoteBlazor.isMirrorPage = true;
         window.RemoteBlazor.isPrimary = false;
         makePageReadOnly();
         // Before any render batch arrives: remote component frames on a mirror load the relay's mirror view, never the component's page.
