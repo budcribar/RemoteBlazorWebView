@@ -7,6 +7,8 @@ import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest, RestartRequest } from "./generated/webview_pb";
 import { initControl, setParticipants, setPrimary, setRestarting, Participant } from './RemoteControl';
 import { initSessionControls } from './SessionControls';
+import { connectionLost } from './ConnectionLost';
+import { giveControlToWhoeverJoins } from './UnattendedControl';
 import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
 import { showErrorNotification } from '../Web.JS/src/BootErrors';
@@ -162,6 +164,22 @@ function comeBackAfterRestart() {
     setTimeout(attempt, COME_BACK_FIRST_TRY_MS);
 }
 
+// The stream from the session closed. After a restart notice that is expected, and the page waits for the new copy.
+// Otherwise the connection was lost: say so, and on a page that can be loaded again without disturbing the session
+// (a /mirror page in a browser), come back once the session answers. See ConnectionLost.ts.
+let leaving = false;
+function streamClosed() {
+    if (restartPending) { comeBackAfterRestart(); return; }
+    // Leaving the page closes the stream too, and a frame's state is its parent page's business.
+    if (leaving || isFramed()) return;
+    const inAppWindow = !!(window as unknown as { chrome?: { webview?: unknown } }).chrome?.webview;
+    connectionLost({
+        canReturn: window.RemoteBlazor.isMirrorPage && !inAppWindow,
+        address: window.location.href,
+        reload: () => window.location.reload(),
+    });
+}
+
 // Apply a controller change to this page: take local input back when we gain control, lock it when we lose it,
 // and publish control state for the app's UI. Driven by both 'primaryChanged:' and the 'participants:' roster.
 function applyPrimary(nowPrimary: boolean) {
@@ -293,16 +311,10 @@ export function initializeRemoteWebView() {
         else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
     }
     // Unattended sessions (?control=remote on the owner's page): the remote user gets control on joining, with
-    // nobody at the machine handing it over. Once per remote user, so the owner can take control back and keep it.
-    if (window.RemoteBlazor.isOwner && !isFramed() && new URLSearchParams(window.location.search).get('control') === 'remote') {
-        const given = new Set<string>();
-        window.RemoteControl?.subscribe(state => {
-            if (!state.iHaveControl) return;
-            const remoteUser = state.participants.find(p => !p.owner && p.id !== state.myClientId);
-            if (!remoteUser || given.has(remoteUser.id)) return;
-            given.add(remoteUser.id);
-            requestPrimary(remoteUser.id);
-        });
+    // nobody at the machine handing it over. See UnattendedControl.ts.
+    if (window.RemoteBlazor.isOwner && !isFramed() && new URLSearchParams(window.location.search).get('control') === 'remote' && window.RemoteControl) {
+        const control = window.RemoteControl;
+        giveControlToWhoeverJoins({ subscribe: callback => control.subscribe(callback), requestPrimary });
     }
     initParentFrameControl(() => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });
     initFrameControl();
@@ -336,14 +348,17 @@ export function initializeRemoteWebView() {
             makePageReadOnly();
     });
 
+    window.addEventListener('pagehide', () => { leaving = true; });
+    window.addEventListener('beforeunload', () => { leaving = true; });
+
     stream.on('error', (err: RpcError) => {
         console.error("grpc error", err.code, err.message);
-        if (restartPending) comeBackAfterRestart();
+        streamClosed();
     });
 
     stream.on('end', () => {
         console.log("BrowserIPC.ReceiveMessage: stream ended");
-        if (restartPending) comeBackAfterRestart();
+        streamClosed();
     });
 }
 

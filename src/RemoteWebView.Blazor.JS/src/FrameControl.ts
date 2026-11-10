@@ -66,10 +66,18 @@ export function initParentFrameControl(onIdentityReady: () => void) {
         onIdentityReady();
     });
 
+    // Working out a frame identity takes a moment (it is a hash), so two control changes close together can finish
+    // out of order. Only the answer for the latest change is used, or the frames would be left following the earlier one.
+    let latestChange = 0;
     window.RemoteControl?.subscribe(state => {
         const primary = state.participants.find(p => p.primary);
         if (!primary) return;
-        void panelClientId(primary.id).then(id => { desiredForFrames = id; postToFrames(); });
+        const change = ++latestChange;
+        void panelClientId(primary.id).then(id => {
+            if (change !== latestChange) return;
+            desiredForFrames = id;
+            postToFrames();
+        });
     });
 
     window.addEventListener('message', e => {

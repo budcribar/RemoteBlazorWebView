@@ -15,6 +15,7 @@ Upgrade the relay (RemoteWebViewService) and the packages together: the new feat
   The wording is neutral ("The host", "Remote user"); `data-host-name` / `data-remote-name` rename the two parties. `window.RemoteControl` exposes the state for a custom UI.
 - **Restart button** (opt-in: `data-restart="true"` on the placeholder). Whoever has control, and the owner, can restart the app from the session bar. The app receives the existing `Refreshed` event; browser pages wait for the new copy and come back by themselves.
 - Fixes found in a review of shared control: a message from before a hand-off could later replace a real one; a browser joining could stop all input reaching the app; the remote user lost voice by refreshing; two hand-offs at once could leave browsers and relay disagreeing.
+- **A lost connection is shown.** A browser page whose connection to the session drops says so instead of staying on screen with nothing working. A `/mirror` page waits for the session and loads again by itself, rebuilt to the current state; a remote user who had control is then a viewer until given control again (at once in an unattended session).
 - **Voice call** between the owner and the remote user (`EnableVoice`, https relay).
 - **`BlazorWebView.NavigateToUrl(Uri)`** (WPF and WinForms): load a page in the control's own WebView once it is ready.
 - **Source generator:** `[RemoteBlazor(..., ShareControl = true)]` and `Unattended = true`; diagnostic RBW011. A `Voice` option (RBW012 on WinForms); `--unattended` and `--voice` at run time; `InitializeRemoteBlazor(new RemoteBlazorStartup { ... })` for apps that work their settings out themselves; `RestartOnRefresh` now gives the new copy this run's own command line and still restarts an app whose window is not responding.
@@ -28,6 +29,15 @@ Upgrade the relay (RemoteWebViewService) and the packages together: the new feat
 - Host crash when a `/mirror` page in control sent the connect handshake.
 - Trimmed / native (AOT) relay: voice messages, the participants list, the status endpoint and settings no longer rely on reflection.
 - Build warnings: MSB3277 (WebView2 WPF assembly in non-WPF projects), RS1032.
+
+- Unattended sessions: the automatic hand-over of control is repeated when the first request does not take.
+- Remote components could be left following the previous controller after two quick changes of control.
+
+### Known issues
+
+- A drop on the app's side (the machine loses its connection to the relay, or the relay restarts) ends the session. The pages say so; the app has to be started again to carry on under the same link.
+- The owner's own page (the app's window in a shared session) does not come back by itself after a lost connection; if it held control, the session ends.
+- A JavaScript interop call that is waiting for its answer at the moment control changes hands does not complete.
 
 ### Behaviour changes
 

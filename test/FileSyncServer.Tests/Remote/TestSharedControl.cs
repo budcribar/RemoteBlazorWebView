@@ -193,6 +193,38 @@ namespace FileSyncServer.Tests.Remote
         }
 
         [Fact]
+        public async Task A_viewer_that_loses_its_connection_says_so_and_comes_back_by_itself()
+        {
+            await _fixture.Startup(1);
+            var owner = _fixture.Owner;
+            await _fixture.WaitForTheAppWindowToJoin();
+            await SharedControlFixture.OpenCounter(owner);
+            await owner.Locator(".btn").ClickAsync();
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+            var viewer = await _fixture.OpenMirror();
+            await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 20000 });
+            await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
+
+            // The viewer's network goes away: its page says so instead of standing there looking alive.
+            await viewer.Context.SetOfflineAsync(true);
+            await Expect(viewer.Locator("#rbwv-connection-lost")).ToContainTextAsync("Connection lost", new LocatorAssertionsToContainTextOptions { Timeout = 30000 });
+
+            // The session carries on without it.
+            await owner.Locator(".btn").ClickAsync();
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 2", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+            // The network returns: the page loads again by itself and shows the session as it is now.
+            await viewer.Context.SetOfflineAsync(false);
+            await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 2", new LocatorAssertionsToContainTextOptions { Timeout = 45000 });
+            await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
+            await Expect(SharedControlFixture.Status(viewer)).ToHaveTextAsync("View only", Soon);
+
+            await owner.Locator(".btn").ClickAsync();
+            await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 3", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+        }
+
+        [Fact]
         public async Task An_unattended_session_gives_control_as_soon_as_someone_joins_and_only_once()
         {
             _fixture.OwnerQuery = "?role=owner&control=remote";
