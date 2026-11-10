@@ -12,10 +12,12 @@
 //
 // Options on the placeholder:
 //   data-share-link="true"            -> show a "Copy link" button (owner only) for the join link
+//   data-restart="true"               -> show a "Restart app" button (whoever has control, and the owner) that restarts
+//                                        the app; every page then waits for the new copy and comes back by itself
 //   data-host-name / data-remote-name -> what to call the two parties in "... has control" (default "The host" / "Remote user")
 // Styling: rbwv-control-bar (container; plus rbwv-control-slotted or rbwv-control-floating), rbwv-control-dot (plus
 // rbwv-control-dot-on while anyone is connected remotely), rbwv-control-status,
-// rbwv-control-btn, rbwv-control-give / -take / -copy, rbwv-voice-status, rbwv-voice-act / -mute / -end. Built-in
+// rbwv-control-btn, rbwv-control-give / -take / -copy / -restart / -confirm / -cancel, rbwv-control-question, rbwv-voice-status, rbwv-voice-act / -mute / -end. Built-in
 // defaults use :where() (zero specificity), so any app rule overrides them.
 //
 // Buttons are added and removed by state (never hidden with CSS), so an app's global button styles cannot reveal one.
@@ -34,6 +36,9 @@ let switchTimer: ReturnType<typeof setTimeout> | undefined;
 let copied = false;
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 let placeQueued = false;
+let confirmingRestart = false;
+let confirmTimer: ReturnType<typeof setTimeout> | undefined;
+const CONFIRM_TIMEOUT_MS = 6000;
 
 const DEFAULT_STYLES = `
 :where(.rbwv-control-bar){display:flex;align-items:center;gap:8px;white-space:nowrap;box-sizing:border-box}
@@ -148,6 +153,23 @@ function showShareLink(): boolean {
     return !!control?.isOwner && (!slot || slot.dataset.shareLink === 'true');
 }
 
+function showRestart(): boolean {
+    // Opt-in on the placeholder only (never on the floating bar). The relay allows the controller and the owner.
+    return !!control && slot?.dataset.restart === 'true' && (control.iHaveControl || control.isOwner);
+}
+
+function askRestart() {
+    confirmingRestart = true;
+    clearTimeout(confirmTimer);
+    confirmTimer = setTimeout(() => { confirmingRestart = false; render(); }, CONFIRM_TIMEOUT_MS);
+    render();
+}
+
+function endConfirm() {
+    confirmingRestart = false;
+    clearTimeout(confirmTimer);
+}
+
 function button(text: string, cls: string, onClick: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
@@ -175,6 +197,13 @@ function render() {
 
     bar.append(connectionDot());
 
+    // Restarting: nothing here can be used until the new copy is up and this page has loaded again.
+    if (control.restarting) {
+        bar.append(span('Restarting…', 'rbwv-control-status'));
+        schedulePlace();
+        return;
+    }
+
     if (switching) {
         bar.append(span('Switching control…', 'rbwv-control-status'));
     } else {
@@ -197,6 +226,18 @@ function render() {
 
     if (showShareLink() && control.shareUrl)
         bar.append(button(copied ? 'Copied' : 'Copy link', 'rbwv-control-copy', copyShareLink));
+
+    if (showRestart()) {
+        if (confirmingRestart) {
+            bar.append(span('Restart the app?', 'rbwv-control-question'));
+            bar.append(button('Restart', 'rbwv-control-confirm', () => { endConfirm(); render(); window.RemoteControl?.requestRestart(); }));
+            bar.append(button('Cancel', 'rbwv-control-cancel', () => { endConfirm(); render(); }));
+        } else {
+            bar.append(button('Restart app', 'rbwv-control-restart', askRestart));
+        }
+    } else if (confirmingRestart) {
+        endConfirm(); // lost control while the question was showing
+    }
 
     if (voice) {
         if (voice.statusText) bar.append(span(voice.statusText, 'rbwv-voice-status'));

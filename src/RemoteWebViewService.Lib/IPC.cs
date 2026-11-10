@@ -15,6 +15,7 @@ namespace PeakSWC.RemoteWebView
     public class IPC 
     {
         public const string ScrollMessagePrefix = "mirror-scroll:";
+        public const string RestartingMessage = "restarting:";
         private readonly object browserStateLock = new();
         private readonly SemaphoreSlim clientWriteLock = new(1, 1);
         private StringRequest? latestScroll;
@@ -93,6 +94,20 @@ namespace PeakSWC.RemoteWebView
             {
                 foreach (var brn in observers.Keys)
                     brn.IsPrimary = brn.ClientId == primaryClientId;
+                foreach (var observer in observers.Values)
+                    observer.Writer.TryWrite(notice);
+            }
+        }
+
+        /// <summary>
+        /// Tells every attached browser that the app is about to restart ("restarting:"), so each page waits for the new
+        /// copy and comes back by itself. Sent straight to each browser, not through message history.
+        /// </summary>
+        public void BroadcastRestarting()
+        {
+            var notice = new StringRequest { Request = RestartingMessage };
+            lock (browserStateLock)
+            {
                 foreach (var observer in observers.Values)
                     observer.Writer.TryWrite(notice);
             }

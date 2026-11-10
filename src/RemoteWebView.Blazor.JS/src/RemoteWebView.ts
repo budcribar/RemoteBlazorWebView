@@ -4,8 +4,8 @@ import { initFrameControl, initParentFrameControl, isFramed, readFrameIdentity }
 import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
-import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest } from "./generated/webview_pb";
-import { initControl, setParticipants, setPrimary, Participant } from './RemoteControl';
+import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest, RestartRequest } from "./generated/webview_pb";
+import { initControl, setParticipants, setPrimary, setRestarting, Participant } from './RemoteControl';
 import { initSessionControls } from './SessionControls';
 import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
@@ -110,6 +110,58 @@ export function requestPrimary(targetClientId: string) {
     });
 }
 
+// Session id from this page's address: /<id>/... for the app's page, /mirror/<id> for a read-only page.
+function sessionId(): string {
+    const parts = window.location.pathname.split('/');
+    return parts[1] == 'mirror' ? parts[2] : parts[1];
+}
+
+// Restart: ask the relay to restart the app. The relay decides whether this connection may.
+export function requestRestart() {
+    const req = new RestartRequest();
+    req.setId(sessionId());
+    req.setClientid(window.RemoteBlazor.clientId);
+    client.restart(req, {}, (err: RpcError | null, _response: Empty) => {
+        if (err) console.log("Restart grpc error", err.code, err.message);
+    });
+}
+
+// The app is restarting. The old copy's session ends (this page's stream closes); the new copy starts under the same
+// id a few seconds later. Wait for it, then load this page again: a /mirror page reloads itself, the app's page goes
+// back through /app/<id> (loading /<id> again would itself count as a refresh and restart the new copy).
+let restartPending = false;
+let comingBack = false;
+const COME_BACK_FIRST_TRY_MS = 2000;
+const COME_BACK_RETRY_MS = 2000;
+const COME_BACK_GIVE_UP_MS = 120000;
+const RESTART_NO_END_MS = 45000;
+
+function comeBackAfterRestart() {
+    if (comingBack || isFramed()) return;
+    // Inside the app's own window (WebView2) there is nothing to come back to: that window belongs to the copy that is
+    // shutting down, and the new copy opens its own. Loading /app here could take the new copy's page from it.
+    if ((window as unknown as { chrome?: { webview?: unknown } }).chrome?.webview) return;
+    comingBack = true;
+    const id = sessionId();
+    const target = window.RemoteBlazor.isMirrorPage
+        ? window.location.href
+        : `${locationOrigin}/app/${id}${window.location.search}`;
+    const started = Date.now();
+
+    const attempt = async () => {
+        if (!window.RemoteBlazor.isMirrorPage) { window.location.replace(target); return; } // /app waits for the new copy itself
+        try {
+            // A mirror page is only served once the new copy is up and its own page is open; until then the relay
+            // answers with an error, which would leave this browser on a dead page.
+            const response = await fetch(target, { cache: 'no-store', credentials: 'same-origin' });
+            if (response.ok) { window.location.reload(); return; }
+        } catch { /* relay not reachable right now; try again */ }
+        if (Date.now() - started > COME_BACK_GIVE_UP_MS) { showErrorNotification(); return; }
+        setTimeout(attempt, COME_BACK_RETRY_MS);
+    };
+    setTimeout(attempt, COME_BACK_FIRST_TRY_MS);
+}
+
 // Apply a controller change to this page: take local input back when we gain control, lock it when we lose it,
 // and publish control state for the app's UI. Driven by both 'primaryChanged:' and the 'participants:' roster.
 function applyPrimary(nowPrimary: boolean) {
@@ -131,6 +183,14 @@ function receiveControl(message: string): boolean {
     if (message.startsWith('primaryChanged:')) {
         const primaryId = message.substring('primaryChanged:'.length);
         applyPrimary(primaryId === window.RemoteBlazor.clientId);
+        return true;
+    }
+    if (message === 'restarting:') {
+        restartPending = true;
+        setRestarting();
+        makePageReadOnly();
+        // Normally the stream closing starts the wait; this covers a stream that never reports its end.
+        setTimeout(comeBackAfterRestart, RESTART_NO_END_MS);
         return true;
     }
     if (message.startsWith('participants:')) {
@@ -223,6 +283,7 @@ export function initializeRemoteWebView() {
         isOwner: window.RemoteBlazor.isOwner,
         shareUrl,
         requestPrimary,
+        requestRestart,
     });
 
     // Each browser draws its own give/take/voice bar (into #rbwv-session-controls if the app provides one). Not inside
@@ -277,10 +338,12 @@ export function initializeRemoteWebView() {
 
     stream.on('error', (err: RpcError) => {
         console.error("grpc error", err.code, err.message);
+        if (restartPending) comeBackAfterRestart();
     });
 
     stream.on('end', () => {
         console.log("BrowserIPC.ReceiveMessage: stream ended");
+        if (restartPending) comeBackAfterRestart();
     });
 }
 

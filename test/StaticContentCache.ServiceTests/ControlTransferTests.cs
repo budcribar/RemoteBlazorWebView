@@ -100,6 +100,102 @@ public class ControlTransferTests
     }
 
     [Fact]
+    public async Task The_controller_can_restart_the_app_and_every_browser_is_told()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        var owner = s.Join("owner", owner: true);
+        var remote = s.Join("remote");
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+        await s.SetPrimary("owner", "remote");
+
+        await s.Restart("remote");
+
+        await WaitFor(() => host.Messages.Contains("refreshed:")); // what a browser refresh sends: apps need nothing new
+        await WaitFor(() => owner.Messages.Contains("restarting:") && remote.Messages.Contains("restarting:"));
+    }
+
+    [Fact]
+    public async Task The_owner_can_restart_the_app_without_having_control()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("owner", owner: true);
+        s.Join("remote");
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+        await s.SetPrimary("owner", "remote");
+
+        await s.Restart("owner");
+
+        await WaitFor(() => host.Messages.Contains("refreshed:"));
+    }
+
+    [Fact]
+    public async Task A_connection_without_control_cannot_restart_the_app()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("owner", owner: true);
+        var remote = s.Join("remote");
+        var viewer = s.Join("viewer");
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+
+        await s.Restart("remote");   // attached, but neither the controller nor the owner
+        await s.Restart("viewer");
+        await s.Restart("stranger"); // not attached at all
+        await s.Restart("");
+        await Task.Delay(200);
+
+        Assert.DoesNotContain("refreshed:", host.Messages);
+        Assert.DoesNotContain("restarting:", remote.Messages);
+        Assert.DoesNotContain("restarting:", viewer.Messages);
+    }
+
+    [Fact]
+    public async Task Pressing_restart_twice_restarts_once()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("owner", owner: true);
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+
+        await s.Restart("owner");
+        await s.Restart("owner");
+        await WaitFor(() => host.Messages.Contains("refreshed:"));
+        await Task.Delay(200);
+
+        Assert.Single(host.Messages, m => m == "refreshed:");
+    }
+
+    [Fact]
+    public async Task An_app_that_does_not_shut_down_after_a_restart_request_is_dropped()
+    {
+        var before = BrowserIPCService.RestartGracePeriod;
+        BrowserIPCService.RestartGracePeriod = TimeSpan.FromMilliseconds(300);
+        try
+        {
+            await using var s = new Session();
+            s.Join("owner", owner: true);
+            await WaitFor(() => s.State.PrimaryClientId == "owner");
+
+            await s.Restart("owner");
+
+            await WaitFor(() => !s.IsRegistered); // the relay gave up on it, as it does after a refresh
+        }
+        finally
+        {
+            BrowserIPCService.RestartGracePeriod = before;
+        }
+    }
+
+    [Fact]
+    public async Task Restart_for_an_unknown_session_does_nothing()
+    {
+        await using var s = new Session();
+        await s.Ipc.Restart(new RestartRequest { Id = Guid.NewGuid().ToString(), ClientId = "a" }, new CallContext(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task The_owner_takes_control_when_it_joins_after_someone_else_claimed_it()
     {
         await using var s = new Session();
@@ -372,13 +468,14 @@ public class ControlTransferTests
     private sealed class Session : IAsyncDisposable
     {
         private readonly List<Connection> connections = [];
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> services;
         public string Id { get; } = Guid.NewGuid().ToString();
         public ServiceState State { get; }
         public BrowserIPCService Ipc { get; }
 
         public Session()
         {
-            var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+            services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
             State = new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Id = Id };
             var source = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
             source.SetResult(State);
@@ -411,6 +508,12 @@ public class ControlTransferTests
         public Task<SendMessageResponse> Send(string clientId, uint sequence) =>
             Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, Sequence = sequence, IsPrimary = true, Message = $"m{sequence}-{clientId}" },
                 new CallContext(CancellationToken.None));
+
+        public Task Restart(string requester) =>
+            Ipc.Restart(new RestartRequest { Id = Id, ClientId = requester }, new CallContext(CancellationToken.None));
+
+        /// <summary>The relay still has this session (false once it has been shut down or dropped).</summary>
+        public bool IsRegistered => services.ContainsKey(Id);
 
         public Task SetPrimary(string requester, string target) =>
             Ipc.SetPrimary(new SetPrimaryRequest { Id = Id, ClientId = requester, Target = target }, new CallContext(CancellationToken.None));

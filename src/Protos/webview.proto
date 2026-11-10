@@ -78,6 +78,13 @@ message SetPrimaryRequest {
     string target = 3;    // the connection to make primary
 }
 
+// Restart: a browser asks the relay to restart the app. The relay enforces policy: the connection that has control
+// and the owner may ask; nobody else. The app is sent the same "refreshed" notice a browser refresh sends.
+message RestartRequest {
+    string id = 1;
+    string clientId = 2;  // the requesting connection
+}
+
 message SendMessageResponse {
     string id = 1;
     bool success = 2;
@@ -171,6 +178,7 @@ service BrowserIPC {
     rpc ReceiveMessage(ReceiveMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
     rpc SetPrimary(SetPrimaryRequest) returns (google.protobuf.Empty);
+    rpc Restart(RestartRequest) returns (google.protobuf.Empty);
 }
 
 enum ClientState {

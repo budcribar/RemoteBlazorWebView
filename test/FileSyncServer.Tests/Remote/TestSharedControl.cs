@@ -208,6 +208,37 @@ namespace FileSyncServer.Tests.Remote
         }
 
         [Fact]
+        public async Task The_restart_button_restarts_the_app_and_the_page_comes_back_by_itself()
+        {
+            await _fixture.Startup(1);
+            var owner = _fixture.Owner;
+            await SharedControlFixture.OpenCounter(owner);
+            await owner.Locator(".btn").ClickAsync();
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+            // The button is opt-in: an app asks for it on the bar's placeholder. The tutorial app has no placeholder, so add one.
+            await Expect(owner.Locator(".rbwv-control-restart")).ToHaveCountAsync(0);
+            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" data-restart=\"true\"></div>')");
+
+            await owner.Locator(".rbwv-control-restart").ClickAsync();
+            await Expect(owner.Locator(".rbwv-control-question")).ToHaveTextAsync("Restart the app?", Soon);
+            await owner.Locator(".rbwv-control-cancel").ClickAsync(); // Cancel changes nothing
+            await Expect(owner.Locator(".rbwv-control-question")).ToHaveCountAsync(0);
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1");
+
+            await owner.Locator(".rbwv-control-restart").ClickAsync();
+            await owner.Locator(".rbwv-control-confirm").ClickAsync();
+
+            // The app restarts on the same session and this page loads again without anyone touching it: a new copy, so
+            // the counter is back at zero and the owner is in control.
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You have control", new LocatorAssertionsToHaveTextOptions { Timeout = 120000 });
+            await SharedControlFixture.OpenCounter(owner);
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 0", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+            await owner.Locator(".btn").ClickAsync();
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+        }
+
+        [Fact]
         public async Task An_app_page_without_an_owner_shows_no_session_bar()
         {
             // The classic setup (a browser drives the app, nobody is the owner, no voice) must look as it did before sharing control existed.

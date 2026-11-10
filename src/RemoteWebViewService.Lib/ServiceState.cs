@@ -34,6 +34,8 @@ namespace PeakSWC.RemoteWebView
 
         /// <summary>The owner's own surface opened the controlling /app page (?role=owner); remote users join at /mirror.</summary>
         public bool OwnerHoldsApp { get; set; }
+        /// <summary>Set (to 1) by the first accepted restart request, so pressing Restart twice restarts once.</summary>
+        public int RestartRequested;
         public string Id { get; init; } = string.Empty;
         public ConcurrentBag<string> IsMirroredConnection { get; set; } = [];
         public bool EnableMirrors { get; set; } = false;       

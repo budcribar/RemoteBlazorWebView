@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Linq;
 #endif
+using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -306,6 +307,58 @@ namespace PeakSWC.RemoteWebView
 
             await PromoteAsync(serviceState, target).ConfigureAwait(false);
             logger.LogInformation("Control transferred. Id: {Id}, from: {From}, to: {To}", request.Id, current, target);
+            return new Empty();
+        }
+
+        /// <summary>How long the app has to shut down after a restart request before the relay drops the session itself.</summary>
+        internal static TimeSpan RestartGracePeriod { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Restart the app from a browser (the session bar's Restart button). Allowed for the connection that has control
+        /// and for the owner, when attached; ignored from anyone else. The app is sent the same "refreshed" notice a browser
+        /// refresh sends, so an app that restarts on Refreshed needs nothing new; browsers are told first, so each page
+        /// waits for the new copy. An app that does not shut down in time is dropped, as with a refresh.
+        /// </summary>
+        public override async Task<Empty> Restart(RestartRequest request, ServerCallContext context)
+        {
+            if (!serviceDictionary.TryGetValue(request.Id, out var tcs) || tcs == null || !tcs.Task.IsCompletedSuccessfully)
+                return new Empty();
+
+            var serviceState = tcs.Task.Result;
+            string requester = request.ClientId;
+            bool allowed = !string.IsNullOrEmpty(requester) && serviceState.IPC.HasConnection(requester) &&
+                (requester == serviceState.PrimaryClientId || requester == serviceState.OwnerClientId);
+
+            if (!allowed)
+            {
+                logger.LogInformation("Restart denied. Id: {Id}, requester: {Requester}, current: {Current}, owner: {Owner}", request.Id, requester, serviceState.PrimaryClientId, serviceState.OwnerClientId);
+                return new Empty();
+            }
+
+            if (Interlocked.Exchange(ref serviceState.RestartRequested, 1) == 1)
+                return new Empty(); // already restarting
+
+            logger.LogInformation("Restart requested. Id: {Id}, requester: {Requester}", request.Id, requester);
+            serviceState.IPC.BroadcastRestarting();
+            await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
+
+            // Not awaited: the browser's request returns now; the session is dropped later only if the app never shuts down.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (!await Endpoints.WaitForClientShutdown(serviceDictionary, request.Id, RestartGracePeriod, TimeSpan.FromMilliseconds(100)).ConfigureAwait(false))
+                    {
+                        logger.LogWarning("App did not shut down after a restart request; dropping the session. Id: {Id}", request.Id);
+                        await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Restart follow-up failed. Id: {Id}", request.Id);
+                }
+            });
+
             return new Empty();
         }
 

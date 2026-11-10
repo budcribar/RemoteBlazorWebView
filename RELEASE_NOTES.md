@@ -13,6 +13,8 @@ Upgrade the relay (RemoteWebViewService) and the packages together: the new feat
 - **Session controls bar.** Each browser draws its own status, *Give control* / *Take control*, *Copy link* and voice buttons,
   in `<div id="rbwv-session-controls">` if the app has one, otherwise floating. A dot shows when anyone is connected remotely.
   The wording is neutral ("The host", "Remote user"); `data-host-name` / `data-remote-name` rename the two parties. `window.RemoteControl` exposes the state for a custom UI.
+- **Restart button** (opt-in: `data-restart="true"` on the placeholder). Whoever has control, and the owner, can restart the app from the session bar. The app receives the existing `Refreshed` event; browser pages wait for the new copy and come back by themselves.
+- Fixes found in a review of shared control: a message from before a hand-off could later replace a real one; a browser joining could stop all input reaching the app; the remote user lost voice by refreshing; two hand-offs at once could leave browsers and relay disagreeing.
 - **Voice call** between the owner and the remote user (`EnableVoice`, https relay).
 - **`BlazorWebView.NavigateToUrl(Uri)`** (WPF and WinForms): load a page in the control's own WebView once it is ready.
 - **Source generator:** `[RemoteBlazor(..., ShareControl = true)]` and `Unattended = true`; diagnostic RBW011.
