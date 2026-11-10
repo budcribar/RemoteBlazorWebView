@@ -46,7 +46,11 @@ Only one connection controls the app at a time; the relay ignores input from eve
 
 **Supervised or unattended.** By default a session is supervised: the owner starts in control and decides when to give it. Add `&control=technician` to the owner's page address (`/app/<id>?role=owner&control=technician`) for an unattended session: the technician is given control as soon as they join, and the owner can still take it back. The app chooses, so its users can pick the policy that suits them.
 
-**Session controls bar.** Each browser draws its own bar (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` where the bar should sit in your layout; without it the bar floats bottom-right. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes. `window.RemoteControl` exposes the same state for a custom UI.
+**Session controls bar.** Each browser draws its own bar (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` where the bar should sit in your layout; without it the bar floats bottom-right. A floating bar only appears when the session has an owner or a voice call, so an app that uses neither looks as it did before. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes. `window.RemoteControl` exposes the same state for a custom UI.
+
+**With the source generator.** `[RemoteBlazor(nameof(RemoteBlazorWebView), ShareControl = true)]` (or `Unattended = true`) generates this setup; see the generator's README.
+
+**Upgrade the relay and the packages together.** Sharing control needs relay and packages 10.0.15 or later on both sides. With an older relay the *Give control* / *Take control* buttons do nothing. An app on older packages keeps working against a 10.0.15 relay.
 
 **Remote components.** A remote component's frame follows the page it is on: it is usable in the browser that controls the app and read-only in the others, and moves with control. Viewers always see it read-only.
 

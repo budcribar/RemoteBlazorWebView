@@ -64,6 +64,21 @@ namespace PeakSWC.RemoteBlazorWebView
         /// </summary>
         public string? ReverseMirror { get; set; }
 
+        /// <summary>
+        /// Shared control: this window shows the app with the person at the PC in control (the owner); the browser joins at the
+        /// read-only link (&lt;server&gt;/mirror/&lt;id&gt;, "Copy link" in the session bar) and is handed control from the bar, and the
+        /// owner can always take it back. One owner, one technician (the first to join), any number of read-only viewers. Put
+        /// &lt;div id="rbwv-session-controls" data-share-link="true"&gt;&lt;/div&gt; where the bar should sit; without it the bar floats.
+        /// Replaces ShowLink; can't be combined with Mirror or ReverseMirror.
+        /// </summary>
+        public bool ShareControl { get; set; }
+
+        /// <summary>
+        /// Shared control where the technician is given control as soon as they join, with nobody at the PC handing it over
+        /// (the owner can still take it back). Implies <see cref="ShareControl"/>.
+        /// </summary>
+        public bool Unattended { get; set; }
+
         /// <summary>When the browser is refreshed, start a fresh copy of the app on the same server and id, and close this window.</summary>
         public bool RestartOnRefresh { get; set; }
 

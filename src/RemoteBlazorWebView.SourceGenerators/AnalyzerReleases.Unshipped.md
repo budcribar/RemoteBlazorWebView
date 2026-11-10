@@ -15,3 +15,4 @@ RBW007 | RemoteBlazorWebView | Warning | Unknown RemoteBlazorMode
 RBW008 | RemoteBlazorWebView | Warning | ServerUri is not used in Runtime mode
 RBW009 | RemoteBlazorWebView | Error | Mirror and ReverseMirror together
 RBW010 | RemoteBlazorWebView | Error | ReverseMirror is not a WebView2
+RBW011 | RemoteBlazorWebView | Error | ShareControl with Mirror or ReverseMirror

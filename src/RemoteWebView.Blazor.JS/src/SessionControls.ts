@@ -231,6 +231,9 @@ function place() {
         bar.style.right = 'auto';
         bar.style.bottom = 'auto';
     } else {
+        // Without a placeholder the bar only appears when there is something to control: a session with an owner
+        // (control can be handed over) or a voice call. An app that uses neither looks exactly as it did before.
+        if (!control.participants.some(p => p.owner) && !voice) { bar.style.display = 'none'; return; }
         bar.style.display = '';
         bar.classList.add('rbwv-control-floating');
         bar.classList.remove('rbwv-control-slotted');

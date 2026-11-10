@@ -15,9 +15,11 @@ namespace PeakSWC.RemoteBlazorWebView
 		{
 			var split = urlToLoad.AbsolutePath.Split('/');
 			// The relay's own pages for a session load in the WebView: the read-only /mirror/<id> page, the controlling
-			// /app/<id> page and the /<id>/... app page it redirects to (an owner surface shows the app here and hands
+			// /app/<id>?role=owner page and the /<id>/... app page it redirects to (an owner surface shows the app here and hands
 			// technicians the mirror link). Anything else is an external link.
-			var isSessionPage = (split.Length == 3 && (split[1] == "mirror" || split[1] == "app") && Guid.TryParse(split[2], out Guid _))
+			// A plain /app/<id> link (the "open in your browser" link apps show) still opens in the system browser, as before.
+			var isOwnerApp = split.Length == 3 && split[1] == "app" && urlToLoad.Query.Contains("role=owner", StringComparison.Ordinal);
+			var isSessionPage = (split.Length == 3 && (split[1] == "mirror" || isOwnerApp) && Guid.TryParse(split[2], out Guid _))
 				|| (split.Length >= 2 && Guid.TryParse(split[1], out Guid _));
 			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data" || isSessionPage) ?
 				UrlLoadingStrategy.OpenInWebView :

@@ -53,6 +53,11 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             "ReverseMirror '{0}' is a {1}; it must be a WebView2 control (a type with a settable Uri Source property), such as <wv2:WebView2 x:Name=\"{0}\" /> with xmlns:wv2=\"clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf\"",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+        public static readonly DiagnosticDescriptor ShareControlAndMirror = new(
+            "RBW011", "ShareControl with Mirror or ReverseMirror",
+            "ShareControl (and Unattended) already puts the app in this window and gives the browser the mirror link; remove Mirror and ReverseMirror",
+            Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
+
         public static readonly DiagnosticDescriptor ServerUriIgnored = new(
             "RBW008", "ServerUri is not used in Runtime mode",
             "ServerUri is only used in Remote mode; in Runtime mode the view is remote only when the app is started with -u=<server uri>. Set Mode = RemoteBlazorMode.Remote (or <RemoteBlazorMode>Remote</RemoteBlazorMode>) to use it.",

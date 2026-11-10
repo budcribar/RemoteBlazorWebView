@@ -222,6 +222,34 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         Assert.Null((string?)view.Html); // no link: the WebView2 shows the app
     }
 
+    [Theory]
+    [InlineData("ShareControl = true", "?role=owner")]
+    [InlineData("Unattended = true", "?role=owner&control=technician")]
+    public void Share_control_shows_the_app_in_this_window_as_the_owner(string option, string query)
+    {
+        var r = GeneratorHarness.Run(Wpf($$"""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", {{option}})]"""));
+        NoErrors(r);
+        Assert.Empty(r.GeneratorDiagnostics);
+        var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
+        Assert.True(remote);
+        Assert.True((bool)view.EnableMirrors); // the browser joins at the mirror link
+        Assert.False((bool)view.HasConnected);
+
+        var id = Guid.NewGuid();
+        view.FireReady(new Uri("https://localhost:5001/"), id);
+        Assert.Equal(new Uri($"https://localhost:5001/app/{id}{query}"), (Uri)view.NavigatedUrl);
+        Assert.Null((string?)view.Html); // no link page: the session bar has Copy link
+    }
+
+    [Theory]
+    [InlineData("ShareControl = true, Mirror = true")]
+    [InlineData("Unattended = true, Mirror = true")]
+    public void Share_control_with_mirror_is_an_error(string options)
+    {
+        var r = GeneratorHarness.Run(Wpf($"[RemoteBlazor(nameof(RemoteBlazorWebView), {options})]"), load: false);
+        Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW011");
+    }
+
     [Fact]
     public void Reverse_mirror_and_mirror_together_is_an_error()
     {

@@ -34,6 +34,8 @@ namespace PeakSWC.RemoteWebView
         public event System.EventHandler<DisconnectedEventArgs>? Disconnected;
         public event System.EventHandler<RefreshedEventArgs>? Refreshed;
         public void NavigateToString(string html) => Html = html;
+        public System.Uri? NavigatedUrl;
+        public void NavigateToUrl(System.Uri url) => NavigatedUrl = url;
         public void Restart() => Restarts++;
         public void FireReady(System.Uri url, System.Guid id) => ReadyToConnect?.Invoke(this, new(id, url));
         public void FireConnected(System.Uri url, System.Guid id) => Connected?.Invoke(this, new(id, url));

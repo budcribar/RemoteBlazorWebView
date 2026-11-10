@@ -49,7 +49,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             var mode = Mode.Runtime;
             var modeFromAttribute = false;
             string? serverUri = null, id = null, reverseMirror = null;
-            bool showLink = true, mirror = false, restartOnRefresh = false, shutdownOnDisconnect = false;
+            bool showLink = true, mirror = false, restartOnRefresh = false, shutdownOnDisconnect = false, shareControl = false, unattended = false;
             foreach (var named in attribute.NamedArguments)
             {
                 switch (named.Key)
@@ -60,6 +60,8 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                     case "ShowLink": showLink = named.Value.Value is true; break;
                     case "Mirror": mirror = named.Value.Value is true; break;
                     case "ReverseMirror": reverseMirror = named.Value.Value as string; break;
+                    case "ShareControl": shareControl = named.Value.Value is true; break;
+                    case "Unattended": unattended = named.Value.Value is true; break;
                     case "RestartOnRefresh": restartOnRefresh = named.Value.Value is true; break;
                     case "ShutdownOnDisconnect": shutdownOnDisconnect = named.Value.Value is true; break;
                 }
@@ -122,6 +124,14 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 }
             }
 
+            // Shared control already decides what this window and the browser show.
+            shareControl |= unattended;
+            if (shareControl && (mirror || reverseMirror is not null))
+            {
+                diagnostics.Add(DiagnosticInfo.Create(Diagnostics.ShareControlAndMirror, attributeLocation));
+                canEmit = false;
+            }
+
             if (serverUri is not null && !Uri.TryCreate(serverUri, UriKind.Absolute, out _))
             {
                 diagnostics.Add(DiagnosticInfo.Create(Diagnostics.BadServerUri, attributeLocation, serverUri));
@@ -137,7 +147,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 type.ContainingNamespace.IsGlobalNamespace ? null : type.ContainingNamespace.ToDisplayString(),
                 new EquatableArray<string>(containing.ToImmutableArray()),
                 type.Name, webView, framework, mode, modeFromAttribute, serverUri, id,
-                showLink, mirror, reverseMirror, restartOnRefresh, shutdownOnDisconnect, canEmit,
+                showLink, mirror, reverseMirror, shareControl, unattended, restartOnRefresh, shutdownOnDisconnect, canEmit,
                 LocationInfo.From(attributeLocation),
                 new EquatableArray<DiagnosticInfo>(diagnostics.ToImmutableArray()));
         }
@@ -262,9 +272,18 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             yield return t.Id is null
                 ? "    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? global::System.Guid.Empty; // Guid.Empty: a new id each run"
                 : $"    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? new global::System.Guid({Literal(t.Id)});";
-            if (t.Mirror || t.ReverseMirror is not null) yield return "    webView.EnableMirrors = true;";
+            if (t.Mirror || t.ReverseMirror is not null || t.ShareControl) yield return "    webView.EnableMirrors = true;";
 
-            if (t.ReverseMirror is not null)
+            if (t.ShareControl)
+            {
+                var query = t.Unattended ? "?role=owner&control=technician" : "?role=owner";
+                yield return "";
+                yield return t.Unattended
+                    ? "    // Shared control, unattended: the app shows in this window as the owner; the technician gets control on joining the mirror link."
+                    : "    // Shared control: the app shows in this window with the owner in control; the browser joins at the mirror link and is handed control.";
+                yield return $"    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{{e.Url}}app/{{e.Id}}{query}\"));";
+            }
+            else if (t.ReverseMirror is not null)
             {
                 yield return "";
                 yield return "    // Reverse mirror: this window uses the app through the server; the system browser gets the read-only mirror.";
