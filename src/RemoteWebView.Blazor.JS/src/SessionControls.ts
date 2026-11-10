@@ -104,8 +104,8 @@ function controller(): Participant | undefined {
 }
 
 function showShareLink(): boolean {
-    // In the app's layout the placeholder opts in; floating (no placeholder) offers it to the owner, who shares the link.
-    return slot ? slot.dataset.shareLink === 'true' : !!control?.isOwner;
+    // Only the owner shares the join link (the placeholder opts in; floating always offers it).
+    return !!control?.isOwner && (!slot || slot.dataset.shareLink === 'true');
 }
 
 function button(text: string, cls: string, onClick: () => void): HTMLButtonElement {

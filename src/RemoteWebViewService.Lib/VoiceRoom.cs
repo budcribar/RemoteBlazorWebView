@@ -83,6 +83,18 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         return _controllerKey;
     }
 
+    /// <summary>The technician's key for the first /mirror page, when the owner's surface holds /app. Granted once.</summary>
+    internal string? TakeControllerForMirror()
+    {
+        lock (_gate)
+        {
+            if (_pageGranted || _pageClaimed)
+                return null;
+            _pageGranted = _pageClaimed = true;
+        }
+        return _controllerKey;
+    }
+
     internal static string ControllerScript(Guid id, string key) =>
         $"""<script defer src="/voice/client.js" data-session="{id}" data-key="{key}"></script>""";
 

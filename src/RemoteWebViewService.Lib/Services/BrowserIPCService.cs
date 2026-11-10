@@ -40,7 +40,18 @@ namespace PeakSWC.RemoteWebView
                 if (request.IsOwner && !serviceState.OwnerControlInitialized)
                 {
                     serviceState.OwnerControlInitialized = true;
-                    await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
+                    var holder = serviceState.PrimaryClientId;
+                    if (string.IsNullOrEmpty(holder) || holder == request.ClientId)
+                    {
+                        // The owner already is (or is first to be) the controller - e.g. its surface is the /app page, which
+                        // sends its connect handshake before this stream opens. Do not reset the sequence: its messages are
+                        // already numbered past 1 and a reset would strand everything it sends afterwards.
+                        serviceState.PrimaryClientId = request.ClientId;
+                        serviceState.IPC.SetPrimary(request.ClientId);
+                        serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                    }
+                    else
+                        await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
                 }
                 else
                     serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);

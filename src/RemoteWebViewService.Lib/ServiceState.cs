@@ -31,6 +31,9 @@ namespace PeakSWC.RemoteWebView
         // connects only after the technician (so the technician may have claimed first); the first owner connection is
         // still promoted so the user starts in control, but only once - later owner reconnects do not grab control back.
         public bool OwnerControlInitialized { get; set; }
+
+        /// <summary>The owner's own surface opened the controlling /app page (?role=owner); technicians join at /mirror.</summary>
+        public bool OwnerHoldsApp { get; set; }
         public string Id { get; init; } = string.Empty;
         public ConcurrentBag<string> IsMirroredConnection { get; set; } = [];
         public bool EnableMirrors { get; set; } = false;       

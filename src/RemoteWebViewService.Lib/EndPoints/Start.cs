@@ -53,7 +53,12 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         channel.Writer.TryWrite($"Connect:{guid}");
                     }
 
-                    serviceState.Voice?.GrantController(context, guid);
+                    // The technician's end of the voice call goes to the technician's page. When the owner's own surface takes
+                    // /app (it already has the host end), the technician joins at /mirror and gets it there instead.
+                    if (context.Request.Query["role"] == "owner")
+                        serviceState.OwnerHoldsApp = true;
+                    else
+                        serviceState.Voice?.GrantController(context, guid);
 
                     // Redirect to the specific GUID page, keeping the query (e.g. ?role=owner, read by the page's script).
                     context.Response.Redirect($"/{guid}{context.Request.QueryString}", permanent: false);
