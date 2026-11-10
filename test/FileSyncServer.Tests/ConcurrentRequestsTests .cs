@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -143,44 +143,58 @@ namespace FileSyncServer.Tests
         {
             // Enable client-side caching
             await Utilities.SetClientCache(false);
-            // (await Utilities.GetClientCache()).Should().BeTrue
-            (await Utilities.GetClientCache()).Should().BeFalse();
-            // Arrange
-            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
-
-            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
-
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-
-            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-            // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            try
             {
-                foreach (var fileName in fileNames)
+                // (await Utilities.GetClientCache()).Should().BeTrue
+                (await Utilities.GetClientCache()).Should().BeFalse();
+                // Arrange
+                var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+
+                var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
+                await using var context = await browser.NewContextAsync();
+
+                var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+
+                // Act
+                for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
                 {
-                    tasks.Add(Task.Run(async () =>
+                    foreach (var fileName in fileNames)
                     {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                        tasks.Add(Task.Run(async () =>
                         {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
+                            var page = await context.NewPageAsync();
+                            try
+                            {
+                                var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                                {
+                                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                                });
+                                var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                                return (fileName, response?.Status ?? -1, content);
+                            }
+                            finally
+                            {
+                                await page.CloseAsync();
+                            }
+                        }));
+                    }
+                }
+
+                var results = await Task.WhenAll(tasks);
+
+                // Assert
+                foreach (var (FileName, Status, Content) in results)
+                {
+                    Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
                 }
             }
-
-            var results = await Task.WhenAll(tasks);
-
-            // Assert
-            foreach (var (FileName, Status, Content) in results)
+            finally
             {
-                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");   
+                await Utilities.SetClientCache(false);
             }
-            await Utilities.SetClientCache(false);
         }
 
         [Fact]
@@ -188,44 +202,58 @@ namespace FileSyncServer.Tests
         {
             // Enable client-side caching
             await Utilities.SetClientCache(true);
-            (await Utilities.GetClientCache()).Should().BeTrue();
-          
-            // Arrange
-            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
-
-            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
-
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-
-            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-            // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            try
             {
-                foreach (var fileName in fileNames)
+                (await Utilities.GetClientCache()).Should().BeTrue();
+          
+                // Arrange
+                var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+
+                var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
+                await using var context = await browser.NewContextAsync();
+
+                var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+
+                // Act
+                for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
                 {
-                    tasks.Add(Task.Run(async () =>
+                    foreach (var fileName in fileNames)
                     {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                        tasks.Add(Task.Run(async () =>
                         {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
+                            var page = await context.NewPageAsync();
+                            try
+                            {
+                                var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                                {
+                                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                                });
+                                var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                                return (fileName, response?.Status ?? -1, content);
+                            }
+                            finally
+                            {
+                                await page.CloseAsync();
+                            }
+                        }));
+                    }
+                }
+
+                var results = await Task.WhenAll(tasks);
+
+                // Assert
+                foreach (var (FileName, Status, Content) in results)
+                {
+                    Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
                 }
             }
-
-            var results = await Task.WhenAll(tasks);
-
-            // Assert
-            foreach (var (FileName, Status, Content) in results)
+            finally
             {
-                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
+                await Utilities.SetClientCache(false);
             }
-            await Utilities.SetClientCache(false);
         }
 
         // Chromium's Windows TCP port randomization fails connect() with WSAENOBUFS
