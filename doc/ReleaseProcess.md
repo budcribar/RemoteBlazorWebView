@@ -36,6 +36,26 @@ SemVer treats a hyphen as the start of a prerelease. `10.0.13-p1` sorts **before
 
 `eng/derive-package-version.sh` implements this and does not edit the tree. The workflow prints the result and uploads it. It does not commit and it does not push. The maintainer commits the two property values in `Directory.Build.props` on the line being released.
 
+## Upstream MAUI and Web.JS sources (`EditWebView`)
+
+`src/EditWebView` refreshes the vendored upstream files from `dotnet/aspnetcore` and `dotnet/maui`:
+
+- Copies `src/Components/Web.JS` from the `dotnet/aspnetcore` tag archive into `src/RemoteWebView.Blazor.JS/Web.JS` (compiled into `dist/remote.blazor.desktop.js`).
+- Transforms `src/BlazorWebView/src/{WindowsForms,Wpf,SharedSource}` from the `dotnet/maui` tag archive into `src/RemoteBlazorWebView.WinForms`, `src/RemoteBlazorWebView.Wpf`, and `src/SharedSource` (`PeakSWC.*` namespaces, `AllowExternalDrop = false`, `NavigateToString`, mirror URL routing, and public visibility).
+
+When to run it:
+
+- Run `EditWebView` when moving to a new major, preview, or RC, or when a servicing release changes `src/Components/Web.JS` in `dotnet/aspnetcore` or publishes a new `dotnet/maui` tag on this line.
+- Skip it for runtime-only servicing releases where neither upstream directory changed.
+
+How to run it on `net10`:
+
+1. Set `GITHUB_PAT` in your environment (used by `Utility.GetLatestFrameworkVersionAsync` to query GitHub tags and commit dates).
+2. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net10.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
+3. Inspect `git diff` carefully before committing:
+   - `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms`, and `src/RemoteWebView.Blazor.JS/Web.JS` directly from upstream, so re-apply any repo-local fixes made on top of the vendored files (for example shared-control, voice, or `NavigateToUrl` additions, and verify `src/RemoteWebView.Blazor.JS/Web.JS/package.json` still points `@microsoft/dotnet-runtime` at `file:../dotnet-runtime` and preserves `Web.JS/src/{tsconfig.json,webpack.config.js}`).
+4. Rebuild `src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js` (`npm run build:production`) and verify the solution builds and tests pass before committing.
+
 ## What a dispatch does
 
 Dispatch **Release packages** on net10. The copy of this workflow on net11 still turns a GA SDK into `{major}.0.0`, so pack net10 from this branch. Inputs:
