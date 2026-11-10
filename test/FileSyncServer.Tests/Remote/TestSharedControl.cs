@@ -230,6 +230,9 @@ namespace FileSyncServer.Tests.Remote
 
             await owner.Locator(".rbwv-control-restart").ClickAsync();
             await owner.Locator(".rbwv-control-confirm").ClickAsync();
+            // Wait for the restart to be under way first: until the relay announces it the bar still says "You have control",
+            // which would be mistaken for the page having come back.
+            await Expect(SharedControlFixture.Status(owner)).ToContainTextAsync("Restarting", new LocatorAssertionsToContainTextOptions { Timeout = 20000 });
 
             // The app restarts on the same session and this page loads again without anyone touching it: a new copy, so
             // the counter is back at zero and the owner is in control.
