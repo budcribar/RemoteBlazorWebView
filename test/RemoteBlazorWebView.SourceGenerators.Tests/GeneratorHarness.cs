@@ -37,6 +37,7 @@ namespace PeakSWC.RemoteWebView
         public System.Uri? NavigatedUrl;
         public void NavigateToUrl(System.Uri url) => NavigatedUrl = url;
         public void Restart() => Restarts++;
+        public System.Action? RestartWhenUnresponsive { get; set; }
         public void FireReady(System.Uri url, System.Guid id) => ReadyToConnect?.Invoke(this, new(id, url));
         public void FireConnected(System.Uri url, System.Guid id) => Connected?.Invoke(this, new(id, url));
         public void FireDisconnected() => Disconnected?.Invoke(this, new());
@@ -60,7 +61,7 @@ namespace System.Windows.Forms
 }
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
-    public class BlazorWebView : PeakSWC.RemoteWebView.StubView { public System.Windows.Dispatcher Dispatcher { get; } = new(); }
+    public class BlazorWebView : PeakSWC.RemoteWebView.StubView { public System.Windows.Dispatcher Dispatcher { get; } = new(); public bool EnableVoice { get; set; } }
 }
 namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 {
@@ -105,14 +106,52 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
     }
 
     /// <summary>Creates the test class, calls InitializeRemoteBlazor() and returns its result plus the view it set up.</summary>
-    public static (bool Remote, dynamic View) Initialize(Assembly assembly, string typeName, string member = "RemoteBlazorWebView")
+    public static (bool Remote, dynamic View) Initialize(Assembly assembly, string typeName, string member = "RemoteBlazorWebView", object? startup = null)
     {
         var type = assembly.GetType(typeName, throwOnError: true)!;
         var instance = Activator.CreateInstance(type)!;
-        var remote = (bool)type.GetMethod("InitializeRemoteBlazor", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(instance, null)!;
+        var remote = (bool)type.GetMethod("InitializeRemoteBlazor", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(instance, [startup])!;
         var view = type.GetField(member, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(instance)
             ?? type.GetProperty(member, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!.GetValue(instance)!;
         return (remote, view);
+    }
+
+    private const BindingFlags Internal = BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+    /// <summary>What a restart did: the argument list of each copy it started, and how often it ended the process.</summary>
+    public sealed class RestartProbe
+    {
+        public List<string[]> Copies { get; } = [];
+        public int Exits;
+    }
+
+    /// <summary>Replaces "start a process" and "end this process" in the generated code, so a restart can be observed.</summary>
+    public static RestartProbe ProbeRestarts(Assembly assembly)
+    {
+        var probe = new RestartProbe();
+        var type = assembly.GetType("PeakSWC.RemoteBlazorWebView.RemoteBlazorRestart", throwOnError: true)!;
+        type.GetProperty("StartProcess", Internal)!.SetValue(null, (Action<System.Diagnostics.ProcessStartInfo>)(info => probe.Copies.Add([.. info.ArgumentList])));
+        type.GetProperty("ExitProcess", Internal)!.SetValue(null, (Action)(() => probe.Exits++));
+        return probe;
+    }
+
+    /// <summary>The command line the generated code reads (after the program name), instead of the test runner's own.</summary>
+    public static void CommandLine(Assembly assembly, params string[] args) =>
+        assembly.GetType("PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine", throwOnError: true)!
+            .GetProperty("ArgsOverride", Internal)!.SetValue(null, (string[])["app.exe", .. args]);
+
+    /// <summary>A RemoteBlazorStartup (internal to the test assembly) with the given values.</summary>
+    public static object Startup(Assembly assembly, Uri? serverUri = null, Guid? id = null, bool? unattended = null, bool? voice = null,
+        Func<Uri, Guid, IEnumerable<string>>? restartArguments = null)
+    {
+        var type = assembly.GetType("PeakSWC.RemoteBlazorWebView.RemoteBlazorStartup", throwOnError: true)!;
+        var startup = Activator.CreateInstance(type, nonPublic: true)!;
+        type.GetProperty("ServerUri", Internal)!.SetValue(startup, serverUri);
+        type.GetProperty("Id", Internal)!.SetValue(startup, id);
+        type.GetProperty("Unattended", Internal)!.SetValue(startup, unattended);
+        type.GetProperty("Voice", Internal)!.SetValue(startup, voice);
+        type.GetProperty("RestartArguments", Internal)!.SetValue(startup, restartArguments);
+        return startup;
     }
 
     public static int StaticInt(Assembly assembly, string typeName, string field) =>

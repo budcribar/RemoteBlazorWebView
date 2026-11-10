@@ -26,7 +26,7 @@ namespace PeakSWC.RemoteBlazorWebView
     }
 
     /// <summary>
-    /// Generates <c>bool InitializeRemoteBlazor()</c> for this window, form or control. Call it after <c>InitializeComponent()</c>.
+    /// Generates <c>bool InitializeRemoteBlazor(RemoteBlazorStartup? startup = null)</c> for this window, form or control. Call it after <c>InitializeComponent()</c>.
     /// It sets up the named PeakSWC BlazorWebView for remote use (the code-behind steps of the RemoteBlazorWebViewTutorial's
     /// ConvertToRemoteBlazor.md) and returns whether the view is remote. The <c>RemoteBlazorMode</c> MSBuild property
     /// (Local, Remote or Runtime), when set, overrides <see cref="Mode"/>.
@@ -79,11 +79,76 @@ namespace PeakSWC.RemoteBlazorWebView
         /// </summary>
         public bool Unattended { get; set; }
 
-        /// <summary>When the browser is refreshed, start a fresh copy of the app on the same server and id, and close this window.</summary>
+        /// <summary>
+        /// A voice call between the person at the PC and the remote user (WPF control only; needs an https server). Also turned
+        /// on at run time by <c>--voice</c> on the command line or <see cref="RemoteBlazorStartup.Voice"/>.
+        /// </summary>
+        public bool Voice { get; set; }
+
+        /// <summary>
+        /// When the browser is refreshed (or Restart is pressed in the session bar), start a fresh copy of the app on the same
+        /// server and id, and close this window. The new copy gets this run's own command line (see
+        /// <see cref="RemoteBlazorStartup.RestartArguments"/> to choose it). If the window is not responding, the new copy is
+        /// still started, from a background thread, and this process is ended.
+        /// </summary>
         public bool RestartOnRefresh { get; set; }
 
         /// <summary>When the browser disconnects (tab closed, navigated away), shut the app down.</summary>
         public bool ShutdownOnDisconnect { get; set; }
+    }
+
+    /// <summary>
+    /// Values the app has already worked out, for <c>InitializeRemoteBlazor(startup)</c>. An app that reads its settings from
+    /// more than the command line (environment, a settings file, saved state) fills in what it knows; anything left null
+    /// comes from the command line and the attribute, as it does when no startup is passed.
+    /// </summary>
+    internal sealed class RemoteBlazorStartup
+    {
+        /// <summary>The server to use. Null: <c>-u=</c> on the command line (then the attribute's ServerUri, in Remote mode).</summary>
+        public global::System.Uri? ServerUri { get; set; }
+
+        /// <summary>The client id. Null: <c>-i=</c> on the command line, then the attribute's Id. Guid.Empty: a new id each run.</summary>
+        public global::System.Guid? Id { get; set; }
+
+        /// <summary>Shared control: give the remote user control on joining. Null: the attribute's Unattended, or <c>--unattended</c>.</summary>
+        public bool? Unattended { get; set; }
+
+        /// <summary>The voice call. Null: the attribute's Voice, or <c>--voice</c>.</summary>
+        public bool? Voice { get; set; }
+
+        /// <summary>
+        /// The command-line arguments for the copy started by RestartOnRefresh, given the server and the session id. Null: this
+        /// run's own arguments, with <c>-u=</c> and <c>-i=</c> set to the session's.
+        /// </summary>
+        public global::System.Func<global::System.Uri, global::System.Guid, global::System.Collections.Generic.IEnumerable<string>>? RestartArguments { get; set; }
+    }
+
+    /// <summary>Starts the new copy for RestartOnRefresh, and ends this one when its window cannot be closed.</summary>
+    internal static class RemoteBlazorRestart
+    {
+        /// <summary>Starts a process. Replaceable (tests).</summary>
+        internal static global::System.Action<global::System.Diagnostics.ProcessStartInfo> StartProcess { get; set; } =
+            info => global::System.Diagnostics.Process.Start(info)?.Dispose();
+
+        /// <summary>Ends this process without the UI thread: exit, and kill it if the exit itself stalls. Replaceable (tests).</summary>
+        internal static global::System.Action ExitProcess { get; set; } = () =>
+        {
+            _ = global::System.Threading.Tasks.Task.Delay(3000).ContinueWith(_ => global::System.Diagnostics.Process.GetCurrentProcess().Kill());
+            global::System.Environment.Exit(0);
+        };
+
+        /// <summary>Starts another copy of this app with the given arguments.</summary>
+        public static void StartCopy(global::System.Collections.Generic.IEnumerable<string> arguments)
+        {
+            var info = new global::System.Diagnostics.ProcessStartInfo
+            {
+                FileName = global::System.Environment.ProcessPath ?? global::System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName,
+                UseShellExecute = false,
+                WorkingDirectory = global::System.AppContext.BaseDirectory,
+            };
+            foreach (var argument in arguments) info.ArgumentList.Add(argument);
+            StartProcess(info);
+        }
     }
 
     /// <summary>Reads the RemoteBlazorWebView command line: <c>-u=&lt;server uri&gt;</c> and <c>-i=&lt;id&gt;</c> (also <c>--u=</c>,
@@ -98,10 +163,59 @@ namespace PeakSWC.RemoteBlazorWebView
         public static global::System.Guid? Id =>
             global::System.Guid.TryParse(Value("i"), out var id) ? id : null;
 
+        /// <summary>The command line to read, when not the process's own (tests).</summary>
+        internal static string[]? ArgsOverride { get; set; }
+
+        private static string[] Args => ArgsOverride ?? global::System.Environment.GetCommandLineArgs();
+
+        private static int PrefixLength(string arg) =>
+            arg.StartsWith("--", global::System.StringComparison.Ordinal) ? 2
+            : arg.StartsWith("-", global::System.StringComparison.Ordinal) || arg.StartsWith("/", global::System.StringComparison.Ordinal) ? 1 : 0;
+
+        /// <summary>Whether a switch with no value is present: <c>--name</c> (also <c>-name</c>, <c>/name</c>); <c>--name=false</c> turns it off.</summary>
+        public static bool Has(string name)
+        {
+            var args = Args;
+            for (var i = 1; i < args.Length; i++)
+            {
+                var start = PrefixLength(args[i]);
+                if (start == 0) continue;
+                var body = args[i].Substring(start);
+                if (string.Equals(body, name, global::System.StringComparison.OrdinalIgnoreCase)) return true;
+                if (body.StartsWith(name + "=", global::System.StringComparison.OrdinalIgnoreCase))
+                {
+                    var value = body.Substring(name.Length + 1).Trim();
+                    return !(string.Equals(value, "false", global::System.StringComparison.OrdinalIgnoreCase) || value == "0"
+                        || string.Equals(value, "no", global::System.StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// This run's own arguments for a fresh copy on the same session: everything as given, with <c>-u=</c> and <c>-i=</c>
+        /// replaced by the session's server and id (the id is left out while it is still Guid.Empty).
+        /// </summary>
+        public static global::System.Collections.Generic.List<string> RestartArguments(global::System.Uri serverUri, global::System.Guid id)
+        {
+            var result = new global::System.Collections.Generic.List<string> { $"-u={serverUri}" };
+            if (id != global::System.Guid.Empty) result.Add($"-i={id}");
+            var args = Args;
+            for (var i = 1; i < args.Length; i++)
+            {
+                var start = PrefixLength(args[i]);
+                var body = start == 0 ? "" : args[i].Substring(start);
+                if (body.StartsWith("u=", global::System.StringComparison.OrdinalIgnoreCase) || body.StartsWith("i=", global::System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(body, "u", global::System.StringComparison.OrdinalIgnoreCase) || string.Equals(body, "i", global::System.StringComparison.OrdinalIgnoreCase)) { i++; continue; }
+                result.Add(args[i]);
+            }
+            return result;
+        }
+
         /// <summary>The value of the named switch, or null.</summary>
         public static string? Value(string name)
         {
-            var args = global::System.Environment.GetCommandLineArgs();
+            var args = Args;
             for (var i = 1; i < args.Length; i++)
             {
                 var arg = args[i];

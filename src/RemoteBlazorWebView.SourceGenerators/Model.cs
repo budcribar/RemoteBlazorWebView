@@ -33,6 +33,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
         string? ReverseMirror,
         bool ShareControl,
         bool Unattended,
+        bool Voice,
         bool RestartOnRefresh,
         bool ShutdownOnDisconnect,
         bool CanEmit,
@@ -66,6 +67,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 "RBW009" => Diagnostics.MirrorAndReverseMirror,
                 "RBW010" => Diagnostics.NotWebView2,
                 "RBW011" => Diagnostics.ShareControlAndMirror,
+                "RBW012" => Diagnostics.VoiceNeedsWpf,
                 _ => Diagnostics.ServerUriIgnored,
             };
             return Diagnostic.Create(descriptor, Location?.ToLocation(), Args.ToArray<object>());

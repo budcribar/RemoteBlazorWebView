@@ -49,7 +49,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             var mode = Mode.Runtime;
             var modeFromAttribute = false;
             string? serverUri = null, id = null, reverseMirror = null;
-            bool showLink = true, mirror = false, restartOnRefresh = false, shutdownOnDisconnect = false, shareControl = false, unattended = false;
+            bool showLink = true, mirror = false, restartOnRefresh = false, shutdownOnDisconnect = false, shareControl = false, unattended = false, voice = false;
             foreach (var named in attribute.NamedArguments)
             {
                 switch (named.Key)
@@ -62,6 +62,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                     case "ReverseMirror": reverseMirror = named.Value.Value as string; break;
                     case "ShareControl": shareControl = named.Value.Value is true; break;
                     case "Unattended": unattended = named.Value.Value is true; break;
+                    case "Voice": voice = named.Value.Value is true; break;
                     case "RestartOnRefresh": restartOnRefresh = named.Value.Value is true; break;
                     case "ShutdownOnDisconnect": shutdownOnDisconnect = named.Value.Value is true; break;
                 }
@@ -132,6 +133,9 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 canEmit = false;
             }
 
+            if (voice && framework == UiFramework.WinForms)
+                diagnostics.Add(DiagnosticInfo.Create(Diagnostics.VoiceNeedsWpf, attributeLocation));
+
             if (serverUri is not null && !Uri.TryCreate(serverUri, UriKind.Absolute, out _))
             {
                 diagnostics.Add(DiagnosticInfo.Create(Diagnostics.BadServerUri, attributeLocation, serverUri));
@@ -147,7 +151,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 type.ContainingNamespace.IsGlobalNamespace ? null : type.ContainingNamespace.ToDisplayString(),
                 new EquatableArray<string>(containing.ToImmutableArray()),
                 type.Name, webView, framework, mode, modeFromAttribute, serverUri, id,
-                showLink, mirror, reverseMirror, shareControl, unattended, restartOnRefresh, shutdownOnDisconnect, canEmit,
+                showLink, mirror, reverseMirror, shareControl, unattended, voice, restartOnRefresh, shutdownOnDisconnect, canEmit,
                 LocationInfo.From(attributeLocation),
                 new EquatableArray<DiagnosticInfo>(diagnostics.ToImmutableArray()));
         }
@@ -245,10 +249,11 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             var modeText = mode.ToString();
             yield return "/// <summary>";
             yield return $"/// Sets up {t.WebView} for remote use (generated from [RemoteBlazor], mode {modeText}). Call it after InitializeComponent(),";
-            yield return "/// before the view loads. Returns true when the view is remote.";
+            yield return "/// before the view loads. Returns true when the view is remote. Pass a startup to supply values the app has already";
+            yield return "/// worked out (server, id, unattended, voice, restart arguments); anything left null comes from the command line.";
             yield return "/// </summary>";
             yield return "[global::System.CodeDom.Compiler.GeneratedCode(\"PeakSWC.RemoteBlazorWebView.SourceGenerators\", \"1.0\")]";
-            yield return "private bool InitializeRemoteBlazor()";
+            yield return "private bool InitializeRemoteBlazor(global::PeakSWC.RemoteBlazorWebView.RemoteBlazorStartup? startup = null)";
             yield return "{";
             if (mode == Mode.Local || t.Framework == UiFramework.Unknown)
             {
@@ -262,26 +267,28 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
 
             var wpf = t.Framework == UiFramework.Wpf;
             yield return $"    var webView = this.{t.WebView};";
+            const string commandLine = "global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine";
             yield return mode == Mode.Remote
-                ? $"    var serverUri = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.ServerUri ?? new global::System.Uri({Literal(t.ServerUri!)});"
-                : "    var serverUri = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.ServerUri;";
+                ? $"    var serverUri = startup?.ServerUri ?? {commandLine}.ServerUri ?? new global::System.Uri({Literal(t.ServerUri!)});"
+                : $"    var serverUri = startup?.ServerUri ?? {commandLine}.ServerUri;";
             if (mode == Mode.Runtime)
-                yield return "    if (serverUri is null) return false; // no -u=<server uri>: local";
+                yield return "    if (serverUri is null) return false; // no server from the startup or -u=<server uri>: local";
             yield return "";
             yield return "    webView.ServerUri = serverUri;";
             yield return t.Id is null
-                ? "    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? global::System.Guid.Empty; // Guid.Empty: a new id each run"
-                : $"    webView.Id = global::PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine.Id ?? new global::System.Guid({Literal(t.Id)});";
+                ? $"    webView.Id = startup?.Id ?? {commandLine}.Id ?? global::System.Guid.Empty; // Guid.Empty: a new id each run"
+                : $"    webView.Id = startup?.Id ?? {commandLine}.Id ?? new global::System.Guid({Literal(t.Id)});";
             if (t.Mirror || t.ReverseMirror is not null || t.ShareControl) yield return "    webView.EnableMirrors = true;";
+            if (wpf)
+                yield return $"    webView.EnableVoice = startup?.Voice ?? ({(t.Voice ? "true" : "false")} || {commandLine}.Has(\"voice\")); // a voice call needs an https server";
 
             if (t.ShareControl)
             {
-                var query = t.Unattended ? "?role=owner&control=remote" : "?role=owner";
                 yield return "";
-                yield return t.Unattended
-                    ? "    // Shared control, unattended: the app shows in this window as the owner; the remote user gets control on joining the mirror link."
-                    : "    // Shared control: the app shows in this window with the owner in control; the browser joins at the mirror link and is handed control.";
-                yield return $"    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{{e.Url}}app/{{e.Id}}{query}\"));";
+                yield return "    // Shared control: the app shows in this window with the owner in control; the browser joins at the mirror link and is";
+                yield return "    // handed control. Unattended: the remote user is given control as soon as they join.";
+                yield return $"    var unattended = startup?.Unattended ?? ({(t.Unattended ? "true" : "false")} || {commandLine}.Has(\"unattended\"));";
+                yield return "    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{e.Url}app/{e.Id}?role=owner{(unattended ? \"&control=remote\" : \"\")}\"));";
             }
             else if (t.ReverseMirror is not null)
             {
@@ -309,7 +316,23 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             {
                 yield return "";
                 var close = wpf ? "global::System.Windows.Window.GetWindow(webView)?.Close()" : "webView.FindForm()?.Close()";
-                yield return $"    webView.Refreshed += (_, _) => {Invoke(wpf, $"{{ webView.Restart(); {close}; }}")};";
+                yield return "    // Restart on refresh: a fresh copy on the same server and session id, then this one goes away. The id the server";
+                yield return "    // assigned is kept here because the view's own properties can only be read on the UI thread.";
+                yield return "    var sessionId = webView.Id;";
+                yield return "    var restartArguments = startup?.RestartArguments;";
+                yield return "    var restarting = 0;";
+                yield return "    webView.ReadyToConnect += (_, e) => { if (e.Id != global::System.Guid.Empty) sessionId = e.Id; };";
+                yield return "    global::System.Uri restartServer = serverUri;";
+                yield return "    global::System.Action startNewCopy = () => global::PeakSWC.RemoteBlazorWebView.RemoteBlazorRestart.StartCopy(";
+                yield return $"        restartArguments?.Invoke(restartServer, sessionId) ?? {commandLine}.RestartArguments(restartServer, sessionId));";
+                yield return $"    webView.Refreshed += (_, _) => {Invoke(wpf, $"{{ if (global::System.Threading.Interlocked.Exchange(ref restarting, 1) == 0) {{ startNewCopy(); {close}; }} }}")};";
+                yield return "    // The window did not respond to the restart request: do it from this background thread and end the process.";
+                yield return "    webView.RestartWhenUnresponsive = () =>";
+                yield return "    {";
+                yield return "        if (global::System.Threading.Interlocked.Exchange(ref restarting, 1) != 0) return;";
+                yield return "        startNewCopy();";
+                yield return "        global::PeakSWC.RemoteBlazorWebView.RemoteBlazorRestart.ExitProcess();";
+                yield return "    };";
             }
             if (t.ShutdownOnDisconnect)
             {

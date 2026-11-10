@@ -17,7 +17,8 @@ Upgrade the relay (RemoteWebViewService) and the packages together: the new feat
 - Fixes found in a review of shared control: a message from before a hand-off could later replace a real one; a browser joining could stop all input reaching the app; the remote user lost voice by refreshing; two hand-offs at once could leave browsers and relay disagreeing.
 - **Voice call** between the owner and the remote user (`EnableVoice`, https relay).
 - **`BlazorWebView.NavigateToUrl(Uri)`** (WPF and WinForms): load a page in the control's own WebView once it is ready.
-- **Source generator:** `[RemoteBlazor(..., ShareControl = true)]` and `Unattended = true`; diagnostic RBW011.
+- **Source generator:** `[RemoteBlazor(..., ShareControl = true)]` and `Unattended = true`; diagnostic RBW011. A `Voice` option (RBW012 on WinForms); `--unattended` and `--voice` at run time; `InitializeRemoteBlazor(new RemoteBlazorStartup { ... })` for apps that work their settings out themselves; `RestartOnRefresh` now gives the new copy this run's own command line and still restarts an app whose window is not responding.
+- **`RestartWhenUnresponsive`** on the controls: called on a background thread when a restart was requested but the UI thread did not respond within 5 seconds.
 - **Remote components** follow control: usable in the browser that controls the app, read-only in the others.
 - **Relay version** (with the commit) in `GetServerStatus`, shown by the admin site.
 

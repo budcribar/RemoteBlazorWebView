@@ -34,7 +34,8 @@ public partial class MainWindow : Window
 | `ReverseMirror` | | Name of a WebView2 you put over the BlazorWebView. `EnableMirrors`; the WebView2 opens `<server>/app/<id>`, so the person at the PC uses the app through the server and it looks local; once connected, the system browser opens the read-only `<server>/mirror/<id>` to share. Replaces `ShowLink`; not with `Mirror` |
 | `ShareControl` | `false` | Shared control: `EnableMirrors`, and this window shows the app itself (`<server>/app/<id>?role=owner`) with the person at the PC in control. The browser joins at the read-only `<server>/mirror/<id>` (*Copy link* in the session bar) and is handed control from the bar; the owner can always take it back. Replaces `ShowLink`; not with `Mirror` or `ReverseMirror` |
 | `Unattended` | `false` | `ShareControl`, and the remote user is given control as soon as they join (the owner can still take it back) |
-| `RestartOnRefresh` | `false` | On browser refresh: `Restart()` (a new copy with the same `-u=`/`-i=`) and close the window |
+| `Voice` | `false` | A voice call between the person at the PC and the remote user (WPF control, https server). `--voice` on the command line turns it on too |
+| `RestartOnRefresh` | `false` | On browser refresh, or *Restart app* in the session bar: start a new copy on the same server and session with this run's own command line, and close the window. If the window is not responding, the new copy is started from a background thread and the process is ended |
 | `ShutdownOnDisconnect` | `false` | On disconnect: `Application.Current.Shutdown()` (WPF) or `Application.Exit()` (WinForms) |
 
 The `RemoteBlazorMode` MSBuild property overrides `Mode` for a build: `dotnet build -p:RemoteBlazorMode=Local`, or
@@ -46,7 +47,26 @@ ones. That's a one-time edit; the PeakSWC control behaves like Microsoft's when 
 Diagnostics: RBW001 member not found (warning), RBW002 member isn't a PeakSWC BlazorWebView, RBW003 class isn't partial,
 RBW004 `Remote` without `ServerUri`, RBW005 bad `ServerUri`, RBW006 bad `Id`, RBW007 unknown `RemoteBlazorMode` value (warning),
 RBW008 `ServerUri` set in `Runtime` mode, where it isn't used (warning), RBW009 `Mirror` and `ReverseMirror` together,
-RBW010 `ReverseMirror` isn't a WebView2, RBW011 `ShareControl` or `Unattended` with `Mirror` or `ReverseMirror`.
+RBW010 `ReverseMirror` isn't a WebView2, RBW011 `ShareControl` or `Unattended` with `Mirror` or `ReverseMirror`,
+RBW012 `Voice` on a WinForms control, where it has no effect (warning).
+
+## Choices made when the app starts
+
+`--unattended` (with `ShareControl`) and `--voice` on the command line turn those on for one run, without rebuilding.
+
+An app that works its settings out from more than the command line (environment variables, a settings file, saved state)
+passes what it found; anything left out still comes from the command line and the attribute:
+
+```csharp
+InitializeRemoteBlazor(new RemoteBlazorStartup
+{
+    ServerUri = settings.Server,            // null: -u= on the command line
+    Id = settings.SessionId,                // null: -i= on the command line
+    Unattended = settings.Unattended,       // null: the attribute, or --unattended
+    Voice = settings.Voice,                 // null: the attribute, or --voice
+    RestartArguments = (server, id) => settings.ArgumentsFor(server, id),   // null: this run's own arguments
+});
+```
 
 ## Shared control
 
