@@ -585,7 +585,8 @@ if ($Build -ne $true) {
     foreach ($suite in $quickSuites) {
         Write-Host -ForegroundColor Cyan "Testing $(Split-Path -Leaf (Split-Path -Parent $suite))"
         # GeneratePackageOnBuild=false: testing must not repack the NuGet packages that were just built for release.
-        Invoke-RunTestsNative dotnet test $suite -c Release -p:GeneratePackageOnBuild=false
+        # Quoted: unquoted, PowerShell splits -p:Name=value into "-p:" and "Name=value" when passing it through a function.
+        Invoke-RunTestsNative dotnet test $suite -c Release '-p:GeneratePackageOnBuild=false'
     }
 
     # Navigate to the first test directory
