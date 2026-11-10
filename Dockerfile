@@ -12,16 +12,17 @@ COPY src/RemoteWebViewService/ src/RemoteWebViewService/
 RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64
 # The commit is appended to InformationalVersion as 10.0.14+<sha>, shown on the admin About page. Railway passes
 # RAILWAY_GIT_COMMIT_SHA for GitHub-triggered builds; for `railway up` (CLI) deploys it is empty, so fall back to the
-# uploaded .git/HEAD (.dockerignore lets in only HEAD and refs). Bind-mounted so a context without .git still builds.
+# uploaded .git/HEAD (.dockerignore lets in only HEAD and refs). Railway allows no bind mounts, so copy it: the .gi[t]
+# wildcard plus an always-present anchor file keeps a context without .git building (its contents land in /gitstamp).
+COPY global.json .gi[t] /gitstamp/
 ARG RAILWAY_GIT_COMMIT_SHA=""
-RUN --mount=type=bind,source=.,target=/ctx \
-    sha="$RAILWAY_GIT_COMMIT_SHA"; \
-    if [ -z "$sha" ] && [ -f /ctx/.git/HEAD ]; then \
-      head="$(cat /ctx/.git/HEAD)"; \
+RUN sha="$RAILWAY_GIT_COMMIT_SHA"; \
+    if [ -z "$sha" ] && [ -f /gitstamp/HEAD ]; then \
+      head="$(cat /gitstamp/HEAD)"; \
       case "$head" in \
         "ref: "*) ref="${head#ref: }"; \
-          if [ -f "/ctx/.git/$ref" ]; then sha="$(cat "/ctx/.git/$ref")"; \
-          elif [ -f /ctx/.git/packed-refs ]; then sha="$(grep " $ref\$" /ctx/.git/packed-refs | cut -d' ' -f1)"; fi ;; \
+          if [ -f "/gitstamp/$ref" ]; then sha="$(cat "/gitstamp/$ref")"; \
+          elif [ -f /gitstamp/packed-refs ]; then sha="$(grep " $ref\$" /gitstamp/packed-refs | cut -d' ' -f1)"; fi ;; \
         *) sha="$head" ;; \
       esac; \
     fi; \
