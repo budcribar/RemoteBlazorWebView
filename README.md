@@ -30,6 +30,24 @@ dotnet tool update -g PeakSWC.RemoteWebViewService --version 9.*-*
 
 Mark the window with `[RemoteBlazor(nameof(MyBlazorWebView), ...)]` and call the generated `InitializeRemoteBlazor()` after `InitializeComponent()`; see [the source generator's README](src/RemoteBlazorWebView.SourceGenerators/README.md).
 
+# Sharing control (owner, technician, viewers)
+
+A session can be shared between the person at the machine and a remote technician, with control handed back and forth.
+
+**Roles.** A session supports exactly these participants:
+
+| Role | How they join | What they can do |
+|---|---|---|
+| **Owner** (one) | The app's own window shows the controlling page `/app/<id>?role=owner` (`BlazorWebView.NavigateToUrl`). | Starts in control. Can give control to the technician and can always take it back. |
+| **Technician** (one) | Opens the read-only link `/mirror/<id>` (requires `EnableMirrors`). The technician is the first non-owner connection in the session. | Watches until the owner gives control; then drives the app and can give control back. Gets the technician's end of the voice call when voice is on. |
+| **Viewers** (any number) | Open the same `/mirror/<id>` link after the technician. | Read-only. They are never given control, cannot take it, and have no voice. |
+
+Only one connection controls the app at a time; the relay ignores input from everyone else, and control is never given to a second technician. If the technician leaves, the next-oldest viewer becomes the technician. If the connection in control closes, control returns to the owner while the owner is connected; otherwise the session ends.
+
+**Session controls bar.** Each browser draws its own bar (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` where the bar should sit in your layout; without it the bar floats bottom-right. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes. `window.RemoteControl` exposes the same state for a custom UI.
+
+**Remote components.** A remote component's frame follows the page it is on: it is usable in the browser that controls the app and read-only in the others, and moves with control. Viewers always see it read-only.
+
 # Samples
 
 Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial 

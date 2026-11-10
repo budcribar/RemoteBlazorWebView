@@ -27,8 +27,13 @@ function isMirror() {
 
 // The frame is rendered without src (data-rbwv-src holds it), so only the page that should load it does.
 function load(frame) {
-    const src = frame.getAttribute('data-rbwv-src');
-    if (src && frame.getAttribute('src') !== src) frame.setAttribute('src', src);
+    let src = frame.getAttribute('data-rbwv-src');
+    if (!src) return;
+    // This page's identity in the component's session (set by the RemoteWebView script), so the component's control can follow the
+    // app's control from browser to browser. A fragment, so it is never sent to the relay.
+    const hash = window.RemoteBlazor && window.RemoteBlazor.frameHash;
+    if (hash && !src.includes('#')) src += hash;
+    if (frame.getAttribute('src') !== src) frame.setAttribute('src', src);
 }
 
 export function watch(frame, sink) {

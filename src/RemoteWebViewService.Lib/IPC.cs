@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -108,7 +109,7 @@ namespace PeakSWC.RemoteWebView
             lock (browserStateLock)
             {
                 bool first = true;
-                foreach (var brn in observers.Keys)
+                foreach (var brn in observers.Keys.OrderBy(k => k.JoinOrder)) // join order: the first non-owner is the technician
                 {
                     if (brn.ClientId == excludeClientId)
                         continue;

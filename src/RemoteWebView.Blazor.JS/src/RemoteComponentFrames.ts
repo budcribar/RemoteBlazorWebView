@@ -3,6 +3,8 @@
 // data-rbwv-mirror-src the relay's read-only view of it. A mirror gets the same render batches as the app's page; if it loaded
 // data-rbwv-src too, the relay would take that as a reload and the component's process would restart. So a mirror points each frame
 // at its mirror address, or leaves it empty when there is none.
+import { withFrameIdentity } from './FrameControl';
+
 export const sourceAttribute = 'data-rbwv-src';
 export const mirrorSourceAttribute = 'data-rbwv-mirror-src';
 
@@ -12,7 +14,8 @@ export function mirrorSourceOf(frame: Element): string | null {
 
 function point(frame: Element) {
     if (frame.tagName !== 'IFRAME' || !frame.hasAttribute(sourceAttribute)) return;
-    const mirror = mirrorSourceOf(frame);
+    const address = mirrorSourceOf(frame);
+    const mirror = address ? withFrameIdentity(address) : null;
     if (mirror) {
         if (frame.getAttribute('src') !== mirror) frame.setAttribute('src', mirror);
     } else if (frame.hasAttribute('src')) {
@@ -25,6 +28,11 @@ function pointAll(root: ParentNode) {
 }
 
 let observer: MutationObserver | null = null;
+
+/** Point the frames again, once this page's frame identity is known. */
+export function repointMirrorFrames() {
+    pointAll(document);
+}
 
 export function watchMirrorFrames(root: Element = document.documentElement) {
     if (observer) return;

@@ -1,5 +1,6 @@
 import { initializeScrollSync, receiveScroll } from './ScrollSync';
-import { watchMirrorFrames } from './RemoteComponentFrames';
+import { watchMirrorFrames, repointMirrorFrames } from './RemoteComponentFrames';
+import { initFrameControl, initParentFrameControl, isFramed, readFrameIdentity } from './FrameControl';
 import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
@@ -18,6 +19,8 @@ interface RemoteBlazor {
     isOwner: boolean;
     /** This page was opened as a read-only /mirror page. Fixed for the page's life, unlike isPrimary, which follows control. */
     isMirrorPage: boolean;
+    /** Appended to the address of remote component frames on this page: this page's identity in the component's session. */
+    frameHash?: string;
     grpcHost?: string;
 }
 
@@ -197,9 +200,13 @@ export function initializeRemoteWebView() {
         watchMirrorFrames();
     }
 
-    window.RemoteBlazor.clientId = crypto.randomUUID();
-    // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control.
-    window.RemoteBlazor.isOwner = new URLSearchParams(window.location.search).get('role') === 'owner';
+    // A remote component's frame takes the identity its parent page gave it, so control of the component can follow
+    // control of the app (FrameControl.ts); any other page picks its own.
+    const frameIdentity = readFrameIdentity();
+    window.RemoteBlazor.clientId = frameIdentity.clientId ?? crypto.randomUUID();
+    // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control
+    // (and a frame on that surface is the owner of its component's session).
+    window.RemoteBlazor.isOwner = frameIdentity.owner || new URLSearchParams(window.location.search).get('role') === 'owner';
 
     // "Copy link": an owner surface is itself the controlling /app page, so technicians join at the read-only /mirror
     // page and are handed control from there; anyone else shares the controller page.
@@ -212,9 +219,14 @@ export function initializeRemoteWebView() {
         requestPrimary,
     });
 
-    // Each browser draws its own give/take/voice bar (into #rbwv-session-controls if the app provides one).
-    if (document.body) initSessionControls();
-    else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
+    // Each browser draws its own give/take/voice bar (into #rbwv-session-controls if the app provides one). Not inside
+    // a remote component's frame: its control simply follows the page it is on.
+    if (!isFramed()) {
+        if (document.body) initSessionControls();
+        else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
+    }
+    initParentFrameControl(() => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });
+    initFrameControl();
 
     // The connect handshake belongs to the controller (/app) page, which attaches the shared page context. A /mirror page
     // must not send it: once a mirror can hold control (the owner's local view starts in control, and promotion resets
