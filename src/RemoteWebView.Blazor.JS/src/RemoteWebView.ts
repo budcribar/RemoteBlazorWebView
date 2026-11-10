@@ -184,7 +184,8 @@ export function initializeRemoteWebView() {
 
     const pathParts = window.location.pathname.split('/');
     let id = pathParts[1];
-    if (id === 'mirror') {
+    const startedAsMirror = id === 'mirror';
+    if (startedAsMirror) {
         id = pathParts[2];
         window.RemoteBlazor.isPrimary = false;
         makePageReadOnly();
@@ -210,8 +211,15 @@ export function initializeRemoteWebView() {
     if (document.body) initSessionControls();
     else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
 
-    sendMessage("connected:");
-    sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+    // The connect handshake belongs to the controller (/app) page, which attaches the shared page context. A /mirror page
+    // must not send it: once a mirror can hold control (the owner's local view starts in control, and promotion resets
+    // the sequence) these would reach the host, where AttachPage rebuilds the page for everyone - and with the
+    // /mirror/<id> address, outside the app's base, NavigationManager throws and the host crashes - and "connected:"
+    // would raise Connected again.
+    if (!startedAsMirror) {
+        sendMessage("connected:");
+        sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());
+    }
 
     const message = new ReceiveMessageRequest();
     message.setId(id);
