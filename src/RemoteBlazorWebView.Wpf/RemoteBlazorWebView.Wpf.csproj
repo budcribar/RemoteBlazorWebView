@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on maui 10.0.120</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 10.0.120. 10.0.15: sharing control between the owner and a technician (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>
