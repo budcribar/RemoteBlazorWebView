@@ -320,6 +320,9 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
+        /// <inheritdoc cref="IBlazorWebView.RestartWhenUnresponsive"/>
+        public Action? RestartWhenUnresponsive { get; set; }
+
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);

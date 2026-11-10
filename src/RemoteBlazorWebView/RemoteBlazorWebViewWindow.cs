@@ -68,6 +68,9 @@ namespace PeakSWC.RemoteWebView
             Invoke(() => ReadyToConnect?.Invoke(this, args));
         }
 
+        /// <inheritdoc cref="IBlazorWebView.RestartWhenUnresponsive"/>
+        public Action? RestartWhenUnresponsive { get; set; }
+
         public void Restart()
         {
             RemoteWebView.Restart(this);

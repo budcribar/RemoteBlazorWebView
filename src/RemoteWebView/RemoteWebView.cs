@@ -453,7 +453,15 @@ namespace PeakSWC.RemoteWebView
 
         void FireRefreshed()
         {
-            Dispatcher?.InvokeAsync(() => blazorWebView.FireRefreshed(new RefreshedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!)));
+            var dispatcher = Dispatcher;
+            if (dispatcher is null) return;
+            // Normally the app's Refreshed handler runs on the UI thread. If that thread is stuck, the app's
+            // RestartWhenUnresponsive (when set) runs here instead, so a restart request still restarts the app.
+            _ = UnresponsiveUiWatchdog.Run(
+                work => dispatcher.InvokeAsync(work),
+                () => blazorWebView.FireRefreshed(new RefreshedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!)),
+                blazorWebView.RestartWhenUnresponsive,
+                onFallbackError: ex => logger.LogError(ex, "RestartWhenUnresponsive failed."));
         }
 
         public event EventHandler<string>? OnWebMessageReceived;

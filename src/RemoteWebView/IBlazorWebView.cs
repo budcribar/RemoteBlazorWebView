@@ -28,6 +28,14 @@ namespace PeakSWC.RemoteWebView
 
         public string Markup { get; set; }
         public void Restart();
+
+        /// <summary>
+        /// Called on a background thread when a restart was requested (the Refreshed event) but the UI thread did not
+        /// respond within a few seconds, so Refreshed could not be raised. Set it to restart the app without the UI
+        /// thread: start the new copy, then end this process (a window cannot be closed from here). Unset (the default),
+        /// a restart request to an app whose UI thread is stuck does nothing.
+        /// </summary>
+        public Action? RestartWhenUnresponsive { get => null; set { } }
         
         public void NavigateToString(string htmlContent);
 

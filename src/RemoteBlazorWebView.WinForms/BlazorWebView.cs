@@ -241,6 +241,11 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
+        /// <inheritdoc cref="IBlazorWebView.RestartWhenUnresponsive"/>
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // set in code, never by the designer
+        public Action? RestartWhenUnresponsive { get; set; }
+
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
