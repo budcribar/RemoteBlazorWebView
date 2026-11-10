@@ -57,12 +57,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         }
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
-                        if (serviceState.IPC.ClientResponseStream != null)
-                        {
-                            await serviceState.IPC.ClientResponseStream
-                                .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
-                                .ConfigureAwait(false);
-                        }
+                        await serviceState.IPC.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
                         foreach (var channel in serviceStateChannel.Values)
                         {
                             channel.Writer.TryWrite($"Connect:{guid}");

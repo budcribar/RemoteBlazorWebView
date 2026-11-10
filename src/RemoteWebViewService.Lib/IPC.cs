@@ -16,6 +16,7 @@ namespace PeakSWC.RemoteWebView
     {
         public const string ScrollMessagePrefix = "mirror-scroll:";
         private readonly object browserStateLock = new();
+        private readonly SemaphoreSlim clientWriteLock = new(1, 1);
         private StringRequest? latestScroll;
         private readonly Channel<WebMessageResponse> responseChannel = Channel.CreateUnbounded<WebMessageResponse>();
         private readonly Channel<StringRequest> browserResponseChannel = Channel.CreateUnbounded<StringRequest>();
@@ -140,8 +141,7 @@ namespace PeakSWC.RemoteWebView
                     {
                         // Serialize the write
 
-                        if (ClientResponseStream != null)
-                            await ClientResponseStream.WriteAsync(m,token).ConfigureAwait(false);
+                        await WriteToClientAsync(m, token).ConfigureAwait(false);
 
                         if (logger.IsEnabled(LogLevel.Information))
                             logger.LogDebug($"Browser -> WebView {m.Response}");
@@ -220,11 +220,37 @@ namespace PeakSWC.RemoteWebView
 
         public Task LocationChanged(Point point)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }, cancellationToken) ?? Task.CompletedTask);
+            return WriteToClientAsync(new WebMessageResponse { Response = "location:" + JsonSerializer.Serialize(point, JsonContext.Default.Point) }, cancellationToken);
         }
         public Task SizeChanged(Size size)
         {
-            return (ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }, cancellationToken) ?? Task.CompletedTask);
+            return WriteToClientAsync(new WebMessageResponse { Response = "size:" + JsonSerializer.Serialize(size, JsonContext.Default.Size) }, cancellationToken);
+        }
+
+        /// <summary>
+        /// Writes one message to the app's stream. Every write to that stream goes through here: a gRPC response stream
+        /// accepts one write at a time and throws on a second one that overlaps it, and the stream has several writers
+        /// (browser input from the queue, the "browser attached" and "shutdown" notices, window moves). Does nothing
+        /// when the app has not opened its stream.
+        /// </summary>
+        public async Task WriteToClientAsync(WebMessageResponse message, CancellationToken token = default)
+        {
+            var stream = ClientResponseStream;
+            if (stream == null)
+                return;
+
+            await clientWriteLock.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (token.CanBeCanceled)
+                    await stream.WriteAsync(message, token).ConfigureAwait(false);
+                else
+                    await stream.WriteAsync(message).ConfigureAwait(false);
+            }
+            finally
+            {
+                clientWriteLock.Release();
+            }
         }
 
         public void Shutdown()

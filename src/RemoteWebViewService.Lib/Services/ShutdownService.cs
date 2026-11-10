@@ -25,7 +25,7 @@ namespace PeakSWC.RemoteWebView.Services
                     var serviceState = await client.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                     try
                     {
-                        await (serviceState.IPC?.ClientResponseStream?.WriteAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
+                        await (serviceState.IPC?.WriteToClientAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
                     }
                     catch (Exception writeEx)
                     {

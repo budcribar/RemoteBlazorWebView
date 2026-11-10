@@ -35,12 +35,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         return;
                     }
                     // Notify that the browser is attached, if applicable
-                    if (serviceState.IPC.ClientResponseStream != null)
-                    {
-                        await serviceState.IPC.ClientResponseStream
-                            .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
-                            .ConfigureAwait(false);
-                    }
+                    await serviceState.IPC.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
 
                     // Set the service state only after notifying the client stream succeeds
                     serviceState.Cookies = context.Request.Cookies;
