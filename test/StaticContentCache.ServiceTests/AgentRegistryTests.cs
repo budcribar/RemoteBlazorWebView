@@ -123,14 +123,14 @@ public class AgentRegistryTests
     }
 
     [Fact]
-    public void Technician_is_the_signed_in_user_else_the_request_else_a_default()
+    public void Requester_is_the_signed_in_user_else_the_request_else_a_default()
     {
         var anonymous = new CallContext(CancellationToken.None, new DefaultHttpContext());
-        Assert.Equal("Bob", AgentAdminService.GetTechnician(new StartSessionRequest { Technician = "Bob" }, anonymous));
-        Assert.Equal(AgentAdminService.DefaultTechnician, AgentAdminService.GetTechnician(new StartSessionRequest(), anonymous));
+        Assert.Equal("Bob", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, anonymous));
+        Assert.Equal(AgentAdminService.DefaultRequester, AgentAdminService.GetRequester(new StartSessionRequest(), anonymous));
 
         var signedIn = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("name", "Alice Admin") }, "test")) };
-        Assert.Equal("Alice Admin", AgentAdminService.GetTechnician(new StartSessionRequest { Technician = "Bob" }, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, new CallContext(CancellationToken.None, signedIn)));
     }
 
     // ---------------------------------------------------------------- online / offline / expiry
@@ -262,7 +262,7 @@ public class AgentRegistryTests
         Assert.Equal(response.RequestId, command.Launch.RequestId);
         Assert.Equal(response.SessionId, command.Launch.SessionId);
         Assert.Equal(ServerUrl, command.Launch.ServerUrl);
-        Assert.Equal("Bob", command.Launch.Technician);
+        Assert.Equal("Bob", command.Launch.Requester);
         Assert.Equal(expectConsent, command.Launch.RequireConsent);
 
         var latest = registry.GetLatestProgress(response.RequestId)!;
@@ -451,7 +451,7 @@ public class AgentRegistryTests
 
         await WaitFor(async () => (await invoker.AsyncUnaryCall(GetAgentsMethod, null, options, new Empty())).Agents.Any(a => a.MachineId == "m-1" && a.Online), ct);
 
-        var start = await invoker.AsyncUnaryCall(StartSessionMethod, null, admin, new StartSessionRequest { MachineId = "m-1", Unattended = true, Technician = "Bob" });
+        var start = await invoker.AsyncUnaryCall(StartSessionMethod, null, admin, new StartSessionRequest { MachineId = "m-1", Unattended = true, Requester = "Bob" });
         Assert.True(start.Accepted, start.Error);
         Assert.Equal($"{ServerUrl}/app/{start.SessionId}", start.AppUrl);
 
@@ -461,7 +461,7 @@ public class AgentRegistryTests
         Assert.Equal(start.RequestId, launch.RequestId);
         Assert.Equal(start.SessionId, launch.SessionId);
         Assert.Equal(ServerUrl, launch.ServerUrl);
-        Assert.Equal("Bob", launch.Technician);
+        Assert.Equal("Bob", launch.Requester);
         Assert.False(launch.RequireConsent);
 
         using var watch = invoker.AsyncServerStreamingCall(WatchLaunchMethod, null, options, new WatchLaunchRequest { RequestId = start.RequestId });

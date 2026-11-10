@@ -251,7 +251,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string technician, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
         {
             lock (gate)
             {
@@ -302,7 +302,7 @@ namespace PeakSWC.RemoteWebView.Agents
                         RequestId = requestId,
                         SessionId = sessionId,
                         ServerUrl = baseUrl,
-                        Technician = technician ?? string.Empty,
+                        Requester = requester ?? string.Empty,
                         RequireConsent = requireConsent,
                     }
                 });

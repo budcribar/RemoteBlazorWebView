@@ -1,7 +1,7 @@
 # Agents
 
 The relay keeps an in-memory registry of agents. An agent is a small Windows service on a client PC.
-It holds one gRPC stream open to the relay. A technician picks the PC on the admin site, and the relay tells that agent to
+It holds one gRPC stream open to the relay. A remote user picks the PC on the admin site, and the relay tells that agent to
 download and start the app. The app then registers under the session GUID it was given, as usual (`/app/{id}`).
 The contract is `src/Protos/agent.proto`. Agent and admin-site projects copy it verbatim.
 
@@ -47,7 +47,7 @@ client code don't get the diagnostic, but the contract is just as likely to chan
   |---|---|---|
   | not set | (ignored) | allowed, always asks the person at the PC |
   | set | missing or wrong | `PermissionDenied`, "Admin key required" |
-  | set | correct | asks, unless the technician asked for unattended **and** the agent was installed with `--consent=unattended` |
+  | set | correct | asks, unless the remote user asked for unattended **and** the agent was installed with `--consent=unattended` |
 
 Registrations, launches, declines and failures are written to the log and to the in-memory event log. On Linux they appear on the admin "Events" page.
 

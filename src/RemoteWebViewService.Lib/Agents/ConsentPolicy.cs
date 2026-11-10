@@ -20,7 +20,7 @@ namespace PeakSWC.RemoteWebView.Agents
         /// - AGENT_ADMIN_KEY set and the caller's x-admin-key doesn't match: refused.
         /// - AGENT_ADMIN_KEY not set: allowed, but always asks (no unattended starts without an admin key).
         /// - Otherwise the installer's ceiling is the loosest a session may be: the prompt is skipped only when the
-        ///   technician asked for unattended AND the agent was installed with --consent=unattended.
+        ///   remote user asked for unattended AND the agent was installed with --consent=unattended.
         /// </summary>
         public static StartDecision Decide(bool unattended, ConsentMode ceiling, bool adminKeyConfigured, bool adminKeyValid)
         {
