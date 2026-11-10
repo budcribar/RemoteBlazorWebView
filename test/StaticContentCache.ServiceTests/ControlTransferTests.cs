@@ -91,7 +91,7 @@ public class ControlTransferTests
             var actual = s.State.PrimaryClientId;
             bool Agrees(Connection browser) =>
                 browser.LastRoster()?.SingleOrDefault(p => p.Primary)?.Id == actual &&
-                browser.Messages.Last(m => m.StartsWith("primaryChanged:", StringComparison.Ordinal)) == $"primaryChanged:{actual}";
+                browser.Messages.LastOrDefault(m => m.StartsWith("primaryChanged:", StringComparison.Ordinal)) == $"primaryChanged:{actual}"; // none yet: not agreed yet
             await WaitFor(() => Agrees(owner) && Agrees(remote));
             await Task.Delay(50); // nothing later contradicts it
             Assert.True(Agrees(owner) && Agrees(remote));
