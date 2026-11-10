@@ -38,6 +38,9 @@ namespace FileSyncServer.Tests.Remote
             // Default constructor without ITestOutputHelper
         }
 
+        /// <summary>The page each test browser opens first: the controlling /app page. Shared-control tests open it as the owner.</summary>
+        protected virtual string AppPath(string id) => $"app/{id}";
+
         public virtual Process CreateClient(string url, string id)
         {
             return ClientExecutablePath!.Invoke(url, id);
@@ -146,7 +149,7 @@ namespace FileSyncServer.Tests.Remote
             // Navigate to the home page for each client
             for (int i = 0; i < numClients; i++)
             {
-                await Pages[i].GotoAsync(Url + $"app/{Ids[i]}");
+                await Pages[i].GotoAsync(Url + AppPath(Ids[i]));
             }
 
             // Wait for navigation
