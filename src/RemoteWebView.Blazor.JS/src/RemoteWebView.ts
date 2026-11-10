@@ -5,6 +5,7 @@ import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest } from "./generated/webview_pb";
 import { initControl, setParticipants, setPrimary, Participant } from './RemoteControl';
+import { initSessionControls } from './SessionControls';
 import { Empty } from "google-protobuf/google/protobuf/empty_pb";
 import { internalFunctions as navigationManagerFunctions } from '../Web.JS/src/Services/NavigationManager';
 import { showErrorNotification } from '../Web.JS/src/BootErrors';
@@ -204,6 +205,10 @@ export function initializeRemoteWebView() {
         shareUrl,
         requestPrimary,
     });
+
+    // Each browser draws its own give/take/voice bar (into #rbwv-session-controls if the app provides one).
+    if (document.body) initSessionControls();
+    else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
 
     sendMessage("connected:");
     sendAttachPage(navigationManagerFunctions.getBaseURI(), navigationManagerFunctions.getLocationHref());

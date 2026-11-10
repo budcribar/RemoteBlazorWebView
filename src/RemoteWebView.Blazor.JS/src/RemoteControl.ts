@@ -1,7 +1,7 @@
 // Headless control-transfer state for RemoteBlazorWebView. The relay's control channel ("primaryChanged:" /
 // "participants:") is decoded in RemoteWebView.ts and pushed here. This module keeps the current roster and whether this
-// connection holds control, and publishes it to the host app as window.RemoteControl, so the app's own UI (e.g. the
-// SessionControlBar Blazor component) can render give/take and name the other party. No DOM is drawn here.
+// connection holds control, and publishes it to the host app as window.RemoteControl, so the built-in bar
+// (SessionControls.ts) or an app's own UI can render give/take and name the other party. No DOM is drawn here.
 
 export interface Participant {
     id: string;
