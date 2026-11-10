@@ -85,7 +85,7 @@ message HubCommand {
 
 message LaunchCommand {
   string request_id = 1;
-  string session_id = 2;     // GUID the app must use (-i=); the remote user opens <server>/app/<session_id>
+  string session_id = 2;     // GUID the app must use (-i=); the requester opens <server>/mirror/<session_id>
   string server_url = 3;     // relay base address the app connects to (-u=)
   string requester = 4;     // shown in the consent prompt
   bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
@@ -137,7 +137,7 @@ message StartSessionResponse {
   string error = 2;         // why not ("That computer is offline", "A session is already running")
   string request_id = 3;
   string session_id = 4;
-  string app_url = 5;       // <server>/app/<session_id>
+  string app_url = 5;       // the link the requester opens: <server>/mirror/<session_id>
 }
 
 message WatchLaunchRequest {

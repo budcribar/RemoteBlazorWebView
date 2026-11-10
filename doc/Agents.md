@@ -2,7 +2,7 @@
 
 The relay keeps an in-memory registry of agents. An agent is a small Windows service on a client PC.
 It holds one gRPC stream open to the relay. A remote user picks the PC on the admin site, and the relay tells that agent to
-download and start the app. The app then registers under the session GUID it was given, as usual (`/app/{id}`).
+download and start the app. The app then registers under the session GUID it was given, as usual. The session is shared: the app shows at the PC, and the requester joins at `/mirror/{id}` and is given control there.
 The contract is `src/Protos/agent.proto`. Agent and admin-site projects copy it verbatim.
 
 ## Experimental

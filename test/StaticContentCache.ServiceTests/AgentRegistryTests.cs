@@ -255,7 +255,7 @@ public class AgentRegistryTests
         Assert.True(response.Accepted, response.Error);
         Assert.True(Guid.TryParse(response.SessionId, out _));
         Assert.True(Guid.TryParse(response.RequestId, out _));
-        Assert.Equal($"{ServerUrl}/app/{response.SessionId}", response.AppUrl);
+        Assert.Equal($"{ServerUrl}/mirror/{response.SessionId}", response.AppUrl); // the link the requester joins at
 
         Assert.True(connection.Commands.TryRead(out var command));
         Assert.Equal(HubCommand.BodyOneofCase.Launch, command!.BodyCase);
@@ -453,7 +453,7 @@ public class AgentRegistryTests
 
         var start = await invoker.AsyncUnaryCall(StartSessionMethod, null, admin, new StartSessionRequest { MachineId = "m-1", Unattended = true, Requester = "Bob" });
         Assert.True(start.Accepted, start.Error);
-        Assert.Equal($"{ServerUrl}/app/{start.SessionId}", start.AppUrl);
+        Assert.Equal($"{ServerUrl}/mirror/{start.SessionId}", start.AppUrl);
 
         Assert.True(await connect.ResponseStream.MoveNext(ct));
         var launch = connect.ResponseStream.Current.Launch;

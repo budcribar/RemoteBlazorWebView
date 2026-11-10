@@ -312,7 +312,9 @@ namespace PeakSWC.RemoteWebView.Agents
                     Accepted = true,
                     RequestId = requestId,
                     SessionId = sessionId,
-                    AppUrl = baseUrl + "/app/" + sessionId,
+                    // The session is shared: the app's own window at the PC holds /app, and the requester joins at the
+                    // read-only link and is given control there (the agent starts the app unattended).
+                    AppUrl = baseUrl + "/mirror/" + sessionId,
                 }, entry.Info.MachineName, requireConsent);
             }
 
