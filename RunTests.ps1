@@ -5,6 +5,9 @@
         # Runs only part of the desktop and browser suite (a dotnet test --filter expression), for a quick check before the
         # full run, e.g. -Filter "FullyQualifiedName~SharedControl|Name=Test1Client". The quick suites still run in full.
         [string] $Filter = '',
+        # Tests only: skips the clean, the script bundle and every publish, and uses what the last run built. For a rerun
+        # after changing test code only. A change to the product (C#, the page script, the tutorial apps) needs a run without it.
+        [switch] $NoBuild = $false,
 		[switch] $Rust = $false
     )
 
@@ -12,7 +15,7 @@
 # block below, so a failure anywhere shows FAILED; only reaching the very end shows PASSED.
 function Show-RunTestsResult {
     param([bool] $Passed)
-    $what = if ($Build) { 'BUILD' } else { 'BUILD + TESTS' }
+    $what = if ($Build) { 'BUILD' } elseif ($NoBuild) { 'TESTS (no build)' } else { 'BUILD + TESTS' }
     if ($Passed) {
         # Success: clear the build/test noise so the result is all that's on screen (failures keep the output to read).
         try { Clear-Host } catch { }
@@ -50,6 +53,12 @@ $env:EnvBuildMode = $Mode # Developer or Release
 . (Join-Path $PSScriptRoot 'eng\NativeToolchain.ps1')
 
 Write-Host -ForegroundColor GREEN ("Build:",$Build)
+Write-Host -ForegroundColor GREEN ("NoBuild:",$NoBuild)
+
+if ($Build -and $NoBuild) {
+    Write-Error "-Build (build only) and -NoBuild (tests only) cannot be used together."
+    exit 1
+}
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
@@ -404,6 +413,26 @@ if (-not $alreadyExists) {
 }
 
 
+$currentDirectory = Get-Location
+
+if ($NoBuild) {
+    # Everything the desktop and browser tests start must already be there from an earlier run.
+    $needed = @(
+        'src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js',
+        'src\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publish'
+    )
+    $missing = @($needed | Where-Object { -not (Test-Path -LiteralPath $_) })
+    if ($missing.Count -gt 0) {
+        Write-Error ("-NoBuild needs the output of an earlier run, and these are missing: " + ($missing -join ', ') + ". Run without -NoBuild first.")
+        exit 1
+    }
+    Write-Host -ForegroundColor Yellow "No build: testing what the last run built. Only changes to test code are picked up."
+    if ($Rust -eq $true) { $env:Rust = "true" }
+} else {
+
 Write-Host -ForegroundColor GREEN "Clean artifacts"
 # Missing output folders are not a failure. A later command that needs them still stops the script.
 Get-ChildItem .\src\RemoteWebView.Blazor.JS -Include node_modules,dist -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -Recurse -ErrorAction SilentlyContinue }
@@ -575,6 +604,8 @@ Invoke-RunTestsNative dotnet publish -c Embedded --self-contained true -r win-x6
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
+} # end of the build (skipped with -NoBuild)
+
 if ($Build -ne $true) {
     # The quick suites first: they need no app windows, so a failure stops the run before the slow desktop and browser tests start.
     # Every test project is part of the release gate; before this only FileSyncServer.Tests ran here.
@@ -642,7 +673,7 @@ $compress = @{
   DestinationPath = "artifacts\Release.Zip"
 }
 
-if ($env:EnvBuildMode -eq 'Release') {
+if ($env:EnvBuildMode -eq 'Release' -and -not $NoBuild) {
 	Compress-Archive @compress -Force
 }
 
