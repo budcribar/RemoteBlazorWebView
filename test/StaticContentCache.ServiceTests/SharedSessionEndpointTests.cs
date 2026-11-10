@@ -84,15 +84,43 @@ public class SharedSessionEndpointTests
     }
 
     [Fact]
-    public void The_mirror_voice_grant_is_given_once()
+    public void While_the_remote_user_is_on_the_call_no_other_mirror_page_gets_voice()
     {
         using var lifetime = new CancellationTokenSource();
         var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
 
-        var key = room.TakeControllerForMirror();
+        var key = room.TakeControllerForMirror()!;
+        Assert.NotNull(room.Join(key)); // the remote user's page connects
 
-        Assert.False(string.IsNullOrEmpty(key));
         Assert.Null(room.TakeControllerForMirror()); // a second mirror (a read-only viewer) gets no voice
+        Assert.Null(room.Join(key));                 // and the key cannot connect a second remote end
+    }
+
+    [Fact]
+    public void The_remote_user_gets_voice_again_after_refreshing()
+    {
+        using var lifetime = new CancellationTokenSource();
+        var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
+        var first = room.Join(room.TakeControllerForMirror()!)!;
+
+        room.Leave(first); // the page went away (refresh)
+
+        var key = room.TakeControllerForMirror();
+        Assert.False(string.IsNullOrEmpty(key));
+        Assert.NotNull(room.Join(key!));
+    }
+
+    [Fact]
+    public void A_mirror_page_that_never_connects_does_not_use_up_the_voice_grant()
+    {
+        using var lifetime = new CancellationTokenSource();
+        var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
+
+        Assert.NotNull(room.TakeControllerForMirror()); // a chat app fetched the link for a preview and never connected
+
+        var key = room.TakeControllerForMirror();       // the real remote user
+        Assert.False(string.IsNullOrEmpty(key));
+        Assert.NotNull(room.Join(key!));
     }
 
     private static (DefaultHttpContext Context, ServiceState State, Guid Id) NewRequest(string query, ServiceState? existing = null, Guid? existingId = null, VoiceRoom? voice = null)

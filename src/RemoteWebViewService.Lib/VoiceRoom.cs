@@ -24,13 +24,14 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
     private Peer? _controller;
     private bool _pageGranted;
     private bool _pageClaimed;
+    private bool _mirrorGranted;
     private Guid _callId;
     private bool _controllerConnected;
     private CallState _callState;
 
     private enum CallState { Idle, Ringing, Accepted }
 
-    private sealed class Peer(bool isHost)
+    internal sealed class Peer(bool isHost)
     {
         public bool IsHost { get; } = isHost;
         public Channel<byte[]> Outbox { get; } = Channel.CreateBounded<byte[]>(64);
@@ -83,14 +84,22 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         return _controllerKey;
     }
 
-    /// <summary>The remote user's key for the first /mirror page, when the owner's surface holds /app. Granted once.</summary>
+    /// <summary>
+    /// The remote user's key for a /mirror page, when the owner's surface holds /app. Given to any mirror page that
+    /// loads while nobody holds the remote end of the call: the remote user's page gets it again after a refresh, and a
+    /// page that loaded but never connected (a chat app fetching the link for a preview) does not use it up. While a
+    /// remote end is connected nobody else gets it, so a second person opening the link cannot take over the call.
+    /// </summary>
     internal string? TakeControllerForMirror()
     {
         lock (_gate)
         {
-            if (_pageGranted || _pageClaimed)
+            // The /app page route was used for this session (a session without an owner's surface): that grant is given once.
+            if ((_pageGranted || _pageClaimed) && !_mirrorGranted)
                 return null;
-            _pageGranted = _pageClaimed = true;
+            if (_controller is not null)
+                return null;
+            _pageGranted = _pageClaimed = _mirrorGranted = true;
         }
         return _controllerKey;
     }
@@ -231,13 +240,15 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         return buffer.WrittenSpan.ToArray();
     }
 
-    private Peer? Join(string key)
+    internal Peer? Join(string key)
     {
         lock (_gate)
         {
             if (_host is null && Matches(hostKey, key))
                 return _host = new Peer(isHost: true);
-            if (!_controllerConnected && Matches(_controllerKey, key))
+            // The /app page's key connects once. A mirror page's key connects again after the previous page has gone
+            // (the remote user refreshed), but never while a remote end is connected.
+            if ((_mirrorGranted ? _controller is null : !_controllerConnected) && Matches(_controllerKey, key))
             {
                 _controllerConnected = true;
                 return _controller = new Peer(isHost: false);
@@ -246,7 +257,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         }
     }
 
-    private void Leave(Peer peer)
+    internal void Leave(Peer peer)
     {
         lock (_gate)
         {
