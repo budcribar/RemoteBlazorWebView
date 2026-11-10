@@ -87,6 +87,10 @@ namespace EditWebView
 
             List<(string Name, DateTime Timestamp)> allTags = [];
             string nextUrl = apiUrl;
+            int page = 0;
+            int tagsSeen = 0;
+
+            Console.WriteLine($"Looking for the latest version {majorVersion} tag of {framework}...");
 
             while (!string.IsNullOrEmpty(nextUrl))
             {
@@ -100,11 +104,20 @@ namespace EditWebView
                     foreach (var tag in tags)
                     {
                         string name = tag.GetProperty("name").GetString() ?? string.Empty;
+                        tagsSeen++;
+
+                        // The date costs one request per tag, and these repositories have well over a thousand tags:
+                        // only ask for the tags that can be the answer.
+                        if (!IsValidVersionTag(name, majorVersion, framework)) continue;
+
                         string commitSha = tag.GetProperty("commit").GetProperty("sha").GetString() ?? string.Empty;
                         DateTime timestamp = await GetCommitTimestamp(framework, commitSha);
                         allTags.Add((name, timestamp));
                     }
                 }
+
+                page++;
+                Console.WriteLine($"  page {page}: {tagsSeen} tags read, {allTags.Count} of them version {majorVersion}");
 
                 nextUrl = GetNextPageUrl(response);
             }
@@ -128,6 +141,7 @@ namespace EditWebView
             }
 
             var latestVersion = validTags.First().Name;
+            Console.WriteLine($"  latest: {latestVersion} ({validTags.First().Timestamp:yyyy-MM-dd})");
             return $"https://github.com/{framework}/archive/refs/tags/{latestVersion}.zip";
         }
 
