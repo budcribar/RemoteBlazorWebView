@@ -11,6 +11,8 @@ function Show-RunTestsResult {
     param([bool] $Passed)
     $what = if ($Build) { 'BUILD' } else { 'BUILD + TESTS' }
     if ($Passed) {
+        # Success: clear the build/test noise so the result is all that's on screen (failures keep the output to read).
+        try { Clear-Host } catch { }
         $color = 'Green'
         $art = @(
             '  ######     ###     ######   ######  ########  ######  ',
