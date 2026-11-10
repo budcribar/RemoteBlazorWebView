@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: false
 
-      # global.json pins 10.0.403 with rollForward latestMinor. setup-dotnet
+      # global.json pins 10.0.404 with rollForward latestMinor. setup-dotnet
       # installs the 10.0.x band, which satisfies that roll-forward.
       # ClientFileSyncManager on this line has no
       # cache-control argument, so the provider scenario is skipped on both sides.

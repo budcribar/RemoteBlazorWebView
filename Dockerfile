@@ -10,7 +10,7 @@ COPY src/Protos/ src/Protos/
 COPY src/RemoteWebViewService.Lib/ src/RemoteWebViewService.Lib/
 COPY src/RemoteWebViewService/ src/RemoteWebViewService/
 RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64
-# The commit is appended to InformationalVersion as 10.0.14+<sha>, shown on the admin About page. Railway passes
+# The commit is appended to InformationalVersion as 10.0.15+<sha>, shown on the admin About page. Railway passes
 # RAILWAY_GIT_COMMIT_SHA for GitHub-triggered builds; for `railway up` (CLI) deploys it is empty, so fall back to the
 # uploaded .git/HEAD (.dockerignore lets in only HEAD and refs). Railway allows no bind mounts, so copy it: the .gi[t]
 # wildcard plus an always-present anchor file keeps a context without .git building (its contents land in /gitstamp).

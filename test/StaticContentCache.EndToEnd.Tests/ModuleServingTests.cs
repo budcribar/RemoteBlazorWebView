@@ -19,7 +19,7 @@ public class ModuleServingTests(ServingHost server) : IClassFixture<ServingHost>
 #if NET9_0
         Assert.Equal("9.0.9", WebViewPackageFiles.Version());
 #elif NET10_0
-        Assert.Equal("10.0.14", WebViewPackageFiles.Version());
+        Assert.Equal("10.0.15", WebViewPackageFiles.Version());
 #else
         throw new InvalidOperationException("This serving port is net9 or net10.");
 #endif

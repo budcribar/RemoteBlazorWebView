@@ -49,7 +49,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins 10.0.403 with rollForward latestMinor. This step
+      # global.json pins 10.0.404 with rollForward latestMinor. This step
       # installs the 10.0.x band, which satisfies that roll-forward.
       # The MAUI workload is not required: these tests do not build MAUI apps.
       - name: Setup .NET

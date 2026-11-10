@@ -92,6 +92,91 @@ static class Program
         {
             Console.WriteLine($"Empty yarn.lock file created at: {filePath}");
         }
+
+        ApplyWebJSPatches(webJSTarget);
+    }
+
+    /// <summary>
+    /// Web.JS is replaced wholesale from aspnetcore, so the few changes this repository needs in it are made again here, the way
+    /// Editor does for the C# files. Each one checks for the upstream text it replaces and says so loudly when that text is gone:
+    /// upstream changed, and the patch needs a look before the result is committed.
+    /// </summary>
+    static void ApplyWebJSPatches(string webJS)
+    {
+        Console.WriteLine("Applying RemoteBlazorWebView patches to Web.JS...");
+
+        // A page in a sandboxed iframe (a remote component's frame) has an opaque origin, so this request is cross-origin; a
+        // credentialed one can't be answered with the relay's "Access-Control-Allow-Origin: *".
+        PatchWebJSFile(Path.Combine(webJS, "src", "JSInitializers", "JSInitializers.WebView.ts"),
+            "    credentials: 'include',",
+            "    // RemoteBlazorWebView: 'same-origin' instead of upstream's 'include'. A page in a sandboxed iframe has an opaque origin, so\n" +
+            "    // this request is cross-origin; a credentialed one can't be answered with the relay's \"Access-Control-Allow-Origin: *\".\n" +
+            "    // Same-origin pages (the normal case) still send cookies.\n" +
+            "    credentials: 'same-origin',",
+            "credentials: 'same-origin',");
+
+        // The bundle is built against the dotnet-runtime folder beside Web.JS, not a published package.
+        PatchWebJSFile(Path.Combine(webJS, "package.json"),
+            "\"@microsoft/dotnet-runtime\": \"*\"",
+            "\"@microsoft/dotnet-runtime\": \"file:../dotnet-runtime\"",
+            "\"@microsoft/dotnet-runtime\": \"file:../dotnet-runtime\"");
+
+        // Imported by the circuit code; added here when the upstream tree does not carry it, so the bundle builds.
+        string reconnectEvent = Path.Combine(webJS, "src", "Platform", "Circuits", "ReconnectStateChangedEvent.ts");
+        if (File.Exists(reconnectEvent))
+        {
+            Console.WriteLine($"  ok (upstream has it): {Path.GetFileName(reconnectEvent)}");
+        }
+        else
+        {
+            File.WriteAllText(reconnectEvent,
+                "// Licensed to the .NET Foundation under one or more agreements.\n" +
+                "// The .NET Foundation licenses this file to you under the MIT license.\n" +
+                "\n" +
+                "export interface ReconnectStateChangedEvent {\n" +
+                "  state: 'show' | 'hide' | 'retrying' | 'failed' | 'resume-failed' | 'paused' | 'rejected';\n" +
+                "  currentAttempt?: number;\n" +
+                "  secondsToNextAttempt?: number;\n" +
+                "  remote?: boolean;\n" +
+                "}\n");
+            Console.WriteLine($"  added: {Path.GetFileName(reconnectEvent)}");
+        }
+    }
+
+    /// <summary>Replaces <paramref name="upstream"/> with <paramref name="ours"/> in one file, keeping the file's line endings.</summary>
+    static void PatchWebJSFile(string path, string upstream, string ours, string appliedMarker)
+    {
+        string name = Path.GetFileName(path);
+        if (!File.Exists(path))
+        {
+            WarnPatch($"PATCH NOT APPLIED: {name} is not in the upstream tree any more ({path}).");
+            return;
+        }
+
+        string text = File.ReadAllText(path);
+        if (text.Contains(upstream, StringComparison.Ordinal))
+        {
+            string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            File.WriteAllText(path, text.Replace(upstream, ours.Replace("\n", newline), StringComparison.Ordinal));
+            Console.WriteLine($"  patched: {name}");
+        }
+        else if (text.Contains(appliedMarker, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"  ok (already patched): {name}");
+        }
+        else
+        {
+            WarnPatch($"PATCH NOT APPLIED: {name} no longer contains the upstream text this patch replaces: {upstream.Trim()}");
+        }
+    }
+
+    static void WarnPatch(string message)
+    {
+        var color = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine("  " + message);
+        Console.WriteLine("  Upstream changed here. Look at the file and update ApplyWebJSPatches before committing the result.");
+        Console.ForegroundColor = color;
     }
 
     static void ProcessFiles(string inputDir, string outputDir)
