@@ -15,6 +15,56 @@ namespace EditWebView
         private const string AspNetCoreRepo = "dotnet/aspnetcore";
         private const string MauiRepo = "dotnet/maui";
 
+        private static string? _githubToken;
+
+        /// <summary>
+        /// The token for the GitHub API: GITHUB_PAT when it is set, otherwise the one the
+        /// GitHub CLI holds from 'gh auth login'. Empty when neither is available.
+        /// </summary>
+        private static string GetGitHubToken()
+        {
+            if (_githubToken != null) return _githubToken;
+
+            string token = Environment.GetEnvironmentVariable("GITHUB_PAT")?.Trim() ?? string.Empty;
+            if (token.Length == 0)
+            {
+                token = GetGitHubCliToken();
+                if (token.Length > 0) Console.WriteLine("GITHUB_PAT is not set; using the GitHub CLI sign-in (gh auth token).");
+            }
+
+            return _githubToken = token;
+        }
+
+        private static string GetGitHubCliToken()
+        {
+            try
+            {
+                using var gh = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("gh", "auth token")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                });
+                if (gh == null) return string.Empty;
+
+                var output = gh.StandardOutput.ReadToEndAsync();
+                var errors = gh.StandardError.ReadToEndAsync();
+                if (!gh.WaitForExit(10000))
+                {
+                    try { gh.Kill(); } catch { }
+                    return string.Empty;
+                }
+
+                return gh.ExitCode == 0 ? output.Result.Trim() : string.Empty;
+            }
+            catch (Exception)
+            {
+                // gh is not installed or not on the PATH
+                return string.Empty;
+            }
+        }
+
         public static async Task<string> GetLatestFrameworkVersionAsync(string framework, int majorVersion)
         {
             if (framework != AspNetCoreRepo && framework != MauiRepo)
@@ -25,11 +75,11 @@ namespace EditWebView
             string apiUrl = $"https://api.github.com/repos/{framework}/tags?per_page=100";
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "FrameworkVersionFinder");
 
-            string githubToken = Environment.GetEnvironmentVariable("GITHUB_PAT") ?? string.Empty;
+            string githubToken = GetGitHubToken();
 
             if (string.IsNullOrEmpty(githubToken))
             {
-                Console.Error.WriteLine("Error: GITHUB_PAT environment variable is not set.");
+                Console.Error.WriteLine("Error: no GitHub token. Set the GITHUB_PAT environment variable, or sign in with 'gh auth login'.");
                 Environment.Exit(1);
             }
 
