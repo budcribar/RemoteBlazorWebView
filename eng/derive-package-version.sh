@@ -3,7 +3,7 @@
 # Usage: derive-package-version.sh <net9|net10|net11> <repo-root> [version-override] [patch]
 # Override, when set, is a full version such as 9.0.23 or 9.0.22-rc2.
 # Patch is empty or 0 for none, or a positive integer that appends -pN.
-# A GA SDK uses the committed Directory.Build.props version (9.0.22, 10.0.13),
+# A GA SDK uses the committed Directory.Build.props version (9.0.23, 10.0.13),
 # not {major}.0.0. A prerelease SDK still uses {major}.0.0 and a no-dot suffix.
 # The script does not edit files. A hit on nuget.org is a warning, not a failure.
 set -euo pipefail

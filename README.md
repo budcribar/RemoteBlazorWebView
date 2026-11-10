@@ -18,18 +18,18 @@ As a seamless replacement for the Microsoft.AspNetCore.Components.WebView.Window
 # Demo Video
 ![RemoteBlazorWebView](https://raw.githubusercontent.com/budcribar/RemoteBlazorWebView/net9/icons/RemoteBlazorWebView.gif)
 
-# net9 package 9.0.22
+# net9 package 9.0.23
 
-The packages on this line are version 9.0.22. Build them with SDK 9.0.320 (`rollForward`: `latestMinor`). The target frameworks stay `net9.0`, `net9.0-windows`, and `net9`. Direct Microsoft .NET 9 servicing references are 9.0.22. `Microsoft.AspNetCore.Components.WebView.WindowsForms` stays at 9.0.120 and still restores `Microsoft.AspNetCore.Components.WebView` 9.0.9.
+The packages on this line are version 9.0.23. Build them with SDK 9.0.321 (`rollForward`: `latestMinor`). The target frameworks stay `net9.0`, `net9.0-windows`, and `net9`. Direct Microsoft .NET 9 servicing references are 9.0.23. `Microsoft.AspNetCore.Components.WebView.WindowsForms` stays at 9.0.120 and still restores `Microsoft.AspNetCore.Components.WebView` 9.0.9.
 
-.NET 9 end of support is November 10, 2026. 9.0.22 is the October 25, 2026 out-of-band servicing release (SDK 9.0.320). Details are in [doc/CHANGELOG.md](doc/CHANGELOG.md). This branch prepares that version. It does not publish it.
+.NET 9 end of support is November 10, 2026. 9.0.23 is the November 10, 2026 final servicing release (SDK 9.0.321). Details are in [doc/CHANGELOG.md](doc/CHANGELOG.md).
 
 # Usage instructions
 
-You do not need to build this repo unless you want to customize the RemoteWebViewService. After 9.0.22 is published, install the tool with:
+You do not need to build this repo unless you want to customize the RemoteWebViewService. After 9.0.23 is published, install the tool with:
 
 ```console
-dotnet tool update -g PeakSWC.RemoteWebViewService --version 9.0.22
+dotnet tool update -g PeakSWC.RemoteWebViewService --version 9.0.23
 ```
 
 # Samples

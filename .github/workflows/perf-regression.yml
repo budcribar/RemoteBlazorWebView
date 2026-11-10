@@ -49,7 +49,7 @@ jobs:
 
       # Default baseline is origin/net10, so the 10.0 SDK and this line's SDK
       # both have to be installed. Each worktree's global.json selects the
-      # SDK that build uses. This line pins 9.0.320 with rollForward latestMinor.
+      # SDK that build uses. This line pins 9.0.321 with rollForward latestMinor.
       # ClientFileSyncManager on net9 and net10 has no cache-control argument,
       # so the provider scenario is skipped.
       - name: Setup .NET 10

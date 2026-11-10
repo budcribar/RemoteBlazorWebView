@@ -1,5 +1,16 @@
 # Changelog
 
+## 9.0.23
+
+Final .NET 9 servicing release prepared on November 10, 2026.
+
+- Package version `9.0.23` from `VersionPrefix` in `Directory.Build.props`. No `VersionSuffix`.
+- SDK pin `9.0.321` in `global.json`, with `rollForward` left at `latestMinor`.
+- Microsoft .NET 9 servicing packages that were directly referenced at `9.0.22` are `9.0.23`. Checked on the public NuGet flat-container index and against the [.NET 9.0.23 release notes](https://github.com/dotnet/core/blob/main/release-notes/9.0/9.0.23/9.0.23.md).
+- `Microsoft.AspNetCore.Components.WebView.WindowsForms` stays `9.0.120`.
+- Target frameworks stay `net9.0`, `net9.0-windows`, and `net9`.
+- The [9.0 release index](https://github.com/dotnet/core/blob/main/release-notes/9.0/README.md) and `https://builds.dotnet.microsoft.com/dotnet/release-metadata/9.0/releases.json` list `latest-release` `9.0.23`, `latest-sdk` `9.0.321` (also SDK `9.0.124`), `latest-release-date` `2026-11-10`, `support-phase` `eol`, and `eol-date` `2026-11-10`.
+
 ## 9.0.22
 
 Servicing release prepared on November 6, 2026. The packages are not published.

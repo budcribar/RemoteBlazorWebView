@@ -20,7 +20,7 @@
 		<Title>RemoteBlazorWebView</Title>
 		<Nullable>enable</Nullable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageReleaseNotes>9.0.22 servicing release. Based on maui 9.0.120. Direct Microsoft .NET 9 servicing references are 9.0.22 (SDK 9.0.320). Microsoft.AspNetCore.Components.WebView.WindowsForms stays 9.0.120 and still brings Microsoft.AspNetCore.Components.WebView 9.0.9. .NET 9 end of support is November 10, 2026.</PackageReleaseNotes>
+		<PackageReleaseNotes>9.0.23 servicing release. Based on maui 9.0.120. Direct Microsoft .NET 9 servicing references are 9.0.23 (SDK 9.0.321). Microsoft.AspNetCore.Components.WebView.WindowsForms stays 9.0.120 and still brings Microsoft.AspNetCore.Components.WebView 9.0.9. .NET 9 end of support is November 10, 2026.</PackageReleaseNotes>
 		<DebugType>full</DebugType>
 		<Configurations>Debug;Release;Embedded</Configurations>
 		<Platforms>x64</Platforms>
@@ -38,11 +38,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.22" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.22" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.22" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.22" />
-		<PackageReference Include="Microsoft.JSInterop" Version="9.0.22" />		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.23" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.23" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.23" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.23" />
+		<PackageReference Include="Microsoft.JSInterop" Version="9.0.23" />		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
 		<PackageReference Include="Photino.Net" Version="4.0.16" />
 
 	</ItemGroup>

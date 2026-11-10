@@ -49,9 +49,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins SDK 9.0.320 with rollForward latestMinor. setup-dotnet
+      # global.json pins SDK 9.0.321 with rollForward latestMinor. setup-dotnet
       # installs that published SDK. A newer 9.0 SDK already on the runner
-      # still satisfies the roll-forward. 9.0.320 includes runtime 9.0.22.
+      # still satisfies the roll-forward. 9.0.321 includes runtime 9.0.23.
       # The MAUI workload is not required: these tests do not build MAUI apps.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
