@@ -29,6 +29,7 @@ namespace PeakSWC.RemoteWebView
     public class RemoteWebView2Manager : PeakSWC.RemoteBlazorWebView.WebView2WebViewManager
     {
         Uri url;
+        private readonly RenderAckFilter renderAcks = new();
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
         public RemoteWebView2Manager(IBlazorWebView blazorWebView, WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath, string hostPagePathWithinFileProvider, Action<UrlLoadingEventArgs> externalNavigationStarting, Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger) : base(webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized,logger)
@@ -51,7 +52,10 @@ namespace PeakSWC.RemoteWebView
         {
             this.Dispatcher.InvokeAsync(() =>
             {
-                MessageReceived(RemoteMessageUrl.Rewrite(sender?.ToString(), BlazorWebView.ServerUri, BlazorWebView.Id, RemoteWebView.HostHtmlPath, this.url), e);
+                var source = RemoteMessageUrl.Rewrite(sender?.ToString(), BlazorWebView.ServerUri, BlazorWebView.Id, RemoteWebView.HostHtmlPath, this.url);
+                // Control can move between browsers mid-batch; keep render acknowledgements one per batch, in order.
+                foreach (var message in renderAcks.OnReceived(e))
+                    MessageReceived(source, message);
             });
         }
 
@@ -63,6 +67,7 @@ namespace PeakSWC.RemoteWebView
 
         protected override void SendMessage(string message)
         {
+            renderAcks.OnSending(message);
             RemoteWebView.SendMessage(message);
         }
 
