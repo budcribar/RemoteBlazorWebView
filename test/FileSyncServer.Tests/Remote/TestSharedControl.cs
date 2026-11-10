@@ -20,7 +20,7 @@ namespace FileSyncServer.Tests.Remote
         public IPage Owner => Pages[0];
 
         /// <summary>Another browser joins on the read-only link.</summary>
-        public async Task<IPage> OpenMirror()
+        public async Task<IPage> OpenMirror(string? baseUrl = null)
         {
             var context = await Browser.NewContextAsync(new BrowserNewContextOptions
             {
@@ -29,7 +29,7 @@ namespace FileSyncServer.Tests.Remote
             });
             BrowserContexts.Add(context);
             var page = await context.NewPageAsync();
-            await page.GotoAsync(Url + $"mirror/{Ids[0]}");
+            await page.GotoAsync((baseUrl ?? Url) + $"mirror/{Ids[0]}");
             return page;
         }
 
@@ -202,12 +202,14 @@ namespace FileSyncServer.Tests.Remote
             await owner.Locator(".btn").ClickAsync();
             await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
 
-            var viewer = await _fixture.OpenMirror();
+            // The viewer reaches the relay through a port of the test's own, which the test can cut and restore.
+            using var network = new TcpForwarder(new System.Uri(_fixture.Url).Port);
+            var viewer = await _fixture.OpenMirror($"https://localhost:{network.Port}/");
             await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 20000 });
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
 
             // The viewer's network goes away: its page says so instead of standing there looking alive.
-            await viewer.Context.SetOfflineAsync(true);
+            network.Disconnect();
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToContainTextAsync("Connection lost", new LocatorAssertionsToContainTextOptions { Timeout = 30000 });
 
             // The session carries on without it.
@@ -215,7 +217,7 @@ namespace FileSyncServer.Tests.Remote
             await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 2", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
 
             // The network returns: the page loads again by itself and shows the session as it is now.
-            await viewer.Context.SetOfflineAsync(false);
+            network.Connect();
             await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 2", new LocatorAssertionsToContainTextOptions { Timeout = 45000 });
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
             await Expect(SharedControlFixture.Status(viewer)).ToHaveTextAsync("View only", Soon);
