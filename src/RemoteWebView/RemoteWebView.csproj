@@ -4,6 +4,8 @@
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+    <RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
     <Platforms>x64;AnyCPU</Platforms>

@@ -116,7 +116,7 @@ namespace PeakSWC.RemoteWebView
                     if (!first)
                         sb.Append(',');
                     first = false;
-                    sb.Append("{\"id\":").Append(JsonSerializer.Serialize(brn.ClientId))
+                    sb.Append("{\"id\":\"").Append(JsonEncodedText.Encode(brn.ClientId).ToString()).Append('"') // AOT-safe (no reflection serializer)
                       .Append(",\"owner\":").Append(brn.ClientId == ownerClientId ? "true" : "false")
                       .Append(",\"primary\":").Append(brn.ClientId == primaryClientId ? "true" : "false")
                       .Append('}');

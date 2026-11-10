@@ -154,7 +154,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
             try
             {
                 var config = context.RequestServices.GetRequiredService<IConfiguration>();
-                var ready = JsonSerializer.SerializeToUtf8Bytes(new { type = "ready", iceServers = IceServers(config) });
+                var ready = ReadyMessage(config);
                 await socket.SendAsync(ready.AsMemory(), WebSocketMessageType.Text, true, lifetime.Token).ConfigureAwait(false);
                 var sending = Send(socket, peer, lifetime.Token);
                 var receiving = room.ReceiveSignals(socket, peer, buffer, lifetime.Token);
@@ -183,21 +183,52 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
             && registration.Task.Result.Voice?.HostLifetime.IsCancellationRequested != true ? registration.Task.Result : null;
     }
 
-    private static object[] IceServers(IConfiguration config)
+    // Messages are written with Utf8JsonWriter, not JsonSerializer over anonymous types: the relay is also published trimmed
+    // and native (AOT), where reflection-based serialization is unavailable.
+    private static byte[] ReadyMessage(IConfiguration config)
     {
         var stun = config["Voice:StunUrl"];
         var turn = config["Voice:TurnUrl"];
         var secret = config["Voice:TurnSecret"];
-        var servers = new System.Collections.Generic.List<object>();
-        if (!string.IsNullOrEmpty(stun))
-            servers.Add(new { urls = stun });
-        if (!string.IsNullOrEmpty(turn) && !string.IsNullOrEmpty(secret))
+        var buffer = new System.Buffers.ArrayBufferWriter<byte>();
+        using (var w = new Utf8JsonWriter(buffer))
         {
-            var username = $"{DateTimeOffset.UtcNow.AddHours(2).ToUnixTimeSeconds()}:{NewKey()}";
-            var credential = Convert.ToBase64String(HMACSHA1.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(username)));
-            servers.Add(new { urls = turn, username, credential });
+            w.WriteStartObject();
+            w.WriteString("type", "ready");
+            w.WriteStartArray("iceServers");
+            if (!string.IsNullOrEmpty(stun))
+            {
+                w.WriteStartObject();
+                w.WriteString("urls", stun);
+                w.WriteEndObject();
+            }
+            if (!string.IsNullOrEmpty(turn) && !string.IsNullOrEmpty(secret))
+            {
+                var username = $"{DateTimeOffset.UtcNow.AddHours(2).ToUnixTimeSeconds()}:{NewKey()}";
+                var credential = Convert.ToBase64String(HMACSHA1.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(username)));
+                w.WriteStartObject();
+                w.WriteString("urls", turn);
+                w.WriteString("username", username);
+                w.WriteString("credential", credential);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
         }
-        return servers.ToArray();
+        return buffer.WrittenSpan.ToArray();
+    }
+
+    private static byte[] CallMessage(string type, Guid callId)
+    {
+        var buffer = new System.Buffers.ArrayBufferWriter<byte>();
+        using (var w = new Utf8JsonWriter(buffer))
+        {
+            w.WriteStartObject();
+            w.WriteString("type", type);
+            w.WriteString("callId", callId);
+            w.WriteEndObject();
+        }
+        return buffer.WrittenSpan.ToArray();
     }
 
     private Peer? Join(string key)
@@ -226,7 +257,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
                 _controller = null;
 
             if (_callState != CallState.Idle && other is not null)
-                Post(other, JsonSerializer.SerializeToUtf8Bytes(new { type = "end", callId = _callId }));
+                Post(other, CallMessage("end", _callId));
             _callState = CallState.Idle;
         }
     }
@@ -244,7 +275,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
             var other = peer.IsHost ? _controller : _host;
             if (other is null)
             {
-                Post(peer, JsonSerializer.SerializeToUtf8Bytes(new { type = "unavailable", callId }));
+                Post(peer, CallMessage("unavailable", callId));
                 return;
             }
 

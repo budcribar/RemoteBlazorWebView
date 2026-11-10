@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
 
         public static readonly DiagnosticDescriptor NotWebView2 = new(
             "RBW010", "ReverseMirror is not a WebView2",
-            "ReverseMirror '{0}' is a {1}; it must be a WebView2 control (a type with a settable Uri Source property), e.g. <wv2:WebView2 x:Name=\"{0}\" /> with xmlns:wv2=\"clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf\"",
+            "ReverseMirror '{0}' is a {1}; it must be a WebView2 control (a type with a settable Uri Source property), such as <wv2:WebView2 x:Name=\"{0}\" /> with xmlns:wv2=\"clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf\"",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor ServerUriIgnored = new(

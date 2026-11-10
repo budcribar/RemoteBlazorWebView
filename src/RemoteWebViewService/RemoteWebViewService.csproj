@@ -46,7 +46,10 @@
 	
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
-    <NoWarn>NU5100</NoWarn>
+    <!-- IL2104 / IL3053 / IL3000: trim and AOT warnings raised inside Microsoft's own assemblies (Components.WebAssembly.Server,
+         Microsoft.CSharp, System.Linq.Expressions, the debug proxy launcher) during the native publish. Nothing in this repo can fix
+         them; warnings from this repo's own code (IL2026, IL3050) are NOT suppressed. -->
+    <NoWarn>NU5100;IL2104;IL3053;IL3000</NoWarn>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>

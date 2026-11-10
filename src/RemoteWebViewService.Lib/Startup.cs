@@ -110,7 +110,11 @@ namespace PeakSWC.RemoteWebView
 #endif
 
         // Set by RemoteWebViewServer.StartAsync when the service runs inside another process.
-        private bool Embedded => configuration.GetValue(RemoteWebViewServer.EmbeddedKey, false);
+        private bool Embedded => GetBool(configuration, RemoteWebViewServer.EmbeddedKey, false);
+
+        // Read by hand, not with ConfigurationBinder: the relay is also published trimmed and native (AOT), where the binder's reflection is unavailable.
+        private static bool GetBool(IConfiguration config, string key, bool fallback) =>
+            bool.TryParse(config[key], out var value) ? value : fallback;
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -210,7 +214,13 @@ namespace PeakSWC.RemoteWebView
             services.AddTransient<IUserService, MockUserService>();
 #endif
             // Bind RemoteFilesOptions from configuration
-            services.Configure<RemoteFilesOptions>(configuration.GetSection("RemoteFilesOptions"));
+            services.Configure<RemoteFilesOptions>(options =>
+            {
+                var section = configuration.GetSection("RemoteFilesOptions");
+                if (section[nameof(RemoteFilesOptions.RootDirectory)] is { Length: > 0 } root) options.RootDirectory = root;
+                options.UseServerCache = GetBool(section, nameof(RemoteFilesOptions.UseServerCache), options.UseServerCache);
+                options.UseClientCache = GetBool(section, nameof(RemoteFilesOptions.UseClientCache), options.UseClientCache);
+            });
 
             // Register RemoteFilesOptions as a singleton for direct access if needed
             services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<RemoteFilesOptions>>().Value);
@@ -305,7 +315,7 @@ namespace PeakSWC.RemoteWebView
             app.UseRateLimiter();
 #endif
             // Off in container mode (TLS terminated by Kestrel on a single port) and for the embedded plain-HTTP loopback server.
-            if (!RemoteWebViewServer.IsContainerMode && configuration.GetValue(RemoteWebViewServer.HttpsRedirectionKey, true))
+            if (!RemoteWebViewServer.IsContainerMode && GetBool(configuration, RemoteWebViewServer.HttpsRedirectionKey, true))
                 app.UseHttpsRedirection();
 
             app.UseResponseCompression();

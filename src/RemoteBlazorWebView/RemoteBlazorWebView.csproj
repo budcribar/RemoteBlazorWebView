@@ -4,6 +4,8 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<TargetFramework>net10.0-windows</TargetFramework>
+		<!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+		<RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
