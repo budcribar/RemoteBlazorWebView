@@ -68,6 +68,14 @@ namespace EditWebView
                 await _webviewReadyTask;
                 _webview.NavigateToString(htmlContent);
             });
+        }
+        public void NavigateToUrl(Uri url)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                if (await _webviewReadyTask)
+                    _webview.CoreWebView2.Navigate(url.AbsoluteUri);
+            });
         }";
 
             Replace("protected override void SendMessage(string message)", newMethod + "\n        protected override void SendMessage(string message)");

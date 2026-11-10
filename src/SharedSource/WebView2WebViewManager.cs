@@ -208,6 +208,15 @@ namespace PeakSWC.RemoteBlazorWebView
                 _webview.NavigateToString(htmlContent);
             });
         }
+        /// <summary>Loads a URL in this control's WebView once it is initialized (CoreWebView2 is null until then).</summary>
+        public void NavigateToUrl(Uri url)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                if (await _webviewReadyTask)
+                    _webview.CoreWebView2.Navigate(url.AbsoluteUri);
+            });
+        }
         protected override void SendMessage(string message)
 		{
 			// Check disposal flag first (prevents most calls after disposal)

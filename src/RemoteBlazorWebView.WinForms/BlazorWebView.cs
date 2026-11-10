@@ -245,6 +245,12 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
 
+        /// <summary>
+        /// Loads a page in this control's own WebView, waiting until the WebView is initialized (unlike CoreWebView2.Navigate,
+        /// which is a no-op before then). For the relay's session pages, e.g. an owner surface showing the controlling /app page.
+        /// </summary>
+        public void NavigateToUrl(Uri url) => WebViewManager.NavigateToUrl(url);
+
         public Task WaitForInitializationComplete() => Task.CompletedTask;
     }
 }
