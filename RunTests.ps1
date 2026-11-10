@@ -1,4 +1,4 @@
-
+﻿
  param(
         [string] $Mode = 'Developer',
         [switch] $Build = $false,
@@ -573,6 +573,21 @@ Invoke-RunTestsNative dotnet publish -c Embedded --self-contained true -r win-x6
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
 if ($Build -ne $true) {
+    # The quick suites first: they need no app windows, so a failure stops the run before the slow desktop and browser tests start.
+    # Every test project is part of the release gate; before this only FileSyncServer.Tests ran here.
+    $quickSuites = @(
+        'test\StaticContentCache.ServiceTests\StaticContentCache.ServiceTests.csproj',                       # the relay
+        'test\RemoteWebView.Lifecycle.Tests\RemoteWebView.Lifecycle.Tests.csproj',                           # the app-side library
+        'test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj',  # [RemoteBlazor]
+        'test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj',  # remote components
+        'test\StaticContentCache.EndToEnd.Tests\StaticContentCache.EndToEnd.Tests.csproj'                    # file cache, needs Chrome or Edge installed
+    )
+    foreach ($suite in $quickSuites) {
+        Write-Host -ForegroundColor Cyan "Testing $(Split-Path -Leaf (Split-Path -Parent $suite))"
+        # GeneratePackageOnBuild=false: testing must not repack the NuGet packages that were just built for release.
+        Invoke-RunTestsNative dotnet test $suite -c Release -p:GeneratePackageOnBuild=false
+    }
+
     # Navigate to the first test directory
     $targetPath = Resolve-Path "test\FileSyncServer.Tests"
     Set-Location $targetPath
