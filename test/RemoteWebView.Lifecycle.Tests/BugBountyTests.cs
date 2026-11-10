@@ -1,4 +1,4 @@
-extern alias client;
+﻿extern alias client;
 
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -30,6 +30,8 @@ public class BugBountyTests
     public async Task Mirror_scroll_is_ordered_relayed_and_never_forwarded_to_desktop()
     {
         const string id = "scroll-test";
+        // Browsers are also sent who is in the session and who has control; this test is about scroll messages only.
+        static bool IsControlNotice(string m) => m.StartsWith("participants:", StringComparison.Ordinal) || m.StartsWith("primaryChanged:", StringComparison.Ordinal);
         using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true);
         var ready = new TaskCompletionSource<ServiceState>();
         ready.SetResult(state);
@@ -42,7 +44,7 @@ public class BugBountyTests
         state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(m => desktop.Writer.TryWrite(m.Response));
         using var observer = new CancellationTokenSource();
         state.IPC.BrowserResponseStream(new BrowserResponseNode(
-            new CallbackStreamWriter<StringRequest>(m => relayed.Writer.TryWrite(m.Request)), "mirror", false), observer);
+            new CallbackStreamWriter<StringRequest>(m => { if (!IsControlNotice(m.Request)) relayed.Writer.TryWrite(m.Request); }), "mirror", false), observer);
 
         SendSequenceMessageRequest Scroll(uint sequence, bool primary = true) => new()
         {
@@ -64,7 +66,7 @@ public class BugBountyTests
         var late = Channel.CreateUnbounded<string>();
         using var lateObserver = new CancellationTokenSource();
         state.IPC.BrowserResponseStream(new BrowserResponseNode(
-            new CallbackStreamWriter<StringRequest>(m => late.Writer.TryWrite(m.Request)), "late", false), lateObserver);
+            new CallbackStreamWriter<StringRequest>(m => { if (!IsControlNotice(m.Request)) late.Writer.TryWrite(m.Request); }), "late", false), lateObserver);
         Assert.Equal(IPC.ScrollMessagePrefix + "2", await late.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.False(late.Reader.TryRead(out _));
     }
