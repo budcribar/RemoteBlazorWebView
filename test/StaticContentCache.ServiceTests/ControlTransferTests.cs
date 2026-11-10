@@ -364,6 +364,8 @@ public class ControlTransferTests
         public IReadOnlyCollection<string> Messages => messages;
         public WriteOptions? WriteOptions { get; set; }
         public Task WriteAsync(StringRequest message) { messages.Enqueue(message.Request); return Task.CompletedTask; }
+        // The relay writes with a token; the interface's default for this overload throws when the token can be cancelled.
+        public Task WriteAsync(StringRequest message, CancellationToken cancellationToken) => WriteAsync(message);
     }
 
     private sealed class CallContext(CancellationToken token) : ServerCallContext
