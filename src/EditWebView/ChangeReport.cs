@@ -31,7 +31,7 @@ namespace EditWebView
         /// <param name="Ignored">A new file that a .gitignore rule hides, so 'git add' and 'git status' pass over it.</param>
         public sealed record Change(string Path, Kind Kind, int LinesAdded, int LinesRemoved, bool Binary, bool Ignored = false);
 
-        /// <summary>Results of the Web.JS patches, in the order they ran. Filled in by Program.</summary>
+        /// <summary>Results of this repository's own changes to the upstream source, in the order they ran. Filled in by Program and Editor.</summary>
         public static List<(string File, string Result, bool Problem)> Patches { get; } = [];
 
         /// <summary>Paths in the regenerated folders that already differ from the last commit. Call before the run changes anything.</summary>
@@ -140,7 +140,7 @@ namespace EditWebView
             if (Patches.Count == 0) return;
 
             Console.WriteLine();
-            Console.WriteLine("Web.JS patches:");
+            Console.WriteLine("Changes of this repository's own, made again on the upstream source:");
             foreach (var (file, result, problem) in Patches)
             {
                 if (problem) Warn($"  {file}: {result}");
@@ -302,6 +302,33 @@ namespace EditWebView
         {
             string name = url[(url.LastIndexOf('/') + 1)..];
             return name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+        }
+
+        /// <summary>What a git command writes, byte for byte (a file's content from 'git show').</summary>
+        public static byte[] GitBytes(string repoPath, string[] arguments)
+        {
+            var start = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = repoPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (string argument in arguments) start.ArgumentList.Add(argument);
+
+            using var git = Process.Start(start) ?? throw new InvalidOperationException("git did not start.");
+            var errors = git.StandardError.ReadToEndAsync();
+            using var output = new MemoryStream();
+            git.StandardOutput.BaseStream.CopyTo(output);
+            git.WaitForExit();
+
+            if (git.ExitCode != 0)
+            {
+                throw new InvalidOperationException($"git {arguments[0]} failed ({git.ExitCode}): {errors.Result.Trim()}");
+            }
+
+            return output.ToArray();
         }
 
         private static string Git(string repoPath, string[] arguments, int[]? okExitCodes = null)

@@ -90,8 +90,10 @@ static class Program
         var webJSource = Path.Combine(Path.GetDirectoryName(destinationPath) ?? "", Path.GetFileNameWithoutExtension(destinationPath), @"src/components/Web.JS");
 
         Console.WriteLine($"Copying Web.JS files from {webJSource} to {webJSTarget}");
-        Utility.DeleteDirectoryAndContents(webJSTarget);
+        var ours = ReadOurWebJSFiles(webJSTarget);
+        ClearWebJS(webJSTarget);
         Utility.CopyDirectory(webJSource, webJSTarget);
+        RestoreOurWebJSFiles(webJSTarget, ours);
         string filePath = Path.Combine(webJSTarget, "yarn.lock");
         using (File.Create(filePath))
         {
@@ -99,6 +101,101 @@ static class Program
         }
 
         ApplyWebJSPatches(webJSTarget);
+    }
+
+    /// <summary>
+    /// Files in Web.JS that belong to this repository, not to aspnetcore: the bundle's own tsconfig.json extends the first.
+    /// They are read before Web.JS is replaced and written back afterwards, unless upstream brings a file of the same name.
+    /// </summary>
+    static readonly string[] OurWebJSFiles = ["src/tsconfig.json", "src/webpack.config.js"];
+
+    static Dictionary<string, byte[]> ReadOurWebJSFiles(string webJS)
+    {
+        var contents = new Dictionary<string, byte[]>();
+        foreach (string file in OurWebJSFiles)
+        {
+            string path = Path.Combine(webJS, file);
+            if (File.Exists(path))
+            {
+                contents[file] = File.ReadAllBytes(path);
+                continue;
+            }
+
+            // Not in the working folder (an earlier run removed it, say): the committed copy will do.
+            try
+            {
+                contents[file] = ChangeReport.GitBytes(RepoPath, ["show", $"HEAD:src/RemoteWebView.Blazor.JS/Web.JS/{file}"]);
+            }
+            catch (Exception)
+            {
+                // Reported by RestoreOurWebJSFiles, once it is known whether upstream supplies the file.
+            }
+        }
+
+        return contents;
+    }
+
+    static void RestoreOurWebJSFiles(string webJS, Dictionary<string, byte[]> contents)
+    {
+        foreach (string file in OurWebJSFiles)
+        {
+            string path = Path.Combine(webJS, file);
+            if (File.Exists(path))
+            {
+                WarnPatch($"{file} now comes from upstream; this repository's own copy was not put back.");
+                ChangeReport.Patches.Add((file, "NOT KEPT, upstream now has a file of this name: compare it with ours", true));
+            }
+            else if (contents.TryGetValue(file, out var content))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllBytes(path, content);
+                Console.WriteLine($"  kept: {file}");
+                ChangeReport.Patches.Add((file, "kept (ours, not in upstream)", false));
+            }
+            else
+            {
+                WarnPatch($"{file} is this repository's own file and there was no copy to keep.");
+                ChangeReport.Patches.Add((file, "MISSING, no copy in the folder or in the last commit", true));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Empties Web.JS before the upstream copy, so a file upstream removed does not stay behind. node_modules is left:
+    /// it is not source, 'npm install' brings it up to date, and its link to ../dotnet-runtime is what a delete trips over.
+    /// </summary>
+    static void ClearWebJS(string webJS)
+    {
+        if (!Directory.Exists(webJS)) return;
+
+        foreach (string entry in Directory.GetFileSystemEntries(webJS))
+        {
+            if (Path.GetFileName(entry).Equals("node_modules", StringComparison.OrdinalIgnoreCase)) continue;
+
+            try
+            {
+                if (Directory.Exists(entry))
+                {
+                    foreach (string file in Directory.EnumerateFiles(entry, "*", SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+                    }
+
+                    Directory.Delete(entry, true);
+                }
+                else
+                {
+                    File.SetAttributes(entry, File.GetAttributes(entry) & ~FileAttributes.ReadOnly);
+                    File.Delete(entry);
+                }
+            }
+            catch (Exception ex)
+            {
+                string name = Path.GetFileName(entry);
+                WarnPatch($"Could not remove Web.JS/{name}: {ex.Message}");
+                ChangeReport.Patches.Add(($"Web.JS/{name}", "NOT REMOVED before the copy, so files upstream deleted may remain: " + ex.Message, true));
+            }
+        }
     }
 
     /// <summary>
@@ -221,6 +318,13 @@ static class Program
                 continue;
             }
 
+            // The build folder holds the .props and .targets of Microsoft's own package; this repository's packages have none.
+            if (relativePath.Replace('\\', '/').StartsWith("build/", StringComparison.OrdinalIgnoreCase))
+            {
+                skippedCount++;
+                continue;
+            }
+
             try
             {
                 if (!Directory.Exists(outputFileDir))
@@ -230,6 +334,13 @@ static class Program
 
                 var editor = new Editor(file);
                 editor.Edit();
+                if (!editor.HasContent)
+                {
+                    // Nothing left after the edits (an AssemblyInfo.cs that only served upstream's unit tests).
+                    skippedCount++;
+                    continue;
+                }
+
                 editor.WriteAllText(outputFileDir);
 
                 processedCount++;

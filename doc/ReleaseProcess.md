@@ -50,10 +50,13 @@ When to run it:
 
 How to run it on `net10`:
 
-1. Set `GITHUB_PAT` in your environment (used by `Utility.GetLatestFrameworkVersionAsync` to query GitHub tags and commit dates).
+1. Give it a GitHub token for reading tags: either sign in once with `gh auth login` (EditWebView runs `gh auth token`), or set `GITHUB_PAT`, which wins when both are present.
 2. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net10.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
-3. Inspect `git diff` carefully before committing:
-   - `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms`, and `src/RemoteWebView.Blazor.JS/Web.JS` directly from upstream, so re-apply any repo-local fixes made on top of the vendored files (for example shared-control, voice, or `NavigateToUrl` additions, and verify `src/RemoteWebView.Blazor.JS/Web.JS/package.json` still points `@microsoft/dotnet-runtime` at `file:../dotnet-runtime` and preserves `Web.JS/src/{tsconfig.json,webpack.config.js}`).
+3. Read the summary it prints at the end, and `EditWebView.diff` in the repository root for the whole diff (git-ignored):
+   - **Upstream versions used.** A warning here means the tag is newer than the packages reference: update `Microsoft.AspNetCore.Components.WebView.Wpf` and `.WindowsForms` and the "Based on maui ..." text in the package release notes.
+   - **Changes of this repository's own.** `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms` and `src/RemoteWebView.Blazor.JS/Web.JS` from upstream and then makes this repository's changes again (`Editor.cs` for the C# files, `ApplyWebJSPatches` and `OurWebJSFiles` in `Program.cs` for Web.JS). Any line that says NOT APPLIED, NOT KEPT, NOT REMOVED or MISSING means upstream changed underneath one of them: fix that before committing.
+   - **Changes since the last commit.** Everything listed should be an upstream change. A removed line that this repository added is a change `EditWebView` does not know about yet: put it back, and add it to `Editor.cs` so the next run keeps it.
+   - Upstream's `build/*.props` and `build/*.targets` and its unit-test `InternalsVisibleTo` are left out on purpose.
 4. Rebuild `src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js` (`npm run build:production`) and verify the solution builds and tests pass before committing.
 
 ## What a dispatch does
