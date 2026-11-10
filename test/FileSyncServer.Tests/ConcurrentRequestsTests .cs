@@ -141,55 +141,11 @@ namespace FileSyncServer.Tests
         [Fact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndNoClientCaching()
         {
-            // Enable client-side caching
             await Utilities.SetClientCache(false);
             try
             {
-                // (await Utilities.GetClientCache()).Should().BeTrue
                 (await Utilities.GetClientCache()).Should().BeFalse();
-                // Arrange
-                var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
-
-                var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
-
-                using var playwright = await Playwright.CreateAsync();
-                await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-                await using var context = await browser.NewContextAsync();
-
-                var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-                // Act
-                for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
-                {
-                    foreach (var fileName in fileNames)
-                    {
-                        tasks.Add(Task.Run(async () =>
-                        {
-                            var page = await context.NewPageAsync();
-                            try
-                            {
-                                var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
-                                {
-                                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                                });
-                                var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                                return (fileName, response?.Status ?? -1, content);
-                            }
-                            finally
-                            {
-                                await page.CloseAsync();
-                            }
-                        }));
-                    }
-                }
-
-                var results = await Task.WhenAll(tasks);
-
-                // Assert
-                foreach (var (FileName, Status, Content) in results)
-                {
-                    Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
-                }
+                await AssertBrowserSwarmAsync();
             }
             finally
             {
@@ -200,51 +156,61 @@ namespace FileSyncServer.Tests
         [Fact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndClientCaching()
         {
-            // Enable client-side caching
             await Utilities.SetClientCache(true);
             try
             {
                 (await Utilities.GetClientCache()).Should().BeTrue();
-          
-                // Arrange
-                var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+                await AssertBrowserSwarmAsync();
+            }
+            finally
+            {
+                await Utilities.SetClientCache(false);
+            }
+        }
 
-                var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+        // 300 browser clients at once: 100 rounds of test1..3.txt, every request from
+        // its own browser context. Each context has its own connection pool and HTTP
+        // cache, so the relay sees 300 separate TLS connections arriving together.
+        // A shared context would multiplex them over one HTTP/2 connection (at most
+        // 100 streams in Kestrel) and serve repeats from the browser cache.
+        // The contexts are spread over SwarmBrowsers Chromium processes: 300 contexts
+        // in a single process failed with net::ERR_INSUFFICIENT_RESOURCES.
+        private const int SwarmRounds = 100;
+        private const int SwarmBrowsers = 10;
 
-                using var playwright = await Playwright.CreateAsync();
-                await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-                await using var context = await browser.NewContextAsync();
+        private async Task AssertBrowserSwarmAsync()
+        {
+            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+            var clientId = _clientFixture.ClientId;
 
+            using var playwright = await Playwright.CreateAsync();
+            var browsers = await Task.WhenAll(Enumerable.Range(0, SwarmBrowsers)
+                .Select(_ => playwright.Chromium.LaunchAsync(HeadlessChromiumOptions())));
+            try
+            {
                 var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-                // Act
-                for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+                int n = 0;
+                for (int i = 0; i < SwarmRounds; i++)
                 {
                     foreach (var fileName in fileNames)
                     {
+                        var browser = browsers[n++ % SwarmBrowsers];
                         tasks.Add(Task.Run(async () =>
                         {
+                            await using var context = await browser.NewContextAsync();
                             var page = await context.NewPageAsync();
-                            try
+                            var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
                             {
-                                var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
-                                {
-                                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                                });
-                                var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                                return (fileName, response?.Status ?? -1, content);
-                            }
-                            finally
-                            {
-                                await page.CloseAsync();
-                            }
+                                WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                            });
+                            var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
+                            return (fileName, response?.Status ?? -1, content);
                         }));
                     }
                 }
 
                 var results = await Task.WhenAll(tasks);
 
-                // Assert
                 foreach (var (FileName, Status, Content) in results)
                 {
                     Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
@@ -252,7 +218,10 @@ namespace FileSyncServer.Tests
             }
             finally
             {
-                await Utilities.SetClientCache(false);
+                foreach (var browser in browsers)
+                {
+                    await browser.DisposeAsync();
+                }
             }
         }
 
@@ -261,8 +230,7 @@ namespace FileSyncServer.Tests
         // Playwright disables TcpPortRandomizationWin for that reason
         // (https://github.com/microsoft/playwright/pull/43605). A later
         // --disable-features switch replaces Playwright 1.63's switch, so this
-        // list is that version's set plus TcpPortRandomizationWin. All 300
-        // pages are still opened together.
+        // list is that version's set plus TcpPortRandomizationWin.
         internal static BrowserTypeLaunchOptions HeadlessChromiumOptions() => new()
         {
             Headless = true,
