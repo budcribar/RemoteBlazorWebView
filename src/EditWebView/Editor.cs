@@ -83,8 +83,10 @@ namespace EditWebView
         {
             Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?",
                 "var split = urlToLoad.AbsolutePath.Split('/');\n" +
-                "\t\t\tvar isMirrorUrl = split.Length == 3 && split[1] == \"mirror\" && Guid.TryParse(split[2], out Guid _);\n" +
-                "\t\t\tvar strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\" || isMirrorUrl) ?");
+                "\t\t\t// The relay's own pages for this kind of session load in the WebView: the read-only /mirror/<id> page and the\n" +
+                "\t\t\t// controlling /app/<id> page (an owner surface shows the app here and hands technicians the mirror link).\n" +
+                "\t\t\tvar isSessionPage = split.Length == 3 && (split[1] == \"mirror\" || split[1] == \"app\") && Guid.TryParse(split[2], out Guid _);\n" +
+                "\t\t\tvar strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\" || isSessionPage) ?");
             Replace("internal static", "public static");
         }
 

@@ -197,8 +197,9 @@ export function initializeRemoteWebView() {
     // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control.
     window.RemoteBlazor.isOwner = new URLSearchParams(window.location.search).get('role') === 'owner';
 
-    // The technician joins at the controller (/app) page; expose it so an owner surface can offer a "Copy link".
-    const shareUrl = `${locationOrigin}/app/${id}`;
+    // "Copy link": an owner surface is itself the controlling /app page, so technicians join at the read-only /mirror
+    // page and are handed control from there; anyone else shares the controller page.
+    const shareUrl = window.RemoteBlazor.isOwner ? `${locationOrigin}/mirror/${id}` : `${locationOrigin}/app/${id}`;
 
     initControl({
         myClientId: window.RemoteBlazor.clientId,
