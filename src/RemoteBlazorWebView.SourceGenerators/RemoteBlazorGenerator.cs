@@ -276,10 +276,10 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
 
             if (t.ShareControl)
             {
-                var query = t.Unattended ? "?role=owner&control=technician" : "?role=owner";
+                var query = t.Unattended ? "?role=owner&control=remote" : "?role=owner";
                 yield return "";
                 yield return t.Unattended
-                    ? "    // Shared control, unattended: the app shows in this window as the owner; the technician gets control on joining the mirror link."
+                    ? "    // Shared control, unattended: the app shows in this window as the owner; the remote user gets control on joining the mirror link."
                     : "    // Shared control: the app shows in this window with the owner in control; the browser joins at the mirror link and is handed control.";
                 yield return $"    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{{e.Url}}app/{{e.Id}}{query}\"));";
             }

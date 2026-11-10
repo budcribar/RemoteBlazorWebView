@@ -156,7 +156,7 @@
         }
         if (message.type === 'invite' && host && state === 'idle') {
             callId = message.callId;
-            display('ringing', 'The remote technician is requesting a voice call.');
+            display('ringing', 'The remote user is requesting a voice call.');
             return;
         }
         if (message.callId !== callId) return;

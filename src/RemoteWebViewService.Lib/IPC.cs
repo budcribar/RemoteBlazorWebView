@@ -109,7 +109,7 @@ namespace PeakSWC.RemoteWebView
             lock (browserStateLock)
             {
                 bool first = true;
-                foreach (var brn in observers.Keys.OrderBy(k => k.JoinOrder)) // join order: the first non-owner is the technician
+                foreach (var brn in observers.Keys.OrderBy(k => k.JoinOrder)) // join order: the first non-owner is the remote user
                 {
                     if (brn.ClientId == excludeClientId)
                         continue;

@@ -208,7 +208,7 @@ export function initializeRemoteWebView() {
     // (and a frame on that surface is the owner of its component's session).
     window.RemoteBlazor.isOwner = frameIdentity.owner || new URLSearchParams(window.location.search).get('role') === 'owner';
 
-    // "Copy link": an owner surface is itself the controlling /app page, so technicians join at the read-only /mirror
+    // "Copy link": an owner surface is itself the controlling /app page, so remote users join at the read-only /mirror
     // page and are handed control from there; anyone else shares the controller page.
     const shareUrl = window.RemoteBlazor.isOwner ? `${locationOrigin}/mirror/${id}` : `${locationOrigin}/app/${id}`;
 
@@ -225,16 +225,16 @@ export function initializeRemoteWebView() {
         if (document.body) initSessionControls();
         else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
     }
-    // Unattended sessions (?control=technician on the owner's page): the technician gets control on joining, with
-    // nobody at the machine handing it over. Once per technician, so the owner can take control back and keep it.
-    if (window.RemoteBlazor.isOwner && !isFramed() && new URLSearchParams(window.location.search).get('control') === 'technician') {
+    // Unattended sessions (?control=remote on the owner's page): the remote user gets control on joining, with
+    // nobody at the machine handing it over. Once per remote user, so the owner can take control back and keep it.
+    if (window.RemoteBlazor.isOwner && !isFramed() && new URLSearchParams(window.location.search).get('control') === 'remote') {
         const given = new Set<string>();
         window.RemoteControl?.subscribe(state => {
             if (!state.iHaveControl) return;
-            const technician = state.participants.find(p => !p.owner && p.id !== state.myClientId);
-            if (!technician || given.has(technician.id)) return;
-            given.add(technician.id);
-            requestPrimary(technician.id);
+            const remoteUser = state.participants.find(p => !p.owner && p.id !== state.myClientId);
+            if (!remoteUser || given.has(remoteUser.id)) return;
+            given.add(remoteUser.id);
+            requestPrimary(remoteUser.id);
         });
     }
     initParentFrameControl(() => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });

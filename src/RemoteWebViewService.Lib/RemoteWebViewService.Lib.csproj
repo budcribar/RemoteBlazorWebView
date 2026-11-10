@@ -25,7 +25,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
-    <PackageReleaseNotes>Based on maui 10.0.120. 10.0.15: sharing control between the owner and a technician (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on maui 10.0.120. 10.0.15: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
     <NoWarn>$(NoWarn);NU5100</NoWarn>
     <!-- The agent registry (Agents/, agent.proto) is marked [Experimental("RWV001")]; the library itself uses it freely. -->
     <NoWarn>$(NoWarn);RWV001</NoWarn>

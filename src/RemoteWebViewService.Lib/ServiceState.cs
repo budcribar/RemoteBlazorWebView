@@ -28,11 +28,11 @@ namespace PeakSWC.RemoteWebView
         // The connection launched by the machine owner (the local control surface). It may always reclaim control; the tech never may.
         public string OwnerClientId { get; set; } = string.Empty;
         // Set once the owner has been given control at the start of the session. In mirror mode the owner's surface
-        // connects only after the technician (so the technician may have claimed first); the first owner connection is
+        // connects only after the remote user (so the remote user may have claimed first); the first owner connection is
         // still promoted so the user starts in control, but only once - later owner reconnects do not grab control back.
         public bool OwnerControlInitialized { get; set; }
 
-        /// <summary>The owner's own surface opened the controlling /app page (?role=owner); technicians join at /mirror.</summary>
+        /// <summary>The owner's own surface opened the controlling /app page (?role=owner); remote users join at /mirror.</summary>
         public bool OwnerHoldsApp { get; set; }
         public string Id { get; init; } = string.Empty;
         public ConcurrentBag<string> IsMirroredConnection { get; set; } = [];

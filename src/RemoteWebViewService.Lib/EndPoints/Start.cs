@@ -53,8 +53,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         channel.Writer.TryWrite($"Connect:{guid}");
                     }
 
-                    // The technician's end of the voice call goes to the technician's page. When the owner's own surface takes
-                    // /app (it already has the host end), the technician joins at /mirror and gets it there instead.
+                    // The remote user's end of the voice call goes to the remote user's page. When the owner's own surface takes
+                    // /app (it already has the host end), the remote user joins at /mirror and gets it there instead.
                     if (context.Request.Query["role"] == "owner")
                         serviceState.OwnerHoldsApp = true;
                     else

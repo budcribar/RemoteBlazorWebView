@@ -224,7 +224,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
 
     [Theory]
     [InlineData("ShareControl = true", "?role=owner")]
-    [InlineData("Unattended = true", "?role=owner&control=technician")]
+    [InlineData("Unattended = true", "?role=owner&control=remote")]
     public void Share_control_shows_the_app_in_this_window_as_the_owner(string option, string query)
     {
         var r = GeneratorHarness.Run(Wpf($$"""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", {{option}})]"""));

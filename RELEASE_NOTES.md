@@ -9,7 +9,7 @@ Upgrade the relay (RemoteWebViewService) and the packages together: the new feat
 - **Sharing control.** The person at the machine (the owner) and a remote user share one session and hand control back and
   forth. The owner's window shows the app itself (`/app/<id>?role=owner`); the remote user joins at the read-only `/mirror/<id>`
   link. One owner, one remote user (the first to join), any number of read-only viewers. See "Sharing control" in the README.
-- **Unattended sessions.** `&control=technician` on the owner's page gives the remote user control as soon as they join.
+- **Unattended sessions.** `&control=remote` on the owner's page gives the remote user control as soon as they join.
 - **Session controls bar.** Each browser draws its own status, *Give control* / *Take control*, *Copy link* and voice buttons,
   in `<div id="rbwv-session-controls">` if the app has one, otherwise floating. A dot shows when anyone is connected remotely.
   The wording is neutral ("The host", "Remote user"); `data-host-name` / `data-remote-name` rename the two parties. `window.RemoteControl` exposes the state for a custom UI.

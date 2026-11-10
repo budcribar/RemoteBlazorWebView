@@ -69,7 +69,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         }
 
                         var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
-                        // The owner's surface holds /app, so the first mirror is the technician: give it the technician's end of
+                        // The owner's surface holds /app, so the first mirror is the remote user: give it the remote user's end of
                         // the voice call (once, like the /app grant).
                         var voiceKey = serviceState.OwnerHoldsApp ? serviceState.Voice?.TakeControllerForMirror() : null;
                         if (voiceKey is not null)

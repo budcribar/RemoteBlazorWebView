@@ -83,7 +83,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         return _controllerKey;
     }
 
-    /// <summary>The technician's key for the first /mirror page, when the owner's surface holds /app. Granted once.</summary>
+    /// <summary>The remote user's key for the first /mirror page, when the owner's surface holds /app. Granted once.</summary>
     internal string? TakeControllerForMirror()
     {
         lock (_gate)

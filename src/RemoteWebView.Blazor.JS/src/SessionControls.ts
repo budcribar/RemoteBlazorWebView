@@ -1,7 +1,7 @@
 // Per-browser session controls (control hand-off + voice) for a RemoteBlazorWebView session.
 //
 // Why this is not a Blazor component: the Blazor app runs once, in the host process, and every browser (the owner's
-// window, the technician's) displays that same render, while the relay drops input from whoever does not hold control.
+// window, the remote user's) displays that same render, while the relay drops input from whoever does not hold control.
 // A Blazor-rendered bar would therefore show the same text to everyone and be unclickable for the party without control.
 // So each browser draws its own bar here, from its own state, and talks to the relay directly.
 //

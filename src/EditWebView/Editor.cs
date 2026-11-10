@@ -93,7 +93,7 @@ namespace EditWebView
                 "var split = urlToLoad.AbsolutePath.Split('/');\n" +
                 "\t\t\t// The relay's own pages for a session load in the WebView: the read-only /mirror/<id> page, the controlling\n" +
                 "\t\t\t// /app/<id>?role=owner page and the /<id>/... app page it redirects to (an owner surface shows the app here and hands\n" +
-                "\t\t\t// technicians the mirror link). Anything else is an external link.\n" +
+                "\t\t\t// remote users the mirror link). Anything else is an external link.\n" +
                 "\t\t\t// A plain /app/<id> link (the \"open in your browser\" link apps show) still opens in the system browser, as before.\n" +
                 "\t\t\tvar isOwnerApp = split.Length == 3 && split[1] == \"app\" && urlToLoad.Query.Contains(\"role=owner\", StringComparison.Ordinal);\n" +
                 "\t\t\tvar isSessionPage = (split.Length == 3 && (split[1] == \"mirror\" || isOwnerApp) && Guid.TryParse(split[2], out Guid _))\n" +
