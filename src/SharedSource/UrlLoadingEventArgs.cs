@@ -14,9 +14,11 @@ namespace PeakSWC.RemoteBlazorWebView
 		public static UrlLoadingEventArgs CreateWithDefaultLoadingStrategy(Uri urlToLoad, Uri appOriginUri)
 		{
 			var split = urlToLoad.AbsolutePath.Split('/');
-			// The relay's own pages for this kind of session load in the WebView: the read-only /mirror/<id> page and the
-			// controlling /app/<id> page (an owner surface shows the app here and hands technicians the mirror link).
-			var isSessionPage = split.Length == 3 && (split[1] == "mirror" || split[1] == "app") && Guid.TryParse(split[2], out Guid _);
+			// The relay's own pages for a session load in the WebView: the read-only /mirror/<id> page, the controlling
+			// /app/<id> page and the /<id>/... app page it redirects to (an owner surface shows the app here and hands
+			// technicians the mirror link). Anything else is an external link.
+			var isSessionPage = (split.Length == 3 && (split[1] == "mirror" || split[1] == "app") && Guid.TryParse(split[2], out Guid _))
+				|| (split.Length >= 2 && Guid.TryParse(split[1], out Guid _));
 			var strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == "data" || isSessionPage) ?
 				UrlLoadingStrategy.OpenInWebView :
 				UrlLoadingStrategy.OpenExternally;

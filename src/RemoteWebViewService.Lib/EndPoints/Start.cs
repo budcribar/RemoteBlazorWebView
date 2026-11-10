@@ -55,8 +55,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     serviceState.Voice?.GrantController(context, guid);
 
-                    // Redirect to the specific GUID page
-                    context.Response.Redirect($"/{guid}", permanent: false);
+                    // Redirect to the specific GUID page, keeping the query (e.g. ?role=owner, read by the page's script).
+                    context.Response.Redirect($"/{guid}{context.Request.QueryString}", permanent: false);
                 }
                
                 catch(Exception)
