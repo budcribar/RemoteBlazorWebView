@@ -52,6 +52,12 @@ const locationOrigin = window.location.origin === 'null'
 const client = new BrowserIPCClient(window.RemoteBlazor.grpcHost || locationOrigin);
 
 export function sendMessage(message: string) {
+    // Only the controlling page talks to the app. A page without control applies render batches too, and Blazor
+    // acknowledges each one, but the relay ignores those messages - and they must not use up message numbers: one
+    // still on its way when this page is given control would arrive with a number from before the restart at 1, be
+    // held by the relay, and later be forwarded in place of the real message with that number.
+    if (!window.RemoteBlazor.isPrimary) return;
+
     const req = new SendSequenceMessageRequest();
     let id = window.location.pathname.split('/')[1];
     if (id == 'mirror') {

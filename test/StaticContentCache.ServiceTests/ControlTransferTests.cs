@@ -44,6 +44,33 @@ public class ControlTransferTests
     }
 
     [Fact]
+    public async Task Input_that_was_waiting_its_turn_when_control_moved_is_dropped()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("a");
+        s.Join("b");
+        await s.Send("a", 1);
+
+        // Hold the relay's ordering lock so a's next message passes the control check and then waits.
+        var turn = s.State.BrowserIPC.Semaphore;
+        await turn.WaitAsync();
+        var late = s.Send("a", 2);
+        await Task.Delay(100);
+        var handOff = s.SetPrimary("a", "b"); // control moves while that message is still waiting
+        await WaitFor(() => s.State.PrimaryClientId == "b");
+        turn.Release();
+        Assert.True((await late).Success);
+        await handOff;
+
+        await s.Send("b", 1);
+        await WaitFor(() => host.Messages.Contains("m1-b"));
+        Assert.DoesNotContain("m2-a", host.Messages);          // not forwarded to the app
+        Assert.Empty(s.State.BrowserIPC.MessageDictionary);    // and not parked to take b's number 2 later
+        Assert.Equal(2u, s.State.BrowserIPC.SequenceNum);
+    }
+
+    [Fact]
     public async Task The_owner_takes_control_when_it_joins_after_someone_else_claimed_it()
     {
         await using var s = new Session();
@@ -332,6 +359,14 @@ public class ControlTransferTests
             Ipc = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, services, shutdown);
         }
 
+        /// <summary>Records what the relay forwards to the app (browser input that was accepted).</summary>
+        public HostWriter CaptureHost()
+        {
+            var writer = new HostWriter();
+            State.IPC.ClientResponseStream = writer;
+            return writer;
+        }
+
         /// <summary>A browser opens its stream from the relay (what a page does once, when it starts).</summary>
         public Connection Join(string clientId, bool owner = false)
         {
@@ -345,7 +380,7 @@ public class ControlTransferTests
 
         /// <summary>A browser sends one message to the app. Every page believes it is the controller until told otherwise.</summary>
         public Task<SendMessageResponse> Send(string clientId, uint sequence) =>
-            Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, Sequence = sequence, IsPrimary = true, Message = $"m{sequence}" },
+            Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, Sequence = sequence, IsPrimary = true, Message = $"m{sequence}-{clientId}" },
                 new CallContext(CancellationToken.None));
 
         public Task SetPrimary(string requester, string target) =>
@@ -366,6 +401,15 @@ public class ControlTransferTests
         public Task WriteAsync(StringRequest message) { messages.Enqueue(message.Request); return Task.CompletedTask; }
         // The relay writes with a token; the interface's default for this overload throws when the token can be cancelled.
         public Task WriteAsync(StringRequest message, CancellationToken cancellationToken) => WriteAsync(message);
+    }
+
+    private sealed class HostWriter : IServerStreamWriter<WebMessageResponse>
+    {
+        private readonly ConcurrentQueue<string> messages = new();
+        public IReadOnlyCollection<string> Messages => messages;
+        public WriteOptions? WriteOptions { get; set; }
+        public Task WriteAsync(WebMessageResponse message) { messages.Enqueue(message.Response); return Task.CompletedTask; }
+        public Task WriteAsync(WebMessageResponse message, CancellationToken cancellationToken) => WriteAsync(message);
     }
 
     private sealed class CallContext(CancellationToken token) : ServerCallContext

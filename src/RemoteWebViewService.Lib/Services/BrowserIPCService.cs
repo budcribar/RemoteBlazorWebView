@@ -186,6 +186,15 @@ namespace PeakSWC.RemoteWebView
                 await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
                 try
                 {
+                    // Control may have moved while this message waited its turn. Its number belongs to the previous
+                    // controller's numbering: forwarding it would inject stale input, and parking it would later take
+                    // the place of the new controller's message with the same number.
+                    if (request.ClientId != serviceState.PrimaryClientId)
+                    {
+                        logger.LogDebug("Skipped send message from connection {ClientId}: control moved while it waited", request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = true };
+                    }
+
                     if (request.Sequence == state.SequenceNum)
                     {
                         if (request.Message == "connected:")
