@@ -225,6 +225,18 @@ export function initializeRemoteWebView() {
         if (document.body) initSessionControls();
         else document.addEventListener('DOMContentLoaded', () => initSessionControls(), { once: true });
     }
+    // Unattended sessions (?control=technician on the owner's page): the technician gets control on joining, with
+    // nobody at the machine handing it over. Once per technician, so the owner can take control back and keep it.
+    if (window.RemoteBlazor.isOwner && !isFramed() && new URLSearchParams(window.location.search).get('control') === 'technician') {
+        const given = new Set<string>();
+        window.RemoteControl?.subscribe(state => {
+            if (!state.iHaveControl) return;
+            const technician = state.participants.find(p => !p.owner && p.id !== state.myClientId);
+            if (!technician || given.has(technician.id)) return;
+            given.add(technician.id);
+            requestPrimary(technician.id);
+        });
+    }
     initParentFrameControl(() => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });
     initFrameControl();
 

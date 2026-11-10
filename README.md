@@ -44,6 +44,8 @@ A session can be shared between the person at the machine and a remote technicia
 
 Only one connection controls the app at a time; the relay ignores input from everyone else, and control is never given to a second technician. If the technician leaves, the next-oldest viewer becomes the technician. If the connection in control closes, control returns to the owner while the owner is connected; otherwise the session ends.
 
+**Supervised or unattended.** By default a session is supervised: the owner starts in control and decides when to give it. Add `&control=technician` to the owner's page address (`/app/<id>?role=owner&control=technician`) for an unattended session: the technician is given control as soon as they join, and the owner can still take it back. The app chooses, so its users can pick the policy that suits them.
+
 **Session controls bar.** Each browser draws its own bar (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` where the bar should sit in your layout; without it the bar floats bottom-right. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes. `window.RemoteControl` exposes the same state for a custom UI.
 
 **Remote components.** A remote component's frame follows the page it is on: it is usable in the browser that controls the app and read-only in the others, and moves with control. Viewers always see it read-only.
