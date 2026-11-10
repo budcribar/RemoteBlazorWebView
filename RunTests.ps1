@@ -1,4 +1,4 @@
-﻿
+
  param(
         [string] $Mode = 'Developer',
         [switch] $Build = $false,
@@ -529,27 +529,6 @@ if ($Rust -eq $true)
 	Invoke-RunTestsNative dotnet publish -c Authorization --self-contained true -r linux-x64 .\src\RemoteWebViewService -o src\RemoteWebViewService\bin\publishAuth
 
 	Invoke-RunTestsNative dotnet build -c Release .\src\RemoteWebViewService
-	dotnet tool uninstall PeakSWC.RemoteWebViewService -g
-	if ($LASTEXITCODE -ne 0) {
-		Write-Host "PeakSWC.RemoteWebViewService was not installed globally. Continuing to the tool update."
-	}
-
-	if ($env:EnvBuildMode -eq 'Debug') {
-		# remove the cached version!!
-		$file = Join-Path $env:HomePath '.dotnet\tools\RemoteWebViewService.exe' 
-		if (Test-Path $file) {
-			Remove-Item $file
-		}
-
-		$file = Join-Path $env:HomePath '.dotnet\tools\.store\peakswc.RemoteWebViewService' 
-		if (Test-Path $file) {
-			Remove-Item $file -Recurse
-		}
-		Invoke-RunTestsNative dotnet tool update -g --add-source artifacts PeakSWC.RemoteWebViewService --version 8.*-* 
-	} else {
-		Invoke-RunTestsNative dotnet tool update -g  PeakSWC.RemoteWebViewService --version 8.*-* 
-	}
-
 }
 
 
@@ -629,7 +608,7 @@ if ($Build -ne $true) {
 
     # The Microsoft.Playwright package writes playwright.ps1 into the test output during build.
     # Install browsers from that script. There is no global `playwright` command.
-    Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release
+    Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release '-p:GeneratePackageOnBuild=false'
     $playwright = Get-ChildItem -Path (Join-Path (Get-Location) 'bin') -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $playwright) {
         Write-Error "playwright.ps1 was not produced by the FileSyncServer.Tests build."
@@ -645,9 +624,9 @@ if ($Build -ne $true) {
     $logfile1 = "FileSyncServerTestLog_$timestamp.html"
     if ($Filter) {
         Write-Host -ForegroundColor Yellow "Partial run: only tests matching '$Filter'. Run again without -Filter before a release."
-        & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1" --filter $Filter
+        & dotnet test FileSyncServer.Tests.csproj -c Release --no-build --logger:"html;LogFileName=$logfile1" --filter $Filter
     } else {
-        & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1"
+        & dotnet test FileSyncServer.Tests.csproj -c Release --no-build --logger:"html;LogFileName=$logfile1"
     }
     $testExit = $LASTEXITCODE
     if ($testExit -ne 0) {
