@@ -37,24 +37,32 @@ namespace PeakSWC.RemoteWebView
                 // (in mirror mode it connects only once the remote user is present), so promote it on its first
                 // connection even if the remote user already claimed control - but only once, so a later owner reconnect
                 // does not grab control back. PromoteAsync also broadcasts the roster; otherwise just tell everyone present.
-                if (request.IsOwner && !serviceState.OwnerControlInitialized)
+                await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    serviceState.OwnerControlInitialized = true;
-                    var holder = serviceState.PrimaryClientId;
-                    if (string.IsNullOrEmpty(holder) || holder == request.ClientId)
+                    if (request.IsOwner && !serviceState.OwnerControlInitialized)
                     {
-                        // The owner already is (or is first to be) the controller - e.g. its surface is the /app page, which
-                        // sends its connect handshake before this stream opens. Do not reset the sequence: its messages are
-                        // already numbered past 1 and a reset would strand everything it sends afterwards.
-                        serviceState.PrimaryClientId = request.ClientId;
-                        serviceState.IPC.SetPrimary(request.ClientId);
-                        serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                        serviceState.OwnerControlInitialized = true;
+                        var holder = serviceState.PrimaryClientId;
+                        if (string.IsNullOrEmpty(holder) || holder == request.ClientId)
+                        {
+                            // The owner already is (or is first to be) the controller - e.g. its surface is the /app page, which
+                            // sends its connect handshake before this stream opens. Do not reset the sequence: its messages are
+                            // already numbered past 1 and a reset would strand everything it sends afterwards.
+                            serviceState.PrimaryClientId = request.ClientId;
+                            serviceState.IPC.SetPrimary(request.ClientId);
+                            serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                        }
+                        else
+                            await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
                     }
                     else
-                        await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
+                        serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
                 }
-                else
-                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                finally
+                {
+                    serviceState.BrowserIPC.ControlChange.Release();
+                }
 
                 try
                 {
@@ -90,20 +98,30 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         private async Task OnConnectionClosed(ServiceState serviceState, string id, string clientId, Exception? ex)
         {
-            if (serviceState.PrimaryClientId != clientId)
+            // Decided under the control-change lock: a hand-off in progress finishes first, so this sees who really
+            // holds control now (the leaver may just have been given it, or just have given it away).
+            await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+            try
             {
-                // A mirror (or already-demoted connection) left; the session continues. Refresh the roster, dropping
-                // the leaver, which may not have been removed from the observer set yet.
-                serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId: clientId);
-                return;
-            }
+                if (serviceState.PrimaryClientId != clientId)
+                {
+                    // A mirror (or already-demoted connection) left; the session continues. Refresh the roster, dropping
+                    // the leaver, which may not have been removed from the observer set yet.
+                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId: clientId);
+                    return;
+                }
 
-            var owner = serviceState.OwnerClientId;
-            if (!string.IsNullOrEmpty(owner) && owner != clientId && serviceState.IPC.HasConnection(owner))
+                var owner = serviceState.OwnerClientId;
+                if (!string.IsNullOrEmpty(owner) && owner != clientId && serviceState.IPC.HasConnection(owner))
+                {
+                    await PromoteAsync(serviceState, owner, excludeClientId: clientId).ConfigureAwait(false);
+                    logger.LogInformation("Controlling connection {ClientId} left; control reverted to owner {Owner}. Id: {Id}", clientId, owner, id);
+                    return;
+                }
+            }
+            finally
             {
-                await PromoteAsync(serviceState, owner, excludeClientId: clientId).ConfigureAwait(false);
-                logger.LogInformation("Controlling connection {ClientId} left; control reverted to owner {Owner}. Id: {Id}", clientId, owner, id);
-                return;
+                serviceState.BrowserIPC.ControlChange.Release();
             }
 
             logger.LogInformation("Controlling connection closed, shutting down. Id: {Id}, ClientId: {ClientId}", id, clientId);
@@ -248,6 +266,20 @@ namespace PeakSWC.RemoteWebView
                 return new Empty();
 
             var serviceState = tcs.Task.Result;
+            // One change of controller at a time: this request is judged against the result of any change before it.
+            await serviceState.BrowserIPC.ControlChange.WaitAsync(context.CancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await SetPrimaryCore(serviceState, request).ConfigureAwait(false);
+            }
+            finally
+            {
+                serviceState.BrowserIPC.ControlChange.Release();
+            }
+        }
+
+        private async Task<Empty> SetPrimaryCore(ServiceState serviceState, SetPrimaryRequest request)
+        {
             string requester = request.ClientId;
             string target = request.Target;
             string current = serviceState.PrimaryClientId;

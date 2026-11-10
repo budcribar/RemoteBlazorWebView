@@ -71,6 +71,35 @@ public class ControlTransferTests
     }
 
     [Fact]
+    public async Task Give_and_take_at_the_same_moment_leave_everyone_agreeing_on_who_has_control()
+    {
+        for (var round = 0; round < 25; round++)
+        {
+            await using var s = new Session();
+            var owner = s.Join("owner", owner: true);
+            var remote = s.Join("remote");
+            await WaitFor(() => s.State.PrimaryClientId == "owner");
+            await s.SetPrimary("owner", "remote");
+
+            // The remote user gives control back while the owner takes it, and the owner gives it again at once.
+            await Task.WhenAll(
+                Task.Run(() => s.SetPrimary("remote", "owner")),
+                Task.Run(() => s.SetPrimary("owner", "owner")),
+                Task.Run(() => s.SetPrimary("owner", "remote")));
+
+            // Whatever order the three were handled in, the last thing each browser is told matches the relay.
+            var actual = s.State.PrimaryClientId;
+            bool Agrees(Connection browser) =>
+                browser.LastRoster()?.SingleOrDefault(p => p.Primary)?.Id == actual &&
+                browser.Messages.Last(m => m.StartsWith("primaryChanged:", StringComparison.Ordinal)) == $"primaryChanged:{actual}";
+            await WaitFor(() => Agrees(owner) && Agrees(remote));
+            await Task.Delay(50); // nothing later contradicts it
+            Assert.True(Agrees(owner) && Agrees(remote));
+            Assert.Equal(actual, s.State.PrimaryClientId);
+        }
+    }
+
+    [Fact]
     public async Task The_owner_takes_control_when_it_joins_after_someone_else_claimed_it()
     {
         await using var s = new Session();
