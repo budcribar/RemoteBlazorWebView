@@ -33,7 +33,7 @@ public partial class MainWindow : Window
 | `Mirror` | `false` | `EnableMirrors`, and shows the read-only mirror in the view once a browser connects |
 | `ReverseMirror` | | Name of a WebView2 you put over the BlazorWebView. `EnableMirrors`; the WebView2 opens `<server>/app/<id>`, so the person at the PC uses the app through the server and it looks local; once connected, the system browser opens the read-only `<server>/mirror/<id>` to share. Replaces `ShowLink`; not with `Mirror` |
 | `ShareControl` | `false` | Shared control: `EnableMirrors`, and this window shows the app itself (`<server>/app/<id>?role=owner`) with the person at the PC in control. The browser joins at the read-only `<server>/mirror/<id>` (*Copy link* in the session bar) and is handed control from the bar; the owner can always take it back. Replaces `ShowLink`; not with `Mirror` or `ReverseMirror` |
-| `Unattended` | `false` | `ShareControl`, and the technician is given control as soon as they join (the owner can still take it back) |
+| `Unattended` | `false` | `ShareControl`, and the remote user is given control as soon as they join (the owner can still take it back) |
 | `RestartOnRefresh` | `false` | On browser refresh: `Restart()` (a new copy with the same `-u=`/`-i=`) and close the window |
 | `ShutdownOnDisconnect` | `false` | On disconnect: `Application.Current.Shutdown()` (WPF) or `Application.Exit()` (WinForms) |
 
@@ -50,7 +50,7 @@ RBW010 `ReverseMirror` isn't a WebView2, RBW011 `ShareControl` or `Unattended` w
 
 ## Shared control
 
-The person at the PC and a remote technician use the same app, and control is handed back and forth. Nothing to add to the XAML:
+The person at the PC and a remote user use the same app, and control is handed back and forth. Nothing to add to the XAML:
 
 ```csharp
 [RemoteBlazor(nameof(RemoteBlazorWebView), ShareControl = true)]   // or Unattended = true
@@ -59,7 +59,7 @@ public partial class MainWindow : Window
 
 Each browser draws a small session bar (who has control, *Give control* / *Take control*, *Copy link*). Put
 `<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where it should sit; without it the bar floats
-bottom-right. A session has one owner (this window), one technician (the first to open the link) and any number of read-only viewers.
+bottom-right. A session has one owner (this window), one remote user (the first to open the link) and any number of read-only viewers.
 See "Sharing control" in the repository README.
 
 ## Reverse mirror

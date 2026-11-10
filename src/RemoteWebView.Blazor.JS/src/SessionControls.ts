@@ -10,8 +10,11 @@
 // bar itself is attached to <body> so it is never trapped under the app's stacking contexts and always sits above the
 // read-only overlay, keeping it clickable for the party without control. Without a placeholder it floats bottom-right.
 //
-// Options on the placeholder:  data-share-link="true"  -> show a "Copy link" button for the technician's join URL.
-// Styling: rbwv-control-bar (container; plus rbwv-control-slotted or rbwv-control-floating), rbwv-control-status,
+// Options on the placeholder:
+//   data-share-link="true"            -> show a "Copy link" button (owner only) for the join link
+//   data-host-name / data-remote-name -> what to call the two parties in "... has control" (default "The host" / "Remote user")
+// Styling: rbwv-control-bar (container; plus rbwv-control-slotted or rbwv-control-floating), rbwv-control-dot (plus
+// rbwv-control-dot-on while anyone is connected remotely), rbwv-control-status,
 // rbwv-control-btn, rbwv-control-give / -take / -copy, rbwv-voice-status, rbwv-voice-act / -mute / -end. Built-in
 // defaults use :where() (zero specificity), so any app rule overrides them.
 //
@@ -38,7 +41,9 @@ const DEFAULT_STYLES = `
   border:1px solid #39404d;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.35);font:13px system-ui,-apple-system,sans-serif}
 :where(.rbwv-control-floating .rbwv-control-btn){cursor:pointer;padding:5px 10px;border-radius:7px;
   border:1px solid #4b5563;background:#2b3240;color:#f3f4f6;font:inherit}
-:where(.rbwv-voice-status){opacity:.85}`;
+:where(.rbwv-voice-status){opacity:.85}
+:where(.rbwv-control-dot){width:10px;height:10px;border-radius:50%;flex:none;background:#8b929c;opacity:.6}
+:where(.rbwv-control-dot-on){background:#e5484d;opacity:1;box-shadow:0 0 0 3px rgba(229,72,77,.25)}`;
 
 /** Called once by RemoteWebView.ts after window.RemoteControl is published. */
 export function initSessionControls() {
@@ -103,6 +108,41 @@ function controller(): Participant | undefined {
     return control?.participants.find(p => p.primary);
 }
 
+// The names shown for the two parties, as the start of "... has control". The wording is neutral by default (the remote
+// person may be a technician, a coworker, a friend); an app names them on the placeholder:
+//   <div id="rbwv-session-controls" data-host-name="The customer" data-remote-name="The technician"></div>
+function hostName(): string {
+    return slot?.dataset.hostName?.trim() || 'The host';
+}
+
+function remoteName(): string {
+    return slot?.dataset.remoteName?.trim() || 'Remote user';
+}
+
+// A read-only viewer: a remote connection that is not the one control is shared with (the first remote connection).
+function isViewer(): boolean {
+    if (!control || control.isOwner || !control.participants.some(p => p.owner)) return false;
+    const first = control.participants.find(p => !p.owner);
+    return !!first && first.id !== control.myClientId;
+}
+
+// A dot that is lit while anyone is connected remotely, so the person at the machine can see at a glance that someone
+// else can see their screen. Hover (or a screen reader) says how many.
+function connectionDot(): HTMLSpanElement {
+    const remote = control ? control.participants.filter(p => control!.participants.some(o => o.owner) ? !p.owner : p.id !== control!.myClientId).length : 0;
+    const text = control && !control.isOwner && control.participants.some(p => p.owner)
+        ? (remote <= 1 ? 'You are connected remotely' : `${remote} people are connected remotely`)
+        : remote === 0 ? 'No one is connected remotely'
+            : remote === 1 ? 'Someone is connected remotely'
+                : `${remote} people are connected remotely`;
+    const dot = document.createElement('span');
+    dot.className = remote > 0 ? 'rbwv-control-dot rbwv-control-dot-on' : 'rbwv-control-dot';
+    dot.title = text;
+    dot.setAttribute('role', 'img');
+    dot.setAttribute('aria-label', text);
+    return dot;
+}
+
 function showShareLink(): boolean {
     // Only the owner shares the join link (the placeholder opts in; floating always offers it).
     return !!control?.isOwner && (!slot || slot.dataset.shareLink === 'true');
@@ -133,18 +173,21 @@ function render() {
     const ctrl = controller();
     const target = other();
 
+    bar.append(connectionDot());
+
     if (switching) {
         bar.append(span('Switching control…', 'rbwv-control-status'));
     } else {
         bar.append(span(
             iHaveControl ? 'You have control'
-                : ctrl ? (ctrl.owner ? 'The user has control' : 'The technician has control')
-                    : 'No one has control',
+                : isViewer() ? 'View only'
+                    : ctrl ? `${ctrl.owner ? hostName() : remoteName()} has control`
+                        : 'No one has control',
             'rbwv-control-status'));
 
         // Give: only the current controller, and only when there is another party to hand off to.
         if (iHaveControl && target)
-            bar.append(button(`Give control to ${control.isOwner ? 'the technician' : 'the user'}`,
+            bar.append(button(control.isOwner ? 'Give control' : 'Give control back',
                 'rbwv-control-give', () => startSwitch(target.id)));
 
         // Take: only the owner may reclaim, and only when they do not already hold control.
