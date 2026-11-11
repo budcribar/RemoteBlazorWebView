@@ -10,6 +10,10 @@
 // bar itself is attached to <body> so it is never trapped under the app's stacking contexts and always sits above the
 // read-only overlay, keeping it clickable for the party without control. Without a placeholder it floats bottom-right.
 //
+// An app whose layout has the placeholder says so in its host page, so the bar waits for it instead of floating until
+// Blazor has rendered the layout (the bar would show bottom-right for a moment at startup, then jump into place):
+//   <meta name="rbwv-session-controls" content="slot">
+//
 // Options on the placeholder:
 //   data-share-link="true"            -> show a "Copy link" button (owner only) for the join link
 //   data-restart="true"               -> show a "Restart app" button (whoever has control, and the owner) that restarts
@@ -289,6 +293,11 @@ async function copyShareLink() {
     render();
 }
 
+// The host page says the app's layout has the placeholder: the bar never floats, it waits for the placeholder.
+function slotDeclared(): boolean {
+    return document.querySelector('meta[name="rbwv-session-controls"]')?.getAttribute('content')?.trim().toLowerCase() === 'slot';
+}
+
 function schedulePlace() {
     if (placeQueued) return;
     placeQueued = true;
@@ -315,6 +324,7 @@ function place() {
         bar.style.right = 'auto';
         bar.style.bottom = 'auto';
     } else {
+        if (slotDeclared()) { bar.style.display = 'none'; return; } // the placeholder is on its way (or the app took it away)
         // Without a placeholder the bar only appears when there is something to control: a session with an owner
         // (control can be handed over) or a voice call. An app that uses neither looks exactly as it did before.
         if (!control.participants.some(p => p.owner) && !voice) { bar.style.display = 'none'; return; }

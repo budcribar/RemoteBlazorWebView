@@ -278,6 +278,28 @@ namespace FileSyncServer.Tests.Remote
         }
 
         [Fact]
+        public async Task A_host_page_that_declares_the_placeholder_gets_no_floating_bar()
+        {
+            await _fixture.Startup(1);
+            var owner = _fixture.Owner;
+            var bar = owner.Locator(".rbwv-control-bar");
+            // The tutorial app has no placeholder, so with an owner the bar floats.
+            await Expect(bar).ToBeVisibleAsync(Soon);
+            await Expect(bar).ToContainClassAsync("rbwv-control-floating");
+
+            // An app whose layout has the placeholder says so in its host page: the bar waits for the placeholder instead
+            // of floating until the layout is rendered. (Added here after the fact; a resize makes the bar place itself again.)
+            await owner.EvaluateAsync("() => { document.head.insertAdjacentHTML('beforeend', '<meta name=\"rbwv-session-controls\" content=\"slot\">'); window.dispatchEvent(new Event('resize')); }");
+            await Expect(bar).ToBeHiddenAsync(Soon);
+
+            // The placeholder arrives (Blazor rendered the layout): the bar sits in it.
+            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" style=\"position:fixed;top:4px;right:8px\"></div>')");
+            await Expect(bar).ToBeVisibleAsync(Soon);
+            await Expect(bar).ToContainClassAsync("rbwv-control-slotted");
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You have control");
+        }
+
+        [Fact]
         public async Task An_app_page_without_an_owner_shows_no_session_bar()
         {
             // The classic setup (a browser drives the app, nobody is the owner, no voice) must look as it did before sharing control existed.

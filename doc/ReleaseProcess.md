@@ -20,17 +20,17 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net10 that file sets `VersionPrefix` to `10.0.15` and does not set `VersionSuffix`, so the package version is `10.0.15`. `global.json` pins SDK `10.0.404`, which is GA.
+`Directory.Build.props` is the only place a package version is committed. Today on net10 that file sets `VersionPrefix` to `10.0.16` and does not set `VersionSuffix`, so the package version is `10.0.16`. `global.json` pins SDK `10.0.404`, which is GA.
 
 The rule on this line:
 
 - The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json` and the major of `VersionPrefix`.
-- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net10 that is `10.0.15` with no suffix. The script does not replace a GA SDK with `10.0.0`.
+- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net10 that is `10.0.16` with no suffix. The script does not replace a GA SDK with `10.0.0`.
 - When the SDK is a prerelease, `VersionPrefix` is `{major}.0.0` unless `version_override` is set. The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `rc.2` becomes `rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A committed suffix spelled `rc.2` or `preview.5` is rewritten the same way.
 - `version_override` is a single token such as `10.0.14` or `10.0.13-rc2`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`. It replaces both the committed GA version and the prerelease derivation.
 - `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `10.0.13` with patch `1` is `10.0.13-p1` (`VersionSuffix` `p1`).
 
-`10.0.13` is already on nuget.org. `10.0.15` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
+`10.0.15` is already on nuget.org. `10.0.16` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
 
 SemVer treats a hyphen as the start of a prerelease. `10.0.13-p1` sorts **before** `10.0.13`, because every prerelease is less than the release with the same numbers. For a stable package that must install over `10.0.13`, set `version_override` to `10.0.14` and leave `patch` empty. An rc patch such as `11.0.0-rc2-p1` sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order. Use `-pN` for another build of an rc, not for the next stable net10 package.
 

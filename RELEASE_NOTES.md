@@ -1,5 +1,12 @@
 # Release notes
 
+## 10.0.16
+
+- **Session controls bar no longer flashes bottom-right at startup** in an app whose layout has the `rbwv-session-controls`
+  placeholder. Put `<meta name="rbwv-session-controls" content="slot">` in the host page's `<head>`: the bar waits for the
+  placeholder instead of floating until Blazor has rendered the layout. Apps without the tag behave as before. Packages only;
+  the relay does not change.
+
 ## 10.0.15
 
 Upgrade the relay (RemoteWebViewService) and the packages together: the new features need 10.0.15 on both sides.
