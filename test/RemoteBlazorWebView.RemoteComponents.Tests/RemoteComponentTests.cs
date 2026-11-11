@@ -81,15 +81,17 @@ public class RemoteComponentTests
 
         var sent = wire.SentToChild.ToArray();
         Assert.Equal(2, sent.Length);
-        Assert.NotNull(sent[0].Set);
-        Assert.Equal(2, sent[0].Set!.Count);
-        Assert.Equal("PST", sent[0].Set["Zone"].GetString());
-        Assert.Equal(1, sent[0].Set["Count"].GetInt32());
-        Assert.NotNull(sent[1].Set);
-        Assert.Single(sent[1].Set!);
-        Assert.True(sent[1].Set!.ContainsKey("Count"));
-        Assert.False(sent[1].Set!.ContainsKey("Zone"));
-        Assert.Equal(2, sent[1].Set["Count"].GetInt32());
+        var firstSet = sent[0].Set;
+        Assert.NotNull(firstSet);
+        Assert.Equal(2, firstSet.Count);
+        Assert.Equal("PST", firstSet["Zone"].GetString());
+        Assert.Equal(1, firstSet["Count"].GetInt32());
+        var secondSet = sent[1].Set;
+        Assert.NotNull(secondSet);
+        Assert.Single(secondSet);
+        Assert.True(secondSet.ContainsKey("Count"));
+        Assert.False(secondSet.ContainsKey("Zone"));
+        Assert.Equal(2, secondSet["Count"].GetInt32());
 
         await receiver.Picked(7);
         await Eventually(() => !picked.IsEmpty);
