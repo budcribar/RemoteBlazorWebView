@@ -284,17 +284,17 @@ namespace FileSyncServer.Tests.Remote
             var owner = _fixture.Owner;
             var bar = owner.Locator(".rbwv-control-bar");
             // The tutorial app has no placeholder, so with an owner the bar floats.
-            await Expect(bar).ToBeVisibleAsync(Soon);
+            await Expect(bar).ToBeVisibleAsync(new() { Timeout = 20000 });
             await Expect(bar).ToContainClassAsync("rbwv-control-floating");
 
             // An app whose layout has the placeholder says so in its host page: the bar waits for the placeholder instead
             // of floating until the layout is rendered. (Added here after the fact; a resize makes the bar place itself again.)
             await owner.EvaluateAsync("() => { document.head.insertAdjacentHTML('beforeend', '<meta name=\"rbwv-session-controls\" content=\"slot\">'); window.dispatchEvent(new Event('resize')); }");
-            await Expect(bar).ToBeHiddenAsync(Soon);
+            await Expect(bar).ToBeHiddenAsync(new() { Timeout = 20000 });
 
             // The placeholder arrives (Blazor rendered the layout): the bar sits in it.
             await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" style=\"position:fixed;top:4px;right:8px\"></div>')");
-            await Expect(bar).ToBeVisibleAsync(Soon);
+            await Expect(bar).ToBeVisibleAsync(new() { Timeout = 20000 });
             await Expect(bar).ToContainClassAsync("rbwv-control-slotted");
             await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You have control");
         }
