@@ -1,6 +1,6 @@
 # Release notes
 
-## 10.0.16
+## 10.0.15.1
 
 - **Session controls bar no longer flashes bottom-right at startup** in an app whose layout has the `rbwv-session-controls`
   placeholder. Put `<meta name="rbwv-session-controls" content="slot">` in the host page's `<head>`: the bar waits for the
