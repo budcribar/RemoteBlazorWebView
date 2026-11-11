@@ -1,4 +1,4 @@
-﻿// RemoteBlazorWpfFixture.cs
+// RemoteBlazorWpfFixture.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -263,35 +263,49 @@ namespace FileSyncServer.Tests.Remote
         {
             try
             {
-                ServerProcess?.Kill();
+                ServerProcess?.Kill(entireProcessTree: true);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error killing server process: {ex.Message}");
             }
 
-            try
+            foreach (var client in Clients)
             {
-                Clients.ForEach(x => x.Kill());
+                try
+                {
+                    client.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error killing client process: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error killing client processes: {ex.Message}");
-            }
+            Clients.Clear();
 
             try
             {
-                foreach (var page in Pages)
+                KillClient();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error killing remaining client app processes: {ex.Message}");
+            }
+
+            foreach (var page in Pages)
+            {
+                try
                 {
                     page.CloseAsync().Wait();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error closing Playwright pages: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error closing Playwright page: {ex.Message}");
+                }
             }
 
             Pages.Clear();
+            BrowserContexts.Clear();
         }
 
         public async virtual Task TestRefresh(int numClients, int numRefreshes)
@@ -364,10 +378,6 @@ namespace FileSyncServer.Tests.Remote
             sw.Start();
 
             Assert.Equal(num, Pages.Count);
-
-            // Verify we can hang out before attaching browser
-            if (num == 10)
-                Thread.Sleep(TimeSpan.FromMinutes(2));
 
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 

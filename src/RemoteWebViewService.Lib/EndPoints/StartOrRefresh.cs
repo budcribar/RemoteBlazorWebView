@@ -99,22 +99,33 @@ namespace PeakSWC.RemoteWebView.EndPoints
         // The object captured before the loop is the registration that was live when
         // this wait started. A missing key or a different object means that registration
         // is gone, even if a later call inserted a new one under the same id.
-        internal static async Task<bool> WaitForClientShutdown(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, string guid, TimeSpan timeout, TimeSpan delay)
+        internal static async Task<bool> WaitForClientShutdown(
+            ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary,
+            string guid,
+            TimeSpan? timeout = null,
+            TimeSpan? delay = null)
         {
+            var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(30);
+            var effectiveDelay = delay ?? TimeSpan.FromMilliseconds(100);
             serviceDictionary.TryGetValue(guid, out var original);
-            int attempts = (int)(timeout.TotalMilliseconds / delay.TotalMilliseconds);
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-            for (int i = 0; i < attempts; i++)
+            while (true)
             {
                 if (!serviceDictionary.TryGetValue(guid, out var current) || !ReferenceEquals(current, original))
                 {
                     return true;
                 }
 
-                await Task.Delay(delay).ConfigureAwait(false);
-            }
+                var remaining = effectiveTimeout - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    return false;
+                }
 
-            return false;
+                var step = effectiveDelay > TimeSpan.Zero && remaining >= effectiveDelay ? effectiveDelay : remaining;
+                await Task.Delay(step).ConfigureAwait(false);
+            }
         }
     }
 }

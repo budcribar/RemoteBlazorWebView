@@ -8,10 +8,16 @@ using PeakSWC.RemoteWebView.Services;
 
 namespace StaticContentCache.Tests;
 
+[CollectionDefinition("RestartGracePeriod", DisableParallelization = true)]
+public sealed class RestartGracePeriodCollection
+{
+}
+
 /// <summary>
 /// Sharing control: who controls a session, who may hand it over or take it, what happens when the controller leaves,
 /// and the roster every browser is sent. Drives BrowserIPCService directly, with one fake browser stream per connection.
 /// </summary>
+[Collection("RestartGracePeriod")]
 public class ControlTransferTests
 {
     [Fact]
@@ -499,11 +505,15 @@ public class ControlTransferTests
 
     private sealed record Participant(string Id, bool Owner, bool Primary);
 
-    private sealed class Connection(Task stream, CancellationTokenSource cancel, Writer writer)
+    private sealed class Connection(Task stream, CancellationTokenSource cancel, Writer writer) : IDisposable
     {
         public Task Stream => stream;
         public IReadOnlyCollection<string> Messages => writer.Messages;
-        public void Leave() => cancel.Cancel();
+        public void Leave()
+        {
+            try { cancel.Cancel(); } catch (ObjectDisposedException) { }
+        }
+        public void Dispose() => cancel.Dispose();
 
         /// <summary>The most recent "participants:" message this browser was sent, or null if none yet.</summary>
         public List<Participant>? LastRoster()
@@ -571,8 +581,11 @@ public class ControlTransferTests
 
         public async ValueTask DisposeAsync()
         {
+            services.TryRemove(Id, out _);
             foreach (var c in connections) c.Leave();
             try { await Task.WhenAll(connections.Select(c => c.Stream)).WaitAsync(TimeSpan.FromSeconds(5)); } catch { /* best effort */ }
+            await State.DisposeAsync();
+            foreach (var c in connections) c.Dispose();
         }
     }
 

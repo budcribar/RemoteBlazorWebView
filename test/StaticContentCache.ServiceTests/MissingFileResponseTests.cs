@@ -18,7 +18,7 @@ public class MissingFileResponseTests
     public async Task Missing_file_matches_the_local_body_type_and_cache_header()
     {
         var clientId = Guid.NewGuid();
-        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
         state.FileManagerReady.SetResult(true);
         var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
         ready.SetResult(state);
@@ -26,6 +26,7 @@ public class MissingFileResponseTests
         {
             [clientId.ToString()] = ready
         };
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
 
         using var host = await new HostBuilder()
             .ConfigureWebHost(web =>
@@ -36,31 +37,38 @@ public class MissingFileResponseTests
                     services.AddLogging();
                     services.AddMemoryCache();
                     services.AddSingleton(new RemoteFilesOptions { UseClientCache = false, UseServerCache = false });
-                    services.AddSingleton(new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance));
-                    services.AddSingleton<RemoteFileResolver>(new MissingFileResolver());
+                    services.AddSingleton(manager);
+                    services.AddSingleton<RemoteFileResolver>(new MissingFileResolver(manager));
                     services.AddSingleton(states);
                 });
                 web.Configure(app => app.UseMiddleware<RemoteFilesMiddleware>());
             })
             .StartAsync();
 
-        var response = await host.GetTestClient().GetAsync($"/{clientId}/no-such.js");
-        var cache = response.Headers.TryGetValues("Cache-Control", out var values) ? string.Join(",", values) : "";
+        try
+        {
+            var response = await host.GetTestClient().GetAsync($"/{clientId}/no-such.js");
+            var cache = response.Headers.TryGetValues("Cache-Control", out var values) ? string.Join(",", values) : "";
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
-        Assert.Equal("There is no content at no-such.js", await response.Content.ReadAsStringAsync());
-        Assert.Equal(
-            ["max-age=0", "must-revalidate", "no-cache", "no-store"],
-            cache.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .OrderBy(directive => directive, StringComparer.Ordinal)
-                .ToArray());
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+            Assert.Equal("There is no content at no-such.js", await response.Content.ReadAsStringAsync());
+            Assert.Equal(
+                ["max-age=0", "must-revalidate", "no-cache", "no-store"],
+                cache.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                    .OrderBy(directive => directive, StringComparer.Ordinal)
+                    .ToArray());
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
     }
 
     private sealed class MissingFileResolver : RemoteFileResolver
     {
-        public MissingFileResolver()
-            : base(NullLogger<RemoteFileResolver>.Instance, new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance))
+        public MissingFileResolver(ServerFileSyncManager manager)
+            : base(NullLogger<RemoteFileResolver>.Instance, manager)
         {
         }
 

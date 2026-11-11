@@ -26,10 +26,11 @@ namespace App
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001")]"""));
         NoErrors(r);
         Assert.Empty(r.GeneratorDiagnostics);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.True(remote);
         Assert.Equal(new Uri("https://localhost:5001"), (Uri)view.ServerUri);
-        Assert.Equal(Guid.Empty, (Guid)view.Id);
+        Assert.NotEqual(Guid.Empty, (Guid)view.Id);
         Assert.False((bool)view.EnableMirrors);
         Assert.True((bool)view.HasReady);
         Assert.False((bool)view.HasConnected);
@@ -47,10 +48,14 @@ namespace App
         var r = GeneratorHarness.Run(Wpf("[RemoteBlazor(nameof(RemoteBlazorWebView))]"));
         NoErrors(r);
         Assert.Empty(r.GeneratorDiagnostics);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.False(remote);
         Assert.Null((Uri?)view.ServerUri);
         Assert.False((bool)view.HasReady);
+        var idEx = Record.Exception(() => _ = (Guid)view.Id);
+        Assert.NotNull(idEx);
+        Assert.Contains("Id not initialized", idEx.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -58,6 +63,7 @@ namespace App
     {
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Local, ServerUri = "https://localhost:5001", ShutdownOnDisconnect = true)]"""));
         NoErrors(r);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.False(remote);
         Assert.Null((Uri?)view.ServerUri);
@@ -74,6 +80,7 @@ namespace App
             : """[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001")]""";
         var r = GeneratorHarness.Run(Wpf(attribute), modeProperty: property);
         NoErrors(r);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, _) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.Equal(expectRemote, remote);
     }
@@ -84,6 +91,7 @@ namespace App
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001")]"""), modeProperty: "Cloud");
         NoErrors(r);
         Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW007");
+        GeneratorHarness.CommandLine(r.Assembly!);
         Assert.True(GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow").Remote);
     }
 
@@ -110,7 +118,12 @@ namespace App
         Assert.Equal(0, probe.Exits); // the window closes normally
         Assert.Equal(1, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Window", "Closes"));
 
+        // Real BlazorWebView suppresses Disconnected once IsRefreshing is set so refresh does not shut down the app.
         view.FireDisconnected();
+        Assert.Equal(0, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Application", "Shutdowns"));
+
+        var (_, nonRefreshingView) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
+        nonRefreshingView.FireDisconnected();
         Assert.Equal(1, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Application", "Shutdowns"));
     }
 
@@ -137,6 +150,10 @@ namespace App
         Assert.Single(probe.Copies);
         Assert.Equal(1, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Forms.Form", "Closes"));
         view.FireDisconnected();
+        Assert.Equal(0, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Forms.Application", "Exits"));
+
+        var (_, nonRefreshingView) = GeneratorHarness.Initialize(r.Assembly!, "App.Form1", "blazorWebView1");
+        nonRefreshingView.FireDisconnected();
         Assert.Equal(1, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Forms.Application", "Exits"));
     }
 
@@ -155,6 +172,7 @@ public partial class Outer
 }
 """);
         NoErrors(r);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "Outer+Inner", "View");
         Assert.True(remote);
         Assert.Equal(new Uri("https://example.com/"), (Uri)view.ServerUri);
@@ -214,6 +232,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", ReverseMirror = nameof(WebView))]""", ReverseMembers));
         NoErrors(r);
         Assert.Empty(r.GeneratorDiagnostics);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var type = r.Assembly!.GetType("App.MainWindow")!;
         var window = Activator.CreateInstance(type)!;
         Assert.True((bool)type.GetMethod("InitializeRemoteBlazor", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(window, [null])!);
@@ -236,6 +255,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         var r = GeneratorHarness.Run(Wpf($$"""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", {{option}})]"""));
         NoErrors(r);
         Assert.Empty(r.GeneratorDiagnostics);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (remote, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.True(remote);
         Assert.True((bool)view.EnableMirrors); // the browser joins at the mirror link
@@ -279,6 +299,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001", ReverseMirror = "WebView")]"""));
         NoErrors(r);
         Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW001");
+        GeneratorHarness.CommandLine(r.Assembly!);
         Assert.False(GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow").Remote);
     }
 
@@ -324,10 +345,12 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         GeneratorHarness.CommandLine(r.Assembly!);
         var probe = GeneratorHarness.ProbeRestarts(r.Assembly!);
         var (_, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
+        var sessionId = (Guid)view.Id;
+        Assert.NotEqual(Guid.Empty, sessionId);
 
         ((Action)view.RestartWhenUnresponsive)(); // what the library calls when the UI thread did not pick up the request
 
-        Assert.Single(probe.Copies);
+        Assert.Equal(["-u=https://localhost:5001/", $"-i={sessionId}"], Assert.Single(probe.Copies));
         Assert.Equal(1, probe.Exits); // the window cannot be closed from there: the process is ended
         Assert.Equal(0, GeneratorHarness.StaticInt(r.Assembly!, "System.Windows.Window", "Closes"));
 
@@ -341,6 +364,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
     {
         var r = GeneratorHarness.Run(Wpf("""[RemoteBlazor(nameof(RemoteBlazorWebView), Mode = RemoteBlazorMode.Remote, ServerUri = "https://localhost:5001")]"""));
         NoErrors(r);
+        GeneratorHarness.CommandLine(r.Assembly!);
         var (_, view) = GeneratorHarness.Initialize(r.Assembly!, "App.MainWindow");
         Assert.False((bool)view.HasRefreshed);
         Assert.Null((Action?)view.RestartWhenUnresponsive);
@@ -420,6 +444,7 @@ namespace App
 """);
         NoErrors(r);
         Assert.Contains(r.GeneratorDiagnostics, d => d.Id == "RBW012");
+        GeneratorHarness.CommandLine(r.Assembly!);
         Assert.True(GeneratorHarness.Initialize(r.Assembly!, "App.Form1", "blazorWebView1").Remote);
     }
 }

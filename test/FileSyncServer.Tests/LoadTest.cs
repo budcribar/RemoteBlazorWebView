@@ -1,4 +1,4 @@
-﻿using Microsoft.Playwright;
+using Microsoft.Playwright;
 using System.Diagnostics;
 using System.Text;
 using FluentAssertions;
@@ -13,13 +13,14 @@ using Xunit.Abstractions;
 namespace FileSyncServer.Tests
 {
     [Collection("Server collection")]
-    public class LoadTest
+    public class LoadTest : IDisposable
     {
+        private const string TestFileName = "maxconcurrenttest.txt";
         private readonly ServerFixture _serverFixture;
         private readonly ClientFixture _clientFixture;
         private readonly ITestOutputHelper _output;
         private readonly string clientCachePath;
-        private string filePath;
+        private readonly string filePath;
         private readonly string clientId;
 
         public LoadTest(ClientFixture clientFixture, ServerFixture serverFixture, ITestOutputHelper output)
@@ -30,10 +31,10 @@ namespace FileSyncServer.Tests
             clientId = _clientFixture.ClientId.ToString();
 
             var testDirectory = Directory.GetCurrentDirectory();
-            clientCachePath = Path.Combine(testDirectory, "client_cache", clientId);
+            clientCachePath = Path.Combine(testDirectory, "client_cache");
             Directory.CreateDirectory(clientCachePath);
 
-            filePath = Path.Combine(clientCachePath, $"maxconcurrenttest.txt");
+            filePath = Path.Combine(clientCachePath, TestFileName);
             CreateTestFile(1000);
         }
 
@@ -48,75 +49,113 @@ namespace FileSyncServer.Tests
             }
         }
 
+        private void DeleteTestFile()
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to delete load test file '{filePath}': {ex.Message}");
+            }
+        }
+
         [Fact]
         public async Task FindMaxConcurrentRequests()
         {
             double nonlinearityThreshold = 1.5;
             int timeoutSeconds = 30;
             string baseUrl = Utilities.BASEURL;
-            string testUrl = $"{baseUrl}/{clientId}/maxconcurrenttest.txt";
+            string testUrl = $"{baseUrl}/{clientId}/{TestFileName}";
 
             // Process checks (consider moving to fixtures)
             Process.GetProcessesByName("Client").Length.Should().BeGreaterThan(0, "Client process should be running.");
             Process.GetProcessesByName("RemoteWebViewService").Length.Should().BeGreaterThan(0, "Server process should be running.");
 
+            if (!File.Exists(filePath))
+            {
+                CreateTestFile(1000);
+            }
+
             await Utilities.SetServerCache(true);
-
-            int minConcurrentRequests = 1;
-            int maxConcurrentRequests = 1;
-            List<Tuple<int, double>> results = new List<Tuple<int, double>>();
-
-            while (true)
+            try
             {
-                Log($"Measuring {maxConcurrentRequests} concurrent requests.");
-                double averageTime = await MeasureAverageResponseTime(testUrl, maxConcurrentRequests, timeoutSeconds);
-                results.Add(Tuple.Create(maxConcurrentRequests, averageTime));
-                Log($"Measured {maxConcurrentRequests} concurrent requests in {averageTime:F0} ms.");
+                int minConcurrentRequests = 1;
+                int maxConcurrentRequests = 1;
+                int maxSuccessfulConcurrentRequests = 0;
+                List<Tuple<int, double>> results = new List<Tuple<int, double>>();
 
-                if (averageTime > timeoutSeconds * 1000)
+                while (true)
                 {
-                    Log($"Timeout detected at {maxConcurrentRequests} requests.");
-                    break;
+                    Log($"Measuring {maxConcurrentRequests} concurrent requests.");
+                    double averageTime = await MeasureAverageResponseTime(testUrl, maxConcurrentRequests, timeoutSeconds);
+                    results.Add(Tuple.Create(maxConcurrentRequests, averageTime));
+                    Log($"Measured {maxConcurrentRequests} concurrent requests in {averageTime:F0} ms.");
+
+                    if (averageTime > timeoutSeconds * 1000)
+                    {
+                        Log($"Timeout detected at {maxConcurrentRequests} requests.");
+                        break;
+                    }
+
+                    maxSuccessfulConcurrentRequests = Math.Max(maxSuccessfulConcurrentRequests, maxConcurrentRequests);
+
+                    if (results.Count > 1 && averageTime > results[results.Count - 2].Item2 * nonlinearityThreshold)
+                    {
+                        Log($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
+                        break;
+                    }
+
+                    maxConcurrentRequests *= 2;
                 }
 
-                if (results.Count > 1 && averageTime > results[results.Count - 2].Item2 * nonlinearityThreshold)
+                minConcurrentRequests = maxConcurrentRequests / 2;
+                Log($"Binary search between {minConcurrentRequests} and {maxConcurrentRequests} concurrent requests.");
+                while (maxConcurrentRequests - minConcurrentRequests > 1)
                 {
-                    Log($"Nonlinearity threshold exceeded at {maxConcurrentRequests} requests.");
-                    break;
+                    int mid = (minConcurrentRequests + maxConcurrentRequests) / 2;
+                    Log($"Measuring {mid} concurrent requests.");
+                    double midTime = await MeasureAverageResponseTime(testUrl, mid, timeoutSeconds);
+                    results.Add(Tuple.Create(mid, midTime));
+                    Log($"Measured {mid} concurrent requests in {midTime:F0} ms.");
+
+                    if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[results.Count - 2].Item2 * nonlinearityThreshold))
+                    {
+                        maxConcurrentRequests = mid;
+                    }
+                    else
+                    {
+                        minConcurrentRequests = mid;
+                        maxSuccessfulConcurrentRequests = Math.Max(maxSuccessfulConcurrentRequests, mid);
+                    }
                 }
 
-                maxConcurrentRequests *= 2;
+                string html = CreateHtmlReport(results);
+                string reportDir = Path.Combine(Directory.GetCurrentDirectory(), "TestResults");
+                Directory.CreateDirectory(reportDir);
+                string reportPath = Path.Combine(reportDir, "report.html");
+                File.WriteAllText(reportPath, html);
+                Log($"Load test report saved to {reportPath}. Ceiling search ended at {maxConcurrentRequests} concurrent requests.");
+
+                maxConcurrentRequests.Should().BeGreaterThan(0);
+                maxSuccessfulConcurrentRequests.Should().BeGreaterThan(0);
             }
-
-            minConcurrentRequests = maxConcurrentRequests / 2;
-            Log($"Binary search between {minConcurrentRequests} and {maxConcurrentRequests} concurrent requests.");
-            while (maxConcurrentRequests - minConcurrentRequests > 1)
+            finally
             {
-                int mid = (minConcurrentRequests + maxConcurrentRequests) / 2;
-                Log($"Measuring {mid} concurrent requests.");
-                double midTime = await MeasureAverageResponseTime(testUrl, mid, timeoutSeconds);
-                results.Add(Tuple.Create(mid, midTime));
-                Log($"Measured {mid} concurrent requests in {midTime:F0} ms.");
-
-                if (midTime > timeoutSeconds * 1000 || (results.Count > 1 && midTime > results[results.Count - 2].Item2 * nonlinearityThreshold))
-                {
-                    maxConcurrentRequests = mid;
-                }
-                else
-                {
-                    minConcurrentRequests = mid;
-                }
+                await Utilities.SetServerCache(false);
+                DeleteTestFile();
             }
-
-            string html = CreateHtmlReport(results);
-            string reportPath = Path.Combine(clientCachePath, "report.html");
-            File.WriteAllText(reportPath, html);
-            Log($"Load test report saved to {reportPath}. Ceiling search ended at {maxConcurrentRequests} concurrent requests.");
-
-            // Your assertions about maxConcurrentRequests here.
-            // Example: maxConcurrentRequests.Should().BeLessThan(someValue);
         }
 
+        public void Dispose()
+        {
+            DeleteTestFile();
+            GC.SuppressFinalize(this);
+        }
 
         private static async Task<double> MeasureAverageResponseTime(string url, int concurrentRequests, int timeoutSeconds)
         {
@@ -128,35 +167,41 @@ namespace FileSyncServer.Tests
             // page together; this browser is disposed before the next concurrency step.
             await using var browser = await playwright.Chromium.LaunchAsync(ConcurrentRequestsTests.HeadlessChromiumOptions());
 
-            var tasks = new List<Task<double>>();
-            var stopwatch = new Stopwatch();
+            var tasks = new List<Task<double>>(concurrentRequests);
 
             for (int i = 0; i < concurrentRequests; i++)
             {
                 tasks.Add(Task.Run(async () =>
                 {
                     var page = await browser.NewPageAsync();
-                    stopwatch.Start();
+                    var stopwatch = Stopwatch.StartNew();
                     var response = await page.GotoAsync(url, new PageGotoOptions
                     {
                         Timeout = timeoutSeconds * 1000,
                         WaitUntil = WaitUntilState.NetworkIdle
                     });
                     stopwatch.Stop();
+
+                    response.Should().NotBeNull($"Expected a response from '{url}'.");
+                    response!.Status.Should().Be(200, $"Expected status code 200 from '{url}', but got {response.Status}.");
+
                     return stopwatch.Elapsed.TotalMilliseconds;
                 }));
             }
 
             try
             {
-                await Task.WhenAll(tasks);
+                var durations = await Task.WhenAll(tasks);
+                return durations.Average();
             }
-            catch (TimeoutException)
+            catch (TimeoutException) when (concurrentRequests > 1)
             {
                 return timeoutSeconds * 1000 + 1;
             }
-
-            return tasks.Select(t => t.Result).Average();
+            catch (PlaywrightException) when (concurrentRequests > 1)
+            {
+                return timeoutSeconds * 1000 + 1;
+            }
         }
 
         private void Log(string message)

@@ -43,21 +43,21 @@ public class RemoteComponentTests
     [Fact]
     public async Task The_frame_sends_values_then_only_changes_and_raises_callbacks()
     {
-        var wire = new Wire();
+        await using var wire = new Wire();
         var receiver = new ClockReceiver(wire.Child);
         var changes = 0;
         receiver.Changed += () => Interlocked.Increment(ref changes);
         receiver.Start();
 
-        using var ctx = new BunitContext();
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        var picked = new List<int>();
+        var picked = new System.Collections.Concurrent.ConcurrentQueue<int>();
         var opened = 0;
         var cut = ctx.Render<ClockFrame>(p => p
-            .Add(x => x.Open, _ => { opened++; return Task.FromResult(new RemoteComponentSession(new Uri("http://127.0.0.1:5000/abc"), wire.App)); })
+            .Add(x => x.Open, _ => { Interlocked.Increment(ref opened); return Task.FromResult(new RemoteComponentSession(new Uri("http://127.0.0.1:5000/abc"), wire.App)); })
             .Add(x => x.Zone, "PST")
             .Add(x => x.Count, 1)
-            .Add(x => x.Picked, (int v) => picked.Add(v))
+            .Add(x => x.Picked, (int v) => picked.Enqueue(v))
             .Add(x => x.Title, "Clock")
             .AddUnmatched("data-testid", "frame"));
 
@@ -77,32 +77,46 @@ public class RemoteComponentTests
         cut.Render(p => p.Add(x => x.Count, 2)); // Zone unchanged: not sent again
         await Eventually(() => receiver.Count == 2);
         Assert.Equal(2, Volatile.Read(ref changes));
-        Assert.Equal(1, opened);
+        Assert.Equal(1, Volatile.Read(ref opened));
+
+        var sent = wire.SentToChild.ToArray();
+        Assert.Equal(2, sent.Length);
+        var firstSet = sent[0].Set;
+        Assert.NotNull(firstSet);
+        Assert.Equal(2, firstSet.Count);
+        Assert.Equal("PST", firstSet["Zone"].GetString());
+        Assert.Equal(1, firstSet["Count"].GetInt32());
+        var secondSet = sent[1].Set;
+        Assert.NotNull(secondSet);
+        Assert.Single(secondSet);
+        Assert.True(secondSet.ContainsKey("Count"));
+        Assert.False(secondSet.ContainsKey("Zone"));
+        Assert.Equal(2, secondSet["Count"].GetInt32());
 
         await receiver.Picked(7);
-        await Eventually(() => picked.Count == 1);
-        Assert.Equal([7], picked);
+        await Eventually(() => !picked.IsEmpty);
+        Assert.Equal([7], picked.ToArray());
     }
 
     [Fact]
     public async Task A_registered_receiver_is_also_found_as_the_base_and_sees_its_input_end()
     {
         // RemoteComponentHost (ExitWhenInputCloses) starts every receiver this way, so the input is read and its end noticed.
-        var connection = new RemoteComponentConnection(new StringReader(""), null);
-        var ended = false;
-        connection.Closed += () => ended = true;
+        using var connection = new RemoteComponentConnection(new StringReader(""), null);
+        var ended = 0;
+        connection.Closed += () => Interlocked.Exchange(ref ended, 1);
         var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
         services.AddRemoteComponentReceiver<ClockReceiver>(connection);
-        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        await using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
         var receivers = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetServices<RemoteComponentReceiverBase>(provider).ToList();
         Assert.Same(Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ClockReceiver>(provider), Assert.Single(receivers));
-        await Eventually(() => ended);
+        await Eventually(() => Volatile.Read(ref ended) == 1);
     }
 
     [Fact]
-    public void A_failed_open_shows_the_problem()
+    public async Task A_failed_open_shows_the_problem()
     {
-        using var ctx = new BunitContext();
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromException<RemoteComponentSession>(new InvalidOperationException("no relay"))));
         Assert.Empty(cut.FindAll("iframe"));
@@ -112,7 +126,8 @@ public class RemoteComponentTests
     [Fact]
     public async Task The_receiver_skips_values_it_cannot_read()
     {
-        var receiver = new ClockReceiver(new RemoteComponentConnection(null, null));
+        using var connection = new RemoteComponentConnection(null, null);
+        var receiver = new ClockReceiver(connection);
         var bad = new List<string>();
         receiver.BadValue += (n, _) => bad.Add(n);
         var set = new Dictionary<string, System.Text.Json.JsonElement>
@@ -130,13 +145,13 @@ public class RemoteComponentTests
     [Fact]
     public async Task Disposing_the_frame_stops_the_session()
     {
-        var stopped = false;
-        using var ctx = new BunitContext();
+        var stopped = 0;
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri("http://x/1"),
-            new RemoteComponentConnection(null, null), () => { stopped = true; return ValueTask.CompletedTask; }))));
+            new RemoteComponentConnection(null, null), () => { Interlocked.Exchange(ref stopped, 1); return ValueTask.CompletedTask; }))));
         await cut.Instance.DisposeAsync();
-        Assert.True(stopped);
+        Assert.Equal(1, Volatile.Read(ref stopped));
     }
 
     [Theory]
@@ -149,10 +164,10 @@ public class RemoteComponentTests
         Assert.Equal(mirror, RemoteComponentFrame.MirrorSourceFor(new Uri(source))?.ToString());
 
     [Fact]
-    public void The_frame_carries_its_mirror_source()
+    public async Task The_frame_carries_its_mirror_source()
     {
         var id = Guid.NewGuid();
-        using var ctx = new BunitContext();
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri($"http://127.0.0.1:5000/{id}"),
             new RemoteComponentConnection(null, null)))));
@@ -163,9 +178,9 @@ public class RemoteComponentTests
     }
 
     [Fact]
-    public void A_session_without_a_mirror_source_renders_none()
+    public async Task A_session_without_a_mirror_source_renders_none()
     {
-        using var ctx = new BunitContext();
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var cut = ctx.Render<ClockFrame>(p => p.Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri($"http://127.0.0.1:5000/{Guid.NewGuid()}"),
             new RemoteComponentConnection(null, null)) { MirrorSource = null })));

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace StaticContentCache.EndToEnd.Tests;
@@ -128,22 +129,37 @@ public sealed class ChromeSession : IAsyncDisposable
         return null;
     }
 
-    private static IEnumerable<string> InstalledCandidates()
+    internal static IEnumerable<string> InstalledCandidates()
     {
         yield return "/usr/bin/google-chrome-stable";
+        yield return "/usr/bin/google-chrome";
         yield return "/usr/bin/chromium";
         yield return "/usr/bin/chromium-browser";
         yield return "/opt/google/chrome/chrome";
+        yield return "/usr/bin/microsoft-edge-stable";
+        yield return "/usr/bin/microsoft-edge";
+        yield return "/opt/microsoft/msedge/msedge";
         yield return @"C:\Program Files\Google\Chrome\Application\chrome.exe";
         yield return @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
+        yield return @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+        yield return @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
+
+        var localAppData = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+        if (string.IsNullOrEmpty(localAppData))
+            localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrEmpty(localAppData))
+        {
+            yield return Path.Combine(localAppData, "Google", "Chrome", "Application", "chrome.exe");
+            yield return Path.Combine(localAppData, "Microsoft", "Edge", "Application", "msedge.exe");
+        }
 
         var path = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrEmpty(path))
             yield break;
 
         string[] names = OperatingSystem.IsWindows()
-            ? ["chrome.exe", "chrome", "google-chrome.exe", "chromium.exe"]
-            : ["google-chrome-stable", "google-chrome", "chromium", "chromium-browser", "chrome"];
+            ? ["chrome.exe", "chrome", "google-chrome.exe", "chromium.exe", "msedge.exe", "msedge"]
+            : ["google-chrome-stable", "google-chrome", "chromium", "chromium-browser", "chrome", "microsoft-edge-stable", "microsoft-edge", "msedge"];
         foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
             foreach (var name in names)
@@ -201,12 +217,22 @@ public sealed class ChromeSession : IAsyncDisposable
         start.ArgumentList.Add($"--remote-debugging-port={port}");
         start.ArgumentList.Add($"--user-data-dir={userData}");
         start.ArgumentList.Add("about:blank");
-        var process = Process.Start(start) ?? throw new InvalidOperationException("Chrome did not start.");
-        var session = new ChromeSession(process, port, userData);
-        session.Drain(process.StandardOutput);
-        session.Drain(process.StandardError);
+        Process process;
         try
         {
+            process = Process.Start(start) ?? throw new InvalidOperationException("Chrome did not start.");
+        }
+        catch
+        {
+            DeleteUserData(userData);
+            throw;
+        }
+
+        var session = new ChromeSession(process, port, userData);
+        try
+        {
+            session.Drain(process.StandardOutput);
+            session.Drain(process.StandardError);
             await session.WaitForDebuggerAsync();
             return session;
         }
@@ -226,14 +252,38 @@ public sealed class ChromeSession : IAsyncDisposable
         var socketUrl = body["webSocketDebuggerUrl"]!.GetValue<string>();
         var targetId = body["id"]!.GetValue<string>();
         var socket = new ClientWebSocket();
-        await socket.ConnectAsync(new Uri(socketUrl), CancellationToken.None);
+        try
+        {
+            await socket.ConnectAsync(new Uri(socketUrl), CancellationToken.None);
+        }
+        catch
+        {
+            socket.Dispose();
+            try
+            {
+                await _http.GetAsync($"http://127.0.0.1:{_port}/json/close/{targetId}");
+            }
+            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException)
+            {
+            }
+            throw;
+        }
+
         var page = new ChromePage(socket, targetId, _port);
-        await page.StartReadingAsync();
-        await page.SendAsync("Page.enable");
-        await page.SendAsync("Network.enable");
-        await page.SendAsync("Runtime.enable");
-        await page.SendAsync("Page.navigate", new JsonObject { ["url"] = url });
-        return page;
+        try
+        {
+            await page.StartReadingAsync();
+            await page.SendAsync("Page.enable");
+            await page.SendAsync("Network.enable");
+            await page.SendAsync("Runtime.enable");
+            await page.SendAsync("Page.navigate", new JsonObject { ["url"] = url });
+            return page;
+        }
+        catch
+        {
+            await page.DisposeAsync();
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -242,6 +292,7 @@ public sealed class ChromeSession : IAsyncDisposable
         {
             if (!_process.HasExited)
                 _process.Kill(entireProcessTree: true);
+            _process.WaitForExit(5000);
         }
         catch (InvalidOperationException)
         {
@@ -249,19 +300,30 @@ public sealed class ChromeSession : IAsyncDisposable
 
         _process.Dispose();
         _http.Dispose();
-        try
-        {
-            if (Directory.Exists(_userData))
-                Directory.Delete(_userData, recursive: true);
-        }
-        catch (IOException)
-        {
-        }
+        DeleteUserData(_userData);
 
         await Task.CompletedTask;
     }
 
+    private static void DeleteUserData(string userData)
+    {
+        try
+        {
+            if (Directory.Exists(userData))
+                Directory.Delete(userData, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
     private void Drain(StreamReader reader) => StartPipeReader(reader, _error);
+
+    private string ReadError()
+    {
+        lock (_error)
+            return _error.ToString();
+    }
 
     // Returns whether the reader ran on the thread pool. The reader is a dedicated
     // thread that is already inside Read before this returns. A thread-pool queue
@@ -273,8 +335,7 @@ public sealed class ChromeSession : IAsyncDisposable
         var thread = new Thread(() =>
         {
             pool = Thread.CurrentThread.IsThreadPoolThread;
-            started.Set();
-            ReadPipe(reader, sink);
+            ReadPipe(reader, sink, started);
         })
         {
             IsBackground = true,
@@ -286,9 +347,10 @@ public sealed class ChromeSession : IAsyncDisposable
         return pool;
     }
 
-    private static void ReadPipe(TextReader reader, StringBuilder sink)
+    private static void ReadPipe(TextReader reader, StringBuilder sink, ManualResetEventSlim started)
     {
         var buffer = new char[1024];
+        started.Set();
         while (true)
         {
             int read;
@@ -321,8 +383,8 @@ public sealed class ChromeSession : IAsyncDisposable
             },
             () => _process.HasExited,
             TimeSpan.FromSeconds(15),
-            () => "Chrome exited. " + _error,
-            () => "Chrome DevTools did not accept connections. " + _error);
+            () => "Chrome exited. " + ReadError(),
+            () => "Chrome DevTools did not accept connections. " + ReadError());
 
     // The 15s deadline is the wait. One probe uses HttpClient.Timeout (5s). A slow
     // DevTools accept must be retried inside that deadline, not fail the test early.
@@ -395,6 +457,7 @@ public sealed class ChromePage : IAsyncDisposable
           changed: window.__changedModule || null,
           other: window.__otherModule || null,
           baseHref: document.querySelector("base") ? document.querySelector("base").href : null,
+          remoteBlazorLoaded: Boolean(window.RemoteBlazor && window.RemoteBlazor.clientId),
           reloading: window.__reloading === true
         }))()
         """;
@@ -465,19 +528,33 @@ public sealed class ChromePage : IAsyncDisposable
         return remote["value"];
     }
 
-    public Task ReloadAsync()
-        => SendAsync("Page.reload", new JsonObject { ["ignoreCache"] = true });
+    public Task ReloadAsync(bool ignoreCache = false)
+        => SendAsync("Page.reload", new JsonObject { ["ignoreCache"] = ignoreCache });
 
     public async ValueTask DisposeAsync()
     {
         _stop.Cancel();
         try
         {
-            if (_socket.State == WebSocketState.Open)
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+            if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
+            {
+                using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                await _socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "done", closeTimeout.Token);
+            }
         }
-        catch (WebSocketException)
+        catch (Exception ex) when (ex is InvalidOperationException or WebSocketException or OperationCanceledException or ObjectDisposedException)
         {
+        }
+
+        if (_reader is not null)
+        {
+            try
+            {
+                await _reader;
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or WebSocketException or InvalidOperationException or ObjectDisposedException or JsonException)
+            {
+            }
         }
 
         _socket.Dispose();
@@ -485,7 +562,7 @@ public sealed class ChromePage : IAsyncDisposable
         {
             await _http.GetAsync($"http://127.0.0.1:{_port}/json/close/{_targetId}");
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException)
         {
         }
 
@@ -502,26 +579,33 @@ public sealed class ChromePage : IAsyncDisposable
             message["params"] = parameters;
         var waiter = new TaskCompletionSource<JsonNode>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[id] = waiter;
-        var bytes = Encoding.UTF8.GetBytes(message.ToJsonString());
-        await _send.WaitAsync();
         try
         {
-            await _socket.SendAsync(bytes, WebSocketMessageType.Text, true, _stop.Token);
+            var bytes = Encoding.UTF8.GetBytes(message.ToJsonString());
+            await _send.WaitAsync(_stop.Token);
+            try
+            {
+                await _socket.SendAsync(bytes, WebSocketMessageType.Text, true, _stop.Token);
+            }
+            finally
+            {
+                _send.Release();
+            }
+
+            var completed = await Task.WhenAny(waiter.Task, Task.Delay(TimeSpan.FromSeconds(15), _stop.Token));
+            if (completed != waiter.Task)
+                throw new TimeoutException("DevTools command timed out: " + method);
+            var node = await waiter.Task;
+            if (node is not JsonObject obj)
+                throw new InvalidOperationException(method + " returned " + node);
+            if (obj["error"] is JsonObject error)
+                throw new InvalidOperationException(method + " failed: " + error.ToJsonString());
+            return obj;
         }
         finally
         {
-            _send.Release();
+            _pending.TryRemove(id, out _);
         }
-
-        var completed = await Task.WhenAny(waiter.Task, Task.Delay(TimeSpan.FromSeconds(15), _stop.Token));
-        if (completed != waiter.Task)
-            throw new TimeoutException("DevTools command timed out: " + method);
-        var node = await waiter.Task;
-        if (node is not JsonObject obj)
-            throw new InvalidOperationException(method + " returned " + node);
-        if (obj["error"] is JsonObject error)
-            throw new InvalidOperationException(method + " failed: " + error.ToJsonString());
-        return obj;
     }
 
     private async Task ReadLoopAsync()
@@ -531,7 +615,16 @@ public sealed class ChromePage : IAsyncDisposable
             while (!_stop.IsCancellationRequested && _socket.State == WebSocketState.Open)
             {
                 var text = await ReceiveTextAsync();
-                var node = JsonNode.Parse(text);
+                JsonNode? node;
+                try
+                {
+                    node = JsonNode.Parse(text);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+
                 if (node is JsonObject obj
                     && obj["id"] is JsonValue idValue
                     && idValue.TryGetValue<int>(out var id)
@@ -544,7 +637,7 @@ public sealed class ChromePage : IAsyncDisposable
                 Capture(node);
             }
         }
-        catch (Exception ex) when (ex is OperationCanceledException or WebSocketException or InvalidOperationException or ObjectDisposedException)
+        catch (Exception ex) when (ex is OperationCanceledException or WebSocketException or InvalidOperationException or ObjectDisposedException or JsonException)
         {
             foreach (var waiter in _pending.Values)
                 waiter.TrySetException(ex);

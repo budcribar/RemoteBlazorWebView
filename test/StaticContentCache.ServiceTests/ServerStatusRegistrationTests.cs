@@ -14,8 +14,8 @@ public class ServerStatusRegistrationTests
     public async Task Status_includes_task_rows_for_a_connected_client()
     {
         var id = Guid.NewGuid().ToString();
-        var (ipc, services) = ConnectedClient(id, id);
-        var state = await services[id].Task;
+        var (ipc, services, state) = ConnectedClient(id, id);
+        await using var _ = state;
 
         state.PingTask = Task.CompletedTask;
 
@@ -31,7 +31,8 @@ public class ServerStatusRegistrationTests
     {
         var registeredId = Guid.NewGuid().ToString();
         var missingId = "not-registered";
-        var (ipc, services) = ConnectedClient(registeredId, missingId);
+        var (ipc, services, state) = ConnectedClient(registeredId, missingId);
+        await using var _ = state;
 
         await ipc.GetServerStatus(new Empty(), null!);
 
@@ -39,7 +40,7 @@ public class ServerStatusRegistrationTests
         Assert.True(services.ContainsKey(registeredId));
     }
 
-    private static (ClientIPCService Ipc, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> Services) ConnectedClient(string dictionaryKey, string stateId)
+    private static (ClientIPCService Ipc, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> Services, ServiceState State) ConnectedClient(string dictionaryKey, string stateId)
     {
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
         var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
@@ -57,6 +58,6 @@ public class ServerStatusRegistrationTests
             services,
             null!,
             new RemoteFilesOptions());
-        return (ipc, services);
+        return (ipc, services, state);
     }
 }

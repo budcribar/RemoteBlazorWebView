@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
@@ -85,6 +85,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             }
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Id must be set before HostPage");
                 if (value == Guid.Empty)
                     id = Guid.NewGuid();
                 else

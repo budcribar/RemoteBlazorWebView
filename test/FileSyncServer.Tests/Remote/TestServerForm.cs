@@ -12,6 +12,7 @@ namespace FileSyncServer.Tests.Remote
     {
         private readonly int FILES_READ = 25;
 
+        [Fact(Skip = "Refresh coverage runs in TestRemoteBlazorForm; TestServerForm only verifies server stats and disconnect.")]
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
         [Fact]

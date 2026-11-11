@@ -1,4 +1,4 @@
-﻿// FileSyncServer.Tests/FileSyncServiceImplTests.cs
+// FileSyncServer.Tests/FileSyncServiceImplTests.cs
 using FluentAssertions;
 using Microsoft.Playwright;
 using System.Net;
@@ -15,7 +15,7 @@ namespace FileSyncServer.Tests
         private readonly HttpClient _client = Utilities.Client();
         private readonly string _testRootDirectory = Path.Combine(Directory.GetCurrentDirectory(), "client_cache");
         private readonly string _clientId = string.Empty;
-        private readonly string _fileName = "testfile.txt";
+        private readonly string _fileName = $"client_cache_{Guid.NewGuid():N}.txt";
         private readonly string _fileContent = "This is a test file.";
         private readonly string _filePath = string.Empty;
         // Determine the current user
@@ -27,7 +27,7 @@ namespace FileSyncServer.Tests
             _clientId = clientFixture.ClientId.ToString();
 
             // Ensure test files exist in the client's cache directory
-            var clientCachePath = Path.Combine(Directory.GetCurrentDirectory(), "client_cache");
+            var clientCachePath = _testRootDirectory;
             Directory.CreateDirectory(clientCachePath);
           
             // Create a test file with read permissions
@@ -50,60 +50,70 @@ namespace FileSyncServer.Tests
         {
             // Enable client-side caching
             await Utilities.SetClientCache(true);
-            (await Utilities.GetClientCache()).Should().BeTrue();
-
-            // Grant file read permissions
-            Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
-
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            try
             {
-                Headless = true // Run in headless mode
-            });
+                (await Utilities.GetClientCache()).Should().BeTrue();
 
-            // Now use `browserContext` to open pages
-            var page = await browser.NewPageAsync();
+                // Grant file read permissions
+                Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
 
-            // First request: Fetch file and check response
-            var firstResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+                {
+                    Headless = true // Run in headless mode
+                });
+
+                // Now use `browserContext` to open pages
+                var page = await browser.NewPageAsync();
+
+                // First request: Fetch file and check response
+                var firstResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
+                {
+                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                });
+
+                firstResponse.Should().NotBeNull();
+
+                var fromCache = await firstResponse!.Request.Frame.EvaluateAsync<bool>("performance.getEntriesByType('navigation')[0].transferSize === 0");
+
+                fromCache.Should().Be(false);
+                firstResponse.Status.Should().Be((int)HttpStatusCode.OK);
+
+                // Ensure the file content is correct
+                string content = await firstResponse.TextAsync();
+                content.Should().Be(_fileContent);
+
+                // Revoke file read access
+                Utilities.ModifyFilePermissions(_filePath, _currentUser, false);
+                try
+                {
+                    var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
+                    {
+                        WaitUntil = WaitUntilState.NetworkIdle
+                    });
+
+                    secondResponse.Should().NotBeNull();
+                    secondResponse!.Status.Should().Be((int)HttpStatusCode.OK);
+                    // Output second response status
+                    Console.WriteLine($"Second Response Status: {secondResponse!.Status}");
+
+                    fromCache = await secondResponse.Request.Frame.EvaluateAsync<bool>("performance.getEntriesByType('navigation')[0].transferSize === 0");
+                    fromCache.Should().Be(true);
+
+                    // Optionally, verify the content is still accessible from cache (if 304, content won't change)
+                    string cachedContent = await secondResponse.TextAsync();
+                    cachedContent.Should().Be(_fileContent);
+                }
+                finally
+                {
+                    // Restore file permissions after test
+                    Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
+                }
+            }
+            finally
             {
-                WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-            });
-
-            firstResponse.Should().NotBeNull();
-
-            var fromCache = await firstResponse!.Request.Frame.EvaluateAsync<bool>("performance.getEntriesByType('navigation')[0].transferSize === 0");
-
-            fromCache.Should().Be(false);
-            firstResponse.Status.Should().Be((int)HttpStatusCode.OK);
-
-            // Ensure the file content is correct
-            string content = await firstResponse.TextAsync();
-            content.Should().Be(_fileContent);
-
-            // Revoke file read access
-            Utilities.ModifyFilePermissions(_filePath, _currentUser, false);
-
-            var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle
-            });
-
-            secondResponse.Should().NotBeNull();
-            secondResponse!.Status.Should().Be((int)HttpStatusCode.OK);
-            // Output second response status
-            Console.WriteLine($"Second Response Status: {secondResponse!.Status}");          
-
-            fromCache = await secondResponse.Request.Frame.EvaluateAsync<bool>("performance.getEntriesByType('navigation')[0].transferSize === 0");
-            fromCache.Should().Be(true);
-
-            // Optionally, verify the content is still accessible from cache (if 304, content won't change)
-            string cachedContent = await secondResponse.TextAsync();
-            cachedContent.Should().Be(_fileContent);
-
-            // Restore file permissions after test
-            Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
-            await Utilities.SetClientCache(false);
+                await Utilities.SetClientCache(false);
+            }
         }
 
         [Fact]
@@ -116,13 +126,13 @@ namespace FileSyncServer.Tests
 
             // Act
             // First request: should succeed and cache the file
-            var playwright = await Playwright.CreateAsync();
+            using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = true // Run in headless mode
             });
 
-            var context = await browser.NewContextAsync();
+            await using var context = await browser.NewContextAsync();
             var page = await context.NewPageAsync();
 
             // Step 2: Make the first request and check the response status and headers
@@ -140,33 +150,39 @@ namespace FileSyncServer.Tests
 
             // Revoke read access
             Utilities.ModifyFilePermissions(_filePath, _currentUser, false);
-
-            // Second request: should fail
-            var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
+            try
             {
-                WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-            });
+                // Second request: should fail
+                var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{_clientId}/{_fileName}", new PageGotoOptions
+                {
+                    WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                });
 
-
-            secondResponse!.Status.Should().Be(403);
-
-            Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
+                secondResponse.Should().NotBeNull();
+                secondResponse!.Status.Should().Be(403);
+            }
+            finally
+            {
+                Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
+            }
         }
 
         public void Dispose()
         {
-            // Cleanup: Delete the temporary test directory
-            if (Directory.Exists(_testRootDirectory))
+            // Cleanup: Delete only the test-specific file created by this test instance
+            try
             {
-                try
+                if (!string.IsNullOrEmpty(_filePath) && File.Exists(_filePath))
                 {
-                    Directory.Delete(_testRootDirectory, recursive: true);
-                }
-                catch (Exception)
-                {
-                    // Log the exception or handle accordingly
+                    Utilities.ModifyFilePermissions(_filePath, _currentUser, true);
+                    File.Delete(_filePath);
                 }
             }
+            catch (Exception)
+            {
+                // Log the exception or handle accordingly
+            }
+            _client.Dispose();
             GC.SuppressFinalize(this);
         }
     }

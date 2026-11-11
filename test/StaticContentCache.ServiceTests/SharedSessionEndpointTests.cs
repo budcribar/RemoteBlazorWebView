@@ -22,6 +22,7 @@ public class SharedSessionEndpointTests
     public async Task The_owners_app_page_redirect_keeps_the_query(string query)
     {
         var (context, state, id) = NewRequest(query);
+        await using var _ = state;
 
         await Endpoints.Start()(context);
 
@@ -65,6 +66,7 @@ public class SharedSessionEndpointTests
     public async Task A_plain_app_page_redirects_without_a_query_and_is_not_the_owner()
     {
         var (context, state, id) = NewRequest("");
+        await using var _ = state;
 
         await Endpoints.Start()(context);
 
@@ -78,6 +80,7 @@ public class SharedSessionEndpointTests
     public async Task A_second_visitor_to_the_app_page_is_locked_out()
     {
         var (first, state, id) = NewRequest("?role=owner");
+        await using var _ = state;
         await Endpoints.Start()(first);
 
         var (second, _, _) = NewRequest("", state, id);
@@ -92,6 +95,7 @@ public class SharedSessionEndpointTests
         using var lifetime = new CancellationTokenSource();
         var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
         var (context, state, _) = NewRequest("?role=owner", voice: room);
+        await using var _ = state;
 
         await Endpoints.Start()(context);
 
@@ -105,7 +109,8 @@ public class SharedSessionEndpointTests
     {
         using var lifetime = new CancellationTokenSource();
         var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
-        var (context, _, _) = NewRequest("", voice: room);
+        var (context, state, _) = NewRequest("", voice: room);
+        await using var _ = state;
 
         await Endpoints.Start()(context);
 

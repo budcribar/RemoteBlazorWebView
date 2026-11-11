@@ -111,8 +111,8 @@ public class StatsInterceptorTests
 
         Assert.Same(response, result);
         Assert.Equal(1L, Stat(stats, "SuccessfulRequests"));
-        // The reader counts the chunk locally and the handler never copies that count.
-        Assert.Equal(0L, Stat(stats, "TotalBytesReceived"));
+        Assert.True(Stat(stats, "TotalBytesReceived") > 0);
+        Assert.Equal(incoming.CalculateSize(), Stat(stats, "TotalBytesReceived"));
         Assert.Equal(stats.CalculateMessageSize(response), Stat(stats, "TotalBytesSent"));
         Assert.Equal(0L, Stat(stats, "ActiveConnections"));
     }
@@ -125,6 +125,7 @@ public class StatsInterceptorTests
         var incoming = new StringRequest { Request = "up" };
         var outgoing = new StringRequest { Request = "down" };
         var writer = new CollectingWriter<StringRequest>();
+        using var cts = new CancellationTokenSource();
 
         await interceptor.DuplexStreamingServerHandler(
             new SingleReader<StringRequest>(incoming),
@@ -132,14 +133,14 @@ public class StatsInterceptorTests
             new TestCallContext(),
             async (requests, responses, _) =>
             {
-                Assert.True(await requests.MoveNext(CancellationToken.None));
-                await responses.WriteAsync(outgoing);
+                Assert.True(await requests.MoveNext(cts.Token));
+                await responses.WriteAsync(outgoing, cts.Token);
             });
 
         Assert.Equal(new[] { outgoing }, writer.Messages);
         Assert.Equal(1L, Stat(stats, "SuccessfulRequests"));
-        // The request reader count is not copied onto the server stats.
-        Assert.Equal(0L, Stat(stats, "TotalBytesReceived"));
+        Assert.True(Stat(stats, "TotalBytesReceived") > 0);
+        Assert.Equal(incoming.CalculateSize(), Stat(stats, "TotalBytesReceived"));
         Assert.Equal(stats.CalculateMessageSize(outgoing), Stat(stats, "TotalBytesSent"));
         Assert.Equal(0L, Stat(stats, "ActiveConnections"));
     }
@@ -168,6 +169,13 @@ public class StatsInterceptorTests
         public WriteOptions? WriteOptions { get; set; }
         public Task WriteAsync(T message)
         {
+            Messages.Add(message);
+            return Task.CompletedTask;
+        }
+
+        public Task WriteAsync(T message, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             Messages.Add(message);
             return Task.CompletedTask;
         }

@@ -1,8 +1,9 @@
-﻿// TestBlazorFormControl.cs
+// TestBlazorFormControl.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -10,6 +11,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
+using Microsoft.Playwright;
 using PeakSWC.RemoteBlazorWebView;
 using PeakSWC.RemoteBlazorWebView.WindowsForms;
 using PeakSWC.RemoteWebView;
@@ -122,15 +124,39 @@ namespace FileSyncServer.Tests
             var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
             Assert.NotNull(webView);
 
-            Assert.Throws<Exception>(() =>
+            BlazorWebViewFormFactory.MainForm?.Invoke(() =>
+            {
+                webView.Id = Guid.NewGuid();
+                webView.ServerUri = new Uri("https://localhost:5001");
+                webView.HostPage = @"wwwroot\index.html";
+            });
+
+            Assert.Throws<ArgumentException>(() =>
+            {
+                BlazorWebViewFormFactory.MainForm?.Invoke(() =>
+                {
+                    webView.Id = Guid.NewGuid();
+                });
+            });
+        }
+
+        [Fact]
+        public void TestHostPageWithoutIdThrows()
+        {
+            var rootComponent = CreateRootComponent();
+            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
+            Assert.NotNull(webView);
+
+            var ex = Assert.Throws<Exception>(() =>
             {
                 BlazorWebViewFormFactory.MainForm?.Invoke(() =>
                 {
                     webView.ServerUri = new Uri("https://localhost:5001");
                     webView.HostPage = @"wwwroot\index.html";
-                    webView.Id = Guid.NewGuid();
                 });
             });
+
+            Assert.Equal("Id not initialized", ex.Message);
         }
 
         [Fact]
@@ -254,58 +280,106 @@ namespace FileSyncServer.Tests
         [Fact]
         public async Task TestJsDownload()
         {
-            var rootComponent = CreateRootComponent();
-            var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
-            Assert.NotNull(webView);
+            const int scriptCount = 800;
+            string wwwrootPath = Path.GetFullPath(@"wwwroot");
+            string indexPath = Path.Combine(wwwrootPath, "index.html");
+            string? originalIndexHtml = File.Exists(indexPath) ? File.ReadAllText(indexPath) : null;
 
-            AutoResetEvent threadInitialized = new AutoResetEvent(false);
-            string? browserLaunch = null;
-            var browserLaunchGate = new object();
-
-            BlazorWebViewFormFactory.MainForm?.Invoke(() =>
+            try
             {
-                webView.Id = Guid.NewGuid();
-                webView.ServerUri = new Uri("https://localhost:5001");
-                webView.EnableMirrors = true;
+                Utilities.DeleteGeneratedJsFiles(wwwrootPath);
 
-                webView.Connected += (sender, e) =>
+                var rootComponent = CreateRootComponent();
+                var webView = BlazorWebViewFormFactory.CreateBlazorComponent(rootComponent);
+                Assert.NotNull(webView);
+
+                var readyTargetTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var connectedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                BlazorWebViewFormFactory.MainForm?.Invoke(() =>
                 {
-                    webView.WebView.CoreWebView2.Navigate($"{e.Url}mirror/{e.Id}");
-                    var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
-                    BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
-                    threadInitialized.Set();
-                };
+                    webView.Id = Guid.NewGuid();
+                    webView.ServerUri = new Uri("https://localhost:5001");
+                    webView.EnableMirrors = true;
 
-                webView.ReadyToConnect += (sender, e) =>
+                    webView.Connected += (sender, e) =>
+                    {
+                        webView.WebView.CoreWebView2?.Navigate($"{e.Url}mirror/{e.Id}");
+                        var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
+                        if (BlazorWebViewFormFactory.MainForm != null)
+                        {
+                            BlazorWebViewFormFactory.MainForm.Text += $" Controlled remotely {user}from ip address {e.IpAddress}";
+                        }
+                        connectedTcs.TrySetResult();
+                    };
+
+                    webView.ReadyToConnect += (sender, e) =>
+                    {
+                        var target = $"{e.Url}app/{e.Id}";
+                        webView.NavigateToString($"<a href='{target}' target='_blank'> {target}</a>");
+                        readyTargetTcs.TrySetResult(target);
+                    };
+
+                    // 800 x 1k bytes passes
+                    // 100 x 100k bytes passes
+                    Stopwatch sw = Stopwatch.StartNew();
+                    _output.WriteLine("Generating JS files");
+                    Utilities.GenJavascript(scriptCount, 1000, wwwrootPath);
+                    // Utilities.GenJavascript(100,100_000);
+                    _output.WriteLine($"Done Generating JS files in {sw.Elapsed}");
+                    webView.HostPage = @"wwwroot\index.html";
+                });
+
+                var targetUrl = await readyTargetTcs.Task.WaitAsync(TimeSpan.FromSeconds(30));
+                _output.WriteLine($"ReadyToConnect ran. Navigating Playwright Chromium to {targetUrl}");
+
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
-                    var target = $"{e.Url}app/{e.Id}";
-                    webView.NavigateToString($"<a href='{target}' target='_blank'> {target}</a>");
-                    // Chrome with devtools reached this point and still never fired Connected.
-                    // TestConnectedEvent reaches Connected through the default browser.
-                    Utilities.OpenUrlInBrowser(target);
-                    lock (browserLaunchGate)
-                        browserLaunch = $"ReadyToConnect ran. Opened {target} with the default browser.";
-                };
+                    Headless = true
+                });
+                await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+                {
+                    IgnoreHTTPSErrors = true
+                });
+                var page = await context.NewPageAsync();
 
-                // 800 x 1k bytes passes
-                // 100 x 100k bytes passes
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                _output.WriteLine("Generating JS files");
-                Utilities.GenJavascript(800, 1000);
-                // Utilities.GenJavascript(100,100_000);
-                _output.WriteLine($"Done Generating JS files in {sw.Elapsed}");
-                webView.HostPage = @"wwwroot\index.html";
-            });
+                var response = await page.GotoAsync(targetUrl, new PageGotoOptions
+                {
+                    Timeout = 60000,
+                    WaitUntil = WaitUntilState.DOMContentLoaded
+                });
+                Assert.NotNull(response);
 
-            var connected = threadInitialized.WaitOne(30000);
-            string? launchNote;
-            lock (browserLaunchGate)
-                launchNote = browserLaunch;
-            _output.WriteLine(launchNote ?? "ReadyToConnect did not run.");
-            Assert.True(connected, launchNote ?? "ReadyToConnect did not run, so no browser was opened.");
-            // Javascript is still running need a sync mechanism
-            await Task.Delay(TimeSpan.FromSeconds(10));
+                await connectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+                await page.WaitForFunctionAsync(
+                    "expected => window.__jsDownloadResult && (window.__jsDownloadResult.loaded + window.__jsDownloadResult.failed) >= expected",
+                    scriptCount,
+                    new PageWaitForFunctionOptions { Timeout = 60000 });
+
+                var jsResult = await page.EvaluateAsync<JsonElement>("() => window.__jsDownloadResult");
+                int loaded = jsResult.GetProperty("loaded").GetInt32();
+                int failed = jsResult.GetProperty("failed").GetInt32();
+                _output.WriteLine($"JS download verification finished: loaded={loaded}, failed={failed}");
+
+                Assert.Equal(0, failed);
+                Assert.Equal(scriptCount, loaded);
+            }
+            finally
+            {
+                if (originalIndexHtml != null)
+                {
+                    Directory.CreateDirectory(wwwrootPath);
+                    File.WriteAllText(indexPath, originalIndexHtml);
+                }
+                else if (File.Exists(indexPath))
+                {
+                    File.Delete(indexPath);
+                }
+
+                Utilities.DeleteGeneratedJsFiles(wwwrootPath);
+            }
         }
     }
 }

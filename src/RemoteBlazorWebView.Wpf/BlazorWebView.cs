@@ -194,6 +194,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Id must be set before HostPage");
                 if (value == Guid.Empty)
                     id = Guid.NewGuid();
                 else
