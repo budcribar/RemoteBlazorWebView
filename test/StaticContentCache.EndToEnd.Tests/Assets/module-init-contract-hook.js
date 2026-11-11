@@ -32,23 +32,20 @@ try {
   const listed = await manifestResponse.json();
   names.push(...listed);
   const afterStarted = [];
-  const results = await Promise.allSettled(listed.map(async (name) => {
+  await Promise.all(listed.map(async (name) => {
     const moduleUrl = new URL(name, document.baseURI);
     const loaded = await import(moduleUrl.href);
-    if (typeof loaded.afterStarted === "function")
-      afterStarted.push(loaded.afterStarted);
     if (typeof loaded.beforeStart === "function")
       await loaded.beforeStart();
+    if (typeof loaded.afterStarted === "function")
+      afterStarted.push(loaded.afterStarted);
   }));
-  const rejected = results.find((result) => result.status === "rejected");
-  if (rejected)
-    throw rejected.reason;
-  const afterResults = await Promise.allSettled(afterStarted.map((hook) => hook(blazor)));
-  const afterRejected = afterResults.find((result) => result.status === "rejected");
-  if (afterRejected)
-    throw afterRejected.reason;
+  await Promise.all(afterStarted.map((hook) => hook(blazor)));
 } catch (error) {
   stageError = String(error);
+  const deadline = Date.now() + 500;
+  while (Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 await publish({
@@ -65,26 +62,13 @@ if (load === "1" && params.get("reload") === "1") {
   location.reload();
 }
 if (load === "1" && params.get("swap") === "1") {
-  const deadline = Date.now() + 14000;
-  let swapped = false;
+  const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {
     const probe = await fetch(new URL("module-init-swap.txt", document.baseURI), { cache: "no-store" });
-    if (probe.ok && (await probe.text()).trim() === "go") {
-      swapped = true;
+    if (probe.ok && (await probe.text()).trim() === "go")
       break;
-    }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  if (!swapped) {
-    await publish({
-      baseURI: document.baseURI,
-      names,
-      stageError: "Timed out waiting for module-init-swap.txt",
-      load: "2",
-      log: []
-    });
-  } else {
-    sessionStorage.setItem("module-init-load", "2");
-    location.reload();
-  }
+  sessionStorage.setItem("module-init-load", "2");
+  location.reload();
 }

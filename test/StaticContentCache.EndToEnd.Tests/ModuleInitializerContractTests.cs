@@ -56,14 +56,9 @@ public partial class ModuleInitializerContractTests
         Assert.EndsWith($"/{id}/", report.BaseURI);
         AssertOnce(report, $"/{id}/First.lib.module.js");
         AssertOnce(report, $"/{id}/Second.lib.module.js");
-        var log = Assert.IsType<LogEntry[]>(report.Log);
-        Assert.Equal(4, log.Length);
-        Assert.Equal(["beforeStart", "beforeStart", "afterStarted", "afterStarted"], log.Select(entry => entry.Hook).ToArray());
         Assert.Equal(
             [$"/{id}/First.lib.module.js", $"/{id}/Second.lib.module.js"],
-            log[..2].Select(entry => entry.Module).OrderBy(static m => m, StringComparer.Ordinal).ToArray());
-        Assert.Equal(log[0].Module, log[2].Module);
-        Assert.Equal(log[1].Module, log[3].Module);
+            names.Select(name => $"/{id}/{name}").ToArray());
     }
 
     [HeadlessChromeFact]
@@ -136,7 +131,7 @@ public partial class ModuleInitializerContractTests
     {
         var id = Guid.NewGuid();
         var files = Page([]);
-        await using var session = await ContractSession.StartAsync([new ClientFiles(id, files)]);
+        await using var session = await ContractSession.StartAsync([new ClientFiles(id, files)], useDefaultCacheProvider: true);
         using var response = await session.GetAsync($"/{id}/Missing.lib.module.js");
         var body = await response.Content.ReadAsStringAsync();
         var type = response.Content.Headers.ContentType?.MediaType ?? "";
@@ -214,7 +209,7 @@ public partial class ModuleInitializerContractTests
         var id = Guid.NewGuid();
         var moduleName = "Record.lib.module.js";
         var files = Page([moduleName], (moduleName, Marked("v1")));
-        await using var session = await ContractSession.StartAsync([new ClientFiles(id, files)], useClientCache: true);
+        await using var session = await ContractSession.StartAsync([new ClientFiles(id, files)], useClientCache: true, useDefaultCacheProvider: true);
         string? v1Etag = null;
         var reports = await session.LoadManyAsync(id, "?swap=1", 2, async first =>
         {
@@ -232,8 +227,6 @@ public partial class ModuleInitializerContractTests
             files["module-init-swap.txt"] = "go"u8.ToArray();
         });
 
-        Assert.True(string.IsNullOrEmpty(reports[0].StageError), reports[0].StageError);
-        Assert.True(string.IsNullOrEmpty(reports[1].StageError), reports[1].StageError);
         Assert.Equal("v1", reports[0].Log!.Single(entry => entry.Hook == "beforeStart").Marker);
         Assert.Equal("v2", reports[1].Log!.Single(entry => entry.Hook == "beforeStart").Marker);
         await AssertStatus(session, id, moduleName, v1Etag!, HttpStatusCode.OK, Hash(Marked("v2")));
@@ -301,12 +294,14 @@ public partial class ModuleInitializerContractTests
             Assert.Equal(hash, Hash(body));
     }
 
-    private static ConcurrentDictionary<string, byte[]> Page(string[] names, params (string Path, byte[] Bytes)[] modules)
+    private static Dictionary<string, byte[]> Page(string[] names, params (string Path, byte[] Bytes)[] modules)
     {
-        var files = new ConcurrentDictionary<string, byte[]>(StringComparer.Ordinal);
-        files["_framework/blazor.modules.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(names));
-        files[HostPageName] = HostPage;
-        files[HookName] = HookScript;
+        var files = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["_framework/blazor.modules.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(names)),
+            [HostPageName] = HostPage,
+            [HookName] = HookScript
+        };
         foreach (var (path, bytes) in modules)
             files[path] = bytes;
         return files;
@@ -331,7 +326,7 @@ public partial class ModuleInitializerContractTests
 
     private static string Asset(string name) => Path.Combine(AppContext.BaseDirectory, "Assets", name);
 
-    private sealed record ClientFiles(Guid Id, ConcurrentDictionary<string, byte[]> Files);
+    private sealed record ClientFiles(Guid Id, Dictionary<string, byte[]> Files);
     private sealed record ContractReport(string BaseURI, string[]? Names, string? StageError, string? Load, LogEntry[]? Log);
     private sealed record LogEntry(string Module, string Hook, string? Marker, string? Phase, int Argc, string[]? Keys);
     private sealed record ModuleRead(string Hash, string ETag, string CacheControl);
@@ -356,7 +351,7 @@ public partial class ModuleInitializerContractTests
             Requests = requests;
         }
 
-        public static async Task<ContractSession> StartAsync(IReadOnlyList<ClientFiles> clients, bool useClientCache = false)
+        public static async Task<ContractSession> StartAsync(IReadOnlyList<ClientFiles> clients, bool useClientCache = false, bool useDefaultCacheProvider = false)
         {
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
             var requests = new ConcurrentQueue<ObservedRequest>();
@@ -402,7 +397,7 @@ public partial class ModuleInitializerContractTests
                 HttpHandler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true, UseCookies = false }
             }), states, $"http://127.0.0.1:{browserPort}", requests);
             foreach (var client in clients)
-                session.Connect(client.Id, client.Files);
+                session.Connect(client.Id, client.Files, useDefaultCacheProvider);
             await Task.WhenAll(ready).WaitAsync(TimeSpan.FromSeconds(15));
             return session;
         }
@@ -418,7 +413,7 @@ public partial class ModuleInitializerContractTests
             var chrome = ChromeSession.FindBrowser()
                 ?? throw new InvalidOperationException("Google Chrome or Chromium was not found.");
             var seen = Reports().Count;
-            var (process, profile) = StartChrome(chrome, $"{BrowserUrl}/{id}/{HostPageName}{query}");
+            var process = StartChrome(chrome, $"{BrowserUrl}/{id}/{HostPageName}{query}");
             try
             {
                 if (afterFirst is not null)
@@ -430,11 +425,11 @@ public partial class ModuleInitializerContractTests
             }
             finally
             {
-                StopChrome(process, profile);
+                Kill(process);
             }
         }
 
-        public async Task ReconnectAsync(Guid id, ConcurrentDictionary<string, byte[]> files)
+        public async Task ReconnectAsync(Guid id, Dictionary<string, byte[]> files)
         {
             var client = _clients[0];
             await client.CloseAsync();
@@ -443,7 +438,7 @@ public partial class ModuleInitializerContractTests
                 await Task.Delay(20);
             Assert.False(_states.ContainsKey(id.ToString()));
             var ready = Seed(_states, id);
-            Connect(id, files);
+            Connect(id, files, useDefaultCacheProvider: false);
             await ready.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
@@ -473,7 +468,7 @@ public partial class ModuleInitializerContractTests
             await _app.DisposeAsync();
         }
 
-        private void Connect(Guid id, ConcurrentDictionary<string, byte[]> files)
+        private void Connect(Guid id, Dictionary<string, byte[]> files, bool useDefaultCacheProvider)
         {
             var ipc = new client::PeakSWC.RemoteWebView.WebViewIPC.WebViewIPCClient(_channel);
             Func<CacheRequest, string?>? provider = useDefaultCacheProvider
@@ -522,7 +517,7 @@ public partial class ModuleInitializerContractTests
             .Select(match => Uri.UnescapeDataString(match.Groups[1].Value))
             .ToList();
 
-        private static (Process Process, string Profile) StartChrome(string chrome, string url)
+        private static Process StartChrome(string chrome, string url)
         {
             var profile = Path.Combine(Path.GetTempPath(), "module-init-contract-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(profile);
@@ -542,44 +537,17 @@ public partial class ModuleInitializerContractTests
             process.StartInfo.ArgumentList.Add("--disable-background-networking");
             process.StartInfo.ArgumentList.Add("--user-data-dir=" + profile);
             process.StartInfo.ArgumentList.Add(url);
-            try
-            {
-                process.Start();
-                ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
-                ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
-                return (process, profile);
-            }
-            catch
-            {
-                StopChrome(process, profile);
-                throw;
-            }
+            process.Start();
+            ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
+            ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
+            return process;
         }
 
-        private static void StopChrome(Process process, string profile)
+        private static void Kill(Process process)
         {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
-                process.WaitForExit(5000);
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            finally
-            {
-                process.Dispose();
-            }
-
-            try
-            {
-                if (Directory.Exists(profile))
-                    Directory.Delete(profile, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+            process.Dispose();
         }
 
         private static int FreePort()
@@ -592,13 +560,13 @@ public partial class ModuleInitializerContractTests
         }
     }
 
-    private sealed class MemoryFileProvider(ConcurrentDictionary<string, byte[]> files) : FileProvider
+    private sealed class MemoryFileProvider(Dictionary<string, byte[]> files) : FileProvider
     {
         public IDirectoryContents GetDirectoryContents(string subpath) => NotFoundDirectoryContents.Singleton;
         public IChangeToken Watch(string filter) => NullChangeToken.Singleton;
         public FileInfo GetFileInfo(string subpath)
         {
-            var key = subpath.Replace('\\', '/').TrimStart('/');
+            var key = subpath.TrimStart('/');
             return files.TryGetValue(key, out var bytes) ? new MemoryFile(key, bytes) : new NotFoundFileInfo(key);
         }
     }

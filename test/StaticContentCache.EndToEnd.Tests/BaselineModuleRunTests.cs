@@ -117,61 +117,45 @@ public partial class BaselineModuleRunTests : IAsyncLifetime
         var profile = Path.Combine(Path.GetTempPath(), "module-init-chrome-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(profile);
         using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = chrome,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        process.StartInfo.ArgumentList.Add("--headless=new");
+        process.StartInfo.ArgumentList.Add("--no-sandbox");
+        process.StartInfo.ArgumentList.Add("--disable-gpu");
+        process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
+        process.StartInfo.ArgumentList.Add("--no-first-run");
+        process.StartInfo.ArgumentList.Add("--disable-background-networking");
+        process.StartInfo.ArgumentList.Add("--user-data-dir=" + profile);
+        process.StartInfo.ArgumentList.Add(url);
+        process.Start();
+        ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
+        ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
+        var deadline = DateTime.UtcNow.AddSeconds(15);
         string? result = null;
+        while (DateTime.UtcNow < deadline)
+        {
+            result = _requests.Select(static path => ModuleInitResultPattern().Match(path))
+                .Where(static match => match.Success)
+                .Select(static match => Uri.UnescapeDataString(match.Groups[1].Value))
+                .LastOrDefault();
+            if (result is not null)
+                break;
+            await Task.Delay(50);
+        }
+        if (!process.HasExited)
+            process.Kill(entireProcessTree: true);
         try
         {
-            process.StartInfo = new ProcessStartInfo
-            {
-                FileName = chrome,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
-            process.StartInfo.ArgumentList.Add("--headless=new");
-            process.StartInfo.ArgumentList.Add("--no-sandbox");
-            process.StartInfo.ArgumentList.Add("--disable-gpu");
-            process.StartInfo.ArgumentList.Add("--disable-dev-shm-usage");
-            process.StartInfo.ArgumentList.Add("--no-first-run");
-            process.StartInfo.ArgumentList.Add("--disable-background-networking");
-            process.StartInfo.ArgumentList.Add("--user-data-dir=" + profile);
-            process.StartInfo.ArgumentList.Add(url);
-            process.Start();
-            ChromeSession.StartPipeReader(process.StandardOutput, new StringBuilder());
-            ChromeSession.StartPipeReader(process.StandardError, new StringBuilder());
-            var deadline = DateTime.UtcNow.AddSeconds(15);
-            while (DateTime.UtcNow < deadline)
-            {
-                result = _requests.Select(static path => ModuleInitResultPattern().Match(path))
-                    .Where(static match => match.Success)
-                    .Select(static match => Uri.UnescapeDataString(match.Groups[1].Value))
-                    .LastOrDefault();
-                if (result is not null)
-                    break;
-                await Task.Delay(50);
-            }
+            Directory.Delete(profile, recursive: true);
         }
-        finally
+        catch (IOException)
         {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
-                process.WaitForExit(5000);
-            }
-            catch (InvalidOperationException)
-            {
-            }
-
-            try
-            {
-                if (Directory.Exists(profile))
-                    Directory.Delete(profile, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
         }
-
         Assert.NotNull(result);
         return result;
     }
