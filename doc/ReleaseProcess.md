@@ -67,7 +67,7 @@ Dispatch **Release packages** on net9. The copy of this workflow on net11 still 
 | `line` | required | `net9`, `net10`, or `net11`. The workflow checks out that branch for the pack. |
 | `version_override` | empty | Replaces the derived version. For example `9.0.23`. |
 | `patch` | empty | Servicing counter. Empty or `0` adds nothing. `1` appends `-p1`. |
-| `dry_run` | `true` | Packs and uploads artifacts. net9 still runs Windows tests when `line` is net9. Does not push to NuGet. |
+| `dry_run` | `true` | Packs and uploads artifacts. net9 still runs Windows tests when `line` is net9. Does not push to NuGet; untick it to publish. |
 
 Jobs:
 
@@ -88,7 +88,7 @@ The nuget.org profile name is `budcribar`. The workflow reads it from the reposi
 
 Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. Once the push job is allowed to run, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
 
-Create these by hand. This repository's workflow does not create them, and the push job stays unreachable until someone later changes its condition on purpose.
+Create these by hand. This repository's workflow does not create them. With them in place, the push job runs when `dry_run` is off, after the Windows tests and the pack job, and waits for the `nuget-org` approval.
 
 1. In GitHub, create the `nuget-org` environment and set **budcribar** as a required reviewer.
 2. Add the repository variable `NUGET_USER` with the value `budcribar`.
