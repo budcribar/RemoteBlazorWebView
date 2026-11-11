@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Google.Protobuf;
 using Grpc.Core;
@@ -54,27 +55,27 @@ public class BaseHrefRewriteTests
     private static async Task<ServerFileReadRequest> WaitForRequest(LineWriter writer)
     {
         var deadline = DateTime.UtcNow.AddSeconds(2);
-        while (writer.Requests.Count == 0)
+        while (true)
         {
+            if (writer.Requests.TryDequeue(out var request))
+                return request;
             if (DateTime.UtcNow > deadline)
                 throw new TimeoutException("The file request was not written.");
             await Task.Delay(10);
         }
-
-        return writer.Requests[0];
     }
 
     private sealed class LineWriter : IServerStreamWriter<ServerFileReadRequest>
     {
         public WriteOptions? WriteOptions { get; set; }
-        public List<ServerFileReadRequest> Requests { get; } = new();
+        public ConcurrentQueue<ServerFileReadRequest> Requests { get; } = new();
 
         public Task WriteAsync(ServerFileReadRequest message) => WriteAsync(message, CancellationToken.None);
 
         public Task WriteAsync(ServerFileReadRequest message, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            Requests.Add(message);
+            Requests.Enqueue(message);
             return Task.CompletedTask;
         }
     }

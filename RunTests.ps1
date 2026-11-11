@@ -474,6 +474,8 @@ if (-not (Test-Path -LiteralPath $bundle) -or (Get-Item -LiteralPath $bundle).Le
     exit 1
 }
 Write-Host "remote.blazor.desktop.js is $((Get-Item -LiteralPath $bundle).Length) bytes"
+Write-Host -ForegroundColor Cyan "Testing RemoteWebView.Blazor.JS"
+Invoke-RunTestsNative npm test
 
 Set-Location $currentDirectory
 
@@ -586,9 +588,42 @@ Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publi
 } # end of the build (skipped with -NoBuild)
 
 if ($Build -ne $true) {
+    Write-Host -ForegroundColor Cyan "Testing NativeToolchain"
+    & "$PSScriptRoot\test\RunTests.ToolchainTests.ps1"
+    if (-not $?) { exit 1 }
+
+    if ($NoBuild -and (Test-Path -LiteralPath 'src\RemoteWebView.Blazor.JS\node_modules')) {
+        Write-Host -ForegroundColor Cyan "Testing RemoteWebView.Blazor.JS"
+        Push-Location 'src\RemoteWebView.Blazor.JS'
+        try {
+            Invoke-RunTestsNative npm test
+        } finally {
+            Pop-Location
+        }
+    }
+
+    # The Microsoft.Playwright package writes playwright.ps1 into the FileSyncServer.Tests output during build.
+    # Build FileSyncServer.Tests and install Playwright browsers before the quick suites so StaticContentCache.EndToEnd.Tests
+    # also has Chromium available when Chrome/Edge are absent. There is no global `playwright` command.
+    $targetPath = Resolve-Path "test\FileSyncServer.Tests"
+    Push-Location $targetPath
+    try {
+        Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release '-p:GeneratePackageOnBuild=false' '-p:PackAsTool=false'
+        $playwright = Get-ChildItem -Path (Join-Path (Get-Location) 'bin') -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $playwright) {
+            Write-Error "playwright.ps1 was not produced by the FileSyncServer.Tests build."
+            exit 1
+        }
+        Write-Host "Installing Playwright browsers with $($playwright.FullName)"
+        Invoke-RunTestsNative $playwright.FullName install
+    } finally {
+        Pop-Location
+    }
+
     # The quick suites first: they need no app windows, so a failure stops the run before the slow desktop and browser tests start.
     # Every test project is part of the release gate; before this only FileSyncServer.Tests ran here.
     $quickSuites = @(
+        'test\StaticContentCache.Tests\StaticContentCache.Tests.csproj',                                     # static content cache
         'test\StaticContentCache.ServiceTests\StaticContentCache.ServiceTests.csproj',                       # the relay
         'test\RemoteWebView.Lifecycle.Tests\RemoteWebView.Lifecycle.Tests.csproj',                           # the app-side library
         'test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj',  # [RemoteBlazor]
@@ -599,23 +634,11 @@ if ($Build -ne $true) {
         Write-Host -ForegroundColor Cyan "Testing $(Split-Path -Leaf (Split-Path -Parent $suite))"
         # GeneratePackageOnBuild=false: testing must not repack the NuGet packages that were just built for release.
         # Quoted: unquoted, PowerShell splits -p:Name=value into "-p:" and "Name=value" when passing it through a function.
-        Invoke-RunTestsNative dotnet test $suite -c Release '-p:GeneratePackageOnBuild=false'
+        Invoke-RunTestsNative dotnet test $suite -c Release '-p:GeneratePackageOnBuild=false' '-p:PackAsTool=false'
     }
 
     # Navigate to the first test directory
-    $targetPath = Resolve-Path "test\FileSyncServer.Tests"
     Set-Location $targetPath
-
-    # The Microsoft.Playwright package writes playwright.ps1 into the test output during build.
-    # Install browsers from that script. There is no global `playwright` command.
-    Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release '-p:GeneratePackageOnBuild=false'
-    $playwright = Get-ChildItem -Path (Join-Path (Get-Location) 'bin') -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $playwright) {
-        Write-Error "playwright.ps1 was not produced by the FileSyncServer.Tests build."
-        exit 1
-    }
-    Write-Host "Installing Playwright browsers with $($playwright.FullName)"
-    Invoke-RunTestsNative $playwright.FullName install
 
     # Generate a timestamp
     $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"

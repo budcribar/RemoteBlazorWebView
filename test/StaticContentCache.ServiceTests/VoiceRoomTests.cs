@@ -34,7 +34,7 @@ public class VoiceRoomTests
         Assert.Null(room.TakeControllerPage(controllerPage, id));
 
         var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
-        var session = new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Voice = room };
+        await using var session = new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Voice = room };
         sessions[id] = new TaskCompletionSource<ServiceState>();
         sessions[id].SetResult(session);
         var builder = WebApplication.CreateBuilder();

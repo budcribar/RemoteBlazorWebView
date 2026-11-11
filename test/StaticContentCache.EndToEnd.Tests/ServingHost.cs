@@ -20,6 +20,8 @@ using PeakSWC.RemoteWebView.RemoteStaticFiles;
 #endif
 using FileProvider = Microsoft.Extensions.FileProviders.IFileProvider;
 using FileInfo = Microsoft.Extensions.FileProviders.IFileInfo;
+using ClientCompositeProvider = client::PeakSWC.RemoteWebView.OptimizedCompositeFileProvider;
+using ClientRemoteWebView = client::PeakSWC.RemoteWebView.RemoteWebView;
 using ClientSync = client::PeakSWC.RemoteWebView.ClientFileSyncManager;
 
 namespace StaticContentCache.EndToEnd.Tests;
@@ -40,6 +42,8 @@ public sealed class ServingHost : IAsyncLifetime
     public Guid ObjectId { get; } = Guid.NewGuid();
     public Guid AppId { get; } = Guid.NewGuid();
     public Guid PackageId { get; } = Guid.NewGuid();
+    public Guid ProductionAppId { get; } = Guid.NewGuid();
+    public Guid ProductionFallbackId { get; } = Guid.NewGuid();
     public MemoryFileProvider AppFiles { get; } = new();
     public string Url { get; private set; } = "";
 
@@ -50,7 +54,7 @@ public sealed class ServingHost : IAsyncLifetime
         var packageManifest = WebViewPackageFiles.ModulesManifest();
         var baselineModule = ServingFiles.ReadShared("Baseline.lib.module.js");
         var baselineManifest = ServingFiles.ReadShared("blazor.modules.json");
-        var clients = new Dictionary<Guid, MemoryFileProvider>
+        var clients = new Dictionary<Guid, FileProvider>
         {
             [BaselineId] = Page(baselineManifest, script, ("Baseline.lib.module.js", baselineModule)),
             [EmptyId] = Page(ServingFiles.Read("empty-blazor.modules.json"), script),
@@ -61,11 +65,23 @@ public sealed class ServingHost : IAsyncLifetime
         };
         AppFiles.Add("index.html", HostPage);
         AppFiles.Add("_framework/blazor.webview.js", script);
-        AppFiles.Add("_framework/blazor.modules.json", """[{"name":"_content/Lib/Lib.lib.module.js"},{"name":"App.lib.module.js"}]"""u8.ToArray());
+        AppFiles.Add("_framework/blazor.modules.json", ServingFiles.Manifest("_content/Lib/Lib.lib.module.js", "App.lib.module.js"));
         AppFiles.Add("_content/Lib/Lib.lib.module.js", """export function beforeStart() { globalThis.libBefore = true; } export function afterStarted() { globalThis.libAfter = true; }"""u8.ToArray());
         AppFiles.Add("App.lib.module.js", """export function beforeStart() { globalThis.appBefore = true; } export function afterStarted() { globalThis.appAfter = true; }"""u8.ToArray());
 
         clients[PackageId] = Page(packageManifest, script);
+
+        var productionAppFiles = Page(baselineManifest, script, ("Baseline.lib.module.js", baselineModule));
+        clients[ProductionAppId] = new ClientCompositeProvider(
+            new EmbeddedFileProvider(typeof(ClientRemoteWebView).Assembly),
+            productionAppFiles);
+
+        var productionFallbackFiles = new MemoryFileProvider();
+        productionFallbackFiles.Add("index.html", HostPage);
+        productionFallbackFiles.Add("_framework/blazor.webview.js", script);
+        clients[ProductionFallbackId] = new ClientCompositeProvider(
+            new EmbeddedFileProvider(typeof(ClientRemoteWebView).Assembly),
+            productionFallbackFiles);
 
         var ids = clients.Keys.ToArray();
         var ready = ids.Select(_ => new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
@@ -183,7 +199,7 @@ public sealed class ServingHost : IAsyncLifetime
 
 public sealed class MemoryFileProvider : FileProvider
 {
-    private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte[]> _files = new(StringComparer.Ordinal);
 
     public void Add(string path, byte[] bytes) => _files[Normalize(path)] = bytes;
 

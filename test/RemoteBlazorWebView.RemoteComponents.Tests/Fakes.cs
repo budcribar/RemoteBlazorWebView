@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
@@ -40,15 +41,43 @@ public sealed class ClockReceiver(RemoteComponentConnection connection) : Remote
 }
 
 /// <summary>Two in-memory pipes: what the app writes the child reads, and the other way round.</summary>
-public sealed class Wire
+public sealed class Wire : IAsyncDisposable
 {
     private readonly Pipe _toChild = new(), _toApp = new();
     public RemoteComponentConnection App { get; }
     public RemoteComponentConnection Child { get; }
+    public ConcurrentQueue<RemoteComponentMessage> SentToChild { get; } = new();
 
     public Wire()
     {
-        App = new RemoteComponentConnection(new StreamReader(_toApp.Reader.AsStream()), new StreamWriter(_toChild.Writer.AsStream()));
+        App = new RemoteComponentConnection(new StreamReader(_toApp.Reader.AsStream()), new RecordingStreamWriter(_toChild.Writer.AsStream(), SentToChild));
         Child = new RemoteComponentConnection(new StreamReader(_toChild.Reader.AsStream()), new StreamWriter(_toApp.Writer.AsStream()));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        App.Dispose();
+        Child.Dispose();
+        await _toChild.Writer.CompleteAsync();
+        await _toApp.Writer.CompleteAsync();
+        await _toChild.Reader.CompleteAsync();
+        await _toApp.Reader.CompleteAsync();
+    }
+
+    private sealed class RecordingStreamWriter(Stream stream, ConcurrentQueue<RemoteComponentMessage> recorded) : StreamWriter(stream)
+    {
+        public override Task WriteLineAsync(ReadOnlyMemory<char> buffer, CancellationToken cancellationToken = default)
+        {
+            if (RemoteComponentMessage.Parse(new string(buffer.Span)) is { } message)
+                recorded.Enqueue(message);
+            return base.WriteLineAsync(buffer, cancellationToken);
+        }
+
+        public override Task WriteLineAsync(string? value)
+        {
+            if (RemoteComponentMessage.Parse(value) is { } message)
+                recorded.Enqueue(message);
+            return base.WriteLineAsync(value);
+        }
     }
 }

@@ -15,7 +15,7 @@ public class PingShutdownTests
     {
         var id = Guid.NewGuid().ToString();
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
-        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
         {
             Id = id
         };
@@ -41,6 +41,7 @@ public class PingShutdownTests
             state.Cancel();
             await ping.WaitAsync(TimeSpan.FromSeconds(1));
             Assert.True(ping.IsCompletedSuccessfully);
+            Assert.False(services.ContainsKey(id));
         }
         finally
         {
@@ -76,8 +77,7 @@ public class PingShutdownTests
 
         private async Task<bool> WaitForEnd(CancellationToken cancellationToken)
         {
-            using var reg = cancellationToken.Register(() => _release.TrySetResult());
-            await _release.Task;
+            await _release.Task.WaitAsync(cancellationToken);
             return false;
         }
 

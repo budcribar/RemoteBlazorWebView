@@ -4,6 +4,9 @@ using System.Threading.Channels;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PeakSWC.RemoteWebView;
 using PeakSWC.RemoteWebView.Pages;
@@ -18,16 +21,18 @@ public class BugReviewTests
     {
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
         var goodId = Guid.NewGuid().ToString();
-        var good = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
-        good.SetResult(new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
+        await using var goodState = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false)
         {
             Id = goodId,
             HostName = "host-a"
-        });
+        };
+        var good = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        good.SetResult(goodState);
         services[goodId] = good;
 
         var failed = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
         failed.SetException(new InvalidOperationException("registration failed"));
+        _ = failed.Task.Exception;
         services[Guid.NewGuid().ToString()] = failed;
 
         var ipc = new ClientIPCService(
@@ -61,6 +66,8 @@ public class BugReviewTests
 
             var finished = await Task.WhenAny(read, Task.Delay(TimeSpan.FromMilliseconds(500)));
             Assert.Same(read, finished);
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => read);
+            Assert.Contains(id, ex.Message, StringComparison.Ordinal);
         }
         finally
         {
@@ -168,10 +175,82 @@ public class BugReviewTests
     public async Task Modules_manifest_timestamp_is_unix_seconds()
     {
         const long clientTimestamp = 1_725_000_000;
-        var (metadata, _) = await ReadModulesManifestFromClient(Encoding.UTF8.GetBytes("[]\r\n"), clientTimestamp);
+        var clientBytes = Encoding.UTF8.GetBytes("[]\r\n");
+        var (metadata, _) = await ReadModulesManifestFromClient(clientBytes, clientTimestamp);
 
         Assert.Equal(clientTimestamp, metadata.LastModified);
-        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(clientTimestamp), DateTimeOffset.FromUnixTimeSeconds(metadata.LastModified));
+
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var id = Guid.NewGuid();
+        var clientId = id.ToString();
+        var writer = new FakeFileWriter();
+        manager.RegisterClient(clientId, "wwwroot/index.html");
+        manager.AssociateResponseStream(clientId, writer);
+        var resolver = new RemoteFileResolver(NullLogger<RemoteFileResolver>.Instance, manager);
+
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = clientId };
+        state.FileManagerReady.SetResult(true);
+        var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ready.SetResult(state);
+        var states = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>
+        {
+            [clientId] = ready
+        };
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(new RemoteFilesOptions { UseClientCache = true, UseServerCache = false });
+        services.AddSingleton(states);
+        await using var provider = services.BuildServiceProvider();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+
+        var middleware = new RemoteFilesMiddleware(
+            _ => Task.CompletedTask,
+            cache,
+            NullLogger<RemoteFilesMiddleware>.Instance,
+            resolver,
+            manager);
+
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = $"/{id}/_framework/blazor.modules.json";
+        context.Response.Body = new MemoryStream();
+
+        var invoke = middleware.InvokeAsync(context);
+        var metadataRequest = await WaitForRequest(writer);
+        await manager.HandleClientResponse(new ClientFileReadResponse
+        {
+            ClientId = clientId,
+            RequestId = metadataRequest.RequestId,
+            Metadata = new FileMetadata
+            {
+                Length = clientBytes.Length,
+                StatusCode = StatusCodes.Status200OK,
+                ETag = "client-etag",
+                LastModified = clientTimestamp
+            }
+        });
+
+        var dataRequest = await WaitForRequest(writer);
+        await manager.HandleClientResponse(new ClientFileReadResponse
+        {
+            ClientId = clientId,
+            RequestId = dataRequest.RequestId,
+            FileData = new FileData { FileChunk = ByteString.CopyFrom(clientBytes) }
+        });
+        await manager.HandleClientResponse(new ClientFileReadResponse
+        {
+            ClientId = clientId,
+            RequestId = dataRequest.RequestId,
+            FileData = new FileData { FileChunk = ByteString.Empty }
+        });
+
+        await invoke.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Equal(
+            DateTimeOffset.FromUnixTimeSeconds(clientTimestamp).ToString("r"),
+            context.Response.Headers["Last-Modified"].ToString());
     }
 
     private static async Task<(FileMetadata Metadata, byte[] Served)> ReadModulesManifestFromClient(byte[] clientBytes, long lastModified)
@@ -204,7 +283,6 @@ public class BugReviewTests
             });
             var metadata = await metadataTask.WaitAsync(TimeSpan.FromSeconds(2));
 
-            writer.Requests.Clear();
             var streamTask = resolver.GetFileStreamAsync(id, path);
             var dataRequest = await WaitForRequest(writer);
             Assert.Equal(path, dataRequest.Path);
@@ -246,27 +324,27 @@ public class BugReviewTests
     private static async Task<ServerFileReadRequest> WaitForRequest(FakeFileWriter writer)
     {
         var deadline = DateTime.UtcNow.AddSeconds(2);
-        while (writer.Requests.Count == 0)
+        while (true)
         {
+            if (writer.Requests.TryDequeue(out var request))
+                return request;
             if (DateTime.UtcNow > deadline)
                 throw new TimeoutException("The file request was not written.");
             await Task.Delay(10);
         }
-
-        return writer.Requests[0];
     }
 
     private sealed class FakeFileWriter : IServerStreamWriter<ServerFileReadRequest>
     {
         public WriteOptions? WriteOptions { get; set; }
-        public List<ServerFileReadRequest> Requests { get; } = new();
+        public ConcurrentQueue<ServerFileReadRequest> Requests { get; } = new();
 
         public Task WriteAsync(ServerFileReadRequest message) => WriteAsync(message, CancellationToken.None);
 
         public Task WriteAsync(ServerFileReadRequest message, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            Requests.Add(message);
+            Requests.Enqueue(message);
             return Task.CompletedTask;
         }
     }

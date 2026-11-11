@@ -1,4 +1,4 @@
-﻿// TestBlazorWpfControl.cs
+// TestBlazorWpfControl.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -131,16 +131,41 @@ namespace FileSyncServer.Tests
             var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
             Assert.NotNull(webView);
 
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                webView.Id = Guid.NewGuid();
+                webView.ServerUri = new Uri("https://localhost:5001");
+                webView.HostPage = @"wwwroot\index.html";
+            });
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    webView.Id = Guid.NewGuid();
+                });
+            });
+
+            _output.WriteLine($"Caught expected exception: {ex.Message}");
+        }
+
+        [Fact]
+        public async Task TestHostPageWithoutIdThrows()
+        {
+            var rootComponent = CreateRootComponent();
+            var webView = await BlazorWebViewFactory.CreateBlazorComponent(rootComponent);
+            Assert.NotNull(webView);
+
             var ex = await Assert.ThrowsAsync<Exception>(async () =>
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     webView.ServerUri = new Uri("https://localhost:5001");
                     webView.HostPage = @"wwwroot\index.html";
-                    webView.Id = Guid.NewGuid();
                 });
             });
 
+            Assert.Equal("Id not initialized", ex.Message);
             _output.WriteLine($"Caught expected exception: {ex.Message}");
         }
 

@@ -156,28 +156,43 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
                 return;
             }
 
-            if (clientMetadata.StatusCode != StatusCodes.Status200OK)
-            {
-                logger.LogWarning("Client ID '{ClientId}' does not have the file '{SubPath}'. Cannot serve.", clientId, subPath);
-                context.Response.StatusCode = clientMetadata.StatusCode;
-                context.Response.ContentType = "text/plain";
-                context.Response.Headers[HeaderNames.CacheControl] = MauiDefaultCacheControl;
-                // Body.WriteAsync keeps Content-Type as text/plain. WriteAsync(string) adds a charset.
-                var message = Encoding.UTF8.GetBytes($"There is no content at {subPath}");
-                await context.Response.Body.WriteAsync(message, context.RequestAborted).ConfigureAwait(false);
-                return;
-            }
-
-            bool needsUpdate = true;
-            CachedRemoteFile? cached = null;
-
             // The cache is per desktop client. The host page is rewritten with that client's id
             // after the etag is hashed, so a path-only key can serve one client another's bytes.
             var cacheKey = ServerCacheKey(clientId, subPath);
+            CachedRemoteFile? cached = null;
             if (options.UseServerCache && memoryCache.TryGetValue(cacheKey, out CachedRemoteFile? cachedFile) && cachedFile is not null)
             {
                 cached = cachedFile;
-                if (cachedFile.Metadata.ETag != clientMetadata.ETag)
+            }
+
+            if (clientMetadata.StatusCode != StatusCodes.Status200OK)
+            {
+                if (cached is not null && clientMetadata.StatusCode != StatusCodes.Status404NotFound)
+                {
+                    logger.LogDebug("Client ID '{ClientId}' returned status {StatusCode} for '{SubPath}'; serving cached server copy.", clientId, clientMetadata.StatusCode, subPath);
+                    clientMetadata = cached.Metadata;
+                }
+                else
+                {
+                    if (cached is not null)
+                    {
+                        memoryCache.Remove(cacheKey);
+                    }
+                    logger.LogWarning("Client ID '{ClientId}' does not have the file '{SubPath}'. Cannot serve.", clientId, subPath);
+                    context.Response.StatusCode = clientMetadata.StatusCode;
+                    context.Response.ContentType = "text/plain";
+                    context.Response.Headers[HeaderNames.CacheControl] = MauiDefaultCacheControl;
+                    // Body.WriteAsync keeps Content-Type as text/plain. WriteAsync(string) adds a charset.
+                    var message = Encoding.UTF8.GetBytes($"There is no content at {subPath}");
+                    await context.Response.Body.WriteAsync(message, context.RequestAborted).ConfigureAwait(false);
+                    return;
+                }
+            }
+
+            bool needsUpdate = true;
+            if (cached is not null)
+            {
+                if (cached.Metadata.ETag != clientMetadata.ETag)
                 {
                     needsUpdate = true;
                     logger.LogDebug("File '{SubPath}' needs update in server cache.", subPath);

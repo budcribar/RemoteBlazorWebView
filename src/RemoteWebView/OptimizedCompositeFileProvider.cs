@@ -5,9 +5,14 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 public class OptimizedCompositeFileProvider : IFileProvider
 {
+    private const string BlazorModulesManifestPath = "_framework/blazor.modules.json";
+    private static readonly FieldInfo? EmbeddedAssemblyField =
+        typeof(EmbeddedFileProvider).GetField("_assembly", BindingFlags.Instance | BindingFlags.NonPublic);
+
     private readonly IFileProvider[] _fileProviders;
 
     public OptimizedCompositeFileProvider(params IFileProvider[]? fileProviders)
@@ -20,14 +25,64 @@ public class OptimizedCompositeFileProvider : IFileProvider
         if (string.IsNullOrWhiteSpace(subpath))
             throw new ArgumentException("Subpath cannot be null or empty.", nameof(subpath));
 
-        bool isUnderscorePath = subpath.StartsWith("_framework");
+        var trimmed = subpath.Replace('\\', '/').TrimStart('/');
+        if (trimmed.Length == 0)
+            return new NotFoundFileInfo(subpath);
+
+        // RemoteWebView embeds an empty [] fallback at _framework/blazor.modules.json.
+        // Check application and static-web-asset providers first so an app's own module
+        // manifest is not shadowed, falling back to RemoteWebView's embedded [] only when absent.
+        if (string.Equals(trimmed, BlazorModulesManifestPath, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var provider in _fileProviders)
+            {
+                if (IsRemoteWebViewEmbeddedProvider(provider))
+                    continue;
+
+                var fileInfo = GetProviderFileInfo(provider, trimmed, BlazorModulesManifestPath);
+                if (fileInfo.Exists)
+                    return fileInfo;
+            }
+
+            foreach (var provider in _fileProviders)
+            {
+                if (!IsRemoteWebViewEmbeddedProvider(provider))
+                    continue;
+
+                var fileInfo = GetProviderFileInfo(provider, trimmed, BlazorModulesManifestPath);
+                if (fileInfo.Exists)
+                    return fileInfo;
+            }
+
+            return new NotFoundFileInfo(subpath);
+        }
+
+        bool isUnderscorePath = trimmed.StartsWith("_framework", StringComparison.OrdinalIgnoreCase);
+        string canonicalTrimmed = isUnderscorePath && !trimmed.StartsWith("_framework", StringComparison.Ordinal)
+            ? "_framework" + trimmed["_framework".Length..]
+            : trimmed;
 
         // First pass: prioritize embedded files if the path starts with an underscore
         if (isUnderscorePath)
         {
+            foreach (var provider in _fileProviders)
+            {
+                if (!IsRemoteWebViewEmbeddedProvider(provider))
+                    continue;
+
+                var fileInfo = GetProviderFileInfo(provider, trimmed, canonicalTrimmed);
+                if (fileInfo.Exists)
+                {
+                    return fileInfo;
+                }
+            }
+
             foreach (var provider in _fileProviders.OfType<EmbeddedFileProvider>())
             {
-                var fileInfo = provider.GetFileInfo(subpath);
+                if (IsRemoteWebViewEmbeddedProvider(provider))
+                    continue;
+
+                var fileInfo = GetProviderFileInfo(provider, trimmed, canonicalTrimmed);
                 if (fileInfo.Exists)
                 {
                     return fileInfo;
@@ -44,7 +99,7 @@ public class OptimizedCompositeFileProvider : IFileProvider
                 continue;
             }
 
-            var fileInfo = provider.GetFileInfo(subpath);
+            var fileInfo = GetProviderFileInfo(provider, trimmed, canonicalTrimmed);
             if (fileInfo.Exists)
             {
                 return fileInfo;
@@ -53,6 +108,24 @@ public class OptimizedCompositeFileProvider : IFileProvider
 
         // Return a NotFoundFileInfo if no match is found
         return new NotFoundFileInfo(subpath);
+    }
+
+    private static bool IsRemoteWebViewEmbeddedProvider(IFileProvider provider)
+    {
+        if (provider is not EmbeddedFileProvider embedded)
+            return false;
+
+        return EmbeddedAssemblyField?.GetValue(embedded) is Assembly assembly
+            ? assembly == typeof(RemoteWebView).Assembly
+            : true;
+    }
+
+    private static IFileInfo GetProviderFileInfo(IFileProvider provider, string trimmed, string canonicalPath)
+    {
+        var fileInfo = provider.GetFileInfo(trimmed);
+        if (!fileInfo.Exists && !string.Equals(trimmed, canonicalPath, StringComparison.Ordinal))
+            fileInfo = provider.GetFileInfo(canonicalPath);
+        return fileInfo;
     }
     public IDirectoryContents GetDirectoryContents(string subpath)
     {

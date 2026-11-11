@@ -4,7 +4,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.FileProviders;
 using ClientETag = client::PeakSWC.RemoteWebView.ETagGenerator;
+using ClientRemoteWebView = client::PeakSWC.RemoteWebView.RemoteWebView;
 
 namespace StaticContentCache.EndToEnd.Tests;
 
@@ -183,17 +185,88 @@ public class ModuleServingTests(ServingHost server) : IClassFixture<ServingHost>
         Assert.Equal(HttpStatusCode.OK, index.StatusCode);
         Assert.Contains($"<base href=\"/{server.AppId}/\"", html, StringComparison.Ordinal);
 
-        foreach (var (relative, marker) in new[]
+        var manifestResponse = await server.GetAsync(server.AppId, "_framework/blazor.modules.json");
+        var manifestBytes = await manifestResponse.Content.ReadAsByteArrayAsync();
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+        Assert.Equal("application/json", manifestResponse.Content.Headers.ContentType?.MediaType);
+        using var manifestJson = JsonDocument.Parse(manifestBytes);
+        Assert.Equal(JsonValueKind.Array, manifestJson.RootElement.ValueKind);
+        var listed = manifestJson.RootElement.EnumerateArray().Select(item =>
         {
-            ("_content/Lib/Lib.lib.module.js", "libBefore"),
-            ("App.lib.module.js", "appBefore")
-        })
+            Assert.Equal(JsonValueKind.String, item.ValueKind);
+            return item.GetString()!;
+        }).ToArray();
+        Assert.Equal(["_content/Lib/Lib.lib.module.js", "App.lib.module.js"], listed);
+
+        var expectedMarkers = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["_content/Lib/Lib.lib.module.js"] = "libBefore",
+            ["App.lib.module.js"] = "appBefore"
+        };
+        foreach (var relative in listed)
         {
             var response = await server.GetAsync(server.AppId, relative);
             var body = await response.Content.ReadAsStringAsync();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Contains(marker, body, StringComparison.Ordinal);
+            Assert.Contains(expectedMarkers[relative], body, StringComparison.Ordinal);
             Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
+    [Fact]
+    public async Task Production_composite_provider_serves_app_manifest_instead_of_embedded_empty_fallback()
+    {
+        var expectedManifest = ServingFiles.ReadShared("blazor.modules.json");
+        var embeddedFallback = ReadEmbeddedResource("_framework/blazor.modules.json");
+        Assert.NotEqual(embeddedFallback, expectedManifest);
+
+        var manifestResponse = await server.GetAsync(server.ProductionAppId, "_framework/blazor.modules.json");
+        var servedManifest = await manifestResponse.Content.ReadAsByteArrayAsync();
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+        Assert.Equal("application/json", manifestResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(expectedManifest, servedManifest);
+
+        using var json = JsonDocument.Parse(servedManifest);
+        Assert.Equal(["Baseline.lib.module.js"], json.RootElement.EnumerateArray().Select(item => item.GetString() ?? "").ToArray());
+
+        var expectedModule = ServingFiles.ReadShared("Baseline.lib.module.js");
+        var servedModule = await Body(server.ProductionAppId, "Baseline.lib.module.js");
+        Assert.Equal(expectedModule, servedModule);
+    }
+
+    [Fact]
+    public async Task Production_composite_provider_falls_back_to_embedded_empty_manifest_when_app_omits_it()
+    {
+        var embeddedFallback = ReadEmbeddedResource("_framework/blazor.modules.json");
+        var response = await server.GetAsync(server.ProductionFallbackId, "_framework/blazor.modules.json");
+        var served = await response.Content.ReadAsByteArrayAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(embeddedFallback, served);
+        using var json = JsonDocument.Parse(served);
+        Assert.Equal(JsonValueKind.Array, json.RootElement.ValueKind);
+        Assert.Equal(0, json.RootElement.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Production_composite_provider_serves_embedded_remote_desktop_bundle_for_blazor_webview_js()
+    {
+        var embeddedDesktopBundle = ReadEmbeddedResource("_framework/blazor.webview.js");
+        var upstreamWebViewScript = WebViewPackageFiles.BlazorWebViewScript();
+        Assert.NotEmpty(embeddedDesktopBundle);
+        Assert.NotEqual(upstreamWebViewScript, embeddedDesktopBundle);
+
+        foreach (var clientId in new[] { server.ProductionAppId, server.ProductionFallbackId })
+        {
+            var response = await server.GetAsync(clientId, "_framework/blazor.webview.js");
+            var served = await response.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(embeddedDesktopBundle, served);
+            Assert.Equal(Sha256(embeddedDesktopBundle), Sha256(served));
+            Assert.NotEqual(upstreamWebViewScript, served);
         }
     }
 
@@ -241,6 +314,17 @@ public class ModuleServingTests(ServingHost server) : IClassFixture<ServingHost>
         var response = await server.GetAsync(id, relative);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return await response.Content.ReadAsByteArrayAsync();
+    }
+
+    private static byte[] ReadEmbeddedResource(string subpath)
+    {
+        var provider = new EmbeddedFileProvider(typeof(ClientRemoteWebView).Assembly);
+        var info = provider.GetFileInfo(subpath);
+        Assert.True(info.Exists, $"Expected embedded resource '{subpath}' in {typeof(ClientRemoteWebView).Assembly.FullName}.");
+        using var stream = info.CreateReadStream();
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
     }
 
     private static string? Header(HttpResponseMessage response, string name)

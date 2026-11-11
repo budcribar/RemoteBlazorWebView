@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView
 {
 
-    public class ServiceState : IDisposable
+    public class ServiceState : IDisposable, IAsyncDisposable
     {
         public TaskCompletionSource<bool> FileManagerReady { get; set; } = new TaskCompletionSource<bool>();
         public IRequestCookieCollection? Cookies { get; set; }
@@ -64,7 +64,13 @@ namespace PeakSWC.RemoteWebView
 
         public void Cancel()
         {
-            CancellationTokenSource?.Cancel();
+            try
+            {
+                CancellationTokenSource?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         public void Dispose()
@@ -76,7 +82,7 @@ namespace PeakSWC.RemoteWebView
         public async ValueTask DisposeAsync()
         {
             await DisposeAsyncCore().ConfigureAwait(false);
-            Dispose(disposing: true);
+            Dispose(disposing: false);
             GC.SuppressFinalize(this);
         }
 
@@ -85,10 +91,16 @@ namespace PeakSWC.RemoteWebView
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
 
-            if (CancellationTokenSource != null)
+            var cts = CancellationTokenSource;
+            CancellationTokenSource = null;
+            if (cts != null)
             {
                 // Signal cancellation
-                CancellationTokenSource.Cancel();
+                try
+                {
+                    cts.Cancel();
+                }
+                catch { }
 
                 try
                 {
@@ -98,11 +110,11 @@ namespace PeakSWC.RemoteWebView
 
                 try
                 {
-                    FileCollection.Writer.Complete();
+                    FileCollection.Writer.TryComplete();
                 }
                 catch { }
 
-                IPC.Shutdown();
+                IPC?.Shutdown();
 
                 // Await all relevant tasks
                 var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
@@ -116,7 +128,7 @@ namespace PeakSWC.RemoteWebView
                         {
                             // Apply timeout to prevent indefinite hangs
                             // None, not the shutdown token: that token is already cancelled and would end the 30s wait immediately.
-                            if (await Task.WhenAny(task, Task.Delay(timeout, CancellationToken.None)) == task)
+                            if (await Task.WhenAny(task, Task.Delay(timeout, CancellationToken.None)).ConfigureAwait(false) == task)
                             {
                                 // Task completed within the timeout
                                 await task.ConfigureAwait(false);
@@ -139,8 +151,11 @@ namespace PeakSWC.RemoteWebView
                 }
 
                 // Dispose of the CTS after task completion
-                CancellationTokenSource?.Dispose();
-                CancellationTokenSource = null;
+                try
+                {
+                    cts.Dispose();
+                }
+                catch { }
             }
 
             // Disposal flag already set using Interlocked at the start
@@ -153,7 +168,52 @@ namespace PeakSWC.RemoteWebView
 
             if (disposing)
             {
+                var cts = CancellationTokenSource;
+                CancellationTokenSource = null;
+                if (cts != null)
+                {
+                    try
+                    {
+                        cts.Cancel();
+                    }
+                    catch { }
 
+                    try
+                    {
+                        BrowserIPC.Semaphore.Dispose();
+                    }
+                    catch { }
+
+                    try
+                    {
+                        FileCollection.Writer.TryComplete();
+                    }
+                    catch { }
+
+                    IPC?.Shutdown();
+
+                    var tasks = new List<Task>();
+                    if (FileReaderTask is { IsCompleted: false } fileReaderTask) tasks.Add(fileReaderTask);
+                    if (PingTask is { IsCompleted: false } pingTask) tasks.Add(pingTask);
+                    if (IPC?.ProcessMessagesTask is { IsCompleted: false } processMessagesTask) tasks.Add(processMessagesTask);
+                    if (IPC?.ClientTask is { IsCompleted: false } clientTask) tasks.Add(clientTask);
+                    if (IPC?.BrowserTask is { IsCompleted: false } browserTask) tasks.Add(browserTask);
+
+                    if (tasks.Count > 0)
+                    {
+                        try
+                        {
+                            Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
+                        }
+                        catch { }
+                    }
+
+                    try
+                    {
+                        cts.Dispose();
+                    }
+                    catch { }
+                }
             }
 
             // Free unmanaged resources here, if any...

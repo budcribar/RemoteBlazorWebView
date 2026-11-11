@@ -20,7 +20,7 @@ public class MismatchedContentLengthTests
     public async Task Response_body_is_not_cut_to_the_metadata_length()
     {
         var clientId = Guid.NewGuid();
-        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
         state.FileManagerReady.SetResult(true);
         var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
         ready.SetResult(state);
@@ -28,7 +28,8 @@ public class MismatchedContentLengthTests
         {
             [clientId.ToString()] = ready
         };
-        var resolver = new LongerThanMetadataResolver();
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        var resolver = new LongerThanMetadataResolver(manager);
 
         using var host = await new HostBuilder()
             .ConfigureWebHost(web =>
@@ -39,7 +40,7 @@ public class MismatchedContentLengthTests
                     services.AddLogging();
                     services.AddMemoryCache();
                     services.AddSingleton(new RemoteFilesOptions { UseClientCache = false, UseServerCache = false });
-                    services.AddSingleton(new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance));
+                    services.AddSingleton(manager);
                     services.AddSingleton<RemoteFileResolver>(resolver);
                     services.AddSingleton(states);
                 });
@@ -47,17 +48,24 @@ public class MismatchedContentLengthTests
             })
             .StartAsync();
 
-        var response = await host.GetTestClient().GetAsync($"/{clientId}/wwwroot/index.html");
+        try
+        {
+            var response = await host.GetTestClient().GetAsync($"/{clientId}/wwwroot/index.html");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("hello", await response.Content.ReadAsStringAsync());
-        Assert.Equal(5, response.Content.Headers.ContentLength);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("hello", await response.Content.ReadAsStringAsync());
+            Assert.Equal(5, response.Content.Headers.ContentLength);
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
     }
 
     private sealed class LongerThanMetadataResolver : RemoteFileResolver
     {
-        public LongerThanMetadataResolver()
-            : base(NullLogger<RemoteFileResolver>.Instance, new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance))
+        public LongerThanMetadataResolver(ServerFileSyncManager manager)
+            : base(NullLogger<RemoteFileResolver>.Instance, manager)
         {
         }
 

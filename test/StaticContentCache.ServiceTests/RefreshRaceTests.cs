@@ -62,14 +62,15 @@ public class RefreshRaceTests
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
         var id = Guid.NewGuid().ToString();
         services[id] = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timeout = TimeSpan.FromMilliseconds(250);
 
         var started = Stopwatch.StartNew();
-        var gone = await Endpoints.WaitForClientShutdown(services, id, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+        var gone = await Endpoints.WaitForClientShutdown(services, id, timeout, TimeSpan.FromMilliseconds(50));
         started.Stop();
 
         Assert.False(gone);
         Assert.True(services.ContainsKey(id));
-        Assert.True(started.Elapsed >= TimeSpan.FromSeconds(30));
+        Assert.True(started.Elapsed >= timeout);
     }
 
     private static BrowserIPCService NewBrowserIpc(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> services)

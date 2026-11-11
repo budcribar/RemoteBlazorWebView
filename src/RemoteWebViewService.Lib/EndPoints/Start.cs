@@ -23,9 +23,11 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
 
+                ServiceState? serviceState = null;
+                bool markedInUse = false;
                 try
                 {
-                    var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     // Check if the service is already in use
                     if (serviceState.InUse)
                     {
@@ -40,6 +42,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     // Set the service state only after notifying the client stream succeeds
                     serviceState.Cookies = context.Request.Cookies;
                     serviceState.InUse = true;
+                    markedInUse = true;
                     serviceState.User = context.User.GetUserDisplayName() ?? "";
 
                     // Notify all channels of the connection
@@ -61,9 +64,19 @@ namespace PeakSWC.RemoteWebView.EndPoints
                
                 catch(Exception)
                 {
-                    context.Response.StatusCode = StatusCodes.Status404NotFound;
-                    context.Response.ContentType = "text/html";
-                    await context.Response.WriteAsync(RestartFailedPage.Html(guid, false)).ConfigureAwait(false);
+                    if (markedInUse && serviceState != null)
+                    {
+                        serviceState.InUse = false;
+                        serviceState.OwnerHoldsApp = false;
+                        serviceState.Cookies = null;
+                        serviceState.User = "";
+                    }
+                    if (!context.Response.HasStarted)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(RestartFailedPage.Html(guid, false)).ConfigureAwait(false);
+                    }
                     return;
                 }
                

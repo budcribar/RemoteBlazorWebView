@@ -89,6 +89,27 @@ public class ServerCacheIsolationTests
         Assert.Equal(1, host.StreamReads(clientB, "css/app.css"));
     }
 
+    [Fact]
+    public async Task Cached_file_serves_on_client_forbidden_and_evicts_on_not_found()
+    {
+        await using var host = await TwoClientCache.StartAsync();
+        var client = host.Add("secret.txt", etag: "v1", body: "cached-secret");
+
+        var initial = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+        Assert.Equal("cached-secret", await initial.Content.ReadAsStringAsync());
+
+        host.SetStatus(client, "secret.txt", StatusCodes.Status403Forbidden);
+        var forbiddenFallback = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.OK, forbiddenFallback.StatusCode);
+        Assert.Equal("cached-secret", await forbiddenFallback.Content.ReadAsStringAsync());
+        Assert.Equal(1, host.StreamReads(client, "secret.txt"));
+
+        host.SetStatus(client, "secret.txt", StatusCodes.Status404NotFound);
+        var deleted = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.NotFound, deleted.StatusCode);
+    }
+
     private static string? Header(HttpResponseMessage response, string name)
         => response.Headers.TryGetValues(name, out var values) ? values.Single() : null;
 
@@ -145,6 +166,9 @@ public class ServerCacheIsolationTests
         public void Replace(Guid id, string path, string etag, string body)
             => _resolver.Put(id, path, etag, body);
 
+        public void SetStatus(Guid id, string path, int statusCode)
+            => _resolver.SetStatus(id, path, statusCode);
+
         public int StreamReads(Guid id, string path) => _resolver.Reads(id, path);
 
         public Task<HttpResponseMessage> GetAsync(Guid id, string path)
@@ -156,6 +180,11 @@ public class ServerCacheIsolationTests
             _host.Dispose();
             Client.Dispose();
             _resolver.Manager.Dispose();
+            foreach (var entry in States.Values)
+            {
+                if (entry.Task.IsCompletedSuccessfully)
+                    await entry.Task.Result.DisposeAsync();
+            }
         }
     }
 
@@ -181,12 +210,28 @@ public class ServerCacheIsolationTests
             _files[(id.ToString(), path)] = new Entry(etag, bytes);
         }
 
+        public void SetStatus(Guid id, string path, int statusCode)
+        {
+            if (_files.TryGetValue((id.ToString(), path), out var entry))
+                entry.StatusCode = statusCode;
+        }
+
         public int Reads(Guid id, string path)
             => _files.TryGetValue((id.ToString(), path), out var entry) ? entry.Reads : 0;
 
         public override Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath)
         {
             var entry = _files[(clientId, subpath)];
+            if (entry.StatusCode != StatusCodes.Status200OK)
+            {
+                return Task.FromResult(new FileMetadata
+                {
+                    Length = -1,
+                    StatusCode = entry.StatusCode,
+                    ETag = "",
+                    LastModified = 0
+                });
+            }
             return Task.FromResult(new FileMetadata
             {
                 Length = entry.Bytes.Length,
@@ -207,6 +252,7 @@ public class ServerCacheIsolationTests
         {
             public string ETag { get; set; } = etag;
             public byte[] Bytes { get; set; } = bytes;
+            public int StatusCode { get; set; } = StatusCodes.Status200OK;
             public int Reads;
         }
     }

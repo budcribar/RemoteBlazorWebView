@@ -70,7 +70,15 @@ namespace PeakSWC.RemoteWebView.Services
             return Track(async () =>
             {
                 var wrappedStream = new StatsAsyncStreamReader<TRequest>(requestStream, stats);
-                var response = await continuation(wrappedStream, context).ConfigureAwait(false);
+                TResponse response;
+                try
+                {
+                    response = await continuation(wrappedStream, context).ConfigureAwait(false);
+                }
+                finally
+                {
+                    stats.RecordBytesReceived(wrappedStream.BytesReceived);
+                }
 
                 long bytesSent = 0;
                 if (response is IMessage message)
@@ -98,6 +106,7 @@ namespace PeakSWC.RemoteWebView.Services
                 }
                 finally
                 {
+                    stats.RecordBytesReceived(wrappedRequestStream.BytesReceived);
                     stats.RecordBytesSent(wrappedResponseStream.BytesSent);
                 }
             });

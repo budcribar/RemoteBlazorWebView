@@ -75,8 +75,9 @@ export function initializeScrollSync(send: (message: string) => void): void {
     watch(document, []);
 }
 
-function documentInFrameChain(start: Document, frames: number[][]): Document | null {
+function documentInFrameChain(start: Document, frames?: number[][]): Document | null {
     let doc: Document | null = start;
+    if (!Array.isArray(frames)) return doc;
     for (const framePath of frames) {
         const frame = doc && resolveElement(doc, framePath);
         if (frame?.tagName !== 'IFRAME') return null;

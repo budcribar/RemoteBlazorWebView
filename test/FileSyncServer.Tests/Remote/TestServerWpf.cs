@@ -11,6 +11,7 @@ namespace FileSyncServer.Tests.Remote
     public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {
         private readonly int FILES_READ = 29;
+        [Fact(Skip = "Refresh coverage runs in TestRemoteBlazorWpf; TestServerWpf only verifies server stats and disconnect.")]
         public override async Task Test2Client5Refresh() { await Task.CompletedTask; }
      
         [Fact]

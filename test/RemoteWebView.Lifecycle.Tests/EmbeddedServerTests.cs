@@ -12,7 +12,11 @@ using Client = client::PeakSWC.RemoteWebView;
 
 namespace RemoteWebView.Lifecycle.Tests;
 
+[CollectionDefinition("EmbeddedServerEnv", DisableParallelization = true)]
+public sealed class EmbeddedServerEnvCollection;
+
 /// <summary>RemoteWebViewServer.StartAsync: the relay hosted inside the calling process.</summary>
+[Collection("EmbeddedServerEnv")]
 public class EmbeddedServerTests
 {
     [Fact]
@@ -58,19 +62,52 @@ public class EmbeddedServerTests
     public async Task Two_servers_run_side_by_side_and_StopAsync_releases_the_port()
     {
         var a = await RemoteWebViewServer.StartAsync();
-        await using var b = await RemoteWebViewServer.StartAsync();
-        Assert.NotEqual(a.Port, b.Port);
+        try
+        {
+            await using var b = await RemoteWebViewServer.StartAsync();
+            Assert.NotEqual(a.Port, b.Port);
 
-        int port = a.Port;
-        await a.StopAsync();
-        await a.DisposeAsync();
-        await a.StopAsync(); // idempotent
+            int port = a.Port;
+            await a.StopAsync();
+            await a.DisposeAsync();
+            await a.StopAsync(); // idempotent
 
-        using var tcp = new TcpClient();
-        await Assert.ThrowsAnyAsync<SocketException>(() => tcp.ConnectAsync(IPAddress.Loopback, port));
+            await WaitForPortReleaseAsync(port);
 
-        using var http = new HttpClient { BaseAddress = b.BaseUri };
-        Assert.Equal(HttpStatusCode.OK, (await http.GetAsync("health")).StatusCode);
+            using var http = new HttpClient { BaseAddress = b.BaseUri };
+            Assert.Equal(HttpStatusCode.OK, (await http.GetAsync("health")).StatusCode);
+        }
+        finally
+        {
+            await a.StopAsync();
+            await a.DisposeAsync();
+        }
+    }
+
+    private static async Task WaitForPortReleaseAsync(int port)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        SocketException? lastBindError = null;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var listener = new TcpListener(IPAddress.Loopback, port);
+                listener.Start();
+                listener.Stop();
+
+                using var tcp = new TcpClient();
+                await Assert.ThrowsAnyAsync<SocketException>(() => tcp.ConnectAsync(IPAddress.Loopback, port));
+                return;
+            }
+            catch (SocketException ex)
+            {
+                lastBindError = ex;
+                await Task.Delay(25);
+            }
+        }
+
+        throw new InvalidOperationException($"Port {port} was not released after StopAsync.", lastBindError);
     }
 
     [Fact]

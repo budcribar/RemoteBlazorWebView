@@ -23,8 +23,14 @@ namespace PeakSWC.RemoteWebView
     public class WebView2 { public CoreWebView2? CoreWebView2 { get; } = new(); }
     public abstract class StubView : IBlazorWebView
     {
+        private System.Guid _id = System.Guid.Empty;
+        private bool IsRefreshing { get; set; }
         public System.Uri? ServerUri { get; set; }
-        public System.Guid Id { get; set; } = System.Guid.NewGuid();
+        public System.Guid Id
+        {
+            get => _id == System.Guid.Empty ? throw new System.Exception("Id not initialized") : _id;
+            set => _id = value == System.Guid.Empty ? System.Guid.NewGuid() : value;
+        }
         public bool EnableMirrors { get; set; }
         public WebView2 WebView { get; } = new();
         public string? Html;
@@ -40,8 +46,16 @@ namespace PeakSWC.RemoteWebView
         public System.Action? RestartWhenUnresponsive { get; set; }
         public void FireReady(System.Uri url, System.Guid id) => ReadyToConnect?.Invoke(this, new(id, url));
         public void FireConnected(System.Uri url, System.Guid id) => Connected?.Invoke(this, new(id, url));
-        public void FireDisconnected() => Disconnected?.Invoke(this, new());
-        public void FireRefreshed() => Refreshed?.Invoke(this, new());
+        public void FireDisconnected()
+        {
+            if (!IsRefreshing)
+                Disconnected?.Invoke(this, new());
+        }
+        public void FireRefreshed()
+        {
+            IsRefreshing = true;
+            Refreshed?.Invoke(this, new());
+        }
         public bool HasReady => ReadyToConnect is not null;
         public bool HasConnected => Connected is not null;
         public bool HasDisconnected => Disconnected is not null;
@@ -101,7 +115,13 @@ namespace Microsoft.AspNetCore.Components.WebView.Wpf
         var emit = output.Emit(stream);
         var errors = emit.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();
         Assembly? assembly = null;
-        if (emit.Success && load) assembly = Assembly.Load(stream.ToArray());
+        if (emit.Success && load)
+        {
+            assembly = Assembly.Load(stream.ToArray());
+            assembly.GetType("PeakSWC.RemoteBlazorWebView.RemoteBlazorCommandLine", throwOnError: false)?
+                .GetProperty("ArgsOverride", Internal)?
+                .SetValue(null, (string[])["app.exe"]);
+        }
         return new Result(generatorDiagnostics, errors, generated, assembly);
     }
 

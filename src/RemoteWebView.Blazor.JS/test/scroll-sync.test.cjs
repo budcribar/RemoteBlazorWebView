@@ -69,9 +69,16 @@ test('document scrolls and returning to zero synchronize', () => {
 
 test('primary ignores relayed offsets and unrelated IPC passes through', () => {
     const app = setup();
-    assert.equal(app.exports.receiveScroll('mirror-scroll:[{"path":[],"tag":"HTML","id":"","top":500,"left":0}]'), true);
+    assert.equal(app.exports.receiveScroll('mirror-scroll:[{"frames":[],"path":[],"tag":"HTML","id":"","top":500,"left":0}]'), true);
     assert.equal(app.root.scrollTop, 0);
     assert.equal(app.exports.receiveScroll('__bwv:["RenderBatch"]'), false);
+});
+
+test('mirror tolerates scroll payloads without frames', () => {
+    const mirror = setup(false);
+    assert.equal(mirror.exports.receiveScroll('mirror-scroll:[{"path":[],"tag":"HTML","id":"","top":500,"left":25}]'), true);
+    assert.equal(mirror.root.scrollTop, 500);
+    assert.equal(mirror.root.scrollLeft, 25);
 });
 
 test('detached targets are removed and mismatched mirror elements are untouched', () => {
