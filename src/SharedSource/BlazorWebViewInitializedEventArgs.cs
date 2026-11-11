@@ -13,8 +13,6 @@ using WebView2Control = Microsoft.UI.Xaml.Controls.WebView2;
 using AWebView = Android.Webkit.WebView;
 #elif IOS || MACCATALYST
 using WebKit;
-#elif TIZEN
-using TWebView = Tizen.NUI.BaseComponents.WebView;
 #endif
 
 namespace PeakSWC.RemoteBlazorWebView
@@ -91,11 +89,6 @@ namespace PeakSWC.RemoteBlazorWebView
 		/// the default values to allow further configuring additional options.
 		/// </summary>
 		public WKWebView WebView => _platformWebView as WKWebView;
-#elif TIZEN
-		/// <summary>
-		/// Gets the <see cref="TWebView"/> instance that was initialized.
-		/// </summary>
-		public TWebView WebView => _platformWebView as TWebView;
 #endif
 #nullable restore
 	}

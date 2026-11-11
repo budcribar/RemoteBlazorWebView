@@ -43,7 +43,7 @@ function resolveOtherFieldName(currentName: string, otherParam: string | undefin
 
   if (otherParam.startsWith('*.')) {
     // Replace * with the model prefix from the current field's name.
-    // E.g. currentName="User.Password", otherParam="*.ConfirmPassword" → "User.ConfirmPassword"
+    // E.g. currentName="User.Password", otherParam="*.ConfirmPassword" ? "User.ConfirmPassword"
     const lastDot = currentName.lastIndexOf('.');
     const prefix = lastDot >= 0 ? currentName.substring(0, lastDot + 1) : '';
     return prefix + otherParam.substring(2);

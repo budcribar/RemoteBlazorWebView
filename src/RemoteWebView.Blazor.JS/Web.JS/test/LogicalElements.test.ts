@@ -42,7 +42,7 @@ describe('insertLogicalChild', () => {
     // Now orphan the comment by removing it from the DOM (simulates discoverWebAssemblyOptions)
     parent.removeChild(orphanComment);
 
-    // Insert a new element at index 0 â€” the orphan is at position 0
+    // Insert a new element at index 0 — the orphan is at position 0
     const newChild = document.createElement('p');
     insertLogicalChild(newChild, logicalParent, 0);
 
@@ -114,7 +114,7 @@ describe('insertLogicalChild', () => {
     // Orphan the comment
     parent.removeChild(orphanComment);
 
-    // Insert at index 1 â€” after cleanup, there's only 1 sibling so index 1 means append
+    // Insert at index 1 — after cleanup, there's only 1 sibling so index 1 means append
     const newChild = document.createElement('p');
     insertLogicalChild(newChild, logicalParent, 1);
 
@@ -149,7 +149,7 @@ describe('insertLogicalChild', () => {
     parent.removeChild(orphan2);
 
     // Insert at index 1 (between orphan1 and spanA originally).
-    // After cleanup of orphan1 (index 0, before target) â†’ index becomes 0.
+    // After cleanup of orphan1 (index 0, before target) ? index becomes 0.
     // orphan2 at original index 2 is also removed but doesn't affect adjusted index.
     // So we insert at index 0 before spanA.
     const newChild = document.createElement('p');
