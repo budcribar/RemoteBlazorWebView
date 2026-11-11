@@ -311,7 +311,7 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             Dispatcher.Invoke(() => ParticipantsChanged?.Invoke(this, args));
         }
 
-        /// <summary>Someone joined or left the shared session, or control moved. Needs relay 10.0.16 or later.</summary>
+        /// <summary>Someone joined or left the shared session, or control moved. Needs relay 10.0.15 or later.</summary>
         public event EventHandler<ParticipantsChangedEventArgs>? ParticipantsChanged;
 
         public event EventHandler<ConnectedEventArgs>? Connected;
