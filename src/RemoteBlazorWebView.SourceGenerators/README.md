@@ -79,7 +79,8 @@ public partial class MainWindow : Window
 
 Each browser draws a small session bar (who has control, *Give control* / *Take control*, *Copy link*). Put
 `<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where it should sit; without it the bar floats
-bottom-right. A session has one owner (this window), one remote user (the first to open the link) and any number of read-only viewers.
+bottom-right. With the placeholder in your layout, also put `<meta name="rbwv-session-controls" content="slot">` in the host
+page's `<head>`, so the bar waits for the placeholder instead of floating for a moment while the app starts. A session has one owner (this window), one remote user (the first to open the link) and any number of read-only viewers.
 See "Sharing control" in the repository README.
 
 ## Reverse mirror
