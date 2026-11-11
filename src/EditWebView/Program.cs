@@ -7,21 +7,47 @@ static class Program
     private const string AspNetCoreRepo = "dotnet/aspnetcore";
     private const string MauiRepo = "dotnet/maui";
     private const int TargetMajorVersion = 11;
+    // Optional pins. Env vars ASPNETCORE_TAG and MAUI_TAG override these.
+    // When set, the tag archive URL is used directly and the GitHub tag scan is skipped.
+    // A 404 falls back to the scan.
+    private const string? AspNetCoreTagHint = "v11.0.0";
+    private const string? MauiTagHint = "11.0.10";
     private const string RelativePath = "../../../../../";
-    private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\..\"));
+    private static readonly string RepoPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", ".."));
 
-    static async Task Main()
+    static async Task Main(string[] args)
     {
         try
         {
             // What already differs from the last commit, so the summary can say when not everything in it is from this run.
             var changedBefore = ChangeReport.ChangedBefore(RepoPath);
 
-            string latestAspNetCoreUrl = await Utility.GetLatestFrameworkVersionAsync(AspNetCoreRepo, TargetMajorVersion);
-            Console.WriteLine($"Latest ASP.NET Core Version {TargetMajorVersion} URL: {latestAspNetCoreUrl}");
+            int majorVersion = ResolveMajorVersion(args);
+            if (args.Contains("--resolve-only"))
+            {
+                var majors = ReadMajorArguments(args);
+                if (majors.Count == 0)
+                    majors.Add(majorVersion);
 
-            string latestMauiUrl = await Utility.GetLatestFrameworkVersionAsync(MauiRepo, TargetMajorVersion);
-            Console.WriteLine($"Latest MAUI Version {TargetMajorVersion} URL: {latestMauiUrl}");
+                foreach (var major in majors)
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    string url = await Utility.GetLatestFrameworkVersionAsync(MauiRepo, major);
+                    sw.Stop();
+                    Console.WriteLine($"MAUI {major}: {url} (resolved in {sw.Elapsed.TotalSeconds:F1}s)");
+                }
+                return;
+            }
+
+            var aspSw = System.Diagnostics.Stopwatch.StartNew();
+            string latestAspNetCoreUrl = await ResolveArchiveUrlAsync(AspNetCoreRepo, majorVersion, AspNetCoreTagHint, "ASPNETCORE_TAG");
+            aspSw.Stop();
+            Console.WriteLine($"Latest ASP.NET Core Version {majorVersion} URL: {latestAspNetCoreUrl} (resolved in {aspSw.Elapsed.TotalSeconds:F1}s)");
+
+            var mauiSw = System.Diagnostics.Stopwatch.StartNew();
+            string latestMauiUrl = await ResolveArchiveUrlAsync(MauiRepo, majorVersion, MauiTagHint, "MAUI_TAG");
+            mauiSw.Stop();
+            Console.WriteLine($"Latest MAUI Version {majorVersion} URL: {latestMauiUrl} (resolved in {mauiSw.Elapsed.TotalSeconds:F1}s)");
 
             await ProcessAspNetFramework(latestAspNetCoreUrl);
             await ProcessMauiFramework(latestMauiUrl);
@@ -34,6 +60,63 @@ static class Program
             Console.WriteLine($"An error occurred: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
+    }
+
+    static int ResolveMajorVersion(string[] args)
+    {
+        var fromArgs = ReadMajorArguments(args);
+        if (fromArgs.Count == 1)
+            return fromArgs[0];
+
+        var env = Environment.GetEnvironmentVariable("TARGET_MAJOR_VERSION");
+        if (int.TryParse(env, out int major) && major > 0)
+            return major;
+
+        return TargetMajorVersion;
+    }
+
+    static List<int> ReadMajorArguments(string[] args)
+    {
+        var majors = new List<int>();
+        if (args == null)
+            return majors;
+
+        int i = 0;
+        while (i < args.Length)
+        {
+            if (args[i] == "--major" && i + 1 < args.Length && int.TryParse(args[i + 1], out int major))
+            {
+                if (major > 0)
+                    majors.Add(major);
+                i += 2;
+                continue;
+            }
+
+            i++;
+        }
+        return majors;
+    }
+
+    static async Task<string> ResolveArchiveUrlAsync(string repo, int majorVersion, string? defaultTag, string envVar)
+    {
+        // A present env var replaces the const, including an empty value that forces a scan.
+        var envTag = Environment.GetEnvironmentVariable(envVar);
+        var tag = envTag != null ? envTag : defaultTag;
+
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            string url = $"https://github.com/{repo}/archive/refs/tags/{tag}.zip";
+            Console.WriteLine($"Checking pinned tag {tag} for {repo}...");
+            if (await Utility.ArchiveExistsAsync(url))
+            {
+                Console.WriteLine($"Using pinned tag {tag}. Skipping tag scan.");
+                return url;
+            }
+
+            Console.WriteLine($"Pinned tag {tag} was not found. Falling back to tag scan.");
+        }
+
+        return await Utility.GetLatestFrameworkVersionAsync(repo, majorVersion);
     }
 
     static async Task ProcessAspNetFramework(string url)
@@ -49,21 +132,25 @@ static class Program
         var (destinationPath, destinationFolder) = await DownloadAndExtractFramework(url);
         string maui = Path.Combine(destinationFolder, Path.GetFileNameWithoutExtension(destinationPath));
 
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\WindowsForms"), "RemoteBlazorWebView.WinForms");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\Wpf"), "RemoteBlazorWebView.Wpf");
-        ProcessFiles(Path.Combine(maui, @"src\BlazorWebView\src\SharedSource"), "SharedSource");
+        ProcessFiles(Path.Combine(maui, "src", "BlazorWebView", "src", "WindowsForms"), "RemoteBlazorWebView.WinForms");
+        ProcessFiles(Path.Combine(maui, "src", "BlazorWebView", "src", "Wpf"), "RemoteBlazorWebView.Wpf");
+        ProcessFiles(Path.Combine(maui, "src", "BlazorWebView", "src", "SharedSource"), "SharedSource");
     }
 
     static async Task<(string destinationPath, string destinationFolder)> DownloadAndExtractFramework(string url)
     {
         string zipFile = Utility.GetFilenameFromUrl(url);
-        string destinationPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", zipFile);
         string destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        Directory.CreateDirectory(destinationFolder);
+        string destinationPath = Path.Combine(destinationFolder, zipFile);
 
         if (!File.Exists(destinationPath))
         {
             Console.WriteLine($"Downloading {zipFile}...");
+            var downloadSw = System.Diagnostics.Stopwatch.StartNew();
             await Utility.DownloadZipFileAsync(url, destinationPath);
+            downloadSw.Stop();
+            Console.WriteLine($"Download of {zipFile} finished in {downloadSw.Elapsed.TotalSeconds:F1}s");
         }
         else
         {
@@ -100,6 +187,7 @@ static class Program
             Console.WriteLine($"Empty yarn.lock file created at: {filePath}");
         }
 
+        PatchVendoredDotNetRuntime(webJSTarget); // net11: upstream points @microsoft/dotnet-runtime at a package this repository vendors
         ApplyWebJSPatches(webJSTarget);
     }
 
@@ -285,6 +373,22 @@ static class Program
         Console.WriteLine("  " + message);
         Console.WriteLine("  Upstream changed here. Look at the file and update ApplyWebJSPatches before committing the result.");
         Console.ForegroundColor = color;
+    }
+
+    static void PatchVendoredDotNetRuntime(string webJSTarget)
+    {
+        var packageJson = Path.Combine(webJSTarget, "package.json");
+        if (!File.Exists(packageJson))
+            return;
+
+        var text = File.ReadAllText(packageJson);
+        const string upstream = "\"@microsoft/dotnet-runtime\": \"*\"";
+        const string vendored = "\"@microsoft/dotnet-runtime\": \"file:../dotnet-runtime\"";
+        if (!text.Contains(upstream))
+            return;
+
+        File.WriteAllText(packageJson, text.Replace(upstream, vendored));
+        Console.WriteLine("Pointed @microsoft/dotnet-runtime at the vendored dotnet-runtime package.");
     }
 
     static void ProcessFiles(string inputDir, string outputDir)

@@ -1,5 +1,12 @@
 # Release notes
 
+## 11.0.0
+
+The first release for .NET 11 (SDK 11.0.100, ASP.NET Core 11.0.0, MAUI WebView packages 11.0.10). It has everything in
+10.0.15 and 10.0.15.1 below: sharing control, unattended sessions, voice, the opt-in session controls bar and its
+templates, the owner key, `ParticipantsChanged` and the injected sign-in providers. Where the notes below say "10.0.15 on
+both sides", on this line read 11.0.0: a relay and packages from either line work together from 10.0.15 / 11.0.0 up.
+
 ## 10.0.15.1
 
 Packages only; the relay does not change.

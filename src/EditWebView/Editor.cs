@@ -201,20 +201,41 @@ namespace EditWebView
             Comment("#pragma warning restore CA1816");
 
             Replace("Dock = DockStyle.Fill,", "Dock = DockStyle.Fill, AllowExternalDrop = false");
+            // Pre-#34869 WPF assigned the template child with a WebView2Control cast. That cast no longer
+            // matches, so the replacement below is what still disables file drops.
             Replace("_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);",
                 "_webview = (WebView2Control)GetTemplateChild(WebViewTemplateChildName);\n\t\t\t\t_webview.AllowExternalDrop = false;");
+            // MAUI #34869: OnApplyTemplate binds `GetTemplateChild(...) is not IWebView2 webView`.
+            // MAUI defaults UseCompositionControl to true. That selects WebView2CompositionControl,
+            // whose D3D path loads Microsoft.Windows.SDK.NET. A normal WPF publish does not ship
+            // that assembly, so Show() throws FileNotFoundException. Keep the HWND WebView2 unless
+            // the app opts in.
+            Replace(
+                "new PropertyMetadata(true, OnUseCompositionControlPropertyChanged)",
+                "new PropertyMetadata(false, OnUseCompositionControlPropertyChanged)");
+            // UseCompositionControl defaults to true in the MAUI source, so the child is a WebView2CompositionControl and the
+            // WebView2Control cast above does not match. IWebView2.AllowExternalDrop exists in the pinned
+            // Microsoft.Web.WebView2 1.0.4258.31 package and maps to CoreWebView2Controller.AllowExternalDrop
+            // (default true). Set it on the interface so both concrete controls reject external drops.
+            Replace(
+                "if (GetTemplateChild(WebViewTemplateChildName) is not IWebView2 webView)\n\t\t\t\t{\n\t\t\t\t\tthrow new InvalidOperationException($\"Template child '{WebViewTemplateChildName}' was not found or does not implement {nameof(IWebView2)}. Ensure the control template contains a WebView2 or WebView2CompositionControl element named '{WebViewTemplateChildName}'.\");\n\t\t\t\t}\n\t\t\t\t_webview = webView;",
+                "if (GetTemplateChild(WebViewTemplateChildName) is not IWebView2 webView)\n\t\t\t\t{\n\t\t\t\t\tthrow new InvalidOperationException($\"Template child '{WebViewTemplateChildName}' was not found or does not implement {nameof(IWebView2)}. Ensure the control template contains a WebView2 or WebView2CompositionControl element named '{WebViewTemplateChildName}'.\");\n\t\t\t\t}\n\t\t\t\twebView.AllowExternalDrop = false;\n\t\t\t\t_webview = webView;");
 
             Replace("public WebView2Control WebView => _webview;",
                 "public WebView2Control WebView => _webview;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
             Replace("public WebView2Control WebView => _webview!;",
                 "public WebView2Control WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
+            // .NET 11 WPF exposes the inner control as IWebView2 (WebView2 or WebView2CompositionControl).
+            Replace("public IWebView2 WebView => _webview!;",
+                "public IWebView2 WebView => _webview!;\n        [Browsable(false)]\n        public WebView2WebViewManager WebViewManager => _webviewManager;");
 
             Replace("new WebView2WebViewManager", "CreateWebViewManager");
+            var webViewParameterType = _fileName == BlazorWebViewBaseFile ? "IWebView2" : "WebView2Control";
             Replace("private void StartWebViewCoreIfPossible()",
-                @"public virtual WebView2WebViewManager CreateWebViewManager(WebView2Control webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
-		{
+                $@"public virtual WebView2WebViewManager CreateWebViewManager({webViewParameterType} webview, IServiceProvider services, Dispatcher dispatcher, IFileProvider fileProvider, JSComponentConfigurationStore store, string hostPageRelativePath,string hostPagePathWithinFileProvider,Action<UrlLoadingEventArgs> externalNavigationStarting,Action<BlazorWebViewInitializingEventArgs> blazorWebViewInitializing, Action<BlazorWebViewInitializedEventArgs> blazorWebViewInitialized, ILogger logger)
+		{{
 			return new WebView2WebViewManager(webview, services, dispatcher, fileProvider, store, hostPageRelativePath, hostPagePathWithinFileProvider, externalNavigationStarting,blazorWebViewInitializing,blazorWebViewInitialized,logger);
-		}
+		}}
 		protected void StartWebViewCoreIfPossible()");
 
             Replace("BlazorWebView", Path.GetFileNameWithoutExtension(_fileName));
