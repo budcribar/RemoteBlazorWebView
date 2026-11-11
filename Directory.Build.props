@@ -2,6 +2,6 @@
 <Project>
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts</PackageOutputPath>
-    <VersionPrefix>10.0.15</VersionPrefix>
+    <VersionPrefix>10.0.15.1</VersionPrefix>
   </PropertyGroup>
 </Project>
