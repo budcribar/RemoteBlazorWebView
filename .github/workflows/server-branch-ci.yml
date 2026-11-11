@@ -66,10 +66,6 @@ jobs:
       - name: Build remote.blazor.desktop.js and run JS tests
         run: |
           set -euo pipefail
-          if ! command -v protoc >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends protobuf-compiler
-          fi
           corepack enable
           corepack prepare yarn@4.3.1 --activate
           pushd src/RemoteWebView.Blazor.JS >/dev/null
