@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Azure AD B2C sign-in for the relay (IRelayAuthorization "AzureB2C"). Its own project so the relay library and the
+       native (AOT) relay do not carry Microsoft.Identity.Web. RemoteWebViewService.exe references it in every
+       configuration but NoAuthorization. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>PeakSWC.RemoteWebViewService.AzureB2C</AssemblyName>
+    <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
+    <Nullable>enable</Nullable>
+    <Platforms>x64;AnyCPU</Platforms>
+    <Configurations>Debug;Release;Authorization;AzureNoAuth</Configurations>
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.18.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" NoWarn="NU1605" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+</Project>

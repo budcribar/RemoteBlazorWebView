@@ -8,6 +8,7 @@ COPY icons/ icons/
 COPY README.md ./
 COPY src/Protos/ src/Protos/
 COPY src/RemoteWebViewService.Lib/ src/RemoteWebViewService.Lib/
+COPY src/RemoteWebViewService.AzureB2C/ src/RemoteWebViewService.AzureB2C/
 COPY src/RemoteWebViewService/ src/RemoteWebViewService/
 RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64
 # The commit is appended to InformationalVersion as 10.0.15+<sha>, shown on the admin About page. Railway passes

@@ -65,6 +65,16 @@
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
   </ItemGroup>
+  <!-- Azure AD B2C sign-in ("Authorization:Provider": "AzureB2C"): in every configuration but the native relay
+       (NoAuthorization, AOT). A relay built with -c Authorization also requires it by default. Which provider runs is a
+       setting, not a compile-time switch: see IRelayAuthorization. -->
+  <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
+    <ProjectReference Include="..\RemoteWebViewService.AzureB2C\RemoteWebViewService.AzureB2C.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
+    <Compile Remove="Authorization\AzureB2CByDefault.cs" Condition="'$(Configuration)' != 'Authorization'" />
+  </ItemGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
     <None Remove="appsettings.json.save" />

@@ -1,10 +1,9 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-#if AUTHORIZATION
-using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Linq;
-#endif
+using System.Text.Json;
 using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Services;
 using System;
@@ -14,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService) : BrowserIPC.BrowserIPCBase
+    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null) : BrowserIPC.BrowserIPCBase
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
@@ -239,12 +238,13 @@ namespace PeakSWC.RemoteWebView
                         if (request.Message == "connected:")
                         {
                             request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
-#if AUTHORIZATION
-                            string serializedCookies = string.Empty;
-                            if (serviceState.Cookies != null)
-                                serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
-                            request.Cookies = serializedCookies;
-#endif
+                            // With sign-in on, the app gets the page's cookies (the sign-in among them) for its own WebView.
+                            if (authorization?.Enabled == true)
+                            {
+                                request.Cookies = serviceState.Cookies != null
+                                    ? JsonSerializer.Serialize(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value), JsonContext.Default.DictionaryStringString)
+                                    : string.Empty;
+                            }
                         }
                         await ForwardMessage(serviceState, request).ConfigureAwait(false);
                         state.SequenceNum++;

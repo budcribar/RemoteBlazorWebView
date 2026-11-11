@@ -28,13 +28,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
-#if AUTHORIZATION
-using Microsoft.Identity.Web;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.Identity.Client;
-using System.Net.Http;
-using Microsoft.Identity.Web.UI;
-#endif
 
 namespace PeakSWC.RemoteWebView
 {
@@ -92,22 +85,6 @@ namespace PeakSWC.RemoteWebView
 
         private ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> ServiceDictionary { get; } = new();
         private readonly ConcurrentDictionary<string, Channel<string>> serviceStateChannel = new();
-#if AUTHORIZATION
-        private async Task<ProtectedApiCallHelper> CreateApiHelper()
-        {
-            IConfidentialClientApplication confidentialClientApplication =
-               ConfidentialClientApplicationBuilder
-               .Create(configuration.GetValue<string>("AzureAdB2C:ClientId"))
-               .WithTenantId(configuration.GetValue<string>("AzureAdB2C:DirectoryId")) 
-               .WithClientSecret(configuration.GetValue<string>("Secret"))
-               .Build();
-
-            string[] scopes = new string[] { "https://graph.microsoft.com/.default" };
-            AuthenticationResult result = await confidentialClientApplication.AcquireTokenForClient(scopes).ExecuteAsync().ConfigureAwait(false);
-            var httpClient = new HttpClient();
-            return new ProtectedApiCallHelper(httpClient,result.AccessToken);
-        }
-#endif
 
         // Set by RemoteWebViewServer.StartAsync when the service runs inside another process.
         private bool Embedded => GetBool(configuration, RemoteWebViewServer.EmbeddedKey, false);
@@ -190,32 +167,21 @@ namespace PeakSWC.RemoteWebView
                 options.RejectionStatusCode = 429;
             });
 #endif
-#if AUTHORIZATION
-            services.AddTransient((sp) => CreateApiHelper());
-            services.AddTransient<IUserService,UserService>();
-            services.Configure<CookiePolicyOptions>(options =>
+            // Who may open session pages: the provider an embedding host handed over, or the one the configuration names.
+            var authorization = services.FirstOrDefault(d => d.ServiceType == typeof(IRelayAuthorization))?.ImplementationInstance as IRelayAuthorization;
+            if (authorization == null)
             {
-                // This lambda determines whether user consent for non-essential cookies is needed for a given request.
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
-                // Handling SameSite cookie according to https://docs.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-3.1
-                options.HandleSameSiteCookieCompatibility();
-            });
-            // Configuration to sign-in users with Azure AD B2C
-            services.AddMicrosoftIdentityWebAppAuthentication(configuration, "AzureAdB2C");
-            services.AddControllersWithViews().AddMicrosoftIdentityUI();
-            services.AddRazorPages();
-
-            //Configuring appsettings section AzureAdB2C, into IOptions
-            services.AddOptions();
-            services.Configure<OpenIdConnectOptions>(configuration.GetSection("AzureAdB2C"));
-            // Session pages: the app's own owner page without sign-in, otherwise a signed-in member of the session's group.
-            services.AddAuthorization(options =>
-                options.AddPolicy(SessionAccessRequirement.PolicyName, policy => policy.AddRequirements(new SessionAccessRequirement())));
-            services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SessionAccessHandler>();
-#else
-            services.AddTransient<IUserService, MockUserService>();
-#endif
+                authorization = RelayAuthorization.Resolve(configuration);
+                services.AddSingleton(authorization);
+            }
+            authorization.ConfigureServices(services, configuration);
+            if (authorization.Enabled)
+            {
+                // Session pages: the app's own owner page without sign-in, otherwise a signed-in member of the session's group.
+                services.AddAuthorization(options =>
+                    options.AddPolicy(SessionAccessRequirement.PolicyName, policy => policy.AddRequirements(new SessionAccessRequirement())));
+                services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SessionAccessHandler>();
+            }
             // Bind RemoteFilesOptions from configuration
             services.Configure<RemoteFilesOptions>(options =>
             {
@@ -328,10 +294,8 @@ namespace PeakSWC.RemoteWebView
             app.UseCors("CorsPolicy");
 
             app.UseCookiePolicy();
-#if AUTHORIZATION
-            app.UseAuthentication();
-            app.UseAuthorization();
-#endif
+            var authorization = app.ApplicationServices.GetRequiredService<IRelayAuthorization>();
+            authorization.Configure(app);
             app.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(15),
@@ -364,20 +328,20 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/voice/client.js", VoiceRoom.Script()).AllowAnonymous();
                 endpoints.MapGet("/voice/{id:guid}/host", VoiceRoom.HostPage()).AllowAnonymous();
                 endpoints.Map("/voice/{id:guid}/signal", VoiceRoom.Signal()).AllowAnonymous();
-                endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/app/{id:guid}", Endpoints.Start()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/mirror/{id:guid}", Endpoints.Mirror()).RequireSessionAccess(authorization);
+                endpoints.MapGet("/app/{id:guid}", Endpoints.Start()).RequireSessionAccess(authorization);
 
                 // Refresh from home page i.e. https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/
-                endpoints.MapGet("/{id:guid}", Endpoints.StartOrRefresh()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/{id:guid}", Endpoints.StartOrRefresh()).RequireSessionAccess(authorization);
 
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
-                endpoints.MapGet("/{id:guid}/{unused:alpha}", Endpoints.StartOrRefresh()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/grpcbaseuri", Endpoints.GrpcBaseUri()).ConditionallyRequireAuthorization();           
-                endpoints.MapGet("/wait/{id:guid}", Endpoints.Wait()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/{id:guid}/{unused:alpha}", Endpoints.StartOrRefresh()).RequireSessionAccess(authorization);
+                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).RequireSessionAccess(authorization);
+                endpoints.MapGet("/grpcbaseuri", Endpoints.GrpcBaseUri()).RequireSessionAccess(authorization);           
+                endpoints.MapGet("/wait/{id:guid}", Endpoints.Wait()).RequireSessionAccess(authorization);
 #if STATS
-                endpoints.MapGet("/stats", Endpoints.Stats()).ConditionallyRequireAuthorization();
-                endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).ConditionallyRequireAuthorization();
+                endpoints.MapGet("/stats", Endpoints.Stats()).RequireSessionAccess(authorization);
+                endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).RequireSessionAccess(authorization);
 #endif
                 endpoints.MapGet("/health", Endpoints.Health());
                 endpoints.MapGet("/", Endpoints.Contact());

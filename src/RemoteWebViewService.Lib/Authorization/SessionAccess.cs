@@ -1,8 +1,6 @@
-#if AUTHORIZATION
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Identity.Web;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -12,7 +10,8 @@ using System.Threading.Tasks;
 namespace PeakSWC.RemoteWebView
 {
     /// <summary>
-    /// Who may open a session's pages (/app, /mirror, /{id}, /status, /wait) when the relay requires sign-in:
+    /// Who may open a session's pages (/app, /mirror, /{id}, /status, /wait) when the relay requires sign-in
+    /// (any <see cref="IRelayAuthorization"/> but <see cref="NoAuthorization"/>):
     /// <list type="bullet">
     /// <item>the app's own owner page, without signing in: /app/{id}?role=owner&amp;key=... with the app's owner key, then
     /// the owner cookie (OwnerAccess). A customer's PC has no account to sign in with.</item>
@@ -55,7 +54,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            var groups = await users.GetUserGroups(context.User.GetObjectId() ?? string.Empty).ConfigureAwait(false) ?? [];
+            var groups = await users.GetUserGroups(context.User.GetUserObjectId() ?? string.Empty).ConfigureAwait(false) ?? [];
             if (groups.Contains(state.Group))
                 context.Succeed(requirement);
             // otherwise not succeeded: a signed-in user outside the session's group is refused (403)
@@ -80,4 +79,3 @@ namespace PeakSWC.RemoteWebView
         }
     }
 }
-#endif
