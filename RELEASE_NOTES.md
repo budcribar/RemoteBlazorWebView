@@ -2,10 +2,18 @@
 
 ## 10.0.15.1
 
-- **Session controls bar no longer flashes bottom-right at startup** in an app whose layout has the `rbwv-session-controls`
-  placeholder. Put `<meta name="rbwv-session-controls" content="slot">` in the host page's `<head>`: the bar waits for the
-  placeholder instead of floating until Blazor has rendered the layout. Apps without the tag behave as before. Packages only;
-  the relay does not change.
+Packages only; the relay does not change.
+
+- **The session controls bar is opt-in (behaviour change).** Nothing is drawn on an app's pages unless its layout has the
+  `<div id="rbwv-session-controls">` placeholder. Before, an app that shared control or used voice without a placeholder got
+  a bar floating bottom-right; that bar is gone (it also flashed at startup in apps that did have the placeholder). **If your
+  app relied on the floating bar, add the placeholder to your layout**, or the *Give control* / *Take control* and voice
+  buttons are no longer shown.
+- With the placeholder, the bar shows only when there is something to control: a session with an owner, or a voice call.
+- **Your own bar from a template.** Put a `<template>` inside the placeholder and mark its elements with `data-rbwv`
+  (`status`, `give`, `take`, `copy-link`, `restart`, the voice parts, ...). Each browser gets a copy with only the parts that
+  apply to it, the status filled in and the buttons wired; layout, wording and styling are the app's. See "Session controls
+  bar" in the README. `window.RemoteControl` remains for a bar drawn entirely by the app.
 
 ## 10.0.15
 

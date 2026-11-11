@@ -77,10 +77,10 @@ The person at the PC and a remote user use the same app, and control is handed b
 public partial class MainWindow : Window
 ```
 
-Each browser draws a small session bar (who has control, *Give control* / *Take control*, *Copy link*). Put
-`<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where it should sit; without it the bar floats
-bottom-right. With the placeholder in your layout, also put `<meta name="rbwv-session-controls" content="slot">` in the host
-page's `<head>`, so the bar waits for the placeholder instead of floating for a moment while the app starts. A session has one owner (this window), one remote user (the first to open the link) and any number of read-only viewers.
+The session bar (who has control, *Give control* / *Take control*, *Copy link*) is opt-in: put
+`<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where it should sit, and each browser draws its
+bar there. Without the placeholder nothing is drawn, so there are no buttons to hand control over. A `<template>` inside the
+placeholder makes the bar your own markup. A session has one owner (this window), one remote user (the first to open the link) and any number of read-only viewers.
 See "Sharing control" in the repository README.
 
 ## Reverse mirror
