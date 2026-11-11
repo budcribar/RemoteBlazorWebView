@@ -133,6 +133,9 @@ export function requestRestart() {
 // back through /app/<id> (loading /<id> again would itself count as a refresh and restart the new copy).
 let restartPending = false;
 let comingBack = false;
+// The query this page was opened with (?role=owner, &control=remote). Kept from the start: moving between the app's
+// pages drops it from the address, and coming back without it would turn the owner's page into an ordinary one.
+const launchQuery = window.location.search;
 const COME_BACK_FIRST_TRY_MS = 2000;
 const COME_BACK_RETRY_MS = 2000;
 const COME_BACK_GIVE_UP_MS = 120000;
@@ -147,7 +150,7 @@ function comeBackAfterRestart() {
     const id = sessionId();
     const target = window.RemoteBlazor.isMirrorPage
         ? window.location.href
-        : `${locationOrigin}/app/${id}${window.location.search}`;
+        : `${locationOrigin}/app/${id}${launchQuery}`;
     const started = Date.now();
 
     const attempt = async () => {

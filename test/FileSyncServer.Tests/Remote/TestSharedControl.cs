@@ -250,11 +250,11 @@ namespace FileSyncServer.Tests.Remote
             await owner.Locator(".btn").ClickAsync();
             await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
 
-            // The button is opt-in: an app asks for it on the bar's placeholder. The tutorial app has no placeholder, so add one,
-            // pinned to the top of the window: the bar sits exactly over its placeholder, and one at the end of the page would
-            // put the bar below what the browser shows.
+            // The button is opt-in: an app asks for it on the bar's placeholder. The tutorial app's placeholder (in its layout)
+            // does not, so ask here.
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You have control", Soon);
             await Expect(owner.Locator(".rbwv-control-restart")).ToHaveCountAsync(0);
-            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" data-restart=\"true\" style=\"position:fixed;top:4px;right:8px\"></div>')");
+            await owner.EvaluateAsync("() => document.getElementById('rbwv-session-controls').setAttribute('data-restart', 'true')");
 
             await owner.Locator(".rbwv-control-restart").ClickAsync();
             await Expect(owner.Locator(".rbwv-control-question")).ToHaveTextAsync("Restart the app?", Soon);
@@ -278,25 +278,58 @@ namespace FileSyncServer.Tests.Remote
         }
 
         [Fact]
-        public async Task A_host_page_that_declares_the_placeholder_gets_no_floating_bar()
+        public async Task Without_the_placeholder_there_is_no_session_bar()
         {
             await _fixture.Startup(1);
             var owner = _fixture.Owner;
             var bar = owner.Locator(".rbwv-control-bar");
-            // The tutorial app has no placeholder, so with an owner the bar floats.
-            await Expect(bar).ToBeVisibleAsync(new() { Timeout = 20000 });
-            await Expect(bar).ToContainClassAsync("rbwv-control-floating");
-
-            // An app whose layout has the placeholder says so in its host page: the bar waits for the placeholder instead
-            // of floating until the layout is rendered. (Added here after the fact; a resize makes the bar place itself again.)
-            await owner.EvaluateAsync("() => { document.head.insertAdjacentHTML('beforeend', '<meta name=\"rbwv-session-controls\" content=\"slot\">'); window.dispatchEvent(new Event('resize')); }");
-            await Expect(bar).ToBeHiddenAsync(new() { Timeout = 20000 });
-
-            // The placeholder arrives (Blazor rendered the layout): the bar sits in it.
-            await owner.EvaluateAsync("() => document.body.insertAdjacentHTML('beforeend', '<div id=\"rbwv-session-controls\" style=\"position:fixed;top:4px;right:8px\"></div>')");
+            // The tutorial app's layout has the placeholder, so the bar is there.
             await Expect(bar).ToBeVisibleAsync(new() { Timeout = 20000 });
             await Expect(bar).ToContainClassAsync("rbwv-control-slotted");
+
+            // The bar is opt-in: an app without the placeholder gets nothing drawn on its pages, even when it shares control.
+            // (Taken away here by renaming it; a resize makes the bar look for its placeholder again.)
+            await owner.EvaluateAsync("() => { document.getElementById('rbwv-session-controls').id = 'not-the-placeholder'; window.dispatchEvent(new Event('resize')); }");
+            await Expect(bar).ToBeHiddenAsync(new() { Timeout = 20000 });
+            // The state is still there for an app that draws its own.
+            Assert.True(await owner.EvaluateAsync<bool>("() => window.RemoteControl.getState().iHaveControl"));
+
+            await owner.EvaluateAsync("() => { document.getElementById('not-the-placeholder').id = 'rbwv-session-controls'; window.dispatchEvent(new Event('resize')); }");
+            await Expect(bar).ToBeVisibleAsync(new() { Timeout = 20000 });
             await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You have control");
+        }
+
+        [Fact]
+        public async Task A_template_in_the_placeholder_is_the_apps_own_bar()
+        {
+            await _fixture.Startup(1);
+            var owner = _fixture.Owner;
+            await _fixture.WaitForTheAppWindowToJoin();
+            await SharedControlFixture.OpenCounter(owner);
+
+            // The app's own markup: each browser gets a copy with only the parts that apply to it, the status filled in and
+            // the buttons wired. Wording, classes and the elements that are not parts stay the app's.
+            await owner.EvaluateAsync(@"() => document.getElementById('rbwv-session-controls').innerHTML =
+                '<template><em class=""mine"">Session</em> <b data-rbwv=""status"" data-text-you=""You are driving""></b> ' +
+                '<button class=""mine-btn"" data-rbwv=""give"">Hand over</button> <button class=""mine-btn"" data-rbwv=""take"">Take back</button></template>'");
+
+            var bar = owner.Locator(".rbwv-control-bar");
+            await Expect(bar).ToContainClassAsync("rbwv-control-custom", new() { Timeout = 20000 });
+            await Expect(bar.Locator("em.mine")).ToHaveTextAsync("Session");
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You are driving", Soon);
+            await Expect(SharedControlFixture.Give(owner)).ToHaveTextAsync("Hand over", Soon);
+            await Expect(SharedControlFixture.Take(owner)).ToHaveCountAsync(0);
+            await Expect(owner.Locator(".rbwv-control-copy")).ToHaveCountAsync(0); // not in this template
+
+            await SharedControlFixture.Give(owner).ClickAsync();
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("Remote user has control", Soon);
+            await Expect(SharedControlFixture.Take(owner)).ToHaveTextAsync("Take back", Soon);
+            await Expect(SharedControlFixture.Give(owner)).ToHaveCountAsync(0);
+
+            await SharedControlFixture.Take(owner).ClickAsync();
+            await Expect(SharedControlFixture.Status(owner)).ToHaveTextAsync("You are driving", Soon);
+            await owner.Locator(".btn").ClickAsync(); // the owner is in control of the app again
+            await Expect(SharedControlFixture.Count(owner)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
         }
 
         [Fact]

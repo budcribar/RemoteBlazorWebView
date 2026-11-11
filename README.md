@@ -46,7 +46,27 @@ Only one connection controls the app at a time; the relay ignores input from eve
 
 **Supervised or unattended.** By default a session is supervised: the owner starts in control and decides when to give it. Add `&control=remote` to the owner's page address (`/app/<id>?role=owner&control=remote`) for an unattended session: the remote user is given control as soon as they join, and the owner can still take it back. The app chooses, so its users can pick the policy that suits them.
 
-**Session controls bar.** Each browser draws its own bar (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` where the bar should sit in your layout; without it the bar floats bottom-right. If your layout has the placeholder, also put `<meta name="rbwv-session-controls" content="slot">` in the host page's `<head>`: the bar then waits for the placeholder instead of floating for a moment while the app starts. A floating bar only appears when the session has an owner or a voice call, so an app that uses neither looks as it did before. A dot at the start of the bar is lit while anyone is connected remotely; hovering over it says how many. The bar calls the two parties "The host" and "Remote user"; name them for your app with `data-host-name` and `data-remote-name` on the placeholder (for example `data-remote-name="The technician"`). Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes. `window.RemoteControl` exposes the same state for a custom UI.
+**Session controls bar (opt-in).** Nothing is drawn on your pages unless you ask. There are three ways to go:
+
+- **No bar.** Leave the placeholder out. The session still works; with `ShareControl` there are then no buttons to hand control over (use an unattended session, or draw your own).
+- **The built-in bar.** Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where the bar should sit. Each browser draws its own bar over it (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). `data-restart="true"` adds *Restart app*; `data-host-name` / `data-remote-name` rename the two parties ("The host", "Remote user"), for example `data-remote-name="The technician"`. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes.
+- **Your own bar.** Put a `<template>` inside the placeholder and mark its elements with `data-rbwv`. Each browser gets a copy with only the parts that apply to it; the status is filled in and the buttons are wired. Layout, wording, classes and icons are yours:
+
+  ```html
+  <div id="rbwv-session-controls">
+      <template>
+          <span data-rbwv="dot"></span>
+          <strong data-rbwv="status" data-text-you="You are driving"></strong>
+          <button class="my-btn" data-rbwv="give">Hand over</button>
+          <button class="my-btn" data-rbwv="take">Take back</button>
+          <button class="my-btn" data-rbwv="copy-link" data-copied-text="Copied!">Invite</button>
+      </template>
+  </div>
+  ```
+
+  Parts: `dot`, `status`, `give`, `take`, `copy-link`, `restart` (with optional `restart-question`, `restart-confirm`, `restart-cancel` for a confirmation step), `voice-status`, `voice-act`, `voice-mute`, `voice-end`. On the status element `data-text-you`, `data-text-view-only`, `data-text-none`, `data-text-switching` and `data-text-restarting` replace the wording. A part left empty gets the built-in wording.
+
+Put the placeholder in your layout, not on one page, or the bar goes away when the user navigates. It only shows when there is something to control: a session with an owner, or a voice call. A dot is lit while anyone is connected remotely; hovering over it says how many. For anything the template cannot do, `window.RemoteControl` (and `window.RemoteVoice`) expose the same state and actions to your own script; draw that in JavaScript above the page (not as a Blazor component: the app renders once for every browser, and clicks from whoever does not have control are dropped).
 
 **Restart button.** Add `data-restart="true"` to the placeholder to give whoever has control (and the owner, always) a *Restart app* button, with a confirm step. The relay sends the app the same `Refreshed` event a browser refresh raises, so an app that restarts itself there needs nothing else; every browser page then waits for the new copy and loads again by itself. The button never appears without the placeholder.
 
