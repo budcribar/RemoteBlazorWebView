@@ -361,7 +361,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
 
         var id = Guid.NewGuid();
         view.FireReady(new Uri("https://localhost:5001/"), id);
-        Assert.Equal(new Uri($"https://localhost:5001/app/{id}{query}"), (Uri)view.NavigatedUrl);
+        Assert.Equal(new Uri($"https://localhost:5001/app/{id}{query}&key={(string)view.OwnerKey}"), (Uri)view.NavigatedUrl);
         Assert.Equal(voice, (bool)view.EnableVoice);
     }
 
@@ -391,7 +391,7 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
         Assert.Equal(id, (Guid)view.Id);
         Assert.False((bool)view.EnableVoice);
         view.FireReady(new Uri("https://relay.example/"), id);
-        Assert.Equal(new Uri($"https://relay.example/app/{id}?role=owner"), (Uri)view.NavigatedUrl);
+        Assert.Equal(new Uri($"https://relay.example/app/{id}?role=owner&key={(string)view.OwnerKey}"), (Uri)view.NavigatedUrl);
     }
 
     [Fact]

@@ -24,12 +24,12 @@ public class ControlTransferTests
 
         // A remote user who adds ?role=owner to the mirror link: the page claims to be the owner, but has no token.
         s.Join("spoof", owner: true);
-        await WaitFor(() => s.State.IPC.HasConnection("spoof"));
+        await WaitFor(() => remote.LastRoster()?.Any(p => p.Id == "spoof") == true); // joined and announced
         await s.SetPrimary("spoof", "spoof"); // "Take control"
 
         Assert.Equal("", s.State.OwnerClientId);
         Assert.Equal("remote", s.State.PrimaryClientId);
-        Assert.False(remote.LastRoster()!.Any(p => p.Owner));
+        Assert.DoesNotContain(remote.LastRoster()!, p => p.Owner);
     }
 
     [Fact]
