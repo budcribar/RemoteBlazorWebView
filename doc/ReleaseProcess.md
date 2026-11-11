@@ -2,7 +2,7 @@
 
 This describes how a maintainer publishes the seven PeakSWC packages. The tutorial repository is not a NuGet package. It is updated on GitHub after the packages exist.
 
-The workflow that packs the packages is [release-packages.yml](../.github/workflows/release-packages.yml). Its NuGet push job does not run.
+The workflow that packs the packages is [release-packages.yml](../.github/workflows/release-packages.yml). With `dry_run` off, its NuGet push job runs after the Windows tests and the pack job succeed, and then waits for approval in the `nuget-org` environment.
 
 ## The seven packages
 
@@ -89,7 +89,7 @@ The nuget.org profile name is `budcribar`. The workflow reads it from the reposi
 
 Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. Once the push job is allowed to run, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
 
-Create these by hand. This repository's workflow does not create them, and the push job stays unreachable until someone later changes its condition on purpose.
+These were created by hand on 2026-11-10; the workflow does not create them. Recreate them the same way if they are ever removed.
 
 1. In GitHub, create the `nuget-org` environment and set **budcribar** as a required reviewer.
 2. Add the repository variable `NUGET_USER` with the value `budcribar`.
@@ -99,6 +99,6 @@ Create these by hand. This repository's workflow does not create them, and the p
    - Workflow file: `release-packages.yml` (the file name only, not `.github/workflows/release-packages.yml`)
    - Environment: `nuget-org`
 
-Only after those exist, replace the `nuget-push` job condition and review the workflow again. Until that edit, the job cannot run. Setting `dry_run` to false does not enable it either.
+The nuget.org policy is scoped to `PeakSWC.*`. The `nuget-push` job runs only when `dry_run` is off, after `pack` succeeds, and is then held until the required reviewer approves it.
 
 The push source, once the job is allowed to run, is `https://api.nuget.org/v3/index.json`. The key used there is `steps.login.outputs.NUGET_API_KEY`, the temporary key from the login action, not a repository secret.

@@ -1,13 +1,14 @@
 # Manually dispatched package release. Packs the seven PeakSWC packages and
 # uploads them. The tutorial repository is not checked out and is not packed.
 #
-# The NuGet push job is unreachable. Its condition never matches, including
-# when dry_run is false. This file does not read a repository secret and does
-# not push to NuGet.org. When the job is later allowed to run, NuGet/login
-# uses the repository variable NUGET_USER (value budcribar, the nuget.org
-# profile name, not a secret). The nuget-org environment's required reviewer
-# is budcribar. Do not create that environment, variable, or nuget.org policy
-# from this workflow, and do not change the job condition here.
+# With dry_run off, the NuGet push job runs after the Windows tests and the pack
+# job succeed, and then waits for the nuget-org environment's required reviewer
+# (budcribar) to approve it. With dry_run on (the default) it is skipped.
+# This file does not read a repository secret. NuGet/login exchanges a GitHub
+# OIDC token for a one-hour key through the nuget.org Trusted Publishing policy,
+# using the repository variable NUGET_USER (value budcribar, the nuget.org
+# profile name, not a secret). The environment, the variable and the policy were
+# created by hand (doc/ReleaseProcess.md); this workflow does not create them.
 
 name: Release packages
 
@@ -33,7 +34,7 @@ on:
         type: string
         default: ""
       dry_run:
-        description: Pack artifacts only. net10 still runs Windows tests when line is net10. Never pushes to NuGet.
+        description: Pack artifacts only, no push to NuGet. Untick to publish (after the tests pass and the nuget-org approval).
         required: true
         type: boolean
         default: true
@@ -267,16 +268,12 @@ jobs:
           if-no-files-found: error
 
   nuget-push:
-    name: Push to NuGet.org (unreachable)
+    name: Push to NuGet.org
     needs: pack
-    # Unreachable. actionlint rejects a literal `if: false`. dry_run is a
-    # boolean, so it never equals this sentinel. The job stays skipped,
-    # including when dry_run is false. Do not change this condition until the
-    # setup in doc/ReleaseProcess.md is done by hand: nuget-org environment
-    # with required reviewer budcribar, repository variable NUGET_USER=budcribar,
-    # and the nuget.org trusted publishing policy. This workflow does not
-    # create those.
-    if: ${{ inputs.dry_run == '__nuget_push_disabled__' }}
+    # Only with dry_run off, and only after pack (which needs the Windows tests on
+    # net10) succeeded. The nuget-org environment then holds the job until its
+    # required reviewer, budcribar, approves. Setup: doc/ReleaseProcess.md.
+    if: ${{ inputs.dry_run == false }}
     runs-on: windows-latest
     environment: nuget-org
     permissions:
