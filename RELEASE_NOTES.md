@@ -14,6 +14,8 @@ Packages only; the relay does not change.
   (`status`, `give`, `take`, `copy-link`, `restart`, the voice parts, ...). Each browser gets a copy with only the parts that
   apply to it, the status filled in and the buttons wired; layout, wording and styling are the app's. See "Session controls
   bar" in the README. `window.RemoteControl` remains for a bar drawn entirely by the app.
+- Fixed: after *Restart app*, a browser page that had been opened as the owner (`?role=owner`) and had moved to another
+  page of the app came back as an ordinary page, no longer the owner. It now comes back with the query it was opened with.
 
 ## 10.0.15
 
