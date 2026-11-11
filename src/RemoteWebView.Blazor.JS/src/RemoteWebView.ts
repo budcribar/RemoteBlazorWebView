@@ -284,6 +284,15 @@ export function initializeRemoteWebView() {
         watchMirrorFrames();
     }
 
+    function readOwnerToken(sessionId: string): string {
+        const name = `rbwv-owner-${sessionId}=`;
+        for (const part of document.cookie.split(';')) {
+            const cookie = part.trim();
+            if (cookie.startsWith(name)) return decodeURIComponent(cookie.substring(name.length));
+        }
+        return '';
+    }
+
     // A remote component's frame takes the identity its parent page gave it, so control of the component can follow
     // control of the app (FrameControl.ts); any other page picks its own.
     const frameIdentity = readFrameIdentity();
@@ -334,6 +343,9 @@ export function initializeRemoteWebView() {
     message.setClientid(window.RemoteBlazor.clientId);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
     message.setIsowner(window.RemoteBlazor.isOwner);
+    // The relay set this cookie when the app's own window opened /app/<id>?role=owner with the app's owner key. When the
+    // app uses an owner key, ?role=owner alone does not make a connection the owner (OwnerAccess.cs).
+    if (window.RemoteBlazor.isOwner) message.setOwnertoken(readOwnerToken(id));
 
     if (window.RemoteBlazor.isPrimary) ensureScrollSync();
 

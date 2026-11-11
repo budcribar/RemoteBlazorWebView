@@ -67,6 +67,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="StaticContentCache.Tests" />
+    <InternalsVisibleTo Include="RemoteWebView.Lifecycle.Tests" />
   </ItemGroup>
 
   <!-- The [RemoteBlazor] source generator ships in this package (so the Wpf and WindowsForms packages get it transitively), with a

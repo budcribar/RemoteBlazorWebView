@@ -15,6 +15,57 @@ namespace StaticContentCache.Tests;
 public class ControlTransferTests
 {
     [Fact]
+    public async Task When_the_app_sent_an_owner_key_an_owner_claim_without_the_token_is_ignored()
+    {
+        await using var s = new Session(ownerKey: "app-secret");
+        var remote = s.Join("remote");
+        await s.Send("remote", 1);
+        await WaitFor(() => s.State.PrimaryClientId == "remote");
+
+        // A remote user who adds ?role=owner to the mirror link: the page claims to be the owner, but has no token.
+        s.Join("spoof", owner: true);
+        await WaitFor(() => s.State.IPC.HasConnection("spoof"));
+        await s.SetPrimary("spoof", "spoof"); // "Take control"
+
+        Assert.Equal("", s.State.OwnerClientId);
+        Assert.Equal("remote", s.State.PrimaryClientId);
+        Assert.False(remote.LastRoster()!.Any(p => p.Owner));
+    }
+
+    [Fact]
+    public async Task When_the_app_sent_an_owner_key_the_owner_page_with_the_token_is_the_owner()
+    {
+        await using var s = new Session(ownerKey: "app-secret");
+        s.Join("owner", owner: true, ownerToken: s.State.OwnerToken);
+
+        await WaitFor(() => s.State.OwnerClientId == "owner" && s.State.PrimaryClientId == "owner");
+    }
+
+    [Fact]
+    public async Task The_app_hears_the_roster_when_it_asked_for_it()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.State.IPC.ParticipantEvents = true;
+
+        s.Join("owner", owner: true);
+
+        await WaitFor(() => host.Messages.Any(m => m.StartsWith("participants:", StringComparison.Ordinal) && m.Contains("\"owner\"", StringComparison.Ordinal)));
+        Assert.Contains(host.Messages, m => m.Contains("\"name\":\"\"", StringComparison.Ordinal)); // no sign-in here: empty name
+    }
+
+    [Fact]
+    public async Task An_app_that_did_not_ask_never_gets_the_roster()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        var owner = s.Join("owner", owner: true);
+
+        await WaitFor(() => owner.LastRoster() is not null); // the browsers have had it
+        Assert.DoesNotContain(host.Messages, m => m.StartsWith("participants:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task The_first_connection_to_send_claims_control()
     {
         await using var s = new Session();
@@ -473,10 +524,10 @@ public class ControlTransferTests
         public ServiceState State { get; }
         public BrowserIPCService Ipc { get; }
 
-        public Session()
+        public Session(string ownerKey = "")
         {
             services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
-            State = new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Id = Id };
+            State = new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Id = Id, OwnerKey = ownerKey };
             var source = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
             source.SetResult(State);
             services[Id] = source;
@@ -494,11 +545,11 @@ public class ControlTransferTests
         }
 
         /// <summary>A browser opens its stream from the relay (what a page does once, when it starts).</summary>
-        public Connection Join(string clientId, bool owner = false)
+        public Connection Join(string clientId, bool owner = false, string ownerToken = "")
         {
             var cancel = new CancellationTokenSource();
             var writer = new Writer();
-            var stream = Ipc.ReceiveMessage(new ReceiveMessageRequest { Id = Id, ClientId = clientId, IsOwner = owner }, writer, new CallContext(cancel.Token));
+            var stream = Ipc.ReceiveMessage(new ReceiveMessageRequest { Id = Id, ClientId = clientId, IsOwner = owner, OwnerToken = ownerToken }, writer, new CallContext(cancel.Token));
             var connection = new Connection(stream, cancel, writer);
             connections.Add(connection);
             return connection;

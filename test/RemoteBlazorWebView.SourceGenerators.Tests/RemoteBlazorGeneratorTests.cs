@@ -243,7 +243,9 @@ public class MainWindow { internal PeakSWC.RemoteBlazorWebView.Wpf.BlazorWebView
 
         var id = Guid.NewGuid();
         view.FireReady(new Uri("https://localhost:5001/"), id);
-        Assert.Equal(new Uri($"https://localhost:5001/app/{id}{query}"), (Uri)view.NavigatedUrl);
+        string key = (string)view.OwnerKey;
+        Assert.Equal(64, key.Length); // a fresh 32-byte secret, so only this window's page is the owner
+        Assert.Equal(new Uri($"https://localhost:5001/app/{id}{query}&key={key}"), (Uri)view.NavigatedUrl);
         Assert.Null((string?)view.Html); // no link page: the session bar has Copy link
     }
 

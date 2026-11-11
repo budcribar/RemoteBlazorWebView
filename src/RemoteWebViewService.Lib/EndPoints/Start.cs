@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PeakSWC.RemoteWebView.Pages;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -26,6 +27,18 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 try
                 {
                     var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // The owner's page: when the app sent an owner key, only the page the app opened with that key is the owner.
+                    // A wrong or missing key is refused before it can take the /app page.
+                    bool ownerPage = context.Request.Query["role"] == "owner";
+                    if (ownerPage && OwnerAccess.IsKeyed(serviceState) && !OwnerAccess.KeyMatches(serviceState, context.Request.Query["key"]))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "text/plain";
+                        await context.Response.WriteAsync("This link cannot open the owner's page.").ConfigureAwait(false);
+                        return;
+                    }
+
                     // Check if the service is already in use
                     if (serviceState.InUse)
                     {
@@ -50,13 +63,21 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                     // The remote user's end of the voice call goes to the remote user's page. When the owner's own surface takes
                     // /app (it already has the host end), the remote user joins at /mirror and gets it there instead.
-                    if (context.Request.Query["role"] == "owner")
+                    if (ownerPage)
+                    {
                         serviceState.OwnerHoldsApp = true;
+                        if (OwnerAccess.IsKeyed(serviceState))
+                            OwnerAccess.SetOwnerCookie(context, serviceState);
+                    }
                     else
                         serviceState.Voice?.GrantController(context, guid);
 
-                    // Redirect to the specific GUID page, keeping the query (e.g. ?role=owner, read by the page's script).
-                    context.Response.Redirect($"/{guid}{context.Request.QueryString}", permanent: false);
+                    // Redirect to the specific GUID page, keeping the query (e.g. ?role=owner, read by the page's script)
+                    // but not the owner key: from here on the owner cookie stands for it.
+                    var query = context.Request.Query.ContainsKey("key")
+                        ? QueryString.Create(context.Request.Query.Where(q => q.Key != "key")).ToString()
+                        : context.Request.QueryString.ToString();
+                    context.Response.Redirect($"/{guid}{query}", permanent: false);
                 }
                
                 catch(Exception)

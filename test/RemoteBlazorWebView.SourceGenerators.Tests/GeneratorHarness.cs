@@ -26,6 +26,7 @@ namespace PeakSWC.RemoteWebView
         public System.Uri? ServerUri { get; set; }
         public System.Guid Id { get; set; } = System.Guid.NewGuid();
         public bool EnableMirrors { get; set; }
+        public string OwnerKey { get; set; } = "";
         public WebView2 WebView { get; } = new();
         public string? Html;
         public int Restarts;

@@ -209,7 +209,10 @@ namespace PeakSWC.RemoteWebView
             //Configuring appsettings section AzureAdB2C, into IOptions
             services.AddOptions();
             services.Configure<OpenIdConnectOptions>(configuration.GetSection("AzureAdB2C"));
-            services.AddAuthorization();
+            // Session pages: the app's own owner page without sign-in, otherwise a signed-in member of the session's group.
+            services.AddAuthorization(options =>
+                options.AddPolicy(SessionAccessRequirement.PolicyName, policy => policy.AddRequirements(new SessionAccessRequirement())));
+            services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SessionAccessHandler>();
 #else
             services.AddTransient<IUserService, MockUserService>();
 #endif

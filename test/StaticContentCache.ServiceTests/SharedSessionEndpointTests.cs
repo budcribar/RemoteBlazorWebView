@@ -31,6 +31,36 @@ public class SharedSessionEndpointTests
         Assert.True(state.InUse);
     }
 
+    [Theory]
+    [InlineData("?role=owner&key=wrong")]
+    [InlineData("?role=owner")]
+    public async Task When_the_app_sent_an_owner_key_the_owner_page_needs_it(string query)
+    {
+        var (context, state, _) = NewRequest(query, ownerKey: "app-secret");
+
+        await Endpoints.Start()(context);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+        Assert.False(state.OwnerHoldsApp);
+        Assert.False(state.InUse); // the app's own window can still open it
+        Assert.Empty(context.Response.Headers.SetCookie.ToString());
+    }
+
+    [Theory]
+    [InlineData("?role=owner&key=app-secret", "?role=owner")]
+    [InlineData("?role=owner&control=remote&key=app-secret", "?role=owner&control=remote")]
+    public async Task The_owner_page_with_the_key_gets_the_owner_cookie_and_the_key_leaves_the_address(string query, string kept)
+    {
+        var (context, state, id) = NewRequest(query, ownerKey: "app-secret");
+
+        await Endpoints.Start()(context);
+
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal($"/{id}{kept}", context.Response.Headers.Location.ToString());
+        Assert.True(state.OwnerHoldsApp);
+        Assert.Contains($"{OwnerAccess.CookieName(id.ToString())}={state.OwnerToken}", context.Response.Headers.SetCookie.ToString());
+    }
+
     [Fact]
     public async Task A_plain_app_page_redirects_without_a_query_and_is_not_the_owner()
     {
@@ -123,10 +153,10 @@ public class SharedSessionEndpointTests
         Assert.NotNull(room.Join(key!));
     }
 
-    private static (DefaultHttpContext Context, ServiceState State, Guid Id) NewRequest(string query, ServiceState? existing = null, Guid? existingId = null, VoiceRoom? voice = null)
+    private static (DefaultHttpContext Context, ServiceState State, Guid Id) NewRequest(string query, ServiceState? existing = null, Guid? existingId = null, VoiceRoom? voice = null, string ownerKey = "")
     {
         var id = existingId ?? Guid.NewGuid();
-        var state = existing ?? new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Id = id.ToString(), Voice = voice };
+        var state = existing ?? new ServiceState(NullLogger<RemoteWebViewService>.Instance, true) { Id = id.ToString(), Voice = voice, OwnerKey = ownerKey };
         var clients = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
         var source = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
         source.SetResult(state);

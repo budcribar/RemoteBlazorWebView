@@ -288,7 +288,9 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 yield return "    // Shared control: the app shows in this window with the owner in control; the browser joins at the mirror link and is";
                 yield return "    // handed control. Unattended: the remote user is given control as soon as they join.";
                 yield return $"    var unattended = startup?.Unattended ?? ({(t.Unattended ? "true" : "false")} || {commandLine}.Has(\"unattended\"));";
-                yield return "    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{e.Url}app/{e.Id}?role=owner{(unattended ? \"&control=remote\" : \"\")}\"));";
+                yield return "    // The owner key: only this window's page is the owner (a remote user adding ?role=owner to the mirror link is not).";
+                yield return "    webView.OwnerKey = global::System.Convert.ToHexString(global::System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));";
+                yield return "    webView.ReadyToConnect += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{e.Url}app/{e.Id}?role=owner{(unattended ? \"&control=remote\" : \"\")}&key={webView.OwnerKey}\"));";
             }
             else if (t.ReverseMirror is not null)
             {

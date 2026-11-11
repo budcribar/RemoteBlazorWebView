@@ -54,7 +54,9 @@ namespace PeakSWC.RemoteWebView
                 Pid = request.Pid,
                 HostName = request.HostName,
                 ProcessName = request.ProcessName,
+                OwnerKey = request.OwnerKey,
             };
+            state.IPC.ParticipantEvents = request.ParticipantEvents;
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try

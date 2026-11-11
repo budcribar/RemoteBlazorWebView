@@ -118,6 +118,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
+        /// <summary>
+        /// Secret the relay uses to recognise this app's own owner page (/app/{id}?role=owner&amp;key=...). Set it, and open that
+        /// page with it, for a shared session; the source generator does both for ShareControl. Empty: ?role=owner is trusted.
+        /// </summary>
+        public string OwnerKey { get; set; } = string.Empty;
+
         public bool EnableMirrors
         {
             get => (bool)GetValue(EnableMirrorsProperty);
@@ -297,6 +303,14 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         {
             Dispatcher.Invoke(() => ReadyToConnect?.Invoke(this, args));
         }
+
+        public void FireParticipantsChanged(ParticipantsChangedEventArgs args)
+        {
+            Dispatcher.Invoke(() => ParticipantsChanged?.Invoke(this, args));
+        }
+
+        /// <summary>Someone joined or left the shared session, or control moved. Needs relay 10.0.16 or later.</summary>
+        public event EventHandler<ParticipantsChangedEventArgs>? ParticipantsChanged;
 
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;

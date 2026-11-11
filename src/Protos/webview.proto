@@ -33,6 +33,11 @@ message CreateWebViewRequest {
   string hostName = 7;
   bool enableMirrors = 8;
   string voiceHostKey = 9;
+  // A secret only the app knows. When set, the relay accepts the owner role only from the page the app opened with
+  // this key (?key=), not from any page that adds ?role=owner. Empty: older apps; ?role=owner is trusted as before.
+  string ownerKey = 10;
+  // The app understands "participants:" messages (ParticipantsChanged). Older apps throw on unknown commands.
+  bool participantEvents = 11;
 }
 
 message WebMessageResponse {
@@ -65,8 +70,11 @@ message ReceiveMessageRequest {
     string clientId = 2;
     bool isPrimary = 3;
     // Control transfer: a connection launched by the machine owner (the local control surface) sets this.
-    // Only the owner connection may unilaterally reclaim control; the tech never can. See SetPrimary.
+    // Only the owner connection may unilaterally reclaim control; the remote user never can. See SetPrimary.
     bool isOwner = 4;
+    // The owner token the relay gave the owner's page (cookie rbwv-owner-<id>). Required with isOwner when the app
+    // set an owner key.
+    string ownerToken = 5;
 }
 
 // Control transfer (hand-off): requester asks the relay to make 'target' the primary (controlling) connection.

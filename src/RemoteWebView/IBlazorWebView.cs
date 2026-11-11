@@ -15,6 +15,8 @@ namespace PeakSWC.RemoteWebView
         public void FireDisconnected(DisconnectedEventArgs args);
         public void FireRefreshed(RefreshedEventArgs args);
         public void FireReadyToConnect(ReadyToConnectEventArgs args);
+        /// <summary>Raises ParticipantsChanged on the control. The default does nothing (controls without the event).</summary>
+        public void FireParticipantsChanged(ParticipantsChangedEventArgs args) { }
         public Uri? ServerUri { get; set; }
 
         public Uri? GrpcBaseUri { get; set; }
@@ -23,6 +25,9 @@ namespace PeakSWC.RemoteWebView
         public string Group { get; set; }
         public Guid Id { get; set; }
         public bool EnableMirrors { get; set; }
+
+        /// <summary>Secret for this app's own owner page; sent to the relay with CreateWebView. Empty: none (see OwnerAccess on the relay).</summary>
+        public string OwnerKey { get => string.Empty; set { } }
 
         public uint PingIntervalSeconds { get; set; }
 

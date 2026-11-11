@@ -25,8 +25,12 @@ namespace PeakSWC.RemoteWebView
         // Control transfer: the connection (browser clientId) that currently controls the session (its input reaches the WebView).
         // Empty until the first primary connection claims it. Reassigned by BrowserIPC.SetPrimary.
         public string PrimaryClientId { get; set; } = string.Empty;
-        // The connection launched by the machine owner (the local control surface). It may always reclaim control; the tech never may.
+        // The connection launched by the machine owner (the local control surface). It may always reclaim control; the remote user never may.
         public string OwnerClientId { get; set; } = string.Empty;
+        /// <summary>The app's secret for its own owner page (CreateWebView ownerKey). Empty for older apps. See OwnerAccess.</summary>
+        public string OwnerKey { get; init; } = string.Empty;
+        /// <summary>Given to the owner's page (as a cookie) once it presents the owner key; its connection sends it back.</summary>
+        public string OwnerToken { get; } = OwnerAccess.NewToken();
         // Set once the owner has been given control at the start of the session. In mirror mode the owner's surface
         // connects only after the remote user (so the remote user may have claimed first); the first owner connection is
         // still promoted so the user starts in control, but only once - later owner reconnects do not grab control back.

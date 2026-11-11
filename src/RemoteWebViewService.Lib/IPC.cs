@@ -27,6 +27,9 @@ namespace PeakSWC.RemoteWebView
         private readonly ILogger<RemoteWebViewService> logger;
 
         public IServerStreamWriter<WebMessageResponse>? ClientResponseStream { get; set; }
+
+        /// <summary>The app asked for "participants:" messages (CreateWebView participantEvents).</summary>
+        public bool ParticipantEvents { get; set; }
         public void BrowserResponseStream(BrowserResponseNode brn, CancellationTokenSource linkedToken)
         {
             var channel = Channel.CreateUnbounded<StringRequest>();
@@ -135,12 +138,17 @@ namespace PeakSWC.RemoteWebView
                     sb.Append("{\"id\":\"").Append(JsonEncodedText.Encode(brn.ClientId).ToString()).Append('"') // AOT-safe (no reflection serializer)
                       .Append(",\"owner\":").Append(brn.ClientId == ownerClientId ? "true" : "false")
                       .Append(",\"primary\":").Append(brn.ClientId == primaryClientId ? "true" : "false")
+                      .Append(",\"name\":\"").Append(JsonEncodedText.Encode(brn.UserName).ToString()).Append('"')
                       .Append('}');
                 }
                 sb.Append(']');
                 var notice = new StringRequest { Request = sb.ToString() };
                 foreach (var observer in observers.Values)
                     observer.Writer.TryWrite(notice);
+                // The app hears it too (ParticipantsChanged), in order with the input it is sent - but only an app that
+                // said it understands the message: older apps end the session on a command they do not know.
+                if (ParticipantEvents)
+                    responseChannel.Writer.TryWrite(new WebMessageResponse { Response = notice.Request });
             }
         }
 

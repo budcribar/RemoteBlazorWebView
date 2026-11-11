@@ -14,7 +14,7 @@ namespace PeakSWC.RemoteWebView
                 throw new ArgumentNullException(nameof(builder));
             }
 #if AUTHORIZATION
-            return builder.RequireAuthorization(new AuthorizeAttribute());
+            return builder.RequireAuthorization(SessionAccessRequirement.PolicyName);
 #else
             return builder;
 #endif

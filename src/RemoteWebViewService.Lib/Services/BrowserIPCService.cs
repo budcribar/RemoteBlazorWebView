@@ -27,12 +27,20 @@ namespace PeakSWC.RemoteWebView
                 serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
 
                 // The machine owner's local control surface identifies itself (?role=owner). Only the owner may reclaim control.
-                if (request.IsOwner)
+                // When the app sent an owner key, the claim needs the owner token too (OwnerAccess); without it the
+                // connection is an ordinary remote connection, whatever its page's address says.
+                bool isOwner = OwnerAccess.AcceptsOwner(serviceState, request.IsOwner, request.OwnerToken);
+                if (request.IsOwner && !isOwner)
+                    logger.LogWarning("Owner claim without the owner token ignored. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                if (isOwner)
                     serviceState.OwnerClientId = request.ClientId;
 
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
 
-                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
+                // The signed-in name, for the roster and the app's audit (ParticipantsChanged). The page's sign-in cookie comes
+                // with its gRPC-Web call when the relay serves both; otherwise (and without authorization) it is empty.
+                var userName = SignedInName(context);
+                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary) { UserName = userName }, linkedToken);
 
                 // The machine owner holds control from the start. The owner's surface may connect after the remote user
                 // (in mirror mode it connects only once the remote user is present), so promote it on its first
@@ -41,7 +49,7 @@ namespace PeakSWC.RemoteWebView
                 await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    if (request.IsOwner && !serviceState.OwnerControlInitialized)
+                    if (isOwner && !serviceState.OwnerControlInitialized)
                     {
                         serviceState.OwnerControlInitialized = true;
                         var holder = serviceState.PrimaryClientId;
@@ -90,6 +98,18 @@ namespace PeakSWC.RemoteWebView
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                 }
+            }
+        }
+
+        private static string SignedInName(ServerCallContext context)
+        {
+            try
+            {
+                return context.GetHttpContext().User?.GetUserDisplayName() ?? string.Empty;
+            }
+            catch (InvalidOperationException)
+            {
+                return string.Empty; // not an ASP.NET Core call (tests)
             }
         }
 
@@ -259,7 +279,7 @@ namespace PeakSWC.RemoteWebView
         }
         /// <summary>
         /// Control transfer (hand-off). The current controller may pass control to any attached connection; the owner
-        /// may always reclaim control to itself; nothing else is honored, so the tech can never seize control.
+        /// may always reclaim control to itself; nothing else is honored, so the remote user can never seize control.
         /// </summary>
         public override async Task<Empty> SetPrimary(SetPrimaryRequest request, ServerCallContext context)
         {
