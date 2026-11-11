@@ -4,11 +4,14 @@
 		<DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
 		<DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 		<TargetFramework>net11.0-windows</TargetFramework>
+		<!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+		<RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
 		<PackageId>PeakSWC.RemoteBlazorWebView</PackageId>
 		<Authors>Bud Cribar</Authors>
 		<Company>Peak Software Consulting, LLC</Company>
 		<Description>.NET 11 package that hosts a remote Blazor UI on Windows, Mac, and Linux</Description>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);SetPackageVersion</GenerateNuspecDependsOn>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<PackageDescription>.NET 11 package that hosts a remote Blazor UI on Windows, Mac, and Linux</PackageDescription>
 		<Copyright>Peak Software Consulting, LLC</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>

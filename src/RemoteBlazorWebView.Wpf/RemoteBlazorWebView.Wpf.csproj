@@ -16,7 +16,7 @@
 		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
 		<Nullable>annotations</Nullable>
 		<Configurations>Debug;Release;Embedded;Developer</Configurations>

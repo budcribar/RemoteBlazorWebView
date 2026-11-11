@@ -180,7 +180,7 @@ namespace PeakSWC.RemoteWebView
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
                 logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", blazorWebView.Id, blazorWebView.ServerUri, blazorWebView.GrpcBaseUri, blazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, blazorWebView.Group, blazorWebView.EnableMirrors);
-                var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors }, cancellationToken: cts.Token);
+                var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors, VoiceHostKey = (blazorWebView as IVoiceHost)?.VoiceHostKey ?? "", OwnerKey = blazorWebView.OwnerKey ?? "", ParticipantEvents = true }, cancellationToken: cts.Token);
 
                 Exception? exception = ProcessBrowserMessages(blazorWebView, events).Result;
 
@@ -297,6 +297,11 @@ namespace PeakSWC.RemoteWebView
                             logger.LogWarning(shutdownException, "Received 'shutdown' command from server.");
                             cts.Cancel();
                             break; // Exit processing on shutdown
+                        }
+                        else if (commandSpan.Equals("participants", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Who is in the shared session and who has control (sent because CreateWebView set participantEvents).
+                            FireParticipantsChanged(message.Response[(separatorIndex + 1)..]);
                         }
                         else if (commandSpan.Equals("location", StringComparison.OrdinalIgnoreCase) || commandSpan.Equals("size", StringComparison.OrdinalIgnoreCase))
                         {
@@ -446,6 +451,21 @@ namespace PeakSWC.RemoteWebView
             Dispatcher?.InvokeAsync(() => blazorWebView.FireReadyToConnect(new ReadyToConnectEventArgs(blazorWebView.Id, blazorWebView.ServerUri! )));
         }
 
+        void FireParticipantsChanged(string json)
+        {
+            IReadOnlyList<Participant> participants;
+            try
+            {
+                participants = ParticipantRoster.Parse(json);
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                logger.LogError(ex, "Ignored a participants message that is not valid JSON.");
+                return;
+            }
+            Dispatcher?.InvokeAsync(() => blazorWebView.FireParticipantsChanged(new ParticipantsChangedEventArgs(blazorWebView.Id, participants)));
+        }
+
         void FireConnected(string ip, string user)
         {
             Dispatcher?.InvokeAsync(() => blazorWebView.FireConnected(new ConnectedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!, ip, user)));
@@ -460,7 +480,15 @@ namespace PeakSWC.RemoteWebView
 
         void FireRefreshed()
         {
-            Dispatcher?.InvokeAsync(() => blazorWebView.FireRefreshed(new RefreshedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!)));
+            var dispatcher = Dispatcher;
+            if (dispatcher is null) return;
+            // Normally the app's Refreshed handler runs on the UI thread. If that thread is stuck, the app's
+            // RestartWhenUnresponsive (when set) runs here instead, so a restart request still restarts the app.
+            _ = UnresponsiveUiWatchdog.Run(
+                work => dispatcher.InvokeAsync(work),
+                () => blazorWebView.FireRefreshed(new RefreshedEventArgs(blazorWebView.Id, blazorWebView.ServerUri!)),
+                blazorWebView.RestartWhenUnresponsive,
+                onFallbackError: ex => logger.LogError(ex, "RestartWhenUnresponsive failed."));
         }
 
         public event EventHandler<string>? OnWebMessageReceived;

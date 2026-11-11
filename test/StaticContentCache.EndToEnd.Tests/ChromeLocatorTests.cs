@@ -143,10 +143,74 @@ public class ChromeLocatorTests
         Assert.Null(ChromeSession.FindPlaywrightChrome(Path.Combine(Path.GetTempPath(), "no-such-playwright-" + Guid.NewGuid().ToString("N"))));
     }
 
+    [Fact]
+    public void Chrome_output_reader_enters_blocking_read_and_drains_when_released()
+    {
+        using var reader = new BlockingTextReader("drained-output");
+        var sink = new StringBuilder();
+
+        var pool = ChromeSession.StartPipeReader(reader, sink);
+
+        Assert.False(pool);
+        Assert.True(reader.EnteredRead.Wait(TimeSpan.FromSeconds(2)));
+        reader.ReleaseRead.Set();
+        Assert.True(reader.Completed.Wait(TimeSpan.FromSeconds(2)));
+        lock (sink)
+            Assert.Equal("drained-output", sink.ToString());
+    }
+
+    [Fact]
+    public void Installed_candidates_include_microsoft_edge_paths()
+    {
+        var candidates = ChromeSession.InstalledCandidates().ToArray();
+
+        Assert.Contains(@"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", candidates);
+        Assert.Contains(@"C:\Program Files\Microsoft\Edge\Application\msedge.exe", candidates);
+        Assert.Contains("/usr/bin/microsoft-edge-stable", candidates);
+    }
+
     private static void WriteFake(DirectoryInfo root, string install, string relative, string contents)
     {
         var path = Path.Combine(root.FullName, install, relative);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, contents);
+    }
+
+    private sealed class BlockingTextReader(string payload) : TextReader
+    {
+        private bool _served;
+        public ManualResetEventSlim EnteredRead { get; } = new(false);
+        public ManualResetEventSlim ReleaseRead { get; } = new(false);
+        public ManualResetEventSlim Completed { get; } = new(false);
+
+        public override int Read(char[] buffer, int index, int count)
+        {
+            if (!_served)
+            {
+                EnteredRead.Set();
+                if (!ReleaseRead.Wait(TimeSpan.FromSeconds(5)))
+                    throw new IOException("Timed out waiting for release.");
+                _served = true;
+                var length = Math.Min(count, payload.Length);
+                payload.CopyTo(0, buffer, index, length);
+                return length;
+            }
+
+            Completed.Set();
+            return 0;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ReleaseRead.Set();
+                EnteredRead.Dispose();
+                ReleaseRead.Dispose();
+                Completed.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
     }
 }

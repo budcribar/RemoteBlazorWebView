@@ -30,9 +30,14 @@ public class SonarCancellationTests
         await host.Stream.ReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         requestAbort.Cancel();
-        var finished = await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(2)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending).WaitAsync(TimeSpan.FromSeconds(2));
 
-        Assert.Same(pending, finished);
+        var streamStopped = await Task.WhenAny(host.Stream.ReadCancelled.Task, Task.Delay(TimeSpan.FromSeconds(2)));
+        if (streamStopped != host.Stream.ReadCancelled.Task)
+            host.Cleanup.Cancel();
+        Assert.Same(host.Stream.ReadCancelled.Task, streamStopped);
+        await host.MiddlewareCompleted.WaitAsync(TimeSpan.FromSeconds(2));
+
         Assert.False(host.Stream.UnblockedByCleanup);
         Assert.Empty(host.Errors);
         host.Cleanup.Cancel();
@@ -52,7 +57,10 @@ public class SonarCancellationTests
             var streaming = (Task)method!.Invoke(service, new object[] { path, writer, cts.Token })!;
             await writer.WriteEntered.Task.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.True(writer.SawCancelableToken);
-            await streaming.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(cts.Token, writer.ObservedToken);
+
+            cts.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => streaming).WaitAsync(TimeSpan.FromSeconds(2));
         }
         finally
         {
@@ -65,13 +73,13 @@ public class SonarCancellationTests
     {
         var id = Guid.NewGuid().ToString();
         var states = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
-        var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = id };
         var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
         ready.SetResult(state);
         states[id] = ready;
         var channels = new ConcurrentDictionary<string, System.Threading.Channels.Channel<string>>();
         var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, states);
-        var files = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        using var files = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
         var service = new RemoteWebViewService(NullLogger<RemoteWebViewService>.Instance, states, channels, shutdown, files);
         var writer = new BlockingPingWriter();
         using var callCancelled = new CancellationTokenSource();
@@ -86,13 +94,13 @@ public class SonarCancellationTests
         Assert.False(state.PingTask.IsFaulted);
         reader.Release();
         await ping.WaitAsync(TimeSpan.FromSeconds(2));
-        files.Dispose();
+        Assert.False(states.ContainsKey(id));
     }
 
     [Fact]
     public async Task Disposing_the_file_sync_manager_cancels_an_open_write()
     {
-        var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
+        using var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
         var clientId = Guid.NewGuid().ToString();
         manager.RegisterClient(clientId, "index.html");
         var writer = new BlockingFileWriter();
@@ -110,7 +118,7 @@ public class SonarCancellationTests
         Assert.Same(writer.WriteStopped.Task, stopped);
     }
 
-    [WindowsOnlyFact]
+    [Fact]
     public async Task Wasm_and_octet_stream_responses_are_gzip_compressed()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
@@ -132,17 +140,24 @@ public class SonarCancellationTests
                 });
             })
             .StartAsync();
-        var client = host.GetTestClient();
-        foreach (var path in new[] { "/app.wasm", "/blob.bin" })
+        try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, path);
-            request.Headers.AcceptEncoding.ParseAdd("gzip");
-            var response = await client.SendAsync(request);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal("gzip", response.Content.Headers.ContentEncoding.Single());
-            await using var gzip = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
-            using var reader = new StreamReader(gzip);
-            Assert.Equal(payload.Length, (await reader.ReadToEndAsync()).Length);
+            var client = host.GetTestClient();
+            foreach (var path in new[] { "/app.wasm", "/blob.bin" })
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, path);
+                request.Headers.AcceptEncoding.ParseAdd("gzip");
+                var response = await client.SendAsync(request);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("gzip", response.Content.Headers.ContentEncoding.Single());
+                await using var gzip = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
+                using var reader = new StreamReader(gzip);
+                Assert.Equal(payload.Length, (await reader.ReadToEndAsync()).Length);
+            }
+        }
+        finally
+        {
+            await host.StopAsync();
         }
     }
 
@@ -152,17 +167,33 @@ public class SonarCancellationTests
         public Guid ClientId { get; }
         public GateStream Stream { get; }
         public CancellationTokenSource Cleanup { get; }
-        public List<string> Errors { get; }
+        public IReadOnlyCollection<string> Errors => _errors;
+        public Task MiddlewareCompleted { get; }
         private readonly IHost _host;
+        private readonly ServiceState _state;
+        private readonly ServerFileSyncManager _manager;
+        private readonly ConcurrentQueue<string> _errors;
 
-        private AbortHost(IHost host, HttpClient client, Guid clientId, GateStream stream, CancellationTokenSource cleanup, List<string> errors)
+        private AbortHost(
+            IHost host,
+            HttpClient client,
+            Guid clientId,
+            GateStream stream,
+            CancellationTokenSource cleanup,
+            ConcurrentQueue<string> errors,
+            Task middlewareCompleted,
+            ServiceState state,
+            ServerFileSyncManager manager)
         {
             _host = host;
             Client = client;
             ClientId = clientId;
             Stream = stream;
             Cleanup = cleanup;
-            Errors = errors;
+            _errors = errors;
+            MiddlewareCompleted = middlewareCompleted;
+            _state = state;
+            _manager = manager;
         }
 
         public static async Task<AbortHost> StartAsync()
@@ -170,7 +201,8 @@ public class SonarCancellationTests
             var clientId = Guid.NewGuid();
             var cleanup = new CancellationTokenSource();
             var stream = new GateStream(cleanup.Token);
-            var errors = new List<string>();
+            var errors = new ConcurrentQueue<string>();
+            var middlewareCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, false);
             state.FileManagerReady.SetResult(true);
             var ready = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -179,6 +211,7 @@ public class SonarCancellationTests
             {
                 [clientId.ToString()] = ready
             };
+            var manager = new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance);
             var host = await new HostBuilder()
                 .ConfigureWebHost(web =>
                 {
@@ -188,14 +221,28 @@ public class SonarCancellationTests
                         services.AddSingleton<ILoggerProvider>(new ListLoggerProvider(errors));
                         services.AddMemoryCache();
                         services.AddSingleton(new RemoteFilesOptions { UseClientCache = false, UseServerCache = false });
-                        services.AddSingleton(new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance));
-                        services.AddSingleton<RemoteFileResolver>(new GateResolver(stream));
+                        services.AddSingleton(manager);
+                        services.AddSingleton<RemoteFileResolver>(new GateResolver(stream, manager));
                         services.AddSingleton(states);
                     });
-                    web.Configure(app => app.UseMiddleware<RemoteFilesMiddleware>());
+                    web.Configure(app =>
+                    {
+                        app.Use(async (context, next) =>
+                        {
+                            try
+                            {
+                                await next(context);
+                            }
+                            finally
+                            {
+                                middlewareCompleted.TrySetResult();
+                            }
+                        });
+                        app.UseMiddleware<RemoteFilesMiddleware>();
+                    });
                 })
                 .StartAsync();
-            return new AbortHost(host, host.GetTestClient(), clientId, stream, cleanup, errors);
+            return new AbortHost(host, host.GetTestClient(), clientId, stream, cleanup, errors, middlewareCompleted.Task, state, manager);
         }
 
         public async ValueTask DisposeAsync()
@@ -204,6 +251,8 @@ public class SonarCancellationTests
             await _host.StopAsync();
             _host.Dispose();
             Client.Dispose();
+            _manager.Dispose();
+            await _state.DisposeAsync();
             Cleanup.Dispose();
         }
     }
@@ -211,8 +260,8 @@ public class SonarCancellationTests
     private sealed class GateResolver : RemoteFileResolver
     {
         private readonly GateStream _stream;
-        public GateResolver(GateStream stream)
-            : base(NullLogger<RemoteFileResolver>.Instance, new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance))
+        public GateResolver(GateStream stream, ServerFileSyncManager manager)
+            : base(NullLogger<RemoteFileResolver>.Instance, manager)
         {
             _stream = stream;
         }
@@ -228,6 +277,7 @@ public class SonarCancellationTests
     {
         private readonly CancellationToken _cleanup;
         public TaskCompletionSource ReadEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReadCancelled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool UnblockedByCleanup { get; private set; }
 
         public GateStream(CancellationToken cleanup) => _cleanup = cleanup;
@@ -253,8 +303,15 @@ public class SonarCancellationTests
             catch (OperationCanceledException) when (_cleanup.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 UnblockedByCleanup = true;
+                ReadCancelled.TrySetResult();
                 return 0;
             }
+            catch (OperationCanceledException)
+            {
+                ReadCancelled.TrySetResult();
+                throw;
+            }
+            ReadCancelled.TrySetResult();
             throw new OperationCanceledException(cancellationToken);
         }
     }
@@ -263,6 +320,7 @@ public class SonarCancellationTests
     {
         public TaskCompletionSource WriteEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool SawCancelableToken { get; private set; }
+        public CancellationToken ObservedToken { get; private set; }
         public WriteOptions? WriteOptions { get; set; }
 
         public Task WriteAsync(T message)
@@ -271,11 +329,12 @@ public class SonarCancellationTests
             return Task.CompletedTask;
         }
 
-        public Task WriteAsync(T message, CancellationToken cancellationToken)
+        public async Task WriteAsync(T message, CancellationToken cancellationToken)
         {
+            ObservedToken = cancellationToken;
             SawCancelableToken = cancellationToken.CanBeCanceled;
             WriteEntered.TrySetResult();
-            return Task.CompletedTask;
+            await Task.Delay(Timeout.Infinite, cancellationToken);
         }
     }
 
@@ -359,8 +418,7 @@ public class SonarCancellationTests
 
         private async Task<bool> WaitForEnd(CancellationToken cancellationToken)
         {
-            using var reg = cancellationToken.Register(() => _release.TrySetResult());
-            await _release.Task;
+            await _release.Task.WaitAsync(cancellationToken);
             return false;
         }
 
@@ -387,21 +445,21 @@ public class SonarCancellationTests
 
     private sealed class ListLoggerProvider : ILoggerProvider
     {
-        private readonly List<string> _errors;
-        public ListLoggerProvider(List<string> errors) => _errors = errors;
+        private readonly ConcurrentQueue<string> _errors;
+        public ListLoggerProvider(ConcurrentQueue<string> errors) => _errors = errors;
         public ILogger CreateLogger(string categoryName) => new ListLogger(_errors);
         public void Dispose() { }
 
         private sealed class ListLogger : ILogger
         {
-            private readonly List<string> _errors;
-            public ListLogger(List<string> errors) => _errors = errors;
+            private readonly ConcurrentQueue<string> _errors;
+            public ListLogger(ConcurrentQueue<string> errors) => _errors = errors;
             public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
             public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
             {
                 if (logLevel >= LogLevel.Error)
-                    _errors.Add(formatter(state, exception));
+                    _errors.Enqueue(formatter(state, exception));
             }
         }
     }

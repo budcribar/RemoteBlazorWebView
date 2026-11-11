@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                 // Set content type to JSON and return the response
                 context.Response.ContentType = "application/json";
-                await JsonSerializer.SerializeAsync(context.Response.Body, response).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(context.Response.Body, response, JsonContext.Default.StatusResponse).ConfigureAwait(false);
             };
         }
     }

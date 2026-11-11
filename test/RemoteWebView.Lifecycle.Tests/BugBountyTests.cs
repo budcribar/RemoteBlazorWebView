@@ -24,6 +24,7 @@ using ClientRemote = client::PeakSWC.RemoteWebView;
 
 namespace RemoteWebView.Lifecycle.Tests;
 
+[Collection("EmbeddedServerEnv")]
 public class BugBountyTests
 {
     private static readonly string[] MajorArgumentsWithInvalidValues = ["--major", "0", "--major", "-5", "--major", "11"];
@@ -33,7 +34,9 @@ public class BugBountyTests
     public async Task Mirror_scroll_is_ordered_relayed_and_never_forwarded_to_desktop()
     {
         const string id = "scroll-test";
-        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true);
+        // Browsers are also sent who is in the session and who has control; this test is about scroll messages only.
+        static bool IsControlNotice(string m) => m.StartsWith("participants:", StringComparison.Ordinal) || m.StartsWith("primaryChanged:", StringComparison.Ordinal);
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: true);
         var ready = new TaskCompletionSource<ServiceState>();
         ready.SetResult(state);
         var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id] = ready };
@@ -45,7 +48,7 @@ public class BugBountyTests
         state.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(m => desktop.Writer.TryWrite(m.Response));
         using var observer = new CancellationTokenSource();
         state.IPC.BrowserResponseStream(new BrowserResponseNode(
-            new CallbackStreamWriter<StringRequest>(m => relayed.Writer.TryWrite(m.Request)), "mirror", false), observer);
+            new CallbackStreamWriter<StringRequest>(m => { if (!IsControlNotice(m.Request)) relayed.Writer.TryWrite(m.Request); }), "mirror", false), observer);
 
         SendSequenceMessageRequest Scroll(uint sequence, bool primary = true) => new()
         {
@@ -67,7 +70,7 @@ public class BugBountyTests
         var late = Channel.CreateUnbounded<string>();
         using var lateObserver = new CancellationTokenSource();
         state.IPC.BrowserResponseStream(new BrowserResponseNode(
-            new CallbackStreamWriter<StringRequest>(m => late.Writer.TryWrite(m.Request)), "late", false), lateObserver);
+            new CallbackStreamWriter<StringRequest>(m => { if (!IsControlNotice(m.Request)) late.Writer.TryWrite(m.Request); }), "late", false), lateObserver);
         Assert.Equal(IPC.ScrollMessagePrefix + "2", await late.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2)));
         Assert.False(late.Reader.TryRead(out _));
     }
@@ -188,10 +191,14 @@ public class BugBountyTests
         var observers = (System.Collections.IDictionary)observersField.GetValue(ipc)!;
 
         using var mirrorCts = new CancellationTokenSource();
-        var node = new BrowserResponseNode(new CallbackStreamWriter<StringRequest>(_ => { }), "mirror-1", isPrimary: false);
+        var enteredLoop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var node = new BrowserResponseNode(new CallbackStreamWriter<StringRequest>(_ => enteredLoop.TrySetResult()), "mirror-1", isPrimary: false);
         ipc.BrowserResponseStream(node, mirrorCts);
 
         Assert.Single(observers);
+
+        ipc.BroadcastRestarting();
+        await enteredLoop.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         mirrorCts.Cancel();
         await ipc.ProcessMessagesTask!.WaitAsync(TimeSpan.FromSeconds(2));
@@ -844,6 +851,7 @@ public class BugBountyTests
                 }));
 
         var snapshot = stats.GetStats();
+        Assert.True((long)snapshot["TotalBytesReceived"] > 0);
         Assert.True((long)snapshot["TotalBytesSent"] > 0);
     }
 
@@ -952,12 +960,17 @@ public class BugBountyTests
             new NullFileProvider(),
             NullLogger.Instance);
 
+        var probeReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        remote.OnWebMessageReceived += (_, message) => probeReceived.TrySetResult(message);
+
+        var streamCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var reader = new SequenceStreamReader<ClientRemote.WebMessageResponse>(
         [
             new ClientRemote.WebMessageResponse { Response = "created:" },
             new ClientRemote.WebMessageResponse { Response = "location:{\"X\":10,\"Y\":20}" },
-            new ClientRemote.WebMessageResponse { Response = "size:{\"Width\":800,\"Height\":600}" }
-        ]);
+            new ClientRemote.WebMessageResponse { Response = "size:{\"Width\":800,\"Height\":600}" },
+            new ClientRemote.WebMessageResponse { Response = "__bwv:after-location-and-size" }
+        ], onCompleted: () => streamCompleted.TrySetResult());
         var call = new AsyncServerStreamingCall<ClientRemote.WebMessageResponse>(
             reader,
             Task.FromResult(new Metadata()),
@@ -967,8 +980,9 @@ public class BugBountyTests
 
         var method = typeof(ClientRemote.RemoteWebView).GetMethod("ProcessBrowserMessages", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var task = (Task<Exception?>)method.Invoke(remote, [fakeView, call])!;
-        var ex = await task.WaitAsync(TimeSpan.FromSeconds(1));
-        await Task.Delay(50);
+        var ex = await task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal("__bwv:after-location-and-size", await probeReceived.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+        await streamCompleted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Null(ex);
         Assert.Null(disconnected);
@@ -1329,13 +1343,13 @@ public class BugBountyTests
     [Fact]
     public async Task Bug58_ClientFileSyncManager_CloseAsync_disposes_duplex_call_and_tolerates_null_request_stream()
     {
-        var writer = new RecordingClientStreamWriter<ClientRemote.ClientFileReadResponse>();
-        var manager = (ClientRemote.ClientFileSyncManager)Activator.CreateInstance(
-            typeof(ClientRemote.ClientFileSyncManager),
+        var ctor = typeof(ClientRemote.ClientFileSyncManager).GetConstructor(
             BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: [Guid.NewGuid().ToString(), new NullFileProvider(), writer, NullLogger.Instance],
-            culture: null)!;
+            [typeof(string), typeof(Microsoft.Extensions.FileProviders.IFileProvider), typeof(IClientStreamWriter<ClientRemote.ClientFileReadResponse>), typeof(Microsoft.Extensions.Logging.ILogger)])!;
+        var callField = typeof(ClientRemote.ClientFileSyncManager).GetField("_call", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        var writer = new RecordingClientStreamWriter<ClientRemote.ClientFileReadResponse>();
+        var manager = (ClientRemote.ClientFileSyncManager)ctor.Invoke([Guid.NewGuid().ToString(), new NullFileProvider(), writer, NullLogger.Instance]);
 
         var disposed = false;
         var dummyCall = new AsyncDuplexStreamingCall<ClientRemote.ClientFileReadResponse, ClientRemote.ServerFileReadRequest>(
@@ -1346,14 +1360,29 @@ public class BugBountyTests
             () => new Metadata(),
             () => disposed = true);
 
-        typeof(ClientRemote.ClientFileSyncManager)
-            .GetField("_call", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .SetValue(manager, dummyCall);
+        callField.SetValue(manager, dummyCall);
 
         await manager.CloseAsync();
 
         Assert.True(writer.Completed);
         Assert.True(disposed);
+
+        // Also verify CloseAsync tolerates a null _requestStream while still disposing _call.
+        var nullStreamManager = (ClientRemote.ClientFileSyncManager)ctor.Invoke([Guid.NewGuid().ToString(), new NullFileProvider(), null, NullLogger.Instance]);
+        var disposedWithNullStream = false;
+        var dummyCallWithNullStream = new AsyncDuplexStreamingCall<ClientRemote.ClientFileReadResponse, ClientRemote.ServerFileReadRequest>(
+            null!,
+            new SequenceStreamReader<ClientRemote.ServerFileReadRequest>([]),
+            Task.FromResult(new Metadata()),
+            () => Status.DefaultSuccess,
+            () => new Metadata(),
+            () => disposedWithNullStream = true);
+
+        callField.SetValue(nullStreamManager, dummyCallWithNullStream);
+
+        await nullStreamManager.CloseAsync();
+
+        Assert.True(disposedWithNullStream);
     }
 
     [Fact]
@@ -1439,7 +1468,7 @@ public class BugBountyTests
     public async Task Bug63_Start_endpoint_tolerates_closed_channels_and_rolls_back_InUse_if_notification_fails()
     {
         var id = Guid.NewGuid().ToString();
-        using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
+        await using var state = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
         {
             Id = id,
             InUse = false
@@ -1469,6 +1498,42 @@ public class BugBountyTests
 
         Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
         Assert.True(state.InUse);
+
+        // If channel notification throws after InUse was set, Start must roll back InUse and session fields.
+        var id2 = Guid.NewGuid().ToString();
+        await using var state2 = new ServiceState(NullLogger<RemoteWebViewService>.Instance, enableMirrors: false)
+        {
+            Id = id2,
+            InUse = false
+        };
+        state2.IPC.ClientResponseStream = new CallbackStreamWriter<WebMessageResponse>(_ => { });
+
+        var tcs2 = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs2.SetResult(state2);
+        var dict2 = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> { [id2] = tcs2 };
+
+        var channels2 = new ConcurrentDictionary<string, Channel<string>>
+        {
+            ["broken"] = new ThrowingChannel(new InvalidOperationException("channel notification failed"))
+        };
+
+        using var services2 = new ServiceCollection()
+            .AddSingleton(dict2)
+            .AddSingleton(channels2)
+            .BuildServiceProvider();
+
+        var context2 = new DefaultHttpContext { RequestServices = services2 };
+        context2.Request.RouteValues["id"] = id2;
+        context2.Request.QueryString = new QueryString("?role=owner");
+        context2.Response.Body = new MemoryStream();
+
+        await Endpoints.Start()(context2);
+
+        Assert.Equal(StatusCodes.Status404NotFound, context2.Response.StatusCode);
+        Assert.False(state2.InUse);
+        Assert.False(state2.OwnerHoldsApp);
+        Assert.Null(state2.Cookies);
+        Assert.Equal(string.Empty, state2.User);
     }
 
     [Fact]
@@ -1564,6 +1629,63 @@ public class BugBountyTests
             service.WatchFile(new WatchFileRequest { FilePath = "   " }, writer, new TestCallContext(cts.Token)));
 
         Assert.Equal(StatusCode.InvalidArgument, rpcEx.StatusCode);
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"Bug80_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "watched.txt");
+        await File.WriteAllTextAsync(tempFile, "initial");
+
+        using var watchFinallyDone = new ManualResetEventSlim(false);
+        using var watchCts = new CancellationTokenSource();
+        var watchingStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var changeDetected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handlerFinished = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var logger = new CallbackLogger<FileWatcherService>((level, message, exception) =>
+        {
+            if (message.StartsWith("Started watching file:", StringComparison.Ordinal))
+            {
+                watchingStarted.TrySetResult();
+            }
+            else if (message.StartsWith("Change detected in file:", StringComparison.Ordinal))
+            {
+                changeDetected.TrySetResult();
+            }
+            else if (level == Microsoft.Extensions.Logging.LogLevel.Error)
+            {
+                watchFinallyDone.Wait(TimeSpan.FromSeconds(3));
+                handlerFinished.TrySetResult(exception);
+            }
+        });
+
+        try
+        {
+            var watchService = new FileWatcherService(logger);
+            var watchWriter = new CallbackStreamWriter<WatchFileResponse>(_ => { });
+            var watchTask = watchService.WatchFile(
+                new WatchFileRequest { FilePath = tempFile },
+                watchWriter,
+                new TestCallContext(watchCts.Token));
+
+            await watchingStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await File.WriteAllTextAsync(tempFile, "updated-content");
+            await changeDetected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            watchCts.Cancel();
+            await watchTask.WaitAsync(TimeSpan.FromSeconds(5));
+            watchFinallyDone.Set();
+
+            var loggedError = await handlerFinished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.IsAssignableFrom<OperationCanceledException>(loggedError);
+            await Task.Yield();
+        }
+        finally
+        {
+            watchFinallyDone.Set();
+            watchCts.Cancel();
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
     }
 
     [Fact]
@@ -1948,7 +2070,7 @@ public class BugBountyTests
         }
     }
 
-    private sealed class SequenceStreamReader<T>(IReadOnlyList<T> items, Action? onSecondRead = null) : IAsyncStreamReader<T>
+    private sealed class SequenceStreamReader<T>(IReadOnlyList<T> items, Action? onSecondRead = null, Action? onCompleted = null) : IAsyncStreamReader<T>
     {
         private int _index = -1;
         public T Current => items[_index];
@@ -1959,7 +2081,43 @@ public class BugBountyTests
             _index++;
             if (_index == 1)
                 onSecondRead?.Invoke();
-            return Task.FromResult(_index < items.Count);
+            if (_index >= items.Count)
+            {
+                onCompleted?.Invoke();
+                return Task.FromResult(false);
+            }
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class ThrowingChannel : Channel<string>
+    {
+        public ThrowingChannel(Exception exception)
+        {
+            Writer = new ThrowingWriter(exception);
+        }
+
+        private sealed class ThrowingWriter(Exception exception) : ChannelWriter<string>
+        {
+            public override bool TryWrite(string item) => throw exception;
+            public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default) => ValueTask.FromException<bool>(exception);
+        }
+    }
+
+    private sealed class CallbackLogger<T>(Action<Microsoft.Extensions.Logging.LogLevel, string, Exception?> onLog)
+        : Microsoft.Extensions.Logging.ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            Microsoft.Extensions.Logging.LogLevel logLevel,
+            Microsoft.Extensions.Logging.EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            onLog(logLevel, formatter(state, exception), exception);
         }
     }
 

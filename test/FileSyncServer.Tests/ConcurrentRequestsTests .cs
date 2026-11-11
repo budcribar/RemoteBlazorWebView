@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -78,7 +79,7 @@ namespace FileSyncServer.Tests
             {
                 tasks.Add(Task.Run(async () =>
                 {
-                    var response = await client.GetAsync($"/{clientId}/{fileName}");
+                    using var response = await client.GetAsync($"/{clientId}/{fileName}");
                     var content = response.StatusCode == HttpStatusCode.OK ? await response.Content.ReadAsStringAsync() : string.Empty;
                     return (fileName, response.StatusCode, content);
                 }));
@@ -99,7 +100,11 @@ namespace FileSyncServer.Tests
         {
             // Arrange
             var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
-            
+            var clientCachePath = Path.Combine(Directory.GetCurrentDirectory(), "client_cache");
+            var existingFiles = fileNames
+                .Where(f => File.Exists(Path.Combine(clientCachePath, f)))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
 
             using var client = Utilities.Client();   
@@ -114,8 +119,8 @@ namespace FileSyncServer.Tests
                 {
                     tasks.Add(Task.Run(async () =>
                     {
-                        var response = await client.GetAsync($"/{clientId}/{fileName}");
-                        var content = response.StatusCode == HttpStatusCode.OK ? await response.Content.ReadAsStringAsync() : string.Empty;
+                        using var response = await client.GetAsync($"/{clientId}/{fileName}");
+                        var content = await response.Content.ReadAsStringAsync();
                         return (fileName, response.StatusCode, content);
                     }));
                 }
@@ -126,14 +131,15 @@ namespace FileSyncServer.Tests
             // Assert
             foreach (var (FileName, Status, Content) in results)
             {
-                if (Status == HttpStatusCode.OK)
+                if (existingFiles.Contains(FileName))
                 {
+                    Status.Should().Be(HttpStatusCode.OK, $"Expected status code 200 for existing file '{FileName}', got body: '{Content}'.");
                     Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
                 }
                 else
                 {
                     Status.Should().Be(HttpStatusCode.NotFound, $"Expected status code 404 for non-existing file '{FileName}'.");
-                    Content.Should().Be("File not found.", $"Response content for '{FileName}' should indicate that the file was not found.");
+                    Content.Should().Be($"There is no content at {FileName}", $"Response content for '{FileName}' should match the missing-file body.");
                 }
             }
         }
@@ -141,91 +147,173 @@ namespace FileSyncServer.Tests
         [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndNoClientCaching()
         {
-            // Enable client-side caching
             await Utilities.SetClientCache(false);
-            // (await Utilities.GetClientCache()).Should().BeTrue
-            (await Utilities.GetClientCache()).Should().BeFalse();
-            // Arrange
-            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
-
-            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
-
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-
-            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-            // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            try
             {
-                foreach (var fileName in fileNames)
-                {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
-                        {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
-                }
+                (await Utilities.GetClientCache()).Should().BeFalse();
+                await AssertBrowserSwarmAsync(verifyWarmCache: false);
             }
-
-            var results = await Task.WhenAll(tasks);
-
-            // Assert
-            foreach (var (FileName, Status, Content) in results)
+            finally
             {
-                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");   
+                await Utilities.SetClientCache(false);
             }
-            await Utilities.SetClientCache(false);
         }
 
         [WindowsOnlyFact]
         public async Task MultipleConcurrentFileRequestsWithSameFile_BrowserAndClientCaching()
         {
-            // Enable client-side caching
             await Utilities.SetClientCache(true);
-            (await Utilities.GetClientCache()).Should().BeTrue();
-          
-            // Arrange
-            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+            try
+            {
+                (await Utilities.GetClientCache()).Should().BeTrue();
+                await AssertBrowserSwarmAsync(verifyWarmCache: true);
+            }
+            finally
+            {
+                await Utilities.SetClientCache(false);
+            }
+        }
 
-            var clientId = _clientFixture.ClientId; // Retrieve the clientId from ClientFixture
+        // 300 browser clients at once: 100 rounds of test1..3.txt, every request from
+        // its own browser context. Each context has its own connection pool and HTTP
+        // cache, so the relay sees 300 separate TLS connections arriving together.
+        // A shared context would multiplex them over one HTTP/2 connection (at most
+        // 100 streams in Kestrel) and serve repeats from the browser cache.
+        // The contexts are spread over SwarmBrowsers Chromium processes: 300 contexts
+        // in a single process failed with net::ERR_INSUFFICIENT_RESOURCES.
+        private const int SwarmRounds = 100;
+        private const int SwarmBrowsers = 10;
+
+        private async Task AssertBrowserSwarmAsync(bool verifyWarmCache = false)
+        {
+            var fileNames = new List<string> { "test1.txt", "test2.txt", "test3.txt" };
+            var clientId = _clientFixture.ClientId;
 
             using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions());
-
-            var tasks = new List<Task<(string FileName, int Status, string Content)>>();
-
-            // Act
-            for (int i = 0; i < 100; i++) // 5,000 concurrent requests max; much past this hangs
+            var browsers = new List<IBrowser>(SwarmBrowsers);
+            try
             {
-                foreach (var fileName in fileNames)
+                for (int i = 0; i < SwarmBrowsers; i++)
                 {
-                    tasks.Add(Task.Run(async () =>
+                    browsers.Add(await playwright.Chromium.LaunchAsync(HeadlessChromiumOptions()));
+                }
+
+                int warmCount = verifyWarmCache ? SwarmBrowsers * fileNames.Count : 0;
+                var warmSessions = new (IBrowserContext? Context, IPage? Page, string FileName)[warmCount];
+                try
+                {
+                    var tasks = new List<Task<(string FileName, int Status, string Content)>>();
+                    int n = 0;
+                    for (int i = 0; i < SwarmRounds; i++)
                     {
-                        var page = await browser.NewPageAsync();
-                        var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                        foreach (var fileName in fileNames)
                         {
-                            WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
-                        });
-                        var content = await (response?.TextAsync() ?? Task.FromResult<string>(""));
-                        return (fileName, response?.Status ?? -1, content);
-                    }));
+                            int clientIndex = n++;
+                            var browser = browsers[clientIndex % SwarmBrowsers];
+                            tasks.Add(Task.Run(async () =>
+                            {
+                                if (clientIndex < warmCount)
+                                {
+                                    var context = await browser.NewContextAsync();
+                                    warmSessions[clientIndex] = (context, null, fileName);
+                                    var page = await context.NewPageAsync();
+                                    warmSessions[clientIndex] = (context, page, fileName);
+
+                                    var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                                    {
+                                        WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                                    });
+                                    var content = await (response?.TextAsync() ?? Task.FromResult(string.Empty));
+                                    return (fileName, response?.Status ?? -1, content);
+                                }
+                                else
+                                {
+                                    await using var context = await browser.NewContextAsync();
+                                    var page = await context.NewPageAsync();
+                                    var response = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{fileName}", new PageGotoOptions
+                                    {
+                                        WaitUntil = WaitUntilState.NetworkIdle // Wait for all network activity to finish
+                                    });
+                                    var content = await (response?.TextAsync() ?? Task.FromResult(string.Empty));
+                                    return (fileName, response?.Status ?? -1, content);
+                                }
+                            }));
+                        }
+                    }
+
+                    var results = await Task.WhenAll(tasks);
+
+                    foreach (var (FileName, Status, Content) in results)
+                    {
+                        Status.Should().Be((int)HttpStatusCode.OK, $"Expected HTTP 200 status on initial load for '{FileName}'.");
+                        Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
+                    }
+
+                    if (verifyWarmCache)
+                    {
+                        var warmTasks = warmSessions.Select(session => Task.Run(async () =>
+                        {
+                            var page = session.Page!;
+                            var secondResponse = await page.GotoAsync($"{Utilities.BASEURL}/{clientId}/{session.FileName}", new PageGotoOptions
+                            {
+                                WaitUntil = WaitUntilState.NetworkIdle
+                            });
+                            int secondStatus = secondResponse?.Status ?? -1;
+                            bool fromCache = secondResponse != null && await page.EvaluateAsync<bool>(
+                                "() => { const nav = performance.getEntriesByType('navigation')[0]; return nav !== undefined && nav.transferSize === 0; }");
+                            string secondContent = secondResponse != null ? await secondResponse.TextAsync() : string.Empty;
+                            if (string.IsNullOrEmpty(secondContent))
+                            {
+                                secondContent = await page.InnerTextAsync("body");
+                            }
+                            return (session.FileName, secondStatus, fromCache, secondContent);
+                        })).ToList();
+
+                        var warmResults = await Task.WhenAll(warmTasks);
+                        foreach (var (FileName, SecondStatus, FromCache, SecondContent) in warmResults)
+                        {
+                            bool servedFromWarmCache =
+                                SecondStatus == (int)HttpStatusCode.NotModified ||
+                                (SecondStatus == (int)HttpStatusCode.OK && FromCache);
+                            servedFromWarmCache.Should().BeTrue(
+                                $"Expected warm cache hit (200 from browser cache or 304) for '{FileName}', but got status {SecondStatus} (fromCache={FromCache}).");
+                            SecondContent.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt",
+                                $"Cached file content for '{FileName}' should match the expected content.");
+                        }
+                    }
+                }
+                finally
+                {
+                    foreach (var session in warmSessions)
+                    {
+                        if (session.Context != null)
+                        {
+                            try
+                            {
+                                await session.Context.DisposeAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error disposing warm browser context: {ex.Message}");
+                            }
+                        }
+                    }
                 }
             }
-
-            var results = await Task.WhenAll(tasks);
-
-            // Assert
-            foreach (var (FileName, Status, Content) in results)
+            finally
             {
-                Content.Should().Contain($"This is {Path.GetFileNameWithoutExtension(FileName)}.txt", $"File content for '{FileName}' should match the expected content.");
+                foreach (var browser in browsers)
+                {
+                    try
+                    {
+                        await browser.DisposeAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error disposing browser: {ex.Message}");
+                    }
+                }
             }
-            await Utilities.SetClientCache(false);
         }
 
         // Chromium's Windows TCP port randomization fails connect() with WSAENOBUFS
@@ -233,8 +321,7 @@ namespace FileSyncServer.Tests
         // Playwright disables TcpPortRandomizationWin for that reason
         // (https://github.com/microsoft/playwright/pull/43605). A later
         // --disable-features switch replaces Playwright 1.63's switch, so this
-        // list is that version's set plus TcpPortRandomizationWin. All 300
-        // pages are still opened together.
+        // list is that version's set plus TcpPortRandomizationWin.
         internal static BrowserTypeLaunchOptions HeadlessChromiumOptions() => new()
         {
             Headless = true,

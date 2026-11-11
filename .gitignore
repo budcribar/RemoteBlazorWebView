@@ -57,8 +57,6 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /src/RemoteWebView.Blazor.JS/src/generated/ts/webview_pb.d.ts
 /src/RemoteWebView.Blazor.JS/src/generated/WebviewServiceClientPb.ts
 /src/RemoteWebView.Blazor.JS/src/generated/webview_pb.js
-/src/RemoteWebView.Blazor.JS/Web.JS/src
-/src/RemoteWebView.Blazor.JS/Web.JS/test
 /src/Benchmarks/StressServer/publish
 /src/Benchmarks/StressServer/publish.zip
 /src/Benchmarks/FilePOC/Client/publish
@@ -72,3 +70,5 @@ src/RemoteWebWindow.Blazor.JS/dist/remote.blazor.desktop.js
 /Report20241109-1011.diagsession
 /Report20241109-1437.diagsession
 /perf-results/
+/src/RemoteWebView.Blazor.JS/Web.JS/package-lock.json
+/EditWebView.diff

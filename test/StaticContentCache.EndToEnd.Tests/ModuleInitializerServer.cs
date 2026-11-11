@@ -18,6 +18,8 @@ using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using PeakSWC.RemoteWebView.Services;
 using FileProvider = Microsoft.Extensions.FileProviders.IFileProvider;
 using FileInfo = Microsoft.Extensions.FileProviders.IFileInfo;
+using ClientComposite = client::PeakSWC.RemoteWebView.OptimizedCompositeFileProvider;
+using ClientRemoteWebView = client::PeakSWC.RemoteWebView.RemoteWebView;
 using ClientSync = client::PeakSWC.RemoteWebView.ClientFileSyncManager;
 
 namespace StaticContentCache.EndToEnd.Tests;
@@ -25,6 +27,7 @@ namespace StaticContentCache.EndToEnd.Tests;
 public sealed class ModuleInitializerServer : IAsyncLifetime
 {
     private readonly List<ClientSync> _syncs = [];
+    private readonly string _packageTempDir = Path.Combine(Path.GetTempPath(), "module-initializer-package-" + Guid.NewGuid().ToString("N"));
     private DuplexHost? _host;
     private GrpcChannel? _channel;
     private HttpClient? _http;
@@ -40,7 +43,11 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
     public Guid ChangedId { get; } = Guid.NewGuid();
     public Guid OtherId { get; } = Guid.NewGuid();
     public Guid ObjectManifestId { get; } = Guid.NewGuid();
+    public Guid ProductionAppId { get; } = Guid.NewGuid();
+    public Guid ProductionFallbackId { get; } = Guid.NewGuid();
     public MutableFileProvider ChangedFiles { get; } = new();
+    public string WebViewScriptPath { get; private set; } = "";
+    public string PackageModulesManifestPath { get; private set; } = "";
     public string Http1Url { get; private set; } = "";
     private ChromeSession? _chrome;
     private readonly SemaphoreSlim _chromeGate = new(1, 1);
@@ -48,10 +55,18 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
     public async Task InitializeAsync()
     {
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+        Directory.CreateDirectory(_packageTempDir);
+        WebViewScriptPath = ModuleInitializerFiles.WebViewScriptPath(_packageTempDir);
+        PackageModulesManifestPath = ModuleInitializerFiles.PackageModulesManifestPath(_packageTempDir);
         var index = ModuleInitializerFiles.Read("index.html");
         var probe = ModuleInitializerFiles.Read("module-initializer-probe.js");
-        var webView = File.ReadAllBytes(ModuleInitializerFiles.WebViewScriptPath());
-        var clients = new Dictionary<Guid, MutableFileProvider>
+        var webView = File.ReadAllBytes(WebViewScriptPath);
+        var remoteEmbedded = new EmbeddedFileProvider(typeof(ClientRemoteWebView).Assembly);
+        var fallbackApp = new MutableFileProvider();
+        fallbackApp.Add("index.html", index);
+        fallbackApp.Add("module-initializer-probe.js", probe);
+        fallbackApp.Add("_framework/blazor.webview.js", webView);
+        var clients = new Dictionary<Guid, FileProvider>
         {
             [BaselineId] = Page(index, probe, webView, ModuleInitializerFiles.ReadShared("blazor.modules.json"),
                 ("Baseline.lib.module.js", ModuleInitializerFiles.ReadShared("Baseline.lib.module.js"))),
@@ -74,7 +89,12 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
             [OtherId] = Page(index, probe, webView, Manifest("Other.lib.module.js"),
                 ("Other.lib.module.js", ModuleInitializerFiles.Read("Other.lib.module.js"))),
             [ObjectManifestId] = Page(index, probe, webView, ModuleInitializerFiles.Read("object-blazor.modules.json"),
-                ("Baseline.lib.module.js", ModuleInitializerFiles.ReadShared("Baseline.lib.module.js")))
+                ("Baseline.lib.module.js", ModuleInitializerFiles.ReadShared("Baseline.lib.module.js"))),
+            [ProductionAppId] = new ClientComposite(
+                remoteEmbedded,
+                Page(index, probe, webView, ModuleInitializerFiles.ReadShared("blazor.modules.json"),
+                    ("Baseline.lib.module.js", ModuleInitializerFiles.ReadShared("Baseline.lib.module.js")))),
+            [ProductionFallbackId] = new ClientComposite(remoteEmbedded, fallbackApp)
         };
         Page(ChangedFiles, index, probe, webView, Manifest("Changed.lib.module.js"),
             ("Changed.lib.module.js", ModuleInitializerFiles.Read("Changed.lib.module.js")));
@@ -141,6 +161,14 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
         if (_host is not null)
             await _host.DisposeAsync();
         _chromeGate.Dispose();
+        try
+        {
+            if (Directory.Exists(_packageTempDir))
+                Directory.Delete(_packageTempDir, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private static MutableFileProvider Page(byte[] index, byte[] probe, byte[] webView, byte[] manifest, params (string Path, byte[] Bytes)[] files)
@@ -254,7 +282,7 @@ public sealed class ModuleInitializerServer : IAsyncLifetime
 
 public sealed class MutableFileProvider : FileProvider
 {
-    private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte[]> _files = new(StringComparer.Ordinal);
 
     public void Add(string path, byte[] bytes) => _files[Normalize(path)] = bytes;
 
@@ -290,9 +318,17 @@ internal static class ModuleInitializerFiles
 
     public static byte[] ReadShared(string name) => File.ReadAllBytes(Path.Combine(SharedAssetDirectory(), name));
 
-    public static string WebViewScriptPath() => PackagePath("staticwebassets", "blazor.webview.js");
+    public static string WebViewScriptPath(string directory) => Materialize(directory, "blazor.webview.js", File.ReadAllBytes(PackagePath("staticwebassets", "blazor.webview.js")));
 
-    public static string PackageModulesManifestPath() => PackagePath("build", "blazor.modules.json");
+    public static string PackageModulesManifestPath(string directory) => Materialize(directory, "blazor.modules.json", File.ReadAllBytes(PackagePath("build", "blazor.modules.json")));
+
+    private static string Materialize(string directory, string name, byte[] bytes)
+    {
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, name);
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
 
     private static string SharedAssetDirectory()
     {

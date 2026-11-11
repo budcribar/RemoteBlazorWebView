@@ -5,6 +5,8 @@
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 	<DefineConstants>$(DefineConstants);WEBVIEW2_WINFORMS</DefineConstants>
     <TargetFramework>net11.0-windows</TargetFramework>
+    <!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+    <RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>annotations</Nullable>
     <LangVersion>preview</LangVersion>
@@ -19,7 +21,7 @@
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
     <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <Platforms>x64</Platforms>

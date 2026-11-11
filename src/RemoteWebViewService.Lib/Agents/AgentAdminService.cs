@@ -13,7 +13,7 @@ namespace PeakSWC.RemoteWebView.Agents
     public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options) : AgentAdmin.AgentAdminBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentAdminService";
-        public const string DefaultTechnician = "A technician";
+        public const string DefaultRequester = "Someone";
         public static readonly TimeSpan WatchAgentsInterval = TimeSpan.FromSeconds(15);
         private static int warnedNoAdminKey;
 
@@ -48,13 +48,13 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
         {
-            string technician = GetTechnician(request, context);
+            string requester = GetRequester(request, context);
             string serverUrl = GetServerUrl(options, context);
             bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
             if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
                 AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
 
-            var outcome = registry.StartSession(request.MachineId, request.Unattended, technician, serverUrl, options.AdminKeyConfigured, adminKeyValid);
+            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, options.AdminKeyConfigured, adminKeyValid);
             var response = outcome.Response;
             if (outcome.Denied)
             {
@@ -65,10 +65,10 @@ namespace PeakSWC.RemoteWebView.Agents
 
             if (response.Accepted)
                 AgentEvents.Info(logger, Category,
-                    $"Diagnostics requested on {who} by {technician}: request {response.RequestId}, session {response.SessionId}, " +
+                    $"Diagnostics requested on {who} by {requester}: request {response.RequestId}, session {response.SessionId}, " +
                     (outcome.RequireConsent ? "consent required" : "unattended"));
             else
-                AgentEvents.Info(logger, Category, $"Diagnostics request on {who} by {technician} refused: {response.Error}");
+                AgentEvents.Info(logger, Category, $"Diagnostics request on {who} by {requester} refused: {response.Error}");
 
             return Task.FromResult(response);
         }
@@ -113,8 +113,8 @@ namespace PeakSWC.RemoteWebView.Agents
             return null;
         }
 
-        /// <summary>The signed-in user's name when authentication is on, else what the admin site sent, else "A technician".</summary>
-        public static string GetTechnician(StartSessionRequest request, ServerCallContext context)
+        /// <summary>The signed-in user's name when authentication is on, else what the admin site sent, else "Someone".</summary>
+        public static string GetRequester(StartSessionRequest request, ServerCallContext context)
         {
             try
             {
@@ -131,7 +131,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 // Not hosted by ASP.NET Core (unit tests).
             }
 
-            return string.IsNullOrWhiteSpace(request.Technician) ? DefaultTechnician : request.Technician.Trim();
+            return string.IsNullOrWhiteSpace(request.Requester) ? DefaultRequester : request.Requester.Trim();
         }
 
         /// <summary>PUBLIC_BASE_URL when set, else the scheme and host this request came in on.</summary>

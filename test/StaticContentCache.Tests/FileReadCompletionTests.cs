@@ -14,9 +14,10 @@ public class FileReadCompletionTests
     [MemberData(nameof(ReadFailures))]
     public async Task Read_failure_after_metadata_returned_200_sends_empty_completion_normal_404_is_earlier_at_metadata(string failure)
     {
+        var clientId = Guid.NewGuid().ToString();
         var writer = new ClosedPipeWriter();
         var manager = new ClientFileSyncManager(
-            Guid.NewGuid().ToString(),
+            clientId,
             new ExistsThenThrowsProvider(CreateFailure(failure)),
             writer,
             NullLogger.Instance);
@@ -28,7 +29,12 @@ public class FileReadCompletionTests
             RequestType = ServerFileReadRequest.Types.RequestType.FileData
         });
 
-        Assert.Contains(writer.Messages, message => message.FileData != null && message.FileData.FileChunk.Length == 0);
+        var completion = Assert.Single(writer.Messages);
+        Assert.Equal(clientId, completion.ClientId);
+        Assert.Equal("read-1", completion.RequestId);
+        Assert.Equal("app.js", completion.Path);
+        Assert.NotNull(completion.FileData);
+        Assert.Equal(0, completion.FileData.FileChunk.Length);
     }
 
     public static TheoryData<string> ReadFailures { get; } = new()

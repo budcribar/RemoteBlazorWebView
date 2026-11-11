@@ -2,7 +2,7 @@
 
 This describes how a maintainer publishes the seven PeakSWC packages. The tutorial repository is not a NuGet package. It is updated on GitHub after the packages exist.
 
-The workflow that packs the packages is [release-packages.yml](../.github/workflows/release-packages.yml). Its NuGet push job does not run.
+The workflow that packs the packages is [release-packages.yml](../.github/workflows/release-packages.yml). With `dry_run` off, its NuGet push job runs after the Windows tests and the pack job succeed, and then waits for approval in the `nuget-org` environment.
 
 ## The seven packages
 
@@ -20,17 +20,17 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.0` and `VersionSuffix` to `rc3`, so the unpublished package version is `11.0.0-rc3`. That suffix matches the ASP.NET Core 11.0.0-rc.3 libraries this tree references and the SDK pin `11.0.100-rc.3.26522.148` in `global.json`. `eng/derive-package-version.sh` derives `rc3` from that SDK unless `version_override` is set. This file does not publish either version.
+`Directory.Build.props` is the only place a package version is committed. Today on net10 that file sets `VersionPrefix` to `10.0.15.1` and does not set `VersionSuffix`, so the package version is `10.0.15.1`. `global.json` pins SDK `10.0.404`, which is GA.
 
 The rule going forward:
 
-- The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json`.
-- `VersionPrefix` is `{major}.0.0` unless the dispatch input `version_override` says otherwise.
-- The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `11.0.100-rc.2.26504.105` becomes `VersionSuffix` `rc2` and package version `11.0.0-rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A GA SDK (no `preview`, `rc`, `alpha`, `beta`, or `pre`) leaves `VersionSuffix` empty.
-- `version_override` is a single token such as `11.0.1` or `11.0.0-rc3`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`.
-- `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `11.0.0-rc2` with patch `1` is `11.0.0-rc2-p1` (`VersionSuffix` `rc2-p1`). A GA `11.0.0` with patch `1` is `11.0.0-p1` (`VersionSuffix` `p1`).
+- The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json` and the major of `VersionPrefix`.
+- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net10 that is `10.0.15.1` with no suffix. The script does not replace a GA SDK with `10.0.0`.
+- When the SDK is a prerelease, `VersionPrefix` is `{major}.0.0` unless `version_override` is set. The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `rc.2` becomes `rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A committed suffix spelled `rc.2` or `preview.5` is rewritten the same way.
+- `version_override` is a single token such as `10.0.14` or `10.0.13-rc2`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`. It replaces both the committed GA version and the prerelease derivation.
+- `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `10.0.13` with patch `1` is `10.0.13-p1` (`VersionSuffix` `p1`).
 
-`11.0.0-rc2` is already on nuget.org for `PeakSWC.RemoteWebView` and `PeakSWC.RemoteBlazorWebView`. The next net11 package has to be a new version, such as `11.0.0-rc3` or `11.0.0`. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script.
+`10.0.15` is already on nuget.org. `10.0.15.1` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
 
 SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1` and leave `patch` empty.
 
@@ -40,21 +40,24 @@ SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prer
 
 `src/EditWebView` refreshes the vendored upstream files from `dotnet/aspnetcore` and `dotnet/maui`:
 
-- Copies `src/Components/Web.JS` from the `dotnet/aspnetcore` tag archive into `src/RemoteWebView.Blazor.JS/Web.JS` (compiled into `dist/remote.blazor.desktop.js`), preserving repo-local `Web.JS/src/{tsconfig.json,webpack.config.js}` overlays and pointing `@microsoft/dotnet-runtime` at `file:../dotnet-runtime`.
-- Transforms `src/BlazorWebView/src/{WindowsForms,Wpf,SharedSource}` from the `dotnet/maui` tag archive into `src/RemoteBlazorWebView.WinForms`, `src/RemoteBlazorWebView.Wpf`, and `src/SharedSource` (`PeakSWC.*` namespaces, `AllowExternalDrop = false` on WinForms `WebView2` and WPF `IWebView2`, `NavigateToString`, mirror URL routing, and public visibility).
+- Copies `src/Components/Web.JS` from the `dotnet/aspnetcore` tag archive into `src/RemoteWebView.Blazor.JS/Web.JS` (compiled into `dist/remote.blazor.desktop.js`).
+- Transforms `src/BlazorWebView/src/{WindowsForms,Wpf,SharedSource}` from the `dotnet/maui` tag archive into `src/RemoteBlazorWebView.WinForms`, `src/RemoteBlazorWebView.Wpf`, and `src/SharedSource` (`PeakSWC.*` namespaces, `AllowExternalDrop = false`, `NavigateToString`, mirror URL routing, and public visibility).
 
 When to run it:
 
 - Run `EditWebView` when moving to a new major, preview, or RC, or when a servicing release changes `src/Components/Web.JS` in `dotnet/aspnetcore` or publishes a new `dotnet/maui` tag on this line.
 - Skip it for runtime-only servicing releases where neither upstream directory changed.
 
-How to run it on `net11`:
+How to run it on `net10`:
 
-1. To preview the latest upstream MAUI tag without modifying files, run `dotnet run --project src/EditWebView -- --resolve-only --major 11` (uses `git ls-remote --tags`; no `GITHUB_PAT` required).
-2. Update `AspNetCoreTagHint` and `MauiTagHint` in `src/EditWebView/Program.cs` (or override them via `ASPNETCORE_TAG` and `MAUI_TAG`; setting either environment variable to an empty string forces a live tag scan). `TARGET_MAJOR_VERSION` or `--major <N>` overrides the major version.
-3. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net11.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
-4. Inspect `git diff` carefully before committing: `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms`, and `src/RemoteWebView.Blazor.JS/Web.JS` directly from upstream, so re-apply any repo-local changes made on top of the vendored files (for example shared-control, voice, or `NavigateToUrl` additions).
-5. Rebuild `src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js` (`npm run build:production`) and verify the solution builds and tests pass before committing.
+1. Give it a GitHub token for reading tags: either sign in once with `gh auth login` (EditWebView runs `gh auth token`), or set `GITHUB_PAT`, which wins when both are present.
+2. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net10.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
+3. Read the summary it prints at the end, and `EditWebView.diff` in the repository root for the whole diff (git-ignored):
+   - **Upstream versions used.** A warning here means the tag is newer than the packages reference: update `Microsoft.AspNetCore.Components.WebView.Wpf` and `.WindowsForms` and the "Based on maui ..." text in the package release notes.
+   - **Changes of this repository's own.** `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms` and `src/RemoteWebView.Blazor.JS/Web.JS` from upstream and then makes this repository's changes again (`Editor.cs` for the C# files, `ApplyWebJSPatches` and `OurWebJSFiles` in `Program.cs` for Web.JS). Any line that says NOT APPLIED, NOT KEPT, NOT REMOVED or MISSING means upstream changed underneath one of them: fix that before committing.
+   - **Changes since the last commit.** Everything listed should be an upstream change. A removed line that this repository added is a change `EditWebView` does not know about yet: put it back, and add it to `Editor.cs` so the next run keeps it.
+   - Upstream's `build/*.props` and `build/*.targets` and its unit-test `InternalsVisibleTo` are left out on purpose.
+4. Rebuild `src/RemoteWebView.Blazor.JS/dist/remote.blazor.desktop.js` (`npm run build:production`) and verify the solution builds and tests pass before committing.
 
 ## What a dispatch does
 
@@ -86,7 +89,7 @@ The nuget.org profile name is `budcribar`. The workflow reads it from the reposi
 
 Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. Once the push job is allowed to run, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
 
-Create these by hand. This repository's workflow does not create them, and the push job stays unreachable until someone later changes its condition on purpose.
+These were created by hand on 2026-11-10; the workflow does not create them. Recreate them the same way if they are ever removed.
 
 1. In GitHub, create the `nuget-org` environment and set **budcribar** as a required reviewer.
 2. Add the repository variable `NUGET_USER` with the value `budcribar`.
@@ -96,6 +99,6 @@ Create these by hand. This repository's workflow does not create them, and the p
    - Workflow file: `release-packages.yml` (the file name only, not `.github/workflows/release-packages.yml`)
    - Environment: `nuget-org`
 
-Only after those exist, replace the `nuget-push` job condition and review the workflow again. Until that edit, the job cannot run. Setting `dry_run` to false does not enable it either.
+The nuget.org policy is scoped to `PeakSWC.*`. The `nuget-push` job runs only when `dry_run` is off, after `pack` succeeds, and is then held until the required reviewer approves it.
 
 The push source, once the job is allowed to run, is `https://api.nuget.org/v3/index.json`. The key used there is `steps.login.outputs.NUGET_API_KEY`, the temporary key from the login action, not a repository secret.

@@ -196,7 +196,7 @@ namespace PeakSWC.RemoteBlazorWebView
 					_logger.NavigatingToUri(absoluteUri);
 					_webview.Source = absoluteUri;
 				}
-			});
+			}).ObserveExceptionsAsync(_logger);
 		}
 
 		/// <inheritdoc />
@@ -206,6 +206,15 @@ namespace PeakSWC.RemoteBlazorWebView
             {
                 await _webviewReadyTask;
                 _webview.NavigateToString(htmlContent);
+            });
+        }
+        /// <summary>Loads a URL in this control's WebView once it is initialized (CoreWebView2 is null until then).</summary>
+        public void NavigateToUrl(Uri url)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                if (await _webviewReadyTask)
+                    _webview.CoreWebView2.Navigate(url.AbsoluteUri);
             });
         }
         protected override void SendMessage(string message)
@@ -239,7 +248,8 @@ namespace PeakSWC.RemoteBlazorWebView
 
 		/// <summary>
 		/// Marks the manager as disposing to prevent further operations.
-		/// This should be called by the owning control before starting disposal.
+		/// This should be called by the owning control after page disposal completes,
+		/// but before disposing the native WebView.
 		/// </summary>
 		internal void MarkAsDisposing()
 		{

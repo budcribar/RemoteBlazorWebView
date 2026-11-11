@@ -22,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace PeakSWC.RemoteBlazorWebView.Wpf
 {
 
-    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView
+    public class BlazorWebView : BlazorWebViewBase, IBlazorWebView, IVoiceHost
     {
         public CoreWebView2CookieManager CookieManager  => WebView.CoreWebView2.CookieManager;
         private bool IsRefreshing { get; set; } = false;
@@ -120,6 +120,12 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
         }
 
+        /// <summary>
+        /// Secret the relay uses to recognise this app's own owner page (/app/{id}?role=owner&amp;key=...). Set it, and open that
+        /// page with it, for a shared session; the source generator does both for ShareControl. Empty: ?role=owner is trusted.
+        /// </summary>
+        public string OwnerKey { get; set; } = string.Empty;
+
         public bool EnableMirrors
         {
             get => (bool)GetValue(EnableMirrorsProperty);
@@ -190,6 +196,8 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
             }
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Id must be set before HostPage");
                 if (value == Guid.Empty)
                     id = Guid.NewGuid();
                 else
@@ -207,15 +215,86 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
                 return new RemoteWebView2Manager(this,webview, services, dispatcher, fileProvider,store, hostPageRelativePath, hostPagePathWithinFileProvider,externalNavigationStarting, blazorWebViewInitializing, blazorWebViewInitialized, logger);
         }
 
+        private string? _voiceHostKey;
+        private bool _voiceMicHooked;
+
+        /// <summary>Enables in-session voice for remote sessions (shown in the control bubble). Set before HostPage.</summary>
+        public bool EnableVoice
+        {
+            get => _voiceHostKey is not null;
+            set => _voiceHostKey = value
+                ? _voiceHostKey ?? Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                : null;
+        }
+
+        string IVoiceHost.VoiceHostKey =>
+            ServerUri?.Scheme == Uri.UriSchemeHttps && GrpcBaseUri?.Scheme == Uri.UriSchemeHttps
+                ? _voiceHostKey ?? string.Empty
+                : string.Empty;
+
+        // In-surface voice: the control bubble renders the voice controls, so the voice client is injected into this
+        // same WebView rather than a separate window. The host key is furnished by the locally-injected script (never
+        // served over the network — only the host can supply it); the surface grants the mic for the relay origin on
+        // first, user-initiated use.
+        private void StartInSurfaceVoice(Uri server, string key)
+        {
+            if (WebView.CoreWebView2 is not { } core)
+                return;
+
+            if (!_voiceMicHooked)
+            {
+                _voiceMicHooked = true;
+                var authority = server.GetLeftPart(UriPartial.Authority);
+                core.PermissionRequested += (_, e) =>
+                {
+                    if (e.PermissionKind == CoreWebView2PermissionKind.Microphone && e.IsUserInitiated &&
+                        Uri.TryCreate(e.Uri, UriKind.Absolute, out var requester) &&
+                        requester.GetLeftPart(UriPartial.Authority) == authority)
+                    {
+                        e.SavesInProfile = false;
+                        e.State = CoreWebView2PermissionState.Default; // prompt the owner on first use
+                    }
+                };
+            }
+
+            var js =
+                "(function(){if(document.getElementById('__remote-voice-client'))return;" +
+                "var s=document.createElement('script');s.id='__remote-voice-client';s.defer=true;" +
+                "s.src='/voice/client.js';s.dataset.session=" + JsString(Id.ToString()) + ";" +
+                "s.dataset.host='true';s.dataset.hostKey=" + JsString(key) + ";" +
+                "document.body.appendChild(s);})();";
+            _ = core.ExecuteScriptAsync(js);
+        }
+
+        private static string JsString(string value) => System.Text.Json.JsonSerializer.Serialize(value);
+
         public void FireConnected(ConnectedEventArgs args)
         {
-            Dispatcher.Invoke(() => Connected?.Invoke(this, args));
+            Dispatcher.Invoke(() =>
+            {
+                if (((IVoiceHost)this).VoiceHostKey is { Length: > 0 } key && ServerUri is Uri server &&
+                    WebView.CoreWebView2 is not null)
+                {
+                    try
+                    {
+                        StartInSurfaceVoice(server, key);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Unable to start in-surface voice");
+                    }
+                }
+                Connected?.Invoke(this, args);
+            });
         }
 
         public void FireDisconnected(DisconnectedEventArgs args)
         {
-            if (!IsRefreshing)
-                Dispatcher.Invoke(() => Disconnected?.Invoke(this, args));
+            Dispatcher.Invoke(() =>
+            {
+                if (!IsRefreshing)
+                    Disconnected?.Invoke(this, args);
+            });
         }
 
         public void FireRefreshed(RefreshedEventArgs args)
@@ -228,6 +307,14 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
         {
             Dispatcher.Invoke(() => ReadyToConnect?.Invoke(this, args));
         }
+
+        public void FireParticipantsChanged(ParticipantsChangedEventArgs args)
+        {
+            Dispatcher.Invoke(() => ParticipantsChanged?.Invoke(this, args));
+        }
+
+        /// <summary>Someone joined or left the shared session, or control moved. Needs relay 10.0.15 or later.</summary>
+        public event EventHandler<ParticipantsChangedEventArgs>? ParticipantsChanged;
 
         public event EventHandler<ConnectedEventArgs>? Connected;
         public event EventHandler<DisconnectedEventArgs>? Disconnected;
@@ -251,9 +338,18 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
+        /// <inheritdoc cref="IBlazorWebView.RestartWhenUnresponsive"/>
+        public Action? RestartWhenUnresponsive { get; set; }
+
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+
+        /// <summary>
+        /// Loads a page in this control's own WebView, waiting until the WebView is initialized (unlike CoreWebView2.Navigate,
+        /// which is a no-op before then). For the relay's session pages, e.g. an owner surface showing the controlling /app page.
+        /// </summary>
+        public void NavigateToUrl(Uri url) => WebViewManager.NavigateToUrl(url);
 
 
         public Task WaitForInitializationComplete() => Task.CompletedTask;

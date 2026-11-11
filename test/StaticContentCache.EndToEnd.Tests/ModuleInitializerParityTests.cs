@@ -77,7 +77,7 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
     [Fact]
     public async Task Real_blazor_webview_script_is_served_byte_for_byte()
     {
-        var file = File.ReadAllBytes(ModuleInitializerFiles.WebViewScriptPath());
+        var file = File.ReadAllBytes(server.WebViewScriptPath);
         var response = await server.GetAsync(server.BaselineId, "_framework/blazor.webview.js");
         var served = await response.Content.ReadAsByteArrayAsync();
 
@@ -91,7 +91,7 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
     [Fact]
     public void Package_fallback_manifest_parses_as_an_empty_array()
     {
-        var package = File.ReadAllBytes(ModuleInitializerFiles.PackageModulesManifestPath());
+        var package = File.ReadAllBytes(server.PackageModulesManifestPath);
         using var json = JsonDocument.Parse(package);
         Assert.Equal(JsonValueKind.Array, json.RootElement.ValueKind);
         Assert.Equal(0, json.RootElement.GetArrayLength());
@@ -248,6 +248,9 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
                 && Strings(s["order"]).Contains("second.afterStarted"),
             "two initializers");
         var order = Strings(snap["order"]);
+        // JSInitializers.ts runs Promise.all(initializerFiles.map(... await import(adjustedPath) ...)),
+        // so HTTP import completion determines which module resolves first; afterStartedCallbacks is
+        // populated in that resolution order, and all beforeStart hooks finish before any afterStarted hook.
         Assert.Equal(4, order.Length);
         Assert.Equal(["first.beforeStart", "second.beforeStart"], order[..2].OrderBy(static x => x, StringComparer.Ordinal));
         Assert.Equal(["first.afterStarted", "second.afterStarted"], order[2..].OrderBy(static x => x, StringComparer.Ordinal));
@@ -393,8 +396,13 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
         Assert.Equal(HttpStatusCode.NotModified, fresh.StatusCode);
         Assert.Empty(await fresh.Content.ReadAsByteArrayAsync());
 
-        await page.ReloadAsync();
-        var reloaded = await WaitForAsync(page, static s => Int(Object(s, "changed"), "version") == 2 && Int(Object(s, "changed"), "afterStarted") == 1, "changed v2");
+        // public,max-age=3600 keeps the first module in Chrome. The HTTP checks above are what show the new bytes.
+        await page.EvaluateAsync("window.__reloading = true");
+        await page.ReloadAsync(ignoreCache: false);
+        var reloaded = await WaitForAsync(
+            page,
+            static s => !Flag(s, "reloading") && Int(Object(s, "changed"), "afterStarted") == 1 && Int(Object(s, "changed"), "version") == 1,
+            "changed stays cached");
         var changed = Object(reloaded, "changed");
         Assert.Equal(1, Int(changed, "beforeStart"));
         Assert.Equal(["beforeStart", "afterStarted"], Strings(changed["order"]));
@@ -424,6 +432,40 @@ public class ModuleInitializerParityTests(ModuleInitializerServer server) : ICla
         Assert.Null(snap["baseline"]);
         Assert.DoesNotContain(Ipc(snap), message => message.Contains("AttachPage", StringComparison.Ordinal));
         Assert.False(string.IsNullOrEmpty(BootError(snap)));
+    }
+
+    [HeadlessChromeFact]
+    public async Task Production_composite_provider_runs_app_initializers_with_embedded_desktop_bundle()
+    {
+        await using var page = await OpenAsync(server.ProductionAppId);
+        var snap = await WaitForAsync(
+            page,
+            static s => Flag(s, "remoteBlazorLoaded") && BaselineReady(s),
+            "production composite app initializers");
+        var baseline = Object(snap, "baseline");
+
+        Assert.Equal(1, Int(baseline, "beforeStart"));
+        Assert.Equal(1, Int(baseline, "afterStarted"));
+        Assert.Equal(["beforeStart", "afterStarted"], Strings(baseline["order"]));
+        Assert.Contains(page.RequestUrls, url => new Uri(url).AbsolutePath == $"/{server.ProductionAppId}/_framework/blazor.webview.js");
+        Assert.Contains(page.RequestUrls, url => new Uri(url).AbsolutePath == $"/{server.ProductionAppId}/_framework/blazor.modules.json");
+        Assert.Contains(page.RequestUrls, url => new Uri(url).AbsolutePath == $"/{server.ProductionAppId}/Baseline.lib.module.js");
+        Assert.Null(BootError(snap));
+    }
+
+    [HeadlessChromeFact]
+    public async Task Production_composite_provider_boots_with_embedded_fallback_when_app_omits_manifest()
+    {
+        await using var page = await OpenAsync(server.ProductionFallbackId);
+        var snap = await WaitForAsync(
+            page,
+            static s => Flag(s, "remoteBlazorLoaded") && BootError(s) is null,
+            "production composite fallback manifest");
+
+        Assert.Null(snap["baseline"]);
+        Assert.Contains(page.RequestUrls, url => new Uri(url).AbsolutePath == $"/{server.ProductionFallbackId}/_framework/blazor.webview.js");
+        Assert.Contains(page.RequestUrls, url => new Uri(url).AbsolutePath == $"/{server.ProductionFallbackId}/_framework/blazor.modules.json");
+        Assert.Null(BootError(snap));
     }
 
     private async Task<ChromePage> OpenAsync(Guid id)

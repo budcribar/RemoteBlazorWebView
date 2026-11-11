@@ -233,6 +233,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 			if (_webviewManager != null)
 			{
 				// Dispatch because this is going to be async, and we want to catch any errors
+				var logger = Services.GetService<ILogger<BlazorWebViewFormBase>>() ?? NullLogger<BlazorWebViewFormBase>.Instance;
 				_ = ComponentsDispatcher.InvokeAsync(async () =>
 				{
 					var newItems = (eventArgs.NewItems ?? Array.Empty<object>()).Cast<RootComponent>();
@@ -247,7 +248,7 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 					{
 						await item.RemoveFromWebViewManagerAsync(_webviewManager);
 					}
-				});
+				}).ObserveExceptionsAsync(logger);
 			}
 		}
 
@@ -284,11 +285,12 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 				// the WebView2 control. This order is critical because once the WebView2 is disposed it will prevent
 				// Razor component code from working because it requires the WebView to exist.
 				// Dispatch because this is going to be async, and we want to catch any errors.
+				var logger = Services.GetService<ILogger<BlazorWebViewFormBase>>() ?? NullLogger<BlazorWebViewFormBase>.Instance;
 				_ = ComponentsDispatcher.InvokeAsync(async () =>
 				{
 					await _webviewManager.DisposeAsync();
 					base.Dispose(disposing);
-				});
+				}).ObserveExceptionsAsync(logger);
 				return;
 			}
 

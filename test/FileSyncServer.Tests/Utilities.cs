@@ -143,11 +143,12 @@ namespace FileSyncServer.Tests
             var relative = @"RemoteBlazorWebView\src\RemoteWebViewService\bin\publishNoAuth";
 #endif
             var executable = @"RemoteWebViewService.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, executable);
+            var workingDirectory = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative));
+            var f = Path.Combine(workingDirectory, executable);
 
             Process process = new();
-            process.StartInfo.FileName = Path.GetFullPath(f);
-            process.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative);
+            process.StartInfo.FileName = f;
+            process.StartInfo.WorkingDirectory = workingDirectory;
             process.StartInfo.UseShellExecute = true;
 #if !PROFILED_SERVER
             process.Start();
@@ -173,11 +174,12 @@ namespace FileSyncServer.Tests
             Process.GetProcesses().FirstOrDefault(p => p.ProcessName == "http_to_grpc_bridge")?.Kill();
             var relative = @"http_to_grpc_bridge";
             var executable = @"http_to_grpc_bridge.exe";
-            var f = Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, executable);
+            var workingDirectory = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative));
+            var f = Path.Combine(workingDirectory, executable);
 
             Process process = new();
-            process.StartInfo.FileName = Path.GetFullPath(f);
-            process.StartInfo.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), relative);
+            process.StartInfo.FileName = f;
+            process.StartInfo.WorkingDirectory = workingDirectory;
             process.StartInfo.UseShellExecute = true;
 
             process.Start();
@@ -207,7 +209,7 @@ namespace FileSyncServer.Tests
         #endregion
 
         #region WinForm
-        public static Process StartRemoteBlazorWinFormsDebugApp(string url, string id) => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsPath(), url, id);
+        public static Process StartRemoteBlazorWinFormsDebugApp(string url, string id) => StartProcess(BlazorWinFormsDebugAppExe(), BlazorWinFormsDebugPath(), url, id);
 
         public static Process StartRemoteBlazorWinFormsApp(string url, string id) => StartProcess(BlazorWinFormsAppExe(), BlazorWinFormsPath(), url, id);
 
@@ -216,7 +218,7 @@ namespace FileSyncServer.Tests
         public static string BlazorWinFormsDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp";
-            var exePath = @"bin\x64\debug\net11.0-windows";
+            var exePath = @"bin\x64\Debug\net11.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
         public static string BlazorWinFormsDebugAppExe() => Path.Combine(BlazorWinFormsDebugPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
@@ -239,10 +241,7 @@ namespace FileSyncServer.Tests
 
         public static string BlazorWinFormsEmbeddedAppExe() => Path.Combine(BlazorWinFormsEmbeddedPath(), "RemoteBlazorWebViewTutorial.WinFormsApp.exe");
 
-        public static void KillBlazorWinFormsApp()
-        {
-            Process.GetProcesses().Where(p => p.ProcessName == "RemoteBlazorWebViewTutorial.WinFormsApp").ToList().ForEach(x => x.Kill());
-        }
+        public static void KillBlazorWinFormsApp() => Kill("RemoteBlazorWebViewTutorial.WinFormsApp");
         #endregion
 
         #region Wpf
@@ -253,7 +252,7 @@ namespace FileSyncServer.Tests
         public static string BlazorWpfDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp";
-            var exePath = @"bin\x64\debug\net11.0-windows10.0.17763.0";
+            var exePath = @"bin\x64\Debug\net11.0-windows10.0.17763.0";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
@@ -306,7 +305,7 @@ namespace FileSyncServer.Tests
         public static string BlazorWebViewDebugPath()
         {
             var relative = @"RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial";
-            var exePath = @"bin\x64\debug\net11.0-windows";
+            var exePath = @"bin\x64\Debug\net11.0-windows";
             return Path.Combine(Directory.GetCurrentDirectory(), RelativeRoot, relative, exePath);
         }
 
@@ -340,6 +339,7 @@ namespace FileSyncServer.Tests
             return Path.Combine(BlazorWebViewEmbeddedPath(), "RemoteBlazorWebViewTutorial.exe");
         }
 
+        public static Process StartRemoteBlazorWebViewDebugApp(string url, string pid) => StartProcess(BlazorWebViewDebugAppExe(), BlazorWebViewDebugPath(), url, pid);
         public static Process StartRemoteBlazorWebViewApp(string url, string pid) => StartProcess(BlazorWebViewAppExe(), BlazorWebViewPath(), url, pid);
         public static Process StartRemoteBlazorWebViewEmbeddedApp(string url, string pid) => StartProcess(BlazorWebViewAppEmbeddedExe(), BlazorWebViewEmbeddedPath(), url, pid);
         public static void KillRemoteBlazorWebViewApp() => Kill("RemoteBlazorWebViewTutorial");
@@ -367,7 +367,7 @@ namespace FileSyncServer.Tests
             p.StartInfo.RedirectStandardOutput = true;
             p.StartInfo.RedirectStandardError = true;
             p.StartInfo.Arguments = $"-u={url} -i={id}";
-            p.StartInfo.WorkingDirectory = directory;
+            p.StartInfo.WorkingDirectory = Path.GetFullPath(directory);
             var stderr = new StringBuilder();
             p.ErrorDataReceived += (_, e) =>
             {
@@ -426,11 +426,11 @@ namespace FileSyncServer.Tests
             {
                 try
                 {
-                    // Attempt to kill the process
-                    process.Kill();
+                    // Attempt to kill the process and any WebView2 child processes
+                    process.Kill(entireProcessTree: true);
 
                     // Wait for the process to exit
-                    process.WaitForExit();
+                    process.WaitForExit(10000);
                 }
 
                 catch (Exception ex)
@@ -468,12 +468,17 @@ namespace FileSyncServer.Tests
                 Console.WriteLine($"An error occurred: {ex.Message}");
             }
         }
-        public static void GenJavascript(int numberOfFiles = 10, int stringLength = 1000)
+        public static void GenJavascript(int numberOfFiles = 10, int stringLength = 1000, string basePath = @"wwwroot")
         {
-            string basePath = @"wwwroot"; // Set your base path
+            Directory.CreateDirectory(basePath);
             string indexPath = Path.Combine(basePath, "index.html");
 
-            StringBuilder indexFileContent = new(File.Exists(indexPath) ? File.ReadAllText(indexPath) : "<html><head></head><body></body></html>");
+            string html = File.Exists(indexPath)
+                ? File.ReadAllText(indexPath)
+                : "<html><head></head><body></body></html>";
+
+            StringBuilder scriptTags = new();
+            scriptTags.AppendLine($"<script>window.__jsDownloadResult = {{ expected: {numberOfFiles}, loaded: 0, failed: 0, errors: [] }};</script>");
 
             for (int i = 1; i <= numberOfFiles; i++)
             {
@@ -482,37 +487,44 @@ namespace FileSyncServer.Tests
                 string randomString = GenerateRandomString(stringLength);
                 string checksum = CalculateChecksum(randomString);
 
-                string jsContent = $@"
-                (function() {{
-                    const string = '{randomString}';
-                    const checksum = '{checksum}';
-                    async function verifyChecksum() {{
-                        const calculatedChecksum = await sha256(string);
-                        if(calculatedChecksum !== checksum) {{
-                            alert('Checksum verification failed for {fileName}.');
-                            throw new Error('Checksum verification failed.');
-                        }}
-                    }}
-                    async function sha256(message) {{
-                        const msgBuffer = new TextEncoder().encode(message);
-                        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-                        const hashArray = Array.from(new Uint8Array(hashBuffer));
-                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                        return hashHex;
-                    }}
-                    verifyChecksum();
-                    console.log('{fileName} passed');
-                }})();
-                ";
+                string jsContent = $@"(async function() {{
+    const state = window.__jsDownloadResult || (window.__jsDownloadResult = {{ expected: {numberOfFiles}, loaded: 0, failed: 0, errors: [] }});
+    const string = '{randomString}';
+    const checksum = '{checksum}';
+    async function sha256(message) {{
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }}
+    async function verifyChecksum() {{
+        const calculatedChecksum = await sha256(string);
+        if (calculatedChecksum !== checksum) {{
+            throw new Error('Checksum verification failed for {fileName}.');
+        }}
+    }}
+    try {{
+        await verifyChecksum();
+        state.loaded++;
+        console.log('{fileName} passed');
+    }} catch (err) {{
+        state.failed++;
+        state.errors.push(err && err.message ? err.message : String(err));
+        console.error('{fileName} failed', err);
+    }}
+}})();
+";
 
                 File.WriteAllText(filePath, jsContent);
-
-                // Add script tag for this file to index.html
-                int bodyEndIndex = indexFileContent.ToString().LastIndexOf("</body>");
-                indexFileContent.Insert(bodyEndIndex, $"<script src=\"{fileName}\"></script>\n");
+                scriptTags.AppendLine($"<script src=\"{fileName}\" onerror=\"window.__jsDownloadResult.failed++; window.__jsDownloadResult.errors.push('Failed to load {fileName}');\"></script>");
             }
 
-            File.WriteAllText(indexPath, indexFileContent.ToString());
+            int bodyEndIndex = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+            string updatedHtml = bodyEndIndex >= 0
+                ? html.Insert(bodyEndIndex, scriptTags.ToString())
+                : html + scriptTags;
+
+            File.WriteAllText(indexPath, updatedHtml);
         }
 
         [GeneratedRegex(@"^script\d+\.js$", RegexOptions.IgnoreCase)]

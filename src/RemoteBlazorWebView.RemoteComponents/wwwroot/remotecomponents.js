@@ -4,6 +4,8 @@ const frames = new Map(); // iframe element -> .NET HeightSink
 let listening = false;
 
 function onMessage(e) {
+    // Only the page in control reports the height (the relay drops calls from the others anyway).
+    if (window.RemoteBlazor && window.RemoteBlazor.isPrimary === false) return;
     for (const [frame, sink] of frames) {
         if (frame.contentWindow !== e.source) continue;
         const d = e.data;
@@ -13,22 +15,30 @@ function onMessage(e) {
     }
 }
 
-// A read-only mirror of the app's page (RemoteWebView sets RemoteBlazor.isPrimary = false). It gets the same render batches and JS calls
-// as the app's page, but must neither load the component's own page (the relay would take it as a reload and restart the component) nor
-// size the frame: the RemoteWebView script points its frames at the mirror address, and the frame's height comes with the app's renders.
+// A page opened as a read-only /mirror page. It gets the same render batches and JS calls as the app's page, but must not load the
+// component's own page (the relay would take it as a reload and restart the component): the RemoteWebView script points its frames at
+// the mirror address. This is about which page it is, not who has control: control moves between pages, and the app's page keeps
+// the component's own page (and so keeps it running) even while another page is in control.
 function isMirror() {
-    return !!(window.RemoteBlazor && window.RemoteBlazor.isPrimary === false);
+    const rb = window.RemoteBlazor;
+    if (!rb) return false;
+    return typeof rb.isMirrorPage === 'boolean' ? rb.isMirrorPage : rb.isPrimary === false;
 }
 
 // The frame is rendered without src (data-rbwv-src holds it), so only the page that should load it does.
 function load(frame) {
-    const src = frame.getAttribute('data-rbwv-src');
-    if (src && frame.getAttribute('src') !== src) frame.setAttribute('src', src);
+    let src = frame.getAttribute('data-rbwv-src');
+    if (!src) return;
+    // This page's identity in the component's session (set by the RemoteWebView script), so the component's control can follow the
+    // app's control from browser to browser. A fragment, so it is never sent to the relay.
+    const hash = window.RemoteBlazor && window.RemoteBlazor.frameHash;
+    if (hash && !src.includes('#')) src += hash;
+    if (frame.getAttribute('src') !== src) frame.setAttribute('src', src);
 }
 
 export function watch(frame, sink) {
-    if (!frame || isMirror()) return;
-    load(frame);
+    if (!frame) return;
+    if (!isMirror()) load(frame);
     if (!listening) { window.addEventListener('message', onMessage); listening = true; }
     frames.set(frame, sink);
 }

@@ -1,12 +1,12 @@
-# Builds RemoteWebViewService and runs its service tests on pushes to branches other than main.
+# Builds RemoteWebViewService and cross-platform net10.0 libraries and runs their test suites on pushes to branches other than main.
 #
 # main auto-deploys the live relay on Railway, so changes to the server are developed on branches.
 # The other workflows run only on net8 / net10 / net10-ci / net11 or on demand, so a feature branch
 # otherwise gets no build at all.
 #
-# - test: restore, build and run StaticContentCache.ServiceTests (which references only the server).
-#   The agent registry tests must pass. The rest of that project runs too but does not fail the job:
-#   it has not been run on Linux in CI before (some tests are Windows-only by design).
+# - test: runs RunTests.ToolchainTests.ps1, builds remote.blazor.desktop.js and runs its JS tests,
+#   and restores, builds, and runs all cross-platform net10.0 test projects as gating checks
+#   (Windows-specific tests use [WindowsOnlyFact] to skip cleanly on Linux).
 # - docker: builds the same Dockerfile Railway uses, without pushing anything.
 
 name: Server branch CI
@@ -17,11 +17,24 @@ on:
     paths:
       - 'src/RemoteWebViewService/**'
       - 'src/RemoteWebViewService.Lib/**'
+      - 'src/RemoteWebView/**'
+      - 'src/RemoteWebView.Blazor.JS/**'
+      - 'src/EditWebView/**'
+      - 'src/RemoteBlazorWebView.SourceGenerators/**'
+      - 'src/RemoteBlazorWebView.RemoteComponents/**'
+      - 'src/RemoteBlazorWebView.RemoteComponents.Generators/**'
       - 'src/Protos/**'
+      - 'eng/NativeToolchain.ps1'
       - 'test/StaticContentCache.ServiceTests/**'
+      - 'test/StaticContentCache.Tests/**'
+      - 'test/RemoteWebView.Lifecycle.Tests/**'
+      - 'test/RemoteBlazorWebView.SourceGenerators.Tests/**'
+      - 'test/RemoteBlazorWebView.RemoteComponents.Tests/**'
+      - 'test/RunTests.ToolchainTests.ps1'
       - 'Dockerfile'
       - 'global.json'
       - 'Directory.Build.props'
+      - 'Directory.Build.targets'
       - '.github/workflows/server-branch-ci.yml'
   workflow_dispatch:
 
@@ -44,30 +57,89 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
-        run: dotnet restore test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.3.0
 
-      - name: Build
-        run: >
-          dotnet build test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
-          -c Release --no-restore
-          -p:PackAsTool=false -p:GeneratePackageOnBuild=false
+      - name: Test native toolchain helpers
+        run: pwsh -NoProfile -File test/RunTests.ToolchainTests.ps1
 
-      - name: Test agent registry
-        run: >
-          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
-          -c Release --no-build
-          --filter "FullyQualifiedName~AgentRegistryTests"
-          --logger "console;verbosity=normal"
-          --logger "trx;LogFileName=agent.trx" --results-directory TestResults
+      - name: Build remote.blazor.desktop.js and run JS tests
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare yarn@4.3.1 --activate
+          pushd src/RemoteWebView.Blazor.JS >/dev/null
+          yarn install --immutable
+          pushd Web.JS >/dev/null
+          npm install --no-audit --no-fund
+          popd >/dev/null
+          python3 - <<'PY'
+          import os
+          for root in ("node_modules", os.path.join("Web.JS", "node_modules")):
+              if not os.path.isdir(root):
+                  continue
+              for dirpath, _dirnames, filenames in os.walk(root):
+                  for name in filenames:
+                      path = os.path.join(dirpath, name)
+                      try:
+                          with open(path, "rb") as handle:
+                              first = handle.readline(256)
+                              if not first.startswith(b"#!") or b"\r" not in first or b"\0" in first:
+                                  continue
+                              rest = handle.read()
+                      except OSError:
+                          continue
+                      data = first + rest
+                      if b"\0" in data[:512]:
+                          continue
+                      with open(path, "wb") as handle:
+                          handle.write(data.replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+          PY
+          npm run build:production
+          test -s dist/remote.blazor.desktop.js
+          npm test
+          popd >/dev/null
 
-      - name: Test the rest of StaticContentCache.ServiceTests (informational)
-        continue-on-error: true
-        run: >
-          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
-          -c Release --no-build
-          --filter "FullyQualifiedName!~AgentRegistryTests"
-          --logger "trx;LogFileName=other.trx" --results-directory TestResults
+      - name: Restore and build cross-platform test projects
+        run: |
+          set -euo pipefail
+          common=(-c Release -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false)
+          projects=(
+            test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+            test/StaticContentCache.Tests/StaticContentCache.Tests.csproj
+            test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj
+            test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj
+            test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj
+          )
+          for project in "${projects[@]}"; do
+            dotnet build "$project" "${common[@]}"
+          done
+
+      - name: Test cross-platform suites
+        run: |
+          set -uo pipefail
+          common=(-c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false)
+          suites=(
+            "test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj:StaticContentCache.ServiceTests.trx"
+            "test/StaticContentCache.Tests/StaticContentCache.Tests.csproj:StaticContentCache.Tests.trx"
+            "test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj:RemoteWebView.Lifecycle.Tests.trx"
+            "test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj:RemoteBlazorWebView.SourceGenerators.Tests.trx"
+            "test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj:RemoteBlazorWebView.RemoteComponents.Tests.trx"
+          )
+          failed=0
+          for entry in "${suites[@]}"; do
+            project="${entry%%:*}"
+            trx="${entry##*:}"
+            echo "=== Testing $project ==="
+            if ! dotnet test "$project" "${common[@]}" \
+              --logger "console;verbosity=normal" \
+              --logger "trx;LogFileName=$trx" \
+              --results-directory TestResults; then
+              failed=1
+            fi
+          done
+          exit "$failed"
 
       - uses: actions/upload-artifact@v4
         if: always()

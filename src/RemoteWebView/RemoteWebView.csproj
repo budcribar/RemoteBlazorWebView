@@ -4,10 +4,12 @@
     <DebugType Condition="'$(Configuration)' != 'Debug'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
     <TargetFramework>net11.0</TargetFramework>
+    <!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+    <RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <UseWPF>false</UseWPF>
     <Platforms>x64;AnyCPU</Platforms>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <PackageId>PeakSWC.RemoteWebView</PackageId>
     <Authors>Bud Cribar</Authors>
     <Description>Support Package for RemoteBlazorWebView.WindowsForms and RemoteBlazorWebView.Wpf</Description>
@@ -58,6 +60,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="11.0.0-rc.3.26522.148" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	  <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
 	
@@ -65,6 +68,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="StaticContentCache.Tests" />
+    <InternalsVisibleTo Include="RemoteWebView.Lifecycle.Tests" />
   </ItemGroup>
 
   <!-- The [RemoteBlazor] source generator ships in this package (so the Wpf and WindowsForms packages get it transitively), with a

@@ -2,8 +2,48 @@
  param(
         [string] $Mode = 'Developer',
         [switch] $Build = $false,
+        # Runs only part of the desktop and browser suite (a dotnet test --filter expression), for a quick check before the
+        # full run, e.g. -Filter "FullyQualifiedName~SharedControl|Name=Test1Client". The quick suites still run in full.
+        [string] $Filter = '',
+        # Tests only: skips the clean, the script bundle and every publish, and uses what the last run built. For a rerun
+        # after changing test code only. A change to the product (C#, the page script, the tutorial apps) needs a run without it.
+        [switch] $NoBuild = $false,
 		[switch] $Rust = $false
     )
+
+# Big PASSED / FAILED banner at the end of every run. Every early "exit" in this script still runs the finally
+# block below, so a failure anywhere shows FAILED; only reaching the very end shows PASSED.
+function Show-RunTestsResult {
+    param([bool] $Passed)
+    $what = if ($Build) { 'BUILD' } elseif ($NoBuild) { 'TESTS (no build)' } else { 'BUILD + TESTS' }
+    if ($Passed) {
+        # Success: clear the build/test noise so the result is all that's on screen (failures keep the output to read).
+        try { Clear-Host } catch { }
+        $color = 'Green'
+        $art = @(
+            '  ######     ###     ######   ######  ########  ######  ',
+            '  ##   ##   ## ##   ##       ##       ##        ##   ## ',
+            '  ######   ##   ##   #####    #####   ######    ##   ## ',
+            '  ##       #######       ##       ##  ##        ##   ## ',
+            '  ##       ##   ##  ######   ######   ########  ######  ')
+    } else {
+        $color = 'Red'
+        $art = @(
+            '  #######    ###    ##  ##       ########  ######  ',
+            '  ##        ## ##   ##  ##       ##        ##   ## ',
+            '  #####    ##   ##  ##  ##       ######    ##   ## ',
+            '  ##       #######  ##  ##       ##        ##   ## ',
+            '  ##       ##   ##  ##  #######  ########  ######  ')
+    }
+    Write-Host ''
+    $art | ForEach-Object { Write-Host $_ -ForegroundColor $color }
+    Write-Host ''
+    Write-Host ("  {0} {1}" -f $what, $(if ($Passed) { 'PASSED' } else { 'FAILED - scroll up for the first red error' })) -ForegroundColor $color
+    Write-Host ''
+}
+
+$script:RunTestsSucceeded = $false
+try {
 
 # .\RunTests.ps1  -Build:$true
 # .\RunTests.ps1  -Mode Release
@@ -13,6 +53,12 @@ $env:EnvBuildMode = $Mode # Developer or Release
 . (Join-Path $PSScriptRoot 'eng\NativeToolchain.ps1')
 
 Write-Host -ForegroundColor GREEN ("Build:",$Build)
+Write-Host -ForegroundColor GREEN ("NoBuild:",$NoBuild)
+
+if ($Build -and $NoBuild) {
+    Write-Error "-Build (build only) and -NoBuild (tests only) cannot be used together."
+    exit 1
+}
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)
 
@@ -367,6 +413,26 @@ if (-not $alreadyExists) {
 }
 
 
+$currentDirectory = Get-Location
+
+if ($NoBuild) {
+    # Everything the desktop and browser tests start must already be there from an earlier run.
+    $needed = @(
+        'src\RemoteWebView.Blazor.JS\dist\remote.blazor.desktop.js',
+        'src\RemoteWebViewService\bin\publishNoAuth\RemoteWebViewService.exe',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WpfApp\bin\publish',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish',
+        '..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publish'
+    )
+    $missing = @($needed | Where-Object { -not (Test-Path -LiteralPath $_) })
+    if ($missing.Count -gt 0) {
+        Write-Error ("-NoBuild needs the output of an earlier run, and these are missing: " + ($missing -join ', ') + ". Run without -NoBuild first.")
+        exit 1
+    }
+    Write-Host -ForegroundColor Yellow "No build: testing what the last run built. Only changes to test code are picked up."
+    if ($Rust -eq $true) { $env:Rust = "true" }
+} else {
+
 Write-Host -ForegroundColor GREEN "Clean artifacts"
 # Missing output folders are not a failure. A later command that needs them still stops the script.
 Get-ChildItem .\src\RemoteWebView.Blazor.JS -Include node_modules,dist -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -Recurse -ErrorAction SilentlyContinue }
@@ -408,6 +474,8 @@ if (-not (Test-Path -LiteralPath $bundle) -or (Get-Item -LiteralPath $bundle).Le
     exit 1
 }
 Write-Host "remote.blazor.desktop.js is $((Get-Item -LiteralPath $bundle).Length) bytes"
+Write-Host -ForegroundColor Cyan "Testing RemoteWebView.Blazor.JS"
+Invoke-RunTestsNative npm test
 
 Set-Location $currentDirectory
 
@@ -516,28 +584,72 @@ Invoke-RunTestsNative dotnet publish -c Embedded --self-contained true -r win-x6
 # Delete all files except the executable
 Remove-Item ..\RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial\bin\publishEmbedded\* -Exclude *.exe -Recurse
 
-if ($Build -ne $true) {
-    # Navigate to the first test directory
-    $targetPath = Resolve-Path "test\FileSyncServer.Tests"
-    Set-Location $targetPath
+} # end of the build (skipped with -NoBuild)
 
-    # The Microsoft.Playwright package writes playwright.ps1 into the test output during build.
-    # Install browsers from that script. There is no global `playwright` command.
-    Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release
-    $playwright = Get-ChildItem -Path (Join-Path (Get-Location) 'bin') -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $playwright) {
-        Write-Error "playwright.ps1 was not produced by the FileSyncServer.Tests build."
-        exit 1
+if ($Build -ne $true) {
+    Write-Host -ForegroundColor Cyan "Testing NativeToolchain"
+    & "$PSScriptRoot\test\RunTests.ToolchainTests.ps1"
+    if (-not $?) { exit 1 }
+
+    if ($NoBuild -and (Test-Path -LiteralPath 'src\RemoteWebView.Blazor.JS\node_modules')) {
+        Write-Host -ForegroundColor Cyan "Testing RemoteWebView.Blazor.JS"
+        Push-Location 'src\RemoteWebView.Blazor.JS'
+        try {
+            Invoke-RunTestsNative npm test
+        } finally {
+            Pop-Location
+        }
     }
-    Write-Host "Installing Playwright browsers with $($playwright.FullName)"
-    Invoke-RunTestsNative $playwright.FullName install
+
+    # The Microsoft.Playwright package writes playwright.ps1 into the FileSyncServer.Tests output during build.
+    # Build FileSyncServer.Tests and install Playwright browsers before the quick suites so StaticContentCache.EndToEnd.Tests
+    # also has Chromium available when Chrome/Edge are absent. There is no global `playwright` command.
+    $targetPath = Resolve-Path "test\FileSyncServer.Tests"
+    Push-Location $targetPath
+    try {
+        Invoke-RunTestsNative dotnet build FileSyncServer.Tests.csproj -c Release '-p:GeneratePackageOnBuild=false' '-p:PackAsTool=false'
+        $playwright = Get-ChildItem -Path (Join-Path (Get-Location) 'bin') -Recurse -Filter playwright.ps1 -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $playwright) {
+            Write-Error "playwright.ps1 was not produced by the FileSyncServer.Tests build."
+            exit 1
+        }
+        Write-Host "Installing Playwright browsers with $($playwright.FullName)"
+        Invoke-RunTestsNative $playwright.FullName install
+    } finally {
+        Pop-Location
+    }
+
+    # The quick suites first: they need no app windows, so a failure stops the run before the slow desktop and browser tests start.
+    # Every test project is part of the release gate; before this only FileSyncServer.Tests ran here.
+    $quickSuites = @(
+        'test\StaticContentCache.Tests\StaticContentCache.Tests.csproj',                                     # static content cache
+        'test\StaticContentCache.ServiceTests\StaticContentCache.ServiceTests.csproj',                       # the relay
+        'test\RemoteWebView.Lifecycle.Tests\RemoteWebView.Lifecycle.Tests.csproj',                           # the app-side library
+        'test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj',  # [RemoteBlazor]
+        'test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj',  # remote components
+        'test\StaticContentCache.EndToEnd.Tests\StaticContentCache.EndToEnd.Tests.csproj'                    # file cache, needs Chrome or Edge installed
+    )
+    foreach ($suite in $quickSuites) {
+        Write-Host -ForegroundColor Cyan "Testing $(Split-Path -Leaf (Split-Path -Parent $suite))"
+        # GeneratePackageOnBuild=false: testing must not repack the NuGet packages that were just built for release.
+        # Quoted: unquoted, PowerShell splits -p:Name=value into "-p:" and "Name=value" when passing it through a function.
+        Invoke-RunTestsNative dotnet test $suite -c Release '-p:GeneratePackageOnBuild=false' '-p:PackAsTool=false'
+    }
+
+    # Navigate to the first test directory
+    Set-Location $targetPath
 
     # Generate a timestamp
     $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 
     # Run the first test
     $logfile1 = "FileSyncServerTestLog_$timestamp.html"
-    & dotnet test FileSyncServer.Tests.csproj --logger:"html;LogFileName=$logfile1"
+    if ($Filter) {
+        Write-Host -ForegroundColor Yellow "Partial run: only tests matching '$Filter'. Run again without -Filter before a release."
+        & dotnet test FileSyncServer.Tests.csproj -c Release --no-build --logger:"html;LogFileName=$logfile1" --filter $Filter
+    } else {
+        & dotnet test FileSyncServer.Tests.csproj -c Release --no-build --logger:"html;LogFileName=$logfile1"
+    }
     $testExit = $LASTEXITCODE
     if ($testExit -ne 0) {
         Write-Error "dotnet test failed with exit code $testExit. The HTML log was not opened."
@@ -562,6 +674,12 @@ $compress = @{
   DestinationPath = "artifacts\Release.Zip"
 }
 
-if ($env:EnvBuildMode -eq 'Release') {
+if ($env:EnvBuildMode -eq 'Release' -and -not $NoBuild) {
 	Compress-Archive @compress -Force
+}
+
+$script:RunTestsSucceeded = $true
+}
+finally {
+    Show-RunTestsResult -Passed $script:RunTestsSucceeded
 }

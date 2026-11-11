@@ -1,0 +1,11 @@
+<Project>
+  <!-- The Microsoft.Web.WebView2 package adds its WPF assembly (Microsoft.Web.WebView2.Wpf.dll) to every project that gets the package,
+       directly or through a project reference. In a project that is not WPF that reference is unused and only produces MSB3277
+       "conflict between WindowsBase 4.0.0.0 and 5.0.0.0" (several per project, each with a long explanation). A project that does not use
+       the WPF control opts in with <RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>. -->
+  <Target Name="RemoveWebView2WpfReference" BeforeTargets="ResolveAssemblyReferences" Condition="'$(RemoveWebView2WpfReference)' == 'true'">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -32,11 +32,6 @@
     <!-- UseWebAssemblyDebugging only runs in Development; don't copy the 11 MB debug proxy into apps that embed the service.
          RemoteWebViewService.exe references the package itself and still gets it. -->
     <BlazorWebAssemblyOmitDebugProxyOutput>true</BlazorWebAssemblyOmitDebugProxyOutput>
-    <!-- The Azure AD B2C code (#if AUTHORIZATION) needs Microsoft.Identity.Web, OpenIdConnect and Newtonsoft.Json.
-         The SDK adds the AUTHORIZATION define for the Authorization configuration (ImplicitConfigurationDefine) only after
-         this file is evaluated, so DefineConstants can't be inspected here; check the configuration name as well. -->
-    <_RwvAuthorization>$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)AUTHORIZATION(;|$)'))</_RwvAuthorization>
-    <_RwvAuthorization Condition="'$(Configuration)' == 'Authorization'">true</_RwvAuthorization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='AzureNoAuth'">
     <DefineConstants>$(DefineConstants);NOAUTHORIZATION</DefineConstants>
@@ -62,14 +57,8 @@
     <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(_RwvAuthorization)' == 'true'">
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.18.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0-rc.3.26522.148" NoWarn="NU1605" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-  </ItemGroup>
-
   <ItemGroup>
+    <EmbeddedResource Include="VoiceClient.js" LogicalName="VoiceClient.js" />
     <EmbeddedResource Include="..\..\icons\favicon.ico" Link="Resources\favicon.ico" />
     <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png" Pack="true" PackagePath="" />
     <None Include="README.md" Pack="true" PackagePath="" />

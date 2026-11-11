@@ -15,6 +15,7 @@ namespace PeakSWC.RemoteWebView
     public class RemotePhotinoWebViewManager : PhotinoWebViewManager
     {
         Uri url;
+        private readonly RenderAckFilter renderAcks = new();
 
         private RemoteWebView RemoteWebView { get; }
         private IBlazorWebView BlazorWebView { get; }
@@ -42,7 +43,10 @@ namespace PeakSWC.RemoteWebView
         {
             this.Dispatcher.InvokeAsync(() =>
             {
-                MessageReceived(RemoteMessageUrl.Rewrite(sender?.ToString(), BlazorWebView.ServerUri, BlazorWebView.Id, RemoteWebView.HostHtmlPath, this.url), e);
+                var source = RemoteMessageUrl.Rewrite(sender?.ToString(), BlazorWebView.ServerUri, BlazorWebView.Id, RemoteWebView.HostHtmlPath, this.url);
+                // Control can move between browsers mid-batch; keep render acknowledgements one per batch, in order.
+                foreach (var message in renderAcks.OnReceived(e))
+                    MessageReceived(source, message);
             });
         }
 
@@ -54,6 +58,7 @@ namespace PeakSWC.RemoteWebView
 
         protected override void SendMessage(string message)
         {
+            renderAcks.OnSending(message);
             RemoteWebView.SendMessage(message);
         }
 
