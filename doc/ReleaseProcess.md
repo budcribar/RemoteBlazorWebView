@@ -20,17 +20,17 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net10 that file sets `VersionPrefix` to `10.0.15.1` and does not set `VersionSuffix`, so the package version is `10.0.15.1`. `global.json` pins SDK `10.0.404`, which is GA.
+`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.0` and does not set `VersionSuffix`, so the package version is `11.0.0`. `global.json` pins SDK `11.0.100`, which is GA.
 
 The rule going forward:
 
 - The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json` and the major of `VersionPrefix`.
-- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net10 that is `10.0.15.1` with no suffix. The script does not replace a GA SDK with `10.0.0`.
+- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net11 that is `11.0.0` with no suffix. The script does not replace a GA SDK with `10.0.0`.
 - When the SDK is a prerelease, `VersionPrefix` is `{major}.0.0` unless `version_override` is set. The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `rc.2` becomes `rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A committed suffix spelled `rc.2` or `preview.5` is rewritten the same way.
 - `version_override` is a single token such as `10.0.14` or `10.0.13-rc2`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`. It replaces both the committed GA version and the prerelease derivation.
 - `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `10.0.13` with patch `1` is `10.0.13-p1` (`VersionSuffix` `p1`).
 
-`10.0.15` is already on nuget.org. `10.0.15.1` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
+`11.0.0-rc2` is already on nuget.org. `11.0.0` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
 
 SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1` and leave `patch` empty.
 
@@ -48,10 +48,10 @@ When to run it:
 - Run `EditWebView` when moving to a new major, preview, or RC, or when a servicing release changes `src/Components/Web.JS` in `dotnet/aspnetcore` or publishes a new `dotnet/maui` tag on this line.
 - Skip it for runtime-only servicing releases where neither upstream directory changed.
 
-How to run it on `net10`:
+How to run it on `net11`:
 
-1. Give it a GitHub token for reading tags: either sign in once with `gh auth login` (EditWebView runs `gh auth token`), or set `GITHUB_PAT`, which wins when both are present.
-2. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net10.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
+1. Set `AspNetCoreTagHint` and `MauiTagHint` in `src/EditWebView/Program.cs` to the tags you want (or `ASPNETCORE_TAG` / `MAUI_TAG`; an empty value forces a scan with `git ls-remote`). No GitHub token is needed on this line.
+2. Build `src/EditWebView/EditWebView.csproj` with `-p:Platform=x64` (or in Visual Studio with `Debug | x64`), then run the executable from `src/EditWebView/bin/x64/Debug/net11.0` (Visual Studio's default working directory). Both `RepoPath` (six levels up from `BaseDirectory`) and `RelativePath` (five levels up from the working directory to `src/`) assume the `bin/x64/<Configuration>/<tfm>` layout.
 3. Read the summary it prints at the end, and `EditWebView.diff` in the repository root for the whole diff (git-ignored):
    - **Upstream versions used.** A warning here means the tag is newer than the packages reference: update `Microsoft.AspNetCore.Components.WebView.Wpf` and `.WindowsForms` and the "Based on maui ..." text in the package release notes.
    - **Changes of this repository's own.** `EditWebView` overwrites `src/SharedSource`, `src/RemoteBlazorWebView.Wpf`, `src/RemoteBlazorWebView.WinForms` and `src/RemoteWebView.Blazor.JS/Web.JS` from upstream and then makes this repository's changes again (`Editor.cs` for the C# files, `ApplyWebJSPatches` and `OurWebJSFiles` in `Program.cs` for Web.JS). Any line that says NOT APPLIED, NOT KEPT, NOT REMOVED or MISSING means upstream changed underneath one of them: fix that before committing.
