@@ -7,7 +7,11 @@
 **/*.pem
 **/*.key
 **/appsettings.Development.json
-.git/
+# Only the bits needed to stamp the commit on `railway up` deploys (no history, no objects).
+.git/*
+!.git/HEAD
+!.git/refs/
+!.git/packed-refs
 artifacts/
 test/
 doc/

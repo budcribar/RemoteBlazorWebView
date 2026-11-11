@@ -251,7 +251,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string technician, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
         {
             lock (gate)
             {
@@ -302,7 +302,7 @@ namespace PeakSWC.RemoteWebView.Agents
                         RequestId = requestId,
                         SessionId = sessionId,
                         ServerUrl = baseUrl,
-                        Technician = technician ?? string.Empty,
+                        Requester = requester ?? string.Empty,
                         RequireConsent = requireConsent,
                     }
                 });
@@ -312,7 +312,9 @@ namespace PeakSWC.RemoteWebView.Agents
                     Accepted = true,
                     RequestId = requestId,
                     SessionId = sessionId,
-                    AppUrl = baseUrl + "/app/" + sessionId,
+                    // The session is shared: the app's own window at the PC holds /app, and the requester joins at the
+                    // read-only link and is given control there (the agent starts the app unattended).
+                    AppUrl = baseUrl + "/mirror/" + sessionId,
                 }, entry.Info.MachineName, requireConsent);
             }
 

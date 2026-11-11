@@ -5,6 +5,8 @@
     <DebugSymbols Condition="'$(Configuration)' != 'Debug'">False</DebugSymbols>
 	<DefineConstants>$(DefineConstants);WEBVIEW2_WINFORMS</DefineConstants>
     <TargetFramework>net11.0-windows</TargetFramework>
+    <!-- Not a WPF project: drop the WebView2 package's WPF assembly (see Directory.Build.targets). -->
+    <RemoveWebView2WpfReference>true</RemoveWebView2WpfReference>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>annotations</Nullable>
     <LangVersion>preview</LangVersion>
@@ -19,12 +21,12 @@
     <RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <AssemblyName>PeakSWC.RemoteBlazorWebView.WindowsForms</AssemblyName>
     <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <Platforms>x64</Platforms>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5 </PackageReleaseNotes>
+    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.0, the first release for .NET 11: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -49,9 +51,9 @@
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="11.0.0-rc.3.26522.148" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="11.0.0-rc.2.26505.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="11.0.0-rc.3.26522.148" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="11.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="11.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebView\RemoteWebView.csproj" />

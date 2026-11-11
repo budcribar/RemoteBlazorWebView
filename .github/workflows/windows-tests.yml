@@ -96,7 +96,14 @@ jobs:
           npm run build:production
           $js = Get-Item "dist/remote.blazor.desktop.js"
           Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
+          npm test
           Pop-Location
+
+      - name: Test native toolchain helpers
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pwsh -NoProfile -File test/RunTests.ToolchainTests.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Restore and build test projects
         id: build
@@ -107,7 +114,8 @@ jobs:
             '-c', 'Release',
             '-p:Platform=x64',
             '-p:EnableWindowsTargeting=true',
-            '-p:GeneratePackageOnBuild=false'
+            '-p:GeneratePackageOnBuild=false',
+            '-p:PackAsTool=false'
           )
           dotnet build src/RemoteBlazorWebView/RemoteBlazorWebView.csproj @common
           $projects = @(
@@ -143,12 +151,33 @@ jobs:
         run: |
           # Both suites always run. PowerShell otherwise keeps only the last native exit code.
           $failed = $false
+          dotnet test test/StaticContentCache.Tests/StaticContentCache.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:PackAsTool=false `
+            --logger "trx;LogFileName=StaticContentCache.Tests.trx" `
+            --results-directory TestResults/StaticContentCache.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:PackAsTool=false `
+            --logger "trx;LogFileName=StaticContentCache.ServiceTests.trx" `
+            --results-directory TestResults/StaticContentCache.ServiceTests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
           dotnet test test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj `
             -c Release `
             --no-build `
             -p:Platform=x64 `
             -p:EnableWindowsTargeting=true `
             -p:GeneratePackageOnBuild=false `
+            -p:PackAsTool=false `
             --logger "trx;LogFileName=RemoteBlazorWebView.SourceGenerators.Tests.trx" `
             --results-directory TestResults/RemoteBlazorWebView.SourceGenerators.Tests
           if ($LASTEXITCODE -ne 0) { $failed = $true }
@@ -158,8 +187,21 @@ jobs:
             -p:Platform=x64 `
             -p:EnableWindowsTargeting=true `
             -p:GeneratePackageOnBuild=false `
+            -p:PackAsTool=false `
             --logger "trx;LogFileName=RemoteBlazorWebView.RemoteComponents.Tests.trx" `
             --results-directory TestResults/RemoteBlazorWebView.RemoteComponents.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          dotnet test test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj `
+            -c Release `
+            --no-build `
+            -p:Platform=x64 `
+            -p:EnableWindowsTargeting=true `
+            -p:GeneratePackageOnBuild=false `
+            -p:PackAsTool=false `
+            --logger "trx;LogFileName=StaticContentCache.EndToEnd.Tests.trx" `
+            --results-directory TestResults/StaticContentCache.EndToEnd.Tests
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          dotnet test test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj -c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false -p:PackAsTool=false --logger "trx;LogFileName=RemoteWebView.Lifecycle.Tests.trx" --results-directory TestResults/RemoteWebView.Lifecycle.Tests
           if ($LASTEXITCODE -ne 0) { $failed = $true }
           if ($failed) { exit 1 }
 

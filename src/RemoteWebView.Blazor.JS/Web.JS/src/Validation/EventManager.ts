@@ -19,7 +19,7 @@ export class EventManager {
 
   /**
    * Attaches per-field validation listeners based on the element's trigger configuration.
-   * Default: 'lazy validation, eager recovery' â€” validate on change always, on input
+   * Default: 'lazy validation, eager recovery' — validate on change always, on input
    * only after the form has been submitted or the field has had an error.
    */
   attachInputListeners(element: ValidatableElement): void {

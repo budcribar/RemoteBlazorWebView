@@ -40,15 +40,15 @@ public class GeneratedContractTests
     [Fact]
     public async Task Generated_frame_and_receiver_carry_values_and_callbacks()
     {
-        var wire = new Wire();
+        await using var wire = new Wire();
         var receiver = new GaugeReceiver(wire.Child);
         IGauge contract = receiver; // the receiver implements the contract
         receiver.Start();
 
-        using var ctx = new BunitContext();
+        await using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         var resets = 0;
-        var picked = new List<GaugeReading>();
+        var picked = new System.Collections.Concurrent.ConcurrentQueue<GaugeReading>();
         var when = new DateTimeOffset(2026, 11, 6, 12, 0, 0, TimeSpan.FromHours(-8));
         var cut = ctx.Render<GaugeFrame>(p => p
             .Add(x => x.Open, _ => Task.FromResult(new RemoteComponentSession(new Uri("http://127.0.0.1:1/g"), wire.App)))
@@ -56,8 +56,8 @@ public class GeneratedContractTests
             .Add(x => x.Level, 0.5)
             .Add(x => x.Kind, GaugeKind.Round)
             .Add(x => x.History, new[] { new GaugeReading(when, 0.4, null) })
-            .Add(x => x.Reset, () => resets++)
-            .Add(x => x.Picked, (GaugeReading r) => picked.Add(r)));
+            .Add(x => x.Reset, () => Interlocked.Increment(ref resets))
+            .Add(x => x.Picked, (GaugeReading r) => picked.Enqueue(r)));
 
         await Eventually(() => contract.Label == "CPU" && contract.History is { Count: 1 });
         Assert.Equal(0.5, contract.Level);
@@ -69,8 +69,8 @@ public class GeneratedContractTests
 
         await contract.Reset();
         await contract.Picked(new GaugeReading(when, 0.9, "peak"));
-        await Eventually(() => resets == 1 && picked.Count == 1);
-        Assert.Equal("peak", picked[0].Note);
+        await Eventually(() => Volatile.Read(ref resets) == 1 && !picked.IsEmpty);
+        Assert.Equal("peak", Assert.Single(picked).Note);
     }
 
     [Fact]

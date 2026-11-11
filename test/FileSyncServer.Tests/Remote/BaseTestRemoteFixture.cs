@@ -1,4 +1,4 @@
-﻿// RemoteBlazorWpfFixture.cs
+// RemoteBlazorWpfFixture.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -37,6 +37,9 @@ namespace FileSyncServer.Tests.Remote
         {
             // Default constructor without ITestOutputHelper
         }
+
+        /// <summary>The page each test browser opens first: the controlling /app page. Shared-control tests open it as the owner.</summary>
+        protected virtual string AppPath(string id) => $"app/{id}";
 
         public virtual Process CreateClient(string url, string id)
         {
@@ -146,7 +149,7 @@ namespace FileSyncServer.Tests.Remote
             // Navigate to the home page for each client
             for (int i = 0; i < numClients; i++)
             {
-                await Pages[i].GotoAsync(Url + $"app/{Ids[i]}");
+                await Pages[i].GotoAsync(Url + AppPath(Ids[i]));
             }
 
             // Wait for navigation
@@ -243,7 +246,9 @@ namespace FileSyncServer.Tests.Remote
         // on net9 (253836), net10 (257385), and net11 (278555). WPF adds 424 bytes of
         // app-specific static files. File counts stay 25 (WinForms) and 29 (WPF).
         private const int BootScriptCopies = 2;
-        private const long WinFormsBytesWithoutBootScript = 468392;
+        // 468390, was 468392: each page load now gets the app's own _framework/blazor.modules.json (4 bytes in the
+        // tutorial apps) instead of RemoteWebView's embedded fallback (5 bytes then), and it is read twice per client.
+        private const long WinFormsBytesWithoutBootScript = 468390;
         private const long WpfExtraStaticBytes = 424;
 
         private static long StaticBytesWithoutBootScript(bool isWpf)
@@ -260,35 +265,49 @@ namespace FileSyncServer.Tests.Remote
         {
             try
             {
-                ServerProcess?.Kill();
+                ServerProcess?.Kill(entireProcessTree: true);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error killing server process: {ex.Message}");
             }
 
-            try
+            foreach (var client in Clients)
             {
-                Clients.ForEach(x => x.Kill());
+                try
+                {
+                    client.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error killing client process: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error killing client processes: {ex.Message}");
-            }
+            Clients.Clear();
 
             try
             {
-                foreach (var page in Pages)
+                KillClient();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error killing remaining client app processes: {ex.Message}");
+            }
+
+            foreach (var page in Pages)
+            {
+                try
                 {
                     page.CloseAsync().Wait();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error closing Playwright pages: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error closing Playwright page: {ex.Message}");
+                }
             }
 
             Pages.Clear();
+            BrowserContexts.Clear();
         }
 
         public async virtual Task TestRefresh(int numClients, int numRefreshes)

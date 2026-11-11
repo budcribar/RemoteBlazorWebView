@@ -53,6 +53,12 @@ namespace EditWebView
                 case BlazorWebViewBaseFile:
                     EditBlazorWebViewBase();
                     break;
+                case "StaticContentHotReloadManager.cs":
+                    EditStaticContentHotReloadManager();
+                    break;
+                case "AssemblyInfo.cs":
+                    EditAssemblyInfo();
+                    break;
             }
 
             ReplaceNamespaces();
@@ -68,6 +74,15 @@ namespace EditWebView
                 await _webviewReadyTask;
                 _webview.NavigateToString(htmlContent);
             });
+        }
+        /// <summary>Loads a URL in this control's WebView once it is initialized (CoreWebView2 is null until then).</summary>
+        public void NavigateToUrl(Uri url)
+        {
+            _ = Dispatcher.InvokeAsync(async () =>
+            {
+                if (await _webviewReadyTask)
+                    _webview.CoreWebView2.Navigate(url.AbsoluteUri);
+            });
         }";
 
             Replace("protected override void SendMessage(string message)", newMethod + "\n        protected override void SendMessage(string message)");
@@ -77,14 +92,91 @@ namespace EditWebView
             Replace("AddWpfBlazorWebView", "AddRemoteWpfBlazorWebView");
             Replace("internal class WebView2WebViewManager", "public class WebView2WebViewManager");
             ReplaceFirst("#elif WEBVIEW2_MAUI", "using Microsoft.AspNetCore.Components.WebView;\nusing Microsoft.AspNetCore.Components;\n#elif WEBVIEW2_MAUI");
+
+            AddBrowserArgumentsFromEnvironment();
         }
+
+        /// <summary>
+        /// The tests give WebView2 its DevTools port in WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS. Upstream leaves that variable to
+        /// the WebView2 runtime; here the same arguments also go on the environment options, so they are on the browser command line.
+        /// </summary>
+        private void AddBrowserArgumentsFromEnvironment()
+        {
+            const string what = "browser arguments from WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+
+            const string createEnvironment = "\t\t\tvar userDataFolder = args.UserDataFolder ?? GetWebView2UserDataFolder();";
+            const string userDataFolderMethod = "\t\tprivate static string? GetWebView2UserDataFolder()";
+            const string method =
+                "\t\t// The DevTools port is supplied as an environment variable by the tests.\n" +
+                "\t\t// Put the same arguments on the environment options so they are part of the\n" +
+                "\t\t// browser command line even when that variable is only appended by the runtime.\n" +
+                "\t\tprivate static void ApplyAdditionalBrowserArguments(BlazorWebViewInitializingEventArgs args)\n" +
+                "\t\t{\n" +
+                "\t\t\tvar fromEnvironment = Environment.GetEnvironmentVariable(\"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS\");\n" +
+                "\t\t\tif (string.IsNullOrWhiteSpace(fromEnvironment))\n" +
+                "\t\t\t\treturn;\n" +
+                "\n" +
+                "\t\t\targs.EnvironmentOptions ??= new CoreWebView2EnvironmentOptions();\n" +
+                "\t\t\tvar existing = args.EnvironmentOptions.AdditionalBrowserArguments;\n" +
+                "\t\t\tif (string.IsNullOrWhiteSpace(existing))\n" +
+                "\t\t\t\targs.EnvironmentOptions.AdditionalBrowserArguments = fromEnvironment;\n" +
+                "\t\t\telse if (existing.IndexOf(fromEnvironment, StringComparison.Ordinal) < 0)\n" +
+                "\t\t\t\targs.EnvironmentOptions.AdditionalBrowserArguments = existing + \" \" + fromEnvironment;\n" +
+                "\t\t}\n" +
+                "\n";
+
+            // Both places or neither: the call without the method does not compile.
+            if (Count(createEnvironment) != 1 || Count(userDataFolderMethod) != 1)
+            {
+                ChangeReport.Patches.Add((_fileName, $"NOT APPLIED, {what}: upstream changed the lines this is attached to", true));
+                return;
+            }
+
+            Replace(createEnvironment, "\t\t\tApplyAdditionalBrowserArguments(args);\n" + createEnvironment);
+            Replace(userDataFolderMethod, method + userDataFolderMethod);
+            ChangeReport.Patches.Add((_fileName, $"applied, {what}", false));
+        }
+
+        /// <summary>A time limit on the regex, which the static analysis asks for on a pattern matched against request paths.</summary>
+        private void EditStaticContentHotReloadManager()
+        {
+            Patch("new Regex(\"^_content/(?<AssemblyName>[^/]+)/(?<RelativePath>.*)\");",
+                "new Regex(\"^_content/(?<AssemblyName>[^/]+)/(?<RelativePath>.*)\", RegexOptions.None, TimeSpan.FromSeconds(1));",
+                "regex time limit");
+        }
+
+        /// <summary>
+        /// Upstream lets its own unit-test assembly see internals. That is nothing to this repository: the line goes, and with
+        /// it the using it needed. <see cref="HasContent"/> then says whether anything is left worth writing.
+        /// </summary>
+        private void EditAssemblyInfo()
+        {
+            _text = System.Text.RegularExpressions.Regex.Replace(_text,
+                @"^[^\r\n]*InternalsVisibleTo\(""Microsoft\.[^\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+            if (!_text.Contains("InternalsVisibleTo", StringComparison.Ordinal))
+            {
+                _text = System.Text.RegularExpressions.Regex.Replace(_text,
+                    @"^using System\.Runtime\.CompilerServices;[^\S\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+            }
+        }
+
+        /// <summary>False when the edits left nothing but usings and blank lines, so there is no file to write.</summary>
+        public bool HasContent =>
+            _text.Split('\n').Any(line => line.Trim() is { Length: > 0 } trimmed && !trimmed.StartsWith("using ", StringComparison.Ordinal));
 
         private void EditUrlLoadingEventArgs()
         {
             Replace("var strategy = appOriginUri.IsBaseOf(urlToLoad) ?",
                 "var split = urlToLoad.AbsolutePath.Split('/');\n" +
-                "\t\t\tvar isMirrorUrl = split.Length == 3 && split[1] == \"mirror\" && Guid.TryParse(split[2], out Guid _);\n" +
-                "\t\t\tvar strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\" || isMirrorUrl) ?");
+                "\t\t\t// The relay's own pages for a session load in the WebView: the read-only /mirror/<id> page, the controlling\n" +
+                "\t\t\t// /app/<id>?role=owner page and the /<id>/... app page it redirects to (an owner surface shows the app here and hands\n" +
+                "\t\t\t// remote users the mirror link). Anything else is an external link.\n" +
+                "\t\t\t// A plain /app/<id> link (the \"open in your browser\" link apps show) still opens in the system browser, as before.\n" +
+                "\t\t\tvar isOwnerApp = split.Length == 3 && split[1] == \"app\" && urlToLoad.Query.Contains(\"role=owner\", StringComparison.Ordinal);\n" +
+                "\t\t\tvar isSessionPage = (split.Length == 3 && (split[1] == \"mirror\" || isOwnerApp) && Guid.TryParse(split[2], out Guid _))\n" +
+                "\t\t\t\t|| (split.Length >= 2 && Guid.TryParse(split[1], out Guid _));\n" +
+                "\t\t\tvar strategy = (appOriginUri.IsBaseOf(urlToLoad) || urlToLoad.Scheme == \"data\" || isSessionPage) ?");
             Replace("internal static", "public static");
         }
 
@@ -206,6 +298,33 @@ namespace EditWebView
         public void Replace(string oldValue, string newValue)
         {
             _text = _text.Replace(oldValue, newValue);
+        }
+
+        /// <summary>
+        /// A replacement that must find its upstream text. When it does not, upstream changed and the edit made in this
+        /// repository is missing from the result: that goes in the run's summary instead of passing silently.
+        /// </summary>
+        private void Patch(string upstream, string ours, string what)
+        {
+            if (Count(upstream) == 0)
+            {
+                ChangeReport.Patches.Add((_fileName, $"NOT APPLIED, {what}: upstream no longer has the text it replaces", true));
+                return;
+            }
+
+            Replace(upstream, ours);
+            ChangeReport.Patches.Add((_fileName, $"applied, {what}", false));
+        }
+
+        private int Count(string value)
+        {
+            int count = 0;
+            for (int at = _text.IndexOf(value, StringComparison.Ordinal); at >= 0; at = _text.IndexOf(value, at + value.Length, StringComparison.Ordinal))
+            {
+                count++;
+            }
+
+            return count;
         }
 
         public void ReplaceFirst(string search, string replace)

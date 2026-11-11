@@ -57,20 +57,22 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         }
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
 
-                        if (serviceState.IPC.ClientResponseStream != null)
-                        {
-                            await serviceState.IPC.ClientResponseStream
-                                .WriteAsync(new WebMessageResponse { Response = "browserAttached:" })
-                                .ConfigureAwait(false);
-                        }
+                        await serviceState.IPC.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
                         foreach (var channel in serviceStateChannel.Values)
                         {
                             channel.Writer.TryWrite($"Connect:{guid}");
                         }
 
                         var fileStream = await rfr.GetFileStreamAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
+                        // The owner's surface holds /app, so the first mirror is the remote user: give it the remote user's end of
+                        // the voice call (once, like the /app grant).
+                        var voiceKey = serviceState.OwnerHoldsApp ? serviceState.Voice?.TakeControllerForMirror() : null;
+                        if (voiceKey is not null)
+                            context.Response.Headers.CacheControl = "no-store";
                         using Stream stream = fileStream.Stream;
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
+                        if (voiceKey is not null)
+                            await context.Response.WriteAsync(VoiceRoom.ControllerScript(parsedGuid, voiceKey)).ConfigureAwait(false);
                     }
                     else
                     {

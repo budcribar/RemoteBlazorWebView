@@ -16,7 +16,7 @@
 		<RepositoryUrl>https://github.com/budcribar/RemoteBlazorWebView</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>BlazorWebView, Blazor, WebView</PackageTags>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
 		<Nullable>annotations</Nullable>
 		<Configurations>Debug;Release;Embedded;Developer</Configurations>
@@ -24,7 +24,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5 </PackageReleaseNotes>
+		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.0, the first release for .NET 11: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -42,7 +42,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="11.0.0-rc.2.26505.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="11.0.10" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,9 +1,10 @@
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-#if AUTHORIZATION
-using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Linq;
-#endif
+using System.Text.Json;
+using PeakSWC.RemoteWebView.EndPoints;
 using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
@@ -12,20 +13,64 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService) : BrowserIPC.BrowserIPCBase
+    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null) : BrowserIPC.BrowserIPCBase
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
+            ServiceState? serviceState = null;
             try
             {
                 // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+
+                // The machine owner's local control surface identifies itself (?role=owner). Only the owner may reclaim control.
+                // When the app sent an owner key, the claim needs the owner token too (OwnerAccess); without it the
+                // connection is an ordinary remote connection, whatever its page's address says.
+                bool isOwner = OwnerAccess.AcceptsOwner(serviceState, request.IsOwner, request.OwnerToken);
+                if (request.IsOwner && !isOwner)
+                    logger.LogWarning("Owner claim without the owner token ignored. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                if (isOwner)
+                    serviceState.OwnerClientId = request.ClientId;
 
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
 
-                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary), linkedToken);
+                // The signed-in name, for the roster and the app's audit (ParticipantsChanged). The page's sign-in cookie comes
+                // with its gRPC-Web call when the relay serves both; otherwise (and without authorization) it is empty.
+                var userName = SignedInName(context);
+                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary) { UserName = userName }, linkedToken);
+
+                // The machine owner holds control from the start. The owner's surface may connect after the remote user
+                // (in mirror mode it connects only once the remote user is present), so promote it on its first
+                // connection even if the remote user already claimed control - but only once, so a later owner reconnect
+                // does not grab control back. PromoteAsync also broadcasts the roster; otherwise just tell everyone present.
+                await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    if (isOwner && !serviceState.OwnerControlInitialized)
+                    {
+                        serviceState.OwnerControlInitialized = true;
+                        var holder = serviceState.PrimaryClientId;
+                        if (string.IsNullOrEmpty(holder) || holder == request.ClientId)
+                        {
+                            // The owner already is (or is first to be) the controller - e.g. its surface is the /app page, which
+                            // sends its connect handshake before this stream opens. Do not reset the sequence: its messages are
+                            // already numbered past 1 and a reset would strand everything it sends afterwards.
+                            serviceState.PrimaryClientId = request.ClientId;
+                            serviceState.IPC.SetPrimary(request.ClientId);
+                            serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                        }
+                        else
+                            await PromoteAsync(serviceState, request.ClientId).ConfigureAwait(false);
+                    }
+                    else
+                        serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                }
+                finally
+                {
+                    serviceState.BrowserIPC.ControlChange.Release();
+                }
 
                 try
                 {
@@ -34,33 +79,101 @@ namespace PeakSWC.RemoteWebView
                 catch (OperationCanceledException)
                 {
                     // Expected exception when cancellation occurs, don't treat as error
-                    // Fall through to shutdown if primary
+                    // Fall through to primary-disconnect handling.
                 }
                 catch (Exception ex)
                 {
-                    if (request.IsPrimary)
-                    {
-                        logger.LogError(ex, "Exception in ReceiveMessage for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
-                        await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
-                    }
+                    await OnConnectionClosed(serviceState, request.Id, request.ClientId, ex).ConfigureAwait(false);
                     return;
                 }
 
-                // Only shutdown if this is the primary connection
-                if (request.IsPrimary)
-                {
-                    logger.LogInformation("Primary connection closed, shutting down. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
-                    await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
-                }
+                await OnConnectionClosed(serviceState, request.Id, request.ClientId, null).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                if (request.IsPrimary)
+                // serviceState may be null here if the wait above failed; only the current controller triggers teardown.
+                if (serviceState != null && serviceState.PrimaryClientId == request.ClientId)
                 {
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                 }
             }
+        }
+
+        private static string SignedInName(ServerCallContext context)
+        {
+            try
+            {
+                return context.GetHttpContext().User?.GetUserDisplayName() ?? string.Empty;
+            }
+            catch (InvalidOperationException)
+            {
+                return string.Empty; // not an ASP.NET Core call (tests)
+            }
+        }
+
+        /// <summary>
+        /// A browser connection closed. If it was not the controlling connection, nothing happens. If it was, hand
+        /// control back to the owner when the owner is still attached; otherwise tear the session down.
+        /// </summary>
+        private async Task OnConnectionClosed(ServiceState serviceState, string id, string clientId, Exception? ex)
+        {
+            // Decided under the control-change lock: a hand-off in progress finishes first, so this sees who really
+            // holds control now (the leaver may just have been given it, or just have given it away).
+            await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (serviceState.PrimaryClientId != clientId)
+                {
+                    // A mirror (or already-demoted connection) left; the session continues. Refresh the roster, dropping
+                    // the leaver, which may not have been removed from the observer set yet.
+                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId: clientId);
+                    return;
+                }
+
+                var owner = serviceState.OwnerClientId;
+                if (!string.IsNullOrEmpty(owner) && owner != clientId && serviceState.IPC.HasConnection(owner))
+                {
+                    await PromoteAsync(serviceState, owner, excludeClientId: clientId).ConfigureAwait(false);
+                    logger.LogInformation("Controlling connection {ClientId} left; control reverted to owner {Owner}. Id: {Id}", clientId, owner, id);
+                    return;
+                }
+            }
+            finally
+            {
+                serviceState.BrowserIPC.ControlChange.Release();
+            }
+
+            logger.LogInformation("Controlling connection closed, shutting down. Id: {Id}, ClientId: {ClientId}", id, clientId);
+            if (ex != null)
+                await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
+            else
+                await shutdownService.Shutdown(id).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Core of a control hand-off. Changing PrimaryClientId first immediately mutes the previous controller at the
+        /// SendMessage gate; the sequence counter is then reset so the new controller (which resets its own outgoing
+        /// sequence on the primaryChanged notice) lines up at 1; finally browsers are told who now has control.
+        /// </summary>
+        private static async Task PromoteAsync(ServiceState serviceState, string targetClientId, string? excludeClientId = null)
+        {
+            serviceState.PrimaryClientId = targetClientId;
+
+            var state = serviceState.BrowserIPC;
+            await state.Semaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                state.SequenceNum = 1;
+                state.MessageDictionary.Clear();
+            }
+            finally
+            {
+                state.Semaphore.Release();
+            }
+
+            serviceState.IPC.SetPrimary(targetClientId);
+            serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId, excludeClientId);
         }
 
         public override async Task<SendMessageResponse> SendMessage(SendSequenceMessageRequest request, ServerCallContext context)
@@ -87,8 +200,18 @@ namespace PeakSWC.RemoteWebView
                 // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
-                // Skip messages from read only client
-                if (!request.IsPrimary)
+
+                // The first primary connection to send claims control for the session.
+                if (request.IsPrimary && string.IsNullOrEmpty(serviceState.PrimaryClientId))
+                {
+                    serviceState.PrimaryClientId = request.ClientId;
+                    serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
+                }
+
+                // Only the controlling connection's input reaches the WebView; every other connection is read-only.
+                // Control moves at runtime via SetPrimary, so this is keyed on the live PrimaryClientId, not the
+                // per-message isPrimary flag (which a client could also set on its own).
+                if (request.ClientId != serviceState.PrimaryClientId)
                 {
                     logger.LogDebug("Skipped send message '{Message}' from connection {ClientId}", request.Message, request.ClientId);
                     return new SendMessageResponse { Id = request.Id, Success = true };
@@ -101,17 +224,27 @@ namespace PeakSWC.RemoteWebView
                 await state.Semaphore.WaitAsync(linkedToken.Token).ConfigureAwait(false);
                 try
                 {
+                    // Control may have moved while this message waited its turn. Its number belongs to the previous
+                    // controller's numbering: forwarding it would inject stale input, and parking it would later take
+                    // the place of the new controller's message with the same number.
+                    if (request.ClientId != serviceState.PrimaryClientId)
+                    {
+                        logger.LogDebug("Skipped send message from connection {ClientId}: control moved while it waited", request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = true };
+                    }
+
                     if (request.Sequence == state.SequenceNum)
                     {
                         if (request.Message == "connected:")
                         {
                             request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
-#if AUTHORIZATION
-                            string serializedCookies = string.Empty;
-                            if (serviceState.Cookies != null)
-                                serializedCookies = JsonConvert.SerializeObject(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value));
-                            request.Cookies = serializedCookies;
-#endif
+                            // With sign-in on, the app gets the page's cookies (the sign-in among them) for its own WebView.
+                            if (authorization?.Enabled == true)
+                            {
+                                request.Cookies = serviceState.Cookies != null
+                                    ? JsonSerializer.Serialize(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value), JsonContext.Default.DictionaryStringString)
+                                    : string.Empty;
+                            }
                         }
                         await ForwardMessage(serviceState, request).ConfigureAwait(false);
                         state.SequenceNum++;
@@ -144,6 +277,111 @@ namespace PeakSWC.RemoteWebView
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
         }
+        /// <summary>
+        /// Control transfer (hand-off). The current controller may pass control to any attached connection; the owner
+        /// may always reclaim control to itself; nothing else is honored, so the remote user can never seize control.
+        /// </summary>
+        public override async Task<Empty> SetPrimary(SetPrimaryRequest request, ServerCallContext context)
+        {
+            if (!serviceDictionary.TryGetValue(request.Id, out var tcs) || tcs == null || !tcs.Task.IsCompletedSuccessfully)
+                return new Empty();
+
+            var serviceState = tcs.Task.Result;
+            // One change of controller at a time: this request is judged against the result of any change before it.
+            await serviceState.BrowserIPC.ControlChange.WaitAsync(context.CancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await SetPrimaryCore(serviceState, request).ConfigureAwait(false);
+            }
+            finally
+            {
+                serviceState.BrowserIPC.ControlChange.Release();
+            }
+        }
+
+        private async Task<Empty> SetPrimaryCore(ServiceState serviceState, SetPrimaryRequest request)
+        {
+            string requester = request.ClientId;
+            string target = request.Target;
+            string current = serviceState.PrimaryClientId;
+            string owner = serviceState.OwnerClientId;
+
+            bool allowed =
+                requester == current ||                                               // current controller passes control
+                (requester == owner && target == owner && !string.IsNullOrEmpty(owner)); // owner reclaims to itself
+
+            if (!allowed)
+            {
+                logger.LogInformation("SetPrimary denied. Id: {Id}, requester: {Requester}, target: {Target}, current: {Current}, owner: {Owner}", request.Id, requester, target, current, owner);
+                return new Empty();
+            }
+
+            if (string.IsNullOrEmpty(target) || !serviceState.IPC.HasConnection(target))
+            {
+                logger.LogInformation("SetPrimary target not attached. Id: {Id}, target: {Target}", request.Id, target);
+                return new Empty();
+            }
+
+            if (target == current)
+                return new Empty(); // already controlling
+
+            await PromoteAsync(serviceState, target).ConfigureAwait(false);
+            logger.LogInformation("Control transferred. Id: {Id}, from: {From}, to: {To}", request.Id, current, target);
+            return new Empty();
+        }
+
+        /// <summary>How long the app has to shut down after a restart request before the relay drops the session itself.</summary>
+        internal static TimeSpan RestartGracePeriod { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Restart the app from a browser (the session bar's Restart button). Allowed for the connection that has control
+        /// and for the owner, when attached; ignored from anyone else. The app is sent the same "refreshed" notice a browser
+        /// refresh sends, so an app that restarts on Refreshed needs nothing new; browsers are told first, so each page
+        /// waits for the new copy. An app that does not shut down in time is dropped, as with a refresh.
+        /// </summary>
+        public override async Task<Empty> Restart(RestartRequest request, ServerCallContext context)
+        {
+            if (!serviceDictionary.TryGetValue(request.Id, out var tcs) || tcs == null || !tcs.Task.IsCompletedSuccessfully)
+                return new Empty();
+
+            var serviceState = tcs.Task.Result;
+            string requester = request.ClientId;
+            bool allowed = !string.IsNullOrEmpty(requester) && serviceState.IPC.HasConnection(requester) &&
+                (requester == serviceState.PrimaryClientId || requester == serviceState.OwnerClientId);
+
+            if (!allowed)
+            {
+                logger.LogInformation("Restart denied. Id: {Id}, requester: {Requester}, current: {Current}, owner: {Owner}", request.Id, requester, serviceState.PrimaryClientId, serviceState.OwnerClientId);
+                return new Empty();
+            }
+
+            if (Interlocked.Exchange(ref serviceState.RestartRequested, 1) == 1)
+                return new Empty(); // already restarting
+
+            logger.LogInformation("Restart requested. Id: {Id}, requester: {Requester}", request.Id, requester);
+            serviceState.IPC.BroadcastRestarting();
+            await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
+
+            // Not awaited: the browser's request returns now; the session is dropped later only if the app never shuts down.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (!await Endpoints.WaitForClientShutdown(serviceDictionary, request.Id, RestartGracePeriod, TimeSpan.FromMilliseconds(100)).ConfigureAwait(false))
+                    {
+                        logger.LogWarning("App did not shut down after a restart request; dropping the session. Id: {Id}", request.Id);
+                        await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Restart follow-up failed. Id: {Id}", request.Id);
+                }
+            });
+
+            return new Empty();
+        }
+
         private static ValueTask ForwardMessage(ServiceState serviceState, SendSequenceMessageRequest request)
         {
             // Browser-only state must follow the same sequence ordering as Blazor events,

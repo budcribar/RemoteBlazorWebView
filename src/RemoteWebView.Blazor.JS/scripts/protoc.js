@@ -25,10 +25,13 @@ function protocOnPath() {
     return null;
 }
 
-// The npm "protoc" package shim has a CRLF shebang and shadows a real compiler.
+// The npm "protoc" package shim in node_modules/.bin has a CRLF shebang, while the actual
+// protoc 3.x compiler binary downloaded by the "protoc" package (with built-in --js_out) lives
+// under node_modules/protoc/protoc/bin. Prefer it before system protoc (Ubuntu 24+ ships protoc 21+ without --js_out).
 const protoc = firstExisting([
     isWin ? path.join(root, 'protoc', 'bin', 'protoc.exe') : null,
     path.join(root, 'protoc', 'bin', 'protoc'),
+    path.join(root, 'node_modules', 'protoc', 'protoc', 'bin', isWin ? 'protoc.exe' : 'protoc'),
     protocOnPath(),
 ]) || 'protoc';
 
@@ -45,6 +48,14 @@ const grpcPlugin = firstExisting([
 if (!tsPlugin || !grpcPlugin) {
     console.error('protoc plugins were not found. Run yarn install in src/RemoteWebView.Blazor.JS.');
     process.exit(1);
+}
+
+if (!isWin) {
+    for (const bin of [protoc, tsPlugin, grpcPlugin]) {
+        if (bin && path.isAbsolute(bin) && fs.existsSync(bin)) {
+            try { fs.chmodSync(bin, 0o755); } catch {}
+        }
+    }
 }
 
 const generated = path.join(root, 'src', 'generated');

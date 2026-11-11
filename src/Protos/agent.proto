@@ -17,10 +17,10 @@ service AgentHub {
   rpc Connect(stream AgentMessage) returns (stream HubCommand);
 }
 
-// What the person who installed the agent allows. The relay and technicians can only be stricter, never looser.
+// What the person who installed the agent allows. The relay and remote users can only be stricter, never looser.
 enum ConsentMode {
   CONSENT_ALWAYS_ASK = 0;          // someone at the PC must click Allow for every session
-  CONSENT_UNATTENDED_ALLOWED = 1;  // a technician may start a session without asking (they can still choose to ask)
+  CONSENT_UNATTENDED_ALLOWED = 1;  // a remote user may start a session without asking (they can still choose to ask)
 }
 
 enum Lifetime {
@@ -71,7 +71,7 @@ enum LaunchStage {
 message LaunchProgress {
   string request_id = 1;
   LaunchStage stage = 2;
-  string detail = 3;     // plain words for the technician ("Downloading 45 of 129 MB", "Nobody is signed in")
+  string detail = 3;     // plain words for the remote user ("Downloading 45 of 129 MB", "Nobody is signed in")
   string session_id = 4;
   int32 percent = 5;     // 0-100 while downloading, else 0
 }
@@ -85,9 +85,9 @@ message HubCommand {
 
 message LaunchCommand {
   string request_id = 1;
-  string session_id = 2;     // GUID the app must use (-i=); the technician opens <server>/app/<session_id>
+  string session_id = 2;     // GUID the app must use (-i=); the requester opens <server>/mirror/<session_id>
   string server_url = 3;     // relay base address the app connects to (-u=)
-  string technician = 4;     // shown in the consent prompt
+  string requester = 4;     // shown in the consent prompt
   bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
 }
 
@@ -129,7 +129,7 @@ message AgentList {
 message StartSessionRequest {
   string machine_id = 1;
   bool unattended = 2;      // honoured only when the agent's ceiling is CONSENT_UNATTENDED_ALLOWED
-  string technician = 3;    // display name for the consent prompt; the relay fills it from the signed-in user when auth is on
+  string requester = 3;    // display name for the consent prompt; the relay fills it from the signed-in user when auth is on
 }
 
 message StartSessionResponse {
@@ -137,7 +137,7 @@ message StartSessionResponse {
   string error = 2;         // why not ("That computer is offline", "A session is already running")
   string request_id = 3;
   string session_id = 4;
-  string app_url = 5;       // <server>/app/<session_id>
+  string app_url = 5;       // the link the requester opens: <server>/mirror/<session_id>
 }
 
 message WatchLaunchRequest {

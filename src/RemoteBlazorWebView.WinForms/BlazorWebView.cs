@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.AspNetCore.Components.WebView.WebView2;
@@ -85,6 +85,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
             }
             set
             {
+                if (RequiredStartupPropertiesSet)
+                    throw new ArgumentException("Id must be set before HostPage");
                 if (value == Guid.Empty)
                     id = Guid.NewGuid();
                 else
@@ -119,6 +121,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         {
             Invoke(() => ReadyToConnect?.Invoke(this, args));
         }
+
+        public void FireParticipantsChanged(ParticipantsChangedEventArgs args)
+        {
+            Invoke(() => ParticipantsChanged?.Invoke(this, args));
+        }
+
+        /// <summary>Someone joined or left the shared session, or control moved. Needs relay 10.0.15 or later.</summary>
+        public event EventHandler<ParticipantsChangedEventArgs>? ParticipantsChanged;
 
 
         public event EventHandler<ConnectedEventArgs>? Connected;
@@ -202,6 +212,14 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         [Category("Behavior")]
         [Description(@"Enable GUI Mirroring")]
+        /// <summary>
+        /// Secret the relay uses to recognise this app's own owner page (/app/{id}?role=owner&amp;key=...). Set it, and open that
+        /// page with it, for a shared session; the source generator does both for ShareControl. Empty: ?role=owner is trusted.
+        /// </summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public string OwnerKey { get; set; } = string.Empty;
+
         public bool EnableMirrors
         {
             get => _enableMirrors;
@@ -245,9 +263,20 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
 
         public void Restart() => RemoteWebView.RemoteWebView.Restart(this);
 
+        /// <inheritdoc cref="IBlazorWebView.RestartWhenUnresponsive"/>
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // set in code, never by the designer
+        public Action? RestartWhenUnresponsive { get; set; }
+
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri) => RemoteWebView.RemoteWebView.GetGrpcBaseUriAsync(serverUri);
 
         public void NavigateToString(string htmlContent) => WebViewManager.NavigateToString(htmlContent);
+
+        /// <summary>
+        /// Loads a page in this control's own WebView, waiting until the WebView is initialized (unlike CoreWebView2.Navigate,
+        /// which is a no-op before then). For the relay's session pages, e.g. an owner surface showing the controlling /app page.
+        /// </summary>
+        public void NavigateToUrl(Uri url) => WebViewManager.NavigateToUrl(url);
 
         public Task WaitForInitializationComplete() => Task.CompletedTask;
     }

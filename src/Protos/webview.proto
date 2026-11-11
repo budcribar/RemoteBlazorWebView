@@ -32,6 +32,12 @@ message CreateWebViewRequest {
   string processName = 6;
   string hostName = 7;
   bool enableMirrors = 8;
+  string voiceHostKey = 9;
+  // A secret only the app knows. When set, the relay accepts the owner role only from the page the app opened with
+  // this key (?key=), not from any page that adds ?role=owner. Empty: older apps; ?role=owner is trusted as before.
+  string ownerKey = 10;
+  // The app understands "participants:" messages (ParticipantsChanged). Older apps throw on unknown commands.
+  bool participantEvents = 11;
 }
 
 message WebMessageResponse {
@@ -63,6 +69,28 @@ message ReceiveMessageRequest {
     string id = 1;
     string clientId = 2;
     bool isPrimary = 3;
+    // Control transfer: a connection launched by the machine owner (the local control surface) sets this.
+    // Only the owner connection may unilaterally reclaim control; the remote user never can. See SetPrimary.
+    bool isOwner = 4;
+    // The owner token the relay gave the owner's page (cookie rbwv-owner-<id>). Required with isOwner when the app
+    // set an owner key.
+    string ownerToken = 5;
+}
+
+// Control transfer (hand-off): requester asks the relay to make 'target' the primary (controlling) connection.
+// The relay enforces policy: the current primary may pass control to anyone; the owner may always reclaim it
+// to itself; no other connection may seize it.
+message SetPrimaryRequest {
+    string id = 1;
+    string clientId = 2;  // the requesting connection
+    string target = 3;    // the connection to make primary
+}
+
+// Restart: a browser asks the relay to restart the app. The relay enforces policy: the connection that has control
+// and the owner may ask; nobody else. The app is sent the same "refreshed" notice a browser refresh sends.
+message RestartRequest {
+    string id = 1;
+    string clientId = 2;  // the requesting connection
 }
 
 message SendMessageResponse {
@@ -165,6 +193,8 @@ service WebViewIPC {
 service BrowserIPC {
     rpc ReceiveMessage(ReceiveMessageRequest) returns (stream StringRequest);
     rpc SendMessage(SendSequenceMessageRequest) returns (SendMessageResponse);
+    rpc SetPrimary(SetPrimaryRequest) returns (google.protobuf.Empty);
+    rpc Restart(RestartRequest) returns (google.protobuf.Empty);
 }
 
 enum ClientState {
@@ -235,6 +265,7 @@ message ServerResponse {
     double upTime = 7;
     bool client_cache_enabled = 8;
     bool server_cache_enabled = 9;
+    string server_version = 10;
 }
 
 message EventResponse {

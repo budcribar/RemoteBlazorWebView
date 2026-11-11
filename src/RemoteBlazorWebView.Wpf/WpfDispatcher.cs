@@ -3,7 +3,6 @@
 
 using System;
 using Microsoft.AspNetCore.Components;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using WindowsDispatcher = System.Windows.Threading.Dispatcher;
 
@@ -18,102 +17,58 @@ namespace PeakSWC.RemoteBlazorWebView.Wpf
 			_windowsDispatcher = windowsDispatcher ?? throw new ArgumentNullException(nameof(windowsDispatcher));
 		}
 
-		private static Action<Exception> RethrowException = exception =>
-			ExceptionDispatchInfo.Capture(exception).Throw();
-
 		public override bool CheckAccess()
 			=> _windowsDispatcher.CheckAccess();
 
-		public override async Task InvokeAsync(Action workItem)
-		{
-			try
+		public override Task InvokeAsync(Action workItem) =>
+			InvokeAsyncCore(() =>
 			{
-				if (_windowsDispatcher.CheckAccess())
-				{
-					workItem();
-				}
-				else
-				{
-					await _windowsDispatcher.InvokeAsync(workItem);
-				}
-			}
-			catch (Exception ex)
-			{
-				// TODO: Determine whether this is the right kind of rethrowing pattern
-				// You do have to do something like this otherwise unhandled exceptions
-				// throw from inside Dispatcher.InvokeAsync are simply lost.
-				_ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
-				throw;
-			}
-		}
+				workItem();
+				return Task.FromResult(true);
+			});
 
-		public override async Task InvokeAsync(Func<Task> workItem)
-		{
-			try
+		public override Task InvokeAsync(Func<Task> workItem) =>
+			InvokeAsyncCore(async () =>
 			{
-				if (_windowsDispatcher.CheckAccess())
-				{
-					await workItem();
-				}
-				else
-				{
-					await _windowsDispatcher.InvokeAsync(workItem);
-				}
-			}
-			catch (Exception ex)
-			{
-				// TODO: Determine whether this is the right kind of rethrowing pattern
-				// You do have to do something like this otherwise unhandled exceptions
-				// throw from inside Dispatcher.InvokeAsync are simply lost.
-				_ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
-				throw;
-			}
-		}
+				await workItem().ConfigureAwait(false);
+				return true;
+			});
 
-		public override async Task<TResult> InvokeAsync<TResult>(Func<TResult> workItem)
-		{
-			try
+		public override Task<TResult> InvokeAsync<TResult>(Func<TResult> workItem) =>
+			InvokeAsyncCore(() =>
 			{
-				if (_windowsDispatcher.CheckAccess())
-				{
-					return workItem();
-				}
-				else
-				{
-					return await _windowsDispatcher.InvokeAsync(workItem);
-				}
-			}
-			catch (Exception ex)
-			{
-				// TODO: Determine whether this is the right kind of rethrowing pattern
-				// You do have to do something like this otherwise unhandled exceptions
-				// throw from inside Dispatcher.InvokeAsync are simply lost.
-				_ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
-				throw;
-			}
-		}
+				var result = workItem();
+				return Task.FromResult(result);
+			});
 
-		public override async Task<TResult> InvokeAsync<TResult>(Func<Task<TResult>> workItem)
+		public override Task<TResult> InvokeAsync<TResult>(Func<Task<TResult>> workItem) =>
+			InvokeAsyncCore(workItem);
+
+		private async Task<TResult> InvokeAsyncCore<TResult>(Func<Task<TResult>> workItem)
 		{
-			try
+			if (CheckAccess())
 			{
-				if (_windowsDispatcher.CheckAccess())
-				{
-					return await workItem();
-				}
-				else
-				{
-					return await _windowsDispatcher.InvokeAsync(workItem).Task.Unwrap();
-				}
+				return await workItem().ConfigureAwait(false);
 			}
-			catch (Exception ex)
+
+			var completion = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+			// WPF dispatches an Action, so capture the asynchronous result and all outcomes in the returned task.
+			Action action = async () =>
 			{
-				// TODO: Determine whether this is the right kind of rethrowing pattern
-				// You do have to do something like this otherwise unhandled exceptions
-				// throw from inside Dispatcher.InvokeAsync are simply lost.
-				_ = _windowsDispatcher.BeginInvoke(RethrowException, ex);
-				throw;
-			}
+				try
+				{
+					completion.TrySetResult(await workItem().ConfigureAwait(false));
+				}
+				catch (Exception ex)
+				{
+					// Preserve the exception here; awaiting completion below lets the outer async method
+					// classify an OperationCanceledException as cancellation without replacing its instance.
+					completion.TrySetException(ex);
+				}
+			};
+
+			await _windowsDispatcher.InvokeAsync(action).Task.ConfigureAwait(false);
+			return await completion.Task.ConfigureAwait(false);
 		}
 	}
 }

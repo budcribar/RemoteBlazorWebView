@@ -84,6 +84,28 @@ public class ServerCacheIsolationTests
         Assert.Equal("", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task A_cached_file_the_client_now_refuses_is_not_served_from_the_cache()
+    {
+        await using var host = await TwoClientCache.StartAsync();
+        var client = host.Add("secret.txt", etag: "v1", body: "cached-secret", cacheControl: "public, max-age=10");
+
+        var initial = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+        Assert.Equal("cached-secret", await initial.Content.ReadAsStringAsync());
+
+        // The app says no (for example the file's read permission was revoked): the relay's cached copy must not stand in.
+        host.SetStatus(client, "secret.txt", StatusCodes.Status403Forbidden);
+        var forbidden = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.DoesNotContain("cached-secret", await forbidden.Content.ReadAsStringAsync());
+        Assert.Equal(1, host.StreamReads(client, "secret.txt"));
+
+        host.SetStatus(client, "secret.txt", StatusCodes.Status404NotFound);
+        var deleted = await host.GetAsync(client, "secret.txt");
+        Assert.Equal(HttpStatusCode.NotFound, deleted.StatusCode);
+    }
+
     private static string? Header(HttpResponseMessage response, string name)
         => response.Headers.TryGetValues(name, out var values) ? values.Single() : null;
 
@@ -140,6 +162,9 @@ public class ServerCacheIsolationTests
         public void Replace(Guid id, string path, string etag, string body, string cacheControl)
             => _resolver.Put(id, path, etag, body, cacheControl);
 
+        public void SetStatus(Guid id, string path, int statusCode)
+            => _resolver.SetStatus(id, path, statusCode);
+
         public int StreamReads(Guid id, string path) => _resolver.Reads(id, path);
 
         public Task<HttpResponseMessage> GetAsync(Guid id, string path)
@@ -151,6 +176,11 @@ public class ServerCacheIsolationTests
             _host.Dispose();
             Client.Dispose();
             _resolver.Manager.Dispose();
+            foreach (var entry in States.Values)
+            {
+                if (entry.Task.IsCompletedSuccessfully)
+                    await entry.Task.Result.DisposeAsync();
+            }
         }
     }
 
@@ -176,12 +206,28 @@ public class ServerCacheIsolationTests
             _files[(id.ToString(), path)] = new Entry(etag, cacheControl, bytes);
         }
 
+        public void SetStatus(Guid id, string path, int statusCode)
+        {
+            if (_files.TryGetValue((id.ToString(), path), out var entry))
+                entry.StatusCode = statusCode;
+        }
+
         public int Reads(Guid id, string path)
             => _files.TryGetValue((id.ToString(), path), out var entry) ? entry.Reads : 0;
 
         public override Task<FileMetadata> GetFileMetaDataAsync(string clientId, string subpath, string? requestUri = null, string? contentType = null)
         {
             var entry = _files[(clientId, subpath)];
+            if (entry.StatusCode != StatusCodes.Status200OK)
+            {
+                return Task.FromResult(new FileMetadata
+                {
+                    Length = -1,
+                    StatusCode = entry.StatusCode,
+                    ETag = "",
+                    LastModified = 0
+                });
+            }
             return Task.FromResult(new FileMetadata
             {
                 Length = entry.Bytes.Length,
@@ -204,6 +250,7 @@ public class ServerCacheIsolationTests
             public string ETag { get; set; } = etag;
             public string CacheControl { get; set; } = cacheControl;
             public byte[] Bytes { get; set; } = bytes;
+            public int StatusCode { get; set; } = StatusCodes.Status200OK;
             public int Reads;
         }
     }

@@ -167,18 +167,29 @@ function Test-RunTestsMicrosoftSigner {
     return ($Status -eq 'Valid' -and $Subject -match 'O=Microsoft Corporation')
 }
 
+function Reset-RunTestsNativeToolchainState {
+    $script:RunTestsMsvcComponentId = 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+    $script:RunTestsWindowsSdkComponentId = 'Microsoft.VisualStudio.Component.Windows11SDK.26100'
+    $script:ready = $false
+    $script:calls = 0
+}
+
 function ConvertTo-RunTestsNativeCommandLine {
     param([string[]] $Arguments)
     $builder = New-Object System.Text.StringBuilder
     foreach ($argument in @($Arguments)) {
         if ($null -eq $argument) { continue }
         if ($builder.Length -gt 0) { [void]$builder.Append(' ') }
-        if ($argument.Length -gt 0 -and $argument.IndexOfAny([char[]]@(' ', "`t", '"')) -lt 0) {
+        if ($argument.Length -gt 0 -and $argument.IndexOfAny([char[]]@(' ', "`t", "`n", "`r", "`v", '"')) -lt 0) {
             [void]$builder.Append($argument)
         }
         else {
+            # Win32 CommandLineToArgvW treats 2n backslashes before '"' as n literal backslashes + quote toggle,
+            # and 2n+1 backslashes before '"' as n literal backslashes + literal '"'. Double backslashes before
+            # embedded quotes and double trailing backslashes right before the closing quote.
+            $escaped = ($argument -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1'
             [void]$builder.Append('"')
-            [void]$builder.Append(($argument -replace '"', '\"'))
+            [void]$builder.Append($escaped)
             [void]$builder.Append('"')
         }
     }

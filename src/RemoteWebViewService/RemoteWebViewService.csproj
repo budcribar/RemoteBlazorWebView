@@ -46,11 +46,14 @@
 	
     <DeleteExistingFiles>True</DeleteExistingFiles>
     <SelfContained>false</SelfContained>
-    <NoWarn>NU5100</NoWarn>
+    <!-- IL2104 / IL3053 / IL3000: trim and AOT warnings raised inside Microsoft's own assemblies (Components.WebAssembly.Server,
+         Microsoft.CSharp, System.Linq.Expressions, the debug proxy launcher) during the native publish. Nothing in this repo can fix
+         them; warnings from this repo's own code (IL2026, IL3050) are NOT suppressed. -->
+    <NoWarn>NU5100;IL2104;IL3053;IL3000</NoWarn>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
     <Platforms>x64</Platforms>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0-rc.3; WebView WinForms/WPF packages remain 11.0.0-rc.2.26505.5</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.0, the first release for .NET 11: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureNoAuth|x64'">
@@ -61,6 +64,16 @@
   <!-- All service code lives in RemoteWebViewService.Lib so it can also be hosted in-process; this exe is just Program.cs. -->
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
+  <!-- Azure AD B2C sign-in ("Authorization:Provider": "AzureB2C"): in every configuration but the native relay
+       (NoAuthorization, AOT). A relay built with -c Authorization also requires it by default. Which provider runs is a
+       setting, not a compile-time switch: see IRelayAuthorization. -->
+  <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
+    <ProjectReference Include="..\RemoteWebViewService.AzureB2C\RemoteWebViewService.AzureB2C.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
+    <Compile Remove="Authorization\AzureB2CByDefault.cs" Condition="'$(Configuration)' != 'Authorization'" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="appsettings.json.added" />
@@ -80,10 +93,10 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
 	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0-rc.3.26522.148" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0-rc.3.26522.148" />
-	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0-rc.3.26522.148" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0-rc.3.26522.148" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0" NoWarn="NU1605" />
 	  
     <PackageReference Include="Microsoft.Graph.Beta" Version="6.9.0-preview" />
     <PackageReference Include="Microsoft.Graph.Core" Version="4.0.1" />

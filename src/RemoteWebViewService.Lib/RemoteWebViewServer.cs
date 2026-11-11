@@ -234,6 +234,8 @@ namespace PeakSWC.RemoteWebView
             services.AddSingleton(new MaxClientsOptions { MaxClients = options.MaxClients });
             services.AddSingleton(new FrameAncestorsOptions(options.FrameAncestors) { AllowOpaqueOrigin = options.AllowOpaqueOrigin });
             services.AddTransient<IStartupFilter, EmbeddedStartupFilter>();
+            if (options.Authorization != null)
+                services.AddSingleton(options.Authorization); // Startup uses this one instead of the configured provider
         }
 
         private static void ConfigureEmbeddedKestrel(KestrelServerOptions kestrel, RemoteWebViewServerOptions options, bool https, BoundEndpoints bound)
@@ -323,6 +325,12 @@ namespace PeakSWC.RemoteWebView
         /// id in the URL and in each call ties such a request to a client. Defaults to false.
         /// </summary>
         public bool AllowOpaqueOrigin { get; set; }
+
+        /// <summary>
+        /// Who may open session pages. Null (the default): what the "Authorization:Provider" setting names, which is no
+        /// sign-in unless set. Tests hand in a <see cref="FakeAuthorization"/>.
+        /// </summary>
+        public IRelayAuthorization? Authorization { get; set; }
 
         /// <summary>Logging setup for the embedded server's own logger factory. Default: no providers (silent).</summary>
         public Action<ILoggingBuilder>? ConfigureLogging { get; set; }
