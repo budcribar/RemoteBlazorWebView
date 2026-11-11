@@ -381,6 +381,10 @@ namespace FileSyncServer.Tests.Remote
 
             Assert.Equal(num, Pages.Count);
 
+            // Verify we can hang out before attaching browser
+            if (num == 10)
+                Thread.Sleep(TimeSpan.FromMinutes(2));
+
             Console.WriteLine($"Navigate home in {sw.Elapsed}");
 
             sw.Restart();
