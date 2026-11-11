@@ -210,6 +210,8 @@ namespace PeakSWC.RemoteBlazorWebView.WindowsForms
         /// Secret the relay uses to recognise this app's own owner page (/app/{id}?role=owner&amp;key=...). Set it, and open that
         /// page with it, for a shared session; the source generator does both for ShareControl. Empty: ?role=owner is trusted.
         /// </summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public string OwnerKey { get; set; } = string.Empty;
 
         public bool EnableMirrors
