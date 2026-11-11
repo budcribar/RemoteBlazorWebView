@@ -88,7 +88,7 @@ public class ServerCacheIsolationTests
     public async Task A_cached_file_the_client_now_refuses_is_not_served_from_the_cache()
     {
         await using var host = await TwoClientCache.StartAsync();
-        var client = host.Add("secret.txt", etag: "v1", body: "cached-secret");
+        var client = host.Add("secret.txt", etag: "v1", body: "cached-secret", cacheControl: "public, max-age=10");
 
         var initial = await host.GetAsync(client, "secret.txt");
         Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
