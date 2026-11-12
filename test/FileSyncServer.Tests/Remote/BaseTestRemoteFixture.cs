@@ -218,10 +218,6 @@ namespace WebdriverTestProject
 
             using var channel = GrpcChannel.ForAddress(GrpcUrl, new GrpcChannelOptions { HttpHandler = httpHandler });
             var client = new ClientIPC.ClientIPCClient(channel);
-            var response = await client!.GetServerStatusAsync(new Empty { });
-            var totalFilesRead = response.ConnectionResponses.Sum(x => x.TotalFilesRead);
-            var totalBytesRead = response.ConnectionResponses.Sum(x => x.TotalBytesRead);
-
             // metadata.Length, not the response on the wire. Cache-Control headers are not included.
             // The boot script is read twice per client; every other served file is stable across
             // net9, net10, and net11. Read the script from disk so a webpack rebuild does not
@@ -229,7 +225,22 @@ namespace WebdriverTestProject
             var scriptBytes = BootScriptLength();
             var perClient = StaticBytesWithoutBootScript(isWpf) + (BootScriptCopies * scriptBytes);
 
-            Assert.Equal(expectedFiles * num, totalFilesRead);
+            // A page can show its content while its last files are still being fetched, so the relay's totals may
+            // not be complete the moment the clients are up (CI saw 65 of 125 files). Wait for them to arrive; the
+            // totals must then be exactly right, so a relay that serves too much still fails.
+            long totalFilesRead, totalBytesRead;
+            var deadline = DateTime.UtcNow.AddSeconds(60);
+            while (true)
+            {
+                var response = await client!.GetServerStatusAsync(new Empty { });
+                totalFilesRead = response.ConnectionResponses.Sum(x => (long)x.TotalFilesRead);
+                totalBytesRead = response.ConnectionResponses.Sum(x => (long)x.TotalBytesRead);
+                if ((totalFilesRead >= (long)expectedFiles * num && totalBytesRead >= perClient * num) || DateTime.UtcNow >= deadline)
+                    break;
+                await Task.Delay(250);
+            }
+
+            Assert.Equal((long)expectedFiles * num, totalFilesRead);
             Assert.Equal(perClient * num, totalBytesRead);
 
             Console.WriteLine($"TotalBytesRead {totalBytesRead}");
