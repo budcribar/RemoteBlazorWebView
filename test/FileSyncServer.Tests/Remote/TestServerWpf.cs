@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace FileSyncServer.Tests.Remote
 {
+    [Trait("Category", "Slow")]
     public class TestServerWpf(ITestOutputHelper output) : TestRemoteBlazorWpf(output)
     {
         private readonly int FILES_READ = 29;

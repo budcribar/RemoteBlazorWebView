@@ -15,6 +15,7 @@ namespace FileSyncServer.Tests.Local
     /// Abstract base class containing shared test methods like TestClicks.
     /// Derived classes must supply the executable path via the fixture.
     /// </summary>
+    [Trait("Category", "Slow")]
     public abstract class BaseTestClicks<T>(ITestOutputHelper output) : IAsyncLifetime where T : BaseTestFixture, new()
     {
         protected readonly T Fixture = new();

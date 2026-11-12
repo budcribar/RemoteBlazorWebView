@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FileSyncServer.Tests
 {
+    [Trait("Category", "Slow")]
     public class TestBlazorFormControl : IClassFixture<TestBlazorFormControlFixture>
     {
         private readonly TestBlazorFormControlFixture _fixture;

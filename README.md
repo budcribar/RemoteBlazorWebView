@@ -98,5 +98,18 @@ include the session's `Group`, and for the app's own window, which needs no acco
 
 # Samples
 
-Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial 
+Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial
+
+# Fast tests
+
+The FileSync desktop and tutorial Playwright classes are marked `[Trait("Category", "Slow")]`. A normal `dotnet test` still runs them. To skip only that suite:
+
+```console
+dotnet test --filter Category!=Slow
+dotnet build src/RemoteWebViewService/RemoteWebViewService.csproj -c NoAuthorization
+```
+
+`Category!=Slow` keeps Shop Identity, the relay and embedded-server tests, agent registry and hub tests, and the FileSync headless classes (`FileFetchingTests`, `ClientCachingTests`, `ServerCachingTests`, `ConcurrentRequestsTests`, `LoadTest`, `PerformanceTests`, `TestMisc`). On Windows, `.\RunTests.ps1 -Fast` does the same and checks that the NoAuthorization build does not reference Shop Identity or SQLite.
+
+Pushes to `net10` still run the full Windows desktop and tutorial step and the performance regression workflow. An on-demand run is `.github/workflows/fast-tests.yml` (`workflow_dispatch` only). 
 

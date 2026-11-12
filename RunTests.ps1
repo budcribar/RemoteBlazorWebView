@@ -5,6 +5,9 @@
         # Runs only part of the desktop and browser suite (a dotnet test --filter expression), for a quick check before the
         # full run, e.g. -Filter "FullyQualifiedName~SharedControl|Name=Test1Client". The quick suites still run in full.
         [string] $Filter = '',
+        # Skips the desktop and tutorial Playwright tests (Category=Slow) and the tutorial publish.
+        # Still builds NoAuthorization and runs Shop Identity, the relay suites, and FileSync headless tests.
+        [switch] $Fast = $false,
         # Tests only: skips the clean, the script bundle and every publish, and uses what the last run built. For a rerun
         # after changing test code only. A change to the product (C#, the page script, the tutorial apps) needs a run without it.
         [switch] $NoBuild = $false,
@@ -42,6 +45,42 @@ function Show-RunTestsResult {
     Write-Host ''
 }
 
+function Invoke-RunTestsFast {
+    $root = $PSScriptRoot
+    Write-Host -ForegroundColor Cyan "Fast path: filter '$Filter'. Desktop and tutorial Playwright tests are Category=Slow and are not run."
+    Push-Location $root
+    try {
+        & dotnet build src/RemoteWebViewService/RemoteWebViewService.csproj -c NoAuthorization -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false
+        if ($LASTEXITCODE -ne 0) { Write-Error "NoAuthorization build failed ($LASTEXITCODE)."; exit $LASTEXITCODE }
+        $deps = Get-ChildItem -Path src/RemoteWebViewService/bin -Recurse -Filter RemoteWebViewService.deps.json |
+            Where-Object { $_.FullName -match 'NoAuthorization' } |
+            Select-Object -First 1
+        if (-not $deps) { Write-Error "NoAuthorization deps file was not produced."; exit 1 }
+        $depsText = Get-Content -Raw -LiteralPath $deps.FullName
+        if ($depsText -match 'ShopIdentity' -or $depsText -match 'Sqlite') {
+            Write-Error "NoAuthorization deps reference Shop Identity or SQLite: $($deps.FullName)"
+            exit 1
+        }
+        $projects = @(
+            'test\StaticContentCache.Tests\StaticContentCache.Tests.csproj',
+            'test\StaticContentCache.ServiceTests\StaticContentCache.ServiceTests.csproj',
+            'test\RemoteWebView.Lifecycle.Tests\RemoteWebView.Lifecycle.Tests.csproj',
+            'test\RemoteWebView.ShopIdentity.Tests\RemoteWebView.ShopIdentity.Tests.csproj',
+            'test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj',
+            'test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj',
+            'test\StaticContentCache.EndToEnd.Tests\StaticContentCache.EndToEnd.Tests.csproj',
+            'test\FileSyncServer.Tests\FileSyncServer.Tests.csproj'
+        )
+        foreach ($project in $projects) {
+            Write-Host -ForegroundColor Cyan "Fast testing $project"
+            & dotnet test $project -c Release -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false --filter $Filter
+            if ($LASTEXITCODE -ne 0) { Write-Error "dotnet test failed for $project ($LASTEXITCODE)."; exit $LASTEXITCODE }
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
 $script:RunTestsSucceeded = $false
 try {
 
@@ -58,6 +97,16 @@ Write-Host -ForegroundColor GREEN ("NoBuild:",$NoBuild)
 if ($Build -and $NoBuild) {
     Write-Error "-Build (build only) and -NoBuild (tests only) cannot be used together."
     exit 1
+}
+if ($Fast -and $Build) {
+    Write-Error "-Fast runs tests. It cannot be combined with -Build."
+    exit 1
+}
+if ($Fast) {
+    if ($Filter) { $Filter = "($Filter)&Category!=Slow" } else { $Filter = 'Category!=Slow' }
+    Invoke-RunTestsFast
+    $script:RunTestsSucceeded = $true
+    return
 }
 Write-Host -ForegroundColor GREEN ("Rust:",$Rust)
 Write-Host -ForegroundColor GREEN ("EnvBuildMode:",$env:EnvBuildMode)

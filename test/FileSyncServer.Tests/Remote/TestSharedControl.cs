@@ -53,11 +53,14 @@ namespace FileSyncServer.Tests.Remote
     public class SharedControlWinFormsFixture : SharedControlFixture { public SharedControlWinFormsFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWinFormsApp; } }
 
     [Collection("TestSharedControlWpf")]
+    [Trait("Category", "Slow")]
     public class TestSharedControlWpf(ITestOutputHelper output) : BaseTestSharedControl<SharedControlWpfFixture>(output) { }
 
     [Collection("TestSharedControlWinForms")]
+    [Trait("Category", "Slow")]
     public class TestSharedControlWinForms(ITestOutputHelper output) : BaseTestSharedControl<SharedControlWinFormsFixture>(output) { }
 
+    [Trait("Category", "Slow")]
     public abstract class BaseTestSharedControl<T>(ITestOutputHelper output) : IAsyncLifetime where T : SharedControlFixture, new()
     {
         private static readonly LocatorAssertionsToHaveTextOptions Soon = new() { Timeout = 20000 };

@@ -1,0 +1,57 @@
+# On-demand fast check. Does not run on push.
+# Pushes to net10 still run windows-tests.yml (including the desktop and tutorial step)
+# and perf-regression.yml unchanged.
+#
+# Category!=Slow skips only the FileSync desktop and tutorial Playwright classes.
+# Those projects are Windows-only, so this Ubuntu job runs the cross-platform suites
+# (none of them are Slow) and the NoAuthorization build. On Windows, the same filter
+# also runs FileSync headless: dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj --filter Category!=Slow
+
+name: Fast tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: NoAuthorization build
+        run: |
+          set -euo pipefail
+          dotnet build src/RemoteWebViewService/RemoteWebViewService.csproj -c NoAuthorization -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false
+          deps="$(find src/RemoteWebViewService/bin -path '*NoAuthorization*' -name RemoteWebViewService.deps.json | head -n 1)"
+          test -n "$deps"
+          if grep -E -q 'ShopIdentity|Sqlite' "$deps"; then
+            echo "NoAuthorization deps reference Shop Identity or SQLite: $deps"
+            exit 1
+          fi
+
+      - name: Fast test suites
+        run: |
+          set -euo pipefail
+          common=(-c Release -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false --filter 'Category!=Slow')
+          projects=(
+            test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
+            test/StaticContentCache.Tests/StaticContentCache.Tests.csproj
+            test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj
+            test/RemoteWebView.ShopIdentity.Tests/RemoteWebView.ShopIdentity.Tests.csproj
+            test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj
+            test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj
+          )
+          for project in "${projects[@]}"; do
+            echo "=== $project ==="
+            dotnet test "$project" "${common[@]}"
+          done

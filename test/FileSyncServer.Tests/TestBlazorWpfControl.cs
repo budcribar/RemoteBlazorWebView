@@ -16,6 +16,7 @@ using Xunit.Abstractions;
 
 namespace FileSyncServer.Tests
 {
+    [Trait("Category", "Slow")]
     public class TestBlazorWpfControl : IClassFixture<TestBlazorWpfControlFixture>
     {
         private readonly TestBlazorWpfControlFixture _fixture;

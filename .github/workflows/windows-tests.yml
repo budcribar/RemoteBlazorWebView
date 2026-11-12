@@ -381,6 +381,7 @@ jobs:
             --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
             --results-directory TestResults/FileSyncServer.Headless
 
+      # Full desktop and tutorial gate. Do not add Category!=Slow here; that filter is only for local and on-demand fast runs.
       # Tutorial executables are published above. StartProcess gives up after
       # 30s when a hosted session never creates a main window, so this step
       # cannot sit in that loop until the job timeout. continue-on-error stays
