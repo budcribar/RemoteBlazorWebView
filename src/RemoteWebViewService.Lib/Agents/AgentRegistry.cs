@@ -91,23 +91,32 @@ namespace PeakSWC.RemoteWebView.Agents
         private static bool IsFinal(LaunchStage stage) =>
             stage is LaunchStage.StageDeclined or LaunchStage.StageFailed or LaunchStage.StageEnded;
 
-        public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer)
+        public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "")
         {
             ArgumentNullException.ThrowIfNull(hello);
             if (string.IsNullOrWhiteSpace(hello.MachineId))
                 throw new ArgumentException("machine_id is required", nameof(hello));
+            group ??= string.Empty;
 
             CancellationTokenSource? previous;
             AgentConnection connection;
             lock (gate)
             {
                 bool isNew = !agents.TryGetValue(hello.MachineId, out var entry);
+                if (entry != null
+                    && entry.Online
+                    && !string.IsNullOrEmpty(entry.Group)
+                    && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("That computer is already enrolled to another shop.");
+
                 if (entry == null)
                 {
                     entry = new AgentEntry(hello.MachineId);
                     agents[hello.MachineId] = entry;
                 }
 
+                entry.Group = group;
+                entry.Info.Group = entry.Group;
                 previous = entry.ConnectionCts;
                 entry.ConnectionCts = new CancellationTokenSource();
                 entry.ConnectionId = ++nextConnectionId;
@@ -251,13 +260,15 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null)
         {
             lock (gate)
             {
                 AgentEntry? entry = null;
                 if (!string.IsNullOrWhiteSpace(machineId))
                     agents.TryGetValue(machineId, out entry);
+                if (entry != null && groupScope != null && !string.Equals(entry.Group, groupScope, StringComparison.OrdinalIgnoreCase))
+                    entry = null;
 
                 // The admin key is checked before anything about the computer is revealed.
                 var decision = ConsentPolicy.Decide(unattended, entry?.Info.ConsentCeiling ?? ConsentMode.ConsentAlwaysAsk, adminKeyConfigured, adminKeyValid);
@@ -284,6 +295,7 @@ namespace PeakSWC.RemoteWebView.Agents
 
                 var launch = new LaunchEntry(requestId, entry.MachineId, sessionId)
                 {
+                    Group = entry.Group,
                     Latest = new LaunchProgress
                     {
                         RequestId = requestId,
@@ -304,6 +316,7 @@ namespace PeakSWC.RemoteWebView.Agents
                         ServerUrl = baseUrl,
                         Requester = requester ?? string.Empty,
                         RequireConsent = requireConsent,
+                        Group = entry.Group,
                     }
                 });
 
@@ -322,11 +335,13 @@ namespace PeakSWC.RemoteWebView.Agents
                 new(new StartSessionResponse { Accepted = false, Error = error }, machineName, true);
         }
 
-        public CancelLaunchOutcome CancelLaunch(string requestId)
+        public CancelLaunchOutcome CancelLaunch(string requestId, string? groupScope = null)
         {
             lock (gate)
             {
                 if (string.IsNullOrEmpty(requestId) || !launches.TryGetValue(requestId, out var launch))
+                    return CancelLaunchOutcome.NotFound;
+                if (groupScope != null && !string.Equals(launch.Group, groupScope, StringComparison.OrdinalIgnoreCase))
                     return CancelLaunchOutcome.NotFound;
                 if (IsFinal(launch.Latest.Stage))
                     return CancelLaunchOutcome.AlreadyFinished;
@@ -339,11 +354,13 @@ namespace PeakSWC.RemoteWebView.Agents
         }
 
         /// <summary>Replays the latest stage, then live updates; the reader completes after a terminal stage. Null when unknown.</summary>
-        public LaunchSubscription? SubscribeLaunch(string requestId)
+        public LaunchSubscription? SubscribeLaunch(string requestId, string? groupScope = null)
         {
             lock (gate)
             {
                 if (string.IsNullOrEmpty(requestId) || !launches.TryGetValue(requestId, out var launch))
+                    return null;
+                if (groupScope != null && !string.Equals(launch.Group, groupScope, StringComparison.OrdinalIgnoreCase))
                     return null;
 
                 var channel = Channel.CreateUnbounded<LaunchProgress>();
@@ -369,18 +386,27 @@ namespace PeakSWC.RemoteWebView.Agents
                 return launches.TryGetValue(requestId, out var launch) ? launch.Latest : null;
         }
 
-        public AgentInfo? GetAgent(string machineId)
+        public AgentInfo? GetAgent(string machineId, string? groupScope = null)
         {
             lock (gate)
-                return agents.TryGetValue(machineId, out var entry) ? SnapshotNoLock(entry) : null;
+            {
+                if (!agents.TryGetValue(machineId, out var entry))
+                    return null;
+                if (groupScope != null && !string.Equals(entry.Group, groupScope, StringComparison.OrdinalIgnoreCase))
+                    return null;
+                return SnapshotNoLock(entry);
+            }
         }
 
-        public AgentList GetAgentList()
+        public AgentList GetAgentList(string? groupScope = null)
         {
             var list = new AgentList();
             lock (gate)
             {
-                list.Agents.AddRange(agents.Values
+                IEnumerable<AgentEntry> source = agents.Values;
+                if (groupScope != null)
+                    source = source.Where(entry => string.Equals(entry.Group, groupScope, StringComparison.OrdinalIgnoreCase));
+                list.Agents.AddRange(source
                     .OrderByDescending(e => e.Online)
                     .ThenBy(e => e.Info.MachineName, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(e => e.MachineId, StringComparer.OrdinalIgnoreCase)
@@ -488,6 +514,7 @@ namespace PeakSWC.RemoteWebView.Agents
             info.Online = entry.Online;
             info.LastSeen = Timestamp.FromDateTimeOffset(entry.LastSeen);
             info.IpAddress = entry.IpAddress;
+            info.Group = entry.Group;
             return info;
         }
 
@@ -510,6 +537,7 @@ namespace PeakSWC.RemoteWebView.Agents
             public DateTimeOffset LastSeen { get; set; }
             public bool Online { get; set; }
             public string IpAddress { get; set; } = string.Empty;
+            public string Group { get; set; } = string.Empty;
             public long ConnectionId { get; set; }
             public CancellationTokenSource? ConnectionCts { get; set; }
             public IServerStreamWriter<HubCommand>? Writer { get; set; }
@@ -522,6 +550,7 @@ namespace PeakSWC.RemoteWebView.Agents
             public string RequestId { get; } = requestId;
             public string MachineId { get; } = machineId;
             public string SessionId { get; } = sessionId;
+            public string Group { get; set; } = string.Empty;
             public LaunchProgress Latest { get; set; } = new();
             public DateTimeOffset Updated { get; set; }
             public List<Channel<LaunchProgress>> Subscribers { get; } = [];

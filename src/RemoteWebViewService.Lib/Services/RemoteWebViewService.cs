@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null) : WebViewIPC.WebViewIPCBase
     {
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
@@ -33,6 +33,25 @@ namespace PeakSWC.RemoteWebView
 
             logger.LogDebug("CreateWebView called for Id: {Id}", request.Id);
 
+            // A completed registration is a duplicate id. Refuse it before the shop cap so a retry of the same
+            // session is not counted as a second seat.
+            if (serviceDictionary.TryGetValue(request.Id, out var existing) && existing.Task.IsCompleted)
+            {
+                logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+
+            var group = request.Group ?? string.Empty;
+            var active = ShopSessionActivity.Count(serviceDictionary, group);
+            var decision = await (shopSessions ?? AllowAllShopSessionPolicy.Instance).CheckCreateSessionAsync(group, active, context.CancellationToken).ConfigureAwait(false);
+            if (!decision.Allowed)
+            {
+                logger.LogWarning("CreateWebView denied for Id {Id} in group {Group}: {ErrorCode}. {Message}", request.Id, group, decision.ErrorCode, decision.Message);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" + (decision.ErrorCode ?? "denied") }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             if (serviceStateTaskSource.Task.IsCompleted)
@@ -50,7 +69,7 @@ namespace PeakSWC.RemoteWebView
                 InUse = false,
                 Url = $"https://{context.Host}/app/{request.Id}",
                 Id = request.Id,
-                Group = request.Group,
+                Group = group,
                 Pid = request.Pid,
                 HostName = request.HostName,
                 ProcessName = request.ProcessName,

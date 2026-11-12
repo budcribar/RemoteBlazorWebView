@@ -236,6 +236,7 @@ namespace PeakSWC.RemoteWebView
             services.AddTransient<IStartupFilter, EmbeddedStartupFilter>();
             if (options.Authorization != null)
                 services.AddSingleton(options.Authorization); // Startup uses this one instead of the configured provider
+            options.ConfigureTestServices?.Invoke(services);
         }
 
         private static void ConfigureEmbeddedKestrel(KestrelServerOptions kestrel, RemoteWebViewServerOptions options, bool https, BoundEndpoints bound)
@@ -334,6 +335,9 @@ namespace PeakSWC.RemoteWebView
 
         /// <summary>Logging setup for the embedded server's own logger factory. Default: no providers (silent).</summary>
         public Action<ILoggingBuilder>? ConfigureLogging { get; set; }
+
+        /// <summary>Services registered before Startup, so a test can supply <c>IShopStripeClient</c> first.</summary>
+        public Action<IServiceCollection>? ConfigureTestServices { get; set; }
 
         /// <summary>Extra configuration values, e.g. "RemoteFilesOptions:UseServerCache".</summary>
         public IDictionary<string, string?> Configuration { get; } = new Dictionary<string, string?>();

@@ -34,8 +34,8 @@ jobs:
           dotnet build src/RemoteWebViewService/RemoteWebViewService.csproj -c NoAuthorization -p:Platform=x64 -p:EnableWindowsTargeting=true -p:PackAsTool=false -p:GeneratePackageOnBuild=false
           deps="$(find src/RemoteWebViewService/bin -path '*NoAuthorization*' -name RemoteWebViewService.deps.json | head -n 1)"
           test -n "$deps"
-          if grep -E -q 'ShopIdentity|Sqlite' "$deps"; then
-            echo "NoAuthorization deps reference Shop Identity or SQLite: $deps"
+          if grep -E -q 'ShopIdentity|Sqlite|RemoteTicket' "$deps"; then
+            echo "NoAuthorization deps reference Shop Identity, SQLite, or RemoteTicket: $deps"
             exit 1
           fi
 
@@ -47,7 +47,7 @@ jobs:
             test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj
             test/StaticContentCache.Tests/StaticContentCache.Tests.csproj
             test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj
-            test/RemoteWebView.ShopIdentity.Tests/RemoteWebView.ShopIdentity.Tests.csproj
+            test/RemoteWebView.RemoteTicket.Tests/RemoteWebView.RemoteTicket.Tests.csproj
             test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj
             test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj
           )

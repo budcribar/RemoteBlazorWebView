@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Signed relay tickets ("Authorization:Provider": "RemoteTicket"). Shop accounts, billing, and certificates
+       live on a separate host. This project is not part of the native (AOT) NoAuthorization relay. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>PeakSWC.RemoteWebViewService.RemoteTicket</AssemblyName>
+    <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64;AnyCPU</Platforms>
+    <Configurations>Debug;Release;Authorization;AzureNoAuth</Configurations>
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <NoWarn>$(NoWarn);RWV001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,5 +1,6 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Agent;
 using System;
@@ -10,15 +11,19 @@ namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>AgentAdmin: what the admin site (gRPC-Web) uses to list computers and start diagnostics on one.</summary>
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
-    public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options) : AgentAdmin.AgentAdminBase
+    public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options, PeakSWC.RemoteWebView.IAgentTenantPolicy? tenantPolicy = null) : AgentAdmin.AgentAdminBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentAdminService";
+        private readonly PeakSWC.RemoteWebView.IAgentTenantPolicy policy = tenantPolicy ?? new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy();
         public const string DefaultRequester = "Someone";
         public static readonly TimeSpan WatchAgentsInterval = TimeSpan.FromSeconds(15);
         private static int warnedNoAdminKey;
 
-        public override Task<AgentList> GetAgents(Empty request, ServerCallContext context) =>
-            Task.FromResult(registry.GetAgentList());
+        public override Task<AgentList> GetAgents(Empty request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            return Task.FromResult(registry.GetAgentList(access.GroupScope));
+        }
 
         public override async Task WatchAgents(Empty request, IServerStreamWriter<AgentList> responseStream, ServerCallContext context)
         {
@@ -29,7 +34,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 {
                     // Take the signal before the snapshot so a change in between still wakes us.
                     var changed = registry.Changed;
-                    await responseStream.WriteAsync(registry.GetAgentList(), token).ConfigureAwait(false);
+                    await responseStream.WriteAsync(registry.GetAgentList(RequireAccess(context).GroupScope), token).ConfigureAwait(false);
                     try
                     {
                         await changed.WaitAsync(WatchAgentsInterval, token).ConfigureAwait(false);
@@ -48,13 +53,20 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
         {
+            var access = RequireAccess(context);
             string requester = GetRequester(request, context);
             string serverUrl = GetServerUrl(options, context);
+            bool adminKeyConfigured = options.AdminKeyConfigured;
             bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
-            if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
+            if (access.GroupScope != null)
+            {
+                adminKeyConfigured = true;
+                adminKeyValid = access.UnattendedAuthorized;
+            }
+            else if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
                 AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
 
-            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, options.AdminKeyConfigured, adminKeyValid);
+            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope);
             var response = outcome.Response;
             if (outcome.Denied)
             {
@@ -75,7 +87,8 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override async Task WatchLaunch(WatchLaunchRequest request, IServerStreamWriter<LaunchProgress> responseStream, ServerCallContext context)
         {
-            using var subscription = registry.SubscribeLaunch(request.RequestId)
+            var access = RequireAccess(context);
+            using var subscription = registry.SubscribeLaunch(request.RequestId, access.GroupScope)
                 ?? throw new RpcException(new Status(StatusCode.NotFound, "No launch with that request_id"));
             var token = context.CancellationToken;
             try
@@ -91,15 +104,32 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override Task<Empty> CancelLaunch(CancelCommand request, ServerCallContext context)
         {
-            if (options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+            var access = RequireAccess(context);
+            if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
 
-            var outcome = registry.CancelLaunch(request.RequestId);
+            var outcome = registry.CancelLaunch(request.RequestId, access.GroupScope);
             if (outcome == CancelLaunchOutcome.NotFound)
                 throw new RpcException(new Status(StatusCode.NotFound, "No launch with that request_id"));
             if (outcome == CancelLaunchOutcome.Queued)
                 AgentEvents.Info(logger, Category, $"Cancel requested for launch {request.RequestId}");
             return Task.FromResult(new Empty());
+        }
+
+        private PeakSWC.RemoteWebView.AgentAdminAccessDecision RequireAccess(ServerCallContext context)
+        {
+            var access = ResolveAccess(context);
+            if (!access.Allowed)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, access.DenialReason ?? "Access denied"));
+            return access;
+        }
+
+        private PeakSWC.RemoteWebView.AgentAdminAccessDecision ResolveAccess(ServerCallContext context)
+        {
+            HttpContext? http = null;
+            try { http = context.GetHttpContext(); }
+            catch (InvalidOperationException) { }
+            return policy.CheckAdminAccess(http, GetAdminKey(context), options);
         }
 
         /// <summary>The x-admin-key request header (gRPC metadata), or null.</summary>

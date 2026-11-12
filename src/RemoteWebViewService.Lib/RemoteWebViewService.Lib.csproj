@@ -54,7 +54,7 @@
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.15" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
+    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Both" Link="Protos\agent.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,5 +66,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="StaticContentCache.ServiceTests" />
+    <InternalsVisibleTo Include="PeakSWC.RemoteWebViewService.RemoteTicket" />
   </ItemGroup>
 </Project>

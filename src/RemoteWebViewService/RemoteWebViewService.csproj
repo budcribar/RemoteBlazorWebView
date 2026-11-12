@@ -70,9 +70,11 @@
        setting, not a compile-time switch: see IRelayAuthorization. -->
   <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
     <ProjectReference Include="..\RemoteWebViewService.AzureB2C\RemoteWebViewService.AzureB2C.csproj" />
+    <ProjectReference Include="..\RemoteWebViewService.RemoteTicket\RemoteWebViewService.RemoteTicket.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
+    <Compile Remove="Authorization\RemoteTicketRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
     <Compile Remove="Authorization\AzureB2CByDefault.cs" Condition="'$(Configuration)' != 'Authorization'" />
   </ItemGroup>
   <ItemGroup>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -174,6 +175,9 @@ namespace PeakSWC.RemoteWebView
                 authorization = RelayAuthorization.Resolve(configuration);
                 services.AddSingleton(authorization);
             }
+            // Shop Identity replaces these. Every other provider, including the native relay, allows every group and every agent.
+            services.TryAddSingleton<IShopSessionPolicy, AllowAllShopSessionPolicy>();
+            services.TryAddSingleton<IAgentTenantPolicy, AllowAllAgentTenantPolicy>();
             authorization.ConfigureServices(services, configuration);
             if (authorization.Enabled)
             {
@@ -316,7 +320,9 @@ namespace PeakSWC.RemoteWebView
                 }
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-                if (!Embedded)
+                // Same gate as ClientIPCService: embedded hosts with MaxClients > 1 can exercise AgentHub and AgentAdmin.
+                // The offline sweeper stays out of embedded hosts so unit tests do not run a background timer.
+                if (adminServices)
                 {
                     // Agents authenticate with their enrollment key (AGENT_ENROLLMENT_KEYS), checked in AgentHubService.Connect.
                     endpoints.MapGrpcService<AgentHubService>().AllowAnonymous();
@@ -343,6 +349,9 @@ namespace PeakSWC.RemoteWebView
                 endpoints.MapGet("/stats", Endpoints.Stats()).RequireSessionAccess(authorization);
                 endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).RequireSessionAccess(authorization);
 #endif
+                if (authorization is IRelayEndpointExtension extension)
+                    extension.MapEndpoints(endpoints);
+
                 endpoints.MapGet("/health", Endpoints.Health());
                 endpoints.MapGet("/", Endpoints.Contact());
                 endpoints.MapFallbackToFile("index.html");

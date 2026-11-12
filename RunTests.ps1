@@ -57,15 +57,15 @@ function Invoke-RunTestsFast {
             Select-Object -First 1
         if (-not $deps) { Write-Error "NoAuthorization deps file was not produced."; exit 1 }
         $depsText = Get-Content -Raw -LiteralPath $deps.FullName
-        if ($depsText -match 'ShopIdentity' -or $depsText -match 'Sqlite') {
-            Write-Error "NoAuthorization deps reference Shop Identity or SQLite: $($deps.FullName)"
+        if ($depsText -match 'ShopIdentity' -or $depsText -match 'Sqlite' -or $depsText -match 'RemoteTicket') {
+            Write-Error "NoAuthorization deps reference Shop Identity, SQLite, or RemoteTicket: $($deps.FullName)"
             exit 1
         }
         $projects = @(
             'test\StaticContentCache.Tests\StaticContentCache.Tests.csproj',
             'test\StaticContentCache.ServiceTests\StaticContentCache.ServiceTests.csproj',
             'test\RemoteWebView.Lifecycle.Tests\RemoteWebView.Lifecycle.Tests.csproj',
-            'test\RemoteWebView.ShopIdentity.Tests\RemoteWebView.ShopIdentity.Tests.csproj',
+            'test\RemoteWebView.RemoteTicket.Tests\RemoteWebView.RemoteTicket.Tests.csproj',
             'test\RemoteBlazorWebView.SourceGenerators.Tests\RemoteBlazorWebView.SourceGenerators.Tests.csproj',
             'test\RemoteBlazorWebView.RemoteComponents.Tests\RemoteBlazorWebView.RemoteComponents.Tests.csproj',
             'test\StaticContentCache.EndToEnd.Tests\StaticContentCache.EndToEnd.Tests.csproj',
