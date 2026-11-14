@@ -658,6 +658,29 @@ public class AgentRegistryTests
         }
     }
 
+    [Fact]
+    public async Task Platform_admin_with_null_group_scope_starts_unattended_session_without_consent()
+    {
+        var registry = new AgentRegistry();
+        var connection = registry.Register(Hello("machine-1", ceiling: ConsentMode.ConsentUnattendedAllowed), "10.0.0.1", null);
+
+        var policy = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: true, GroupScope: null, UnattendedAuthorized: true));
+        var service = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, AgentOptions.Create(null, null), policy);
+
+        var response = await service.StartSession(new StartSessionRequest { MachineId = "machine-1", Unattended = true }, new CallContext(CancellationToken.None));
+        Assert.True(response.Accepted);
+
+        Assert.True(connection.Commands.TryRead(out var cmd));
+        Assert.NotNull(cmd.Launch);
+        Assert.False(cmd.Launch.RequireConsent);
+    }
+
+    private sealed class FixedPolicy(PeakSWC.RemoteWebView.AgentAdminAccessDecision decision) : PeakSWC.RemoteWebView.IAgentTenantPolicy
+    {
+        public PeakSWC.RemoteWebView.AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) => throw new NotImplementedException();
+        public PeakSWC.RemoteWebView.AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options) => decision;
+    }
+
     private sealed class ManualTime : TimeProvider
     {
         private DateTimeOffset _now = new(2026, 11, 3, 12, 0, 0, TimeSpan.Zero);

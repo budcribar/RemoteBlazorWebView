@@ -58,10 +58,15 @@ namespace PeakSWC.RemoteWebView.Agents
             string serverUrl = GetServerUrl(options, context);
             bool adminKeyConfigured = options.AdminKeyConfigured;
             bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
-            if (access.GroupScope != null)
+            if (access.UnattendedAuthorized)
             {
                 adminKeyConfigured = true;
-                adminKeyValid = access.UnattendedAuthorized;
+                adminKeyValid = true;
+            }
+            else if (access.GroupScope != null)
+            {
+                adminKeyConfigured = true;
+                adminKeyValid = false;
             }
             else if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
                 AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
