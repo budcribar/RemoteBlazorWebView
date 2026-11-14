@@ -95,6 +95,7 @@ namespace PeakSWC.RemoteWebView
     {
         public const string CookieName = "rwv-relay-ticket";
         public const string HeaderName = "x-relay-ticket";
+        private const string CookieAppendedItemKey = "__rwv_ticket_cookie_set";
 
         public static string? From(HttpContext? http)
         {
@@ -103,7 +104,37 @@ namespace PeakSWC.RemoteWebView
             var header = http.Request.Headers[HeaderName].ToString();
             if (!string.IsNullOrWhiteSpace(header))
                 return header.Trim();
-            return http.Request.Cookies.TryGetValue(CookieName, out var cookie) ? cookie : null;
+
+            string? queryTicket = null;
+            if (http.Request.Query.TryGetValue("ticket", out var ticketVal) && !string.IsNullOrWhiteSpace(ticketVal))
+                queryTicket = ticketVal.ToString().Trim();
+            else if (http.Request.Query.TryGetValue(CookieName, out var cookieVal) && !string.IsNullOrWhiteSpace(cookieVal))
+                queryTicket = cookieVal.ToString().Trim();
+
+            if (!string.IsNullOrEmpty(queryTicket))
+            {
+                try
+                {
+                    if (!http.Items.ContainsKey(CookieAppendedItemKey) && !http.Response.HasStarted)
+                    {
+                        http.Items[CookieAppendedItemKey] = true;
+                        http.Response.Cookies.Append(CookieName, queryTicket, new CookieOptions
+                        {
+                            SameSite = SameSiteMode.Lax,
+                            Path = "/",
+                            HttpOnly = true,
+                            Secure = true
+                        });
+                    }
+                }
+                catch
+                {
+                    // Response headers may have started or response does not support cookies
+                }
+                return queryTicket;
+            }
+
+            return http.Request.Cookies.TryGetValue(CookieName, out var cookie) && !string.IsNullOrWhiteSpace(cookie) ? cookie : null;
         }
     }
 }

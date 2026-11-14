@@ -133,6 +133,32 @@ public class RemoteTicketTests
         Assert.NotEqual(HttpStatusCode.Unauthorized, allowed.StatusCode);
     }
 
+    [Theory]
+    [InlineData("ticket")]
+    [InlineData(RemoteTicketReader.CookieName)]
+    public async Task Mirror_accepts_ticket_in_query_parameter_and_sets_cookie(string paramName)
+    {
+        var handler = new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        await using var host = await Start(handler);
+        var state = AddSession(host, "bench");
+        using var anon = Client(host);
+
+        var token = RemoteTicketFormat.Create(Secret, Ticket("user-9", ["bench"], DateTimeOffset.UtcNow.AddMinutes(5)));
+        var response = await anon.GetAsync($"mirror/{state.Id}?{paramName}={Uri.EscapeDataString(token)}");
+
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookieHeaders));
+        var cookieHeader = Assert.Single(cookieHeaders);
+        Assert.Contains($"{RemoteTicketReader.CookieName}={token}", cookieHeader);
+        Assert.Contains("path=/", cookieHeader, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookieHeader, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookieHeader, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("secure", cookieHeader, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static RemoteTicketPayload Ticket(string oid, string[] groups, DateTimeOffset exp) => new()
     {
         Oid = oid,
