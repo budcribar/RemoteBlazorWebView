@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -157,6 +158,31 @@ public class RemoteTicketTests
         Assert.Contains("httponly", cookieHeader, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=lax", cookieHeader, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("secure", cookieHeader, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RemoteTicketFormat_accepts_both_base64url_and_legacy_raw_json_signatures()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var payload = Ticket("user-legacy", ["bench"], now.AddHours(1));
+
+        // 1. Standard format (signs base64url payload)
+        var standardToken = RemoteTicketFormat.Create(Secret, payload);
+        Assert.True(RemoteTicketFormat.TryRead(standardToken, Secret, now, out var standardParsed, out var standardErr), standardErr);
+        Assert.NotNull(standardParsed);
+        Assert.Equal("user-legacy", standardParsed.Oid);
+
+        // 2. Legacy format (signs raw JSON bytes)
+        var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+        var b64Payload = Convert.ToBase64String(jsonBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var rawSigBytes = HMACSHA256.HashData(Encoding.UTF8.GetBytes(Secret), jsonBytes);
+        var b64Sig = Convert.ToBase64String(rawSigBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var legacyToken = b64Payload + "." + b64Sig;
+
+        Assert.True(RemoteTicketFormat.TryRead(legacyToken, Secret, now, out var legacyParsed, out var legacyErr), legacyErr);
+        Assert.NotNull(legacyParsed);
+        Assert.Equal("user-legacy", legacyParsed.Oid);
+        Assert.Equal(["bench"], legacyParsed.Groups);
     }
 
     private static RemoteTicketPayload Ticket(string oid, string[] groups, DateTimeOffset exp) => new()

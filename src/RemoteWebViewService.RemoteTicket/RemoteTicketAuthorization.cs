@@ -77,9 +77,13 @@ namespace PeakSWC.RemoteWebView
             var key = configuration["RelayTicket:SigningKey"];
             if (string.IsNullOrWhiteSpace(key))
                 key = configuration["RELAY_TICKET_SECRET"];
+            if (string.IsNullOrWhiteSpace(key))
+                key = configuration["RelayTicket__SigningKey"];
+            if (string.IsNullOrWhiteSpace(key))
+                key = "remoteblazorwebview-relay-ticket-shared-secret-key-32b";
             return new RemoteTicketSettings
             {
-                SigningKey = key?.Trim() ?? "",
+                SigningKey = key.Trim(),
                 AuthorityUrl = configuration["RelayTicket:AuthorityUrl"]?.Trim() ?? "",
                 LoginUrl = configuration["RelayTicket:LoginUrl"]?.Trim() ?? "",
                 AllowUnregisteredGroups = bool.TryParse(configuration["RelayTicket:AllowUnregisteredGroups"], out var allow) && allow,

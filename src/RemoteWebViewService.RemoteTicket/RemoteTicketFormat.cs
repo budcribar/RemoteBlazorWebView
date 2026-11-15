@@ -76,8 +76,12 @@ namespace PeakSWC.RemoteWebView
             var expected = Sign(signingKey, parts[0]);
             if (given.Length != expected.Length || !CryptographicOperations.FixedTimeEquals(expected, given))
             {
-                error = "invalid_signature";
-                return false;
+                var legacyExpected = HMACSHA256.HashData(Encoding.UTF8.GetBytes(signingKey), body);
+                if (given.Length != legacyExpected.Length || !CryptographicOperations.FixedTimeEquals(legacyExpected, given))
+                {
+                    error = "invalid_signature";
+                    return false;
+                }
             }
 
             RemoteTicketPayload? parsed;
