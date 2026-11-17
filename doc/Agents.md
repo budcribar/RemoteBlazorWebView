@@ -26,12 +26,16 @@ client code don't get the diagnostic, but the contract is just as likely to chan
 | Service | Used by | Transport | Endpoint |
 |---|---|---|---|
 | `rwvagent.AgentHub` (`AgentHubService`) | the agent | native gRPC (HTTP/2) | `/rwvagent.AgentHub/Connect` |
-| `rwvagent.AgentAdmin` (`AgentAdminService`) | the admin site | gRPC-Web, CORS policy `CorsPolicy` | `/rwvagent.AgentAdmin/GetAgents`, `WatchAgents`, `StartSession`, `WatchLaunch`, `CancelLaunch` |
+| `rwvagent.AgentAdmin` (`AgentAdminService`) | the admin site | gRPC-Web, CORS policy `CorsPolicy` | `/rwvagent.AgentAdmin/GetAgents`, `WatchAgents`, `StartSession`, `WatchLaunch`, `CancelLaunch`, `EndSession` |
 
 - `AgentHub.Connect` is anonymous at the HTTP level. The first message must be `AgentHello`, otherwise the call ends with `InvalidArgument`.
   An enrollment key that isn't on the allow-list ends it with `PermissionDenied`. A new stream for the same `machine_id` replaces the old one.
 - `AgentAdmin` gets the same treatment as `ClientIPC`, the other service the admin site calls: anonymous, gRPC-Web, `CorsPolicy`.
-  `GetAgents` and `WatchAgents` are always readable. `StartSession` and `CancelLaunch` are gated by `AGENT_ADMIN_KEY` (below).
+  `GetAgents` and `WatchAgents` are always readable. `StartSession`, `CancelLaunch` and `EndSession` are gated by `AGENT_ADMIN_KEY` (below).
+  `EndSession` takes a machine ID and sends the agent a cancel for that computer's newest unfinished launch, so the agent closes the app
+  it started. It cannot end a session the relay has no launch for (started at the PC, or before the relay restarted).
+  With authentication on, the requester shown in the consent prompt and the log is the signed-in user's name; the caller may only
+  add a short label in parentheses after that same name, for example `Pat Lee (AI connector)`.
 - An agent shows as offline 90 s after its last message, or as soon as its stream ends. Offline agents stay listed for 7 days.
 - `WatchAgents` sends the full list on every change, and at least every 15 s.
 - `WatchLaunch` replays the latest stage first. It ends after READY, DECLINED, FAILED or ENDED. A later ENDED, after READY, is still recorded.
@@ -56,7 +60,7 @@ Registrations, launches, declines and failures are written to the log and to the
 | Variable | Meaning |
 |---|---|
 | `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents. If it's unset or empty, any key is accepted and a warning is logged once. |
-| `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession` and `CancelLaunch` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
+| `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession`, `CancelLaunch` and `EndSession` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
 
 ## Keepalive

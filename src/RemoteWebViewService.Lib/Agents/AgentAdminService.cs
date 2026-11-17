@@ -121,6 +121,21 @@ namespace PeakSWC.RemoteWebView.Agents
             return Task.FromResult(new Empty());
         }
 
+        public override Task<EndSessionResponse> EndSession(EndSessionRequest request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+                throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
+
+            var result = registry.EndSession(request.MachineId, access.GroupScope);
+            if (result.Outcome == EndSessionOutcome.EndSessionRequested)
+            {
+                string who = string.IsNullOrEmpty(result.MachineName) ? request.MachineId : $"{result.MachineName} ({request.MachineId})";
+                AgentEvents.Info(logger, Category, $"Diagnostics end requested on {who} by {GetRequester(null, context)}: request {result.RequestId}");
+            }
+            return Task.FromResult(new EndSessionResponse { Outcome = result.Outcome, RequestId = result.RequestId });
+        }
+
         private PeakSWC.RemoteWebView.AgentAdminAccessDecision RequireAccess(ServerCallContext context)
         {
             var access = ResolveAccess(context);
@@ -148,8 +163,14 @@ namespace PeakSWC.RemoteWebView.Agents
             return null;
         }
 
-        /// <summary>The signed-in user's name when authentication is on, else what the admin site sent, else "Someone".</summary>
-        public static string GetRequester(StartSessionRequest request, ServerCallContext context)
+        /// <summary>Longest label a caller may put after the signed-in name, not counting the parentheses.</summary>
+        public const int MaxRequesterLabelLength = 32;
+
+        /// <summary>
+        /// The signed-in user's name when authentication is on, else what the admin site sent, else "Someone". With authentication on the
+        /// caller cannot choose the name, only add a short label after it (see <see cref="WithLabel"/>).
+        /// </summary>
+        public static string GetRequester(StartSessionRequest? request, ServerCallContext context)
         {
             try
             {
@@ -158,7 +179,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 {
                     string? name = user.FindFirst("name")?.Value ?? user.Identity.Name;
                     if (!string.IsNullOrWhiteSpace(name))
-                        return name.Trim();
+                        return WithLabel(name.Trim(), request?.Requester);
                 }
             }
             catch (InvalidOperationException)
@@ -166,7 +187,30 @@ namespace PeakSWC.RemoteWebView.Agents
                 // Not hosted by ASP.NET Core (unit tests).
             }
 
-            return string.IsNullOrWhiteSpace(request.Requester) ? DefaultRequester : request.Requester.Trim();
+            return string.IsNullOrWhiteSpace(request?.Requester) ? DefaultRequester : request.Requester.Trim();
+        }
+
+        /// <summary>
+        /// Keeps a label the caller put in parentheses after the signed-in name, so the consent prompt and the audit line can say how the
+        /// session was asked for: "Pat Lee (AI connector)". Anything else the caller sent is dropped, so it can never show another
+        /// person's name. The label is letters, digits, spaces and hyphens, at most <see cref="MaxRequesterLabelLength"/> characters.
+        /// </summary>
+        public static string WithLabel(string name, string? requested)
+        {
+            string text = requested?.Trim() ?? string.Empty;
+            string prefix = name + " (";
+            if (text.Length <= prefix.Length + 1 || !text.StartsWith(prefix, StringComparison.Ordinal) || text[^1] != ')')
+                return name;
+
+            string label = text[prefix.Length..^1].Trim();
+            if (label.Length == 0 || label.Length > MaxRequesterLabelLength)
+                return name;
+            foreach (char ch in label)
+            {
+                if (!char.IsLetterOrDigit(ch) && ch != ' ' && ch != '-')
+                    return name;
+            }
+            return $"{name} ({label})";
         }
 
         /// <summary>PUBLIC_BASE_URL when set, else the scheme and host this request came in on.</summary>

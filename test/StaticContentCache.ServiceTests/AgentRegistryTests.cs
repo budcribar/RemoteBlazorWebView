@@ -131,7 +131,27 @@ public class AgentRegistryTests
 
         var signedIn = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("name", "Alice Admin") }, "test")) };
         Assert.Equal("Alice Admin", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin", AgentAdminService.GetRequester(null, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin (AI connector)",
+            AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Alice Admin (AI connector)" }, new CallContext(CancellationToken.None, signedIn)));
     }
+
+    [Theory]
+    [InlineData("Alice Admin (AI connector)", "Alice Admin (AI connector)")]
+    [InlineData("  Alice Admin (AI connector)  ", "Alice Admin (AI connector)")]
+    [InlineData("Alice Admin (web-2)", "Alice Admin (web-2)")]
+    [InlineData("Bob (AI connector)", "Alice Admin")]              // another name
+    [InlineData("Alice Admin and Bob (AI connector)", "Alice Admin")]
+    [InlineData("Alice Admin (Bob) (AI connector)", "Alice Admin")] // parentheses inside the label
+    [InlineData("Alice Admin (really Bob, the owner)", "Alice Admin")]
+    [InlineData("Alice Admin (0123456789012345678901234567890123)", "Alice Admin")] // 34 characters
+    [InlineData("Alice Admin ()", "Alice Admin")]
+    [InlineData("Alice Admin (AI connector", "Alice Admin")]
+    [InlineData("Alice Admin", "Alice Admin")]
+    [InlineData("", "Alice Admin")]
+    [InlineData(null, "Alice Admin")]
+    public void A_signed_in_requester_keeps_only_a_short_label_after_their_own_name(string? requested, string expected) =>
+        Assert.Equal(expected, AgentAdminService.WithLabel("Alice Admin", requested));
 
     // ---------------------------------------------------------------- online / offline / expiry
 
@@ -282,6 +302,61 @@ public class AgentRegistryTests
         Assert.True(connection.Commands.TryRead(out var cancel));
         Assert.Equal(response.RequestId, cancel!.Cancel.RequestId);
         Assert.Equal(CancelLaunchOutcome.NotFound, registry.CancelLaunch(Guid.NewGuid().ToString()));
+    }
+
+    [Fact]
+    public void EndSession_cancels_the_running_launch_and_reports_what_it_cannot_end()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("m-1").Outcome);
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("").Outcome);
+
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.Equal(EndSessionOutcome.EndSessionNotRunning, registry.EndSession("m-1").Outcome);
+
+        // A session someone started at the PC: running, but the relay has no launch to cancel.
+        registry.OnHeartbeat(connection, new Heartbeat { SessionRunning = true, SessionId = Guid.NewGuid().ToString() });
+        Assert.Equal(EndSessionOutcome.EndSessionNotAgentLaunched, registry.EndSession("m-1").Outcome);
+        registry.OnHeartbeat(connection, new Heartbeat());
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var started = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageReady, SessionId = started.SessionId });
+
+        var ended = registry.EndSession("M-1");
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.Equal(started.RequestId, ended.RequestId);
+        Assert.True(connection.Commands.TryRead(out var cancel));
+        Assert.Equal(started.RequestId, cancel!.Cancel.RequestId);
+
+        // The agent closes the app and reports ENDED; after that there is nothing left to end.
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageEnded, SessionId = started.SessionId });
+        Assert.Equal(EndSessionOutcome.EndSessionNotRunning, registry.EndSession("m-1").Outcome);
+        Assert.False(connection.Commands.TryRead(out _));
+    }
+
+    [Fact]
+    public void EndSession_also_stops_a_start_in_progress_and_respects_group_scope_and_offline()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var started = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true, "shop-a").Response;
+        Assert.True(started.Accepted);
+        Assert.True(connection.Commands.TryRead(out _));
+
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("m-1", "shop-b").Outcome);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var ended = registry.EndSession("m-1", "shop-a");
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.True(connection.Commands.TryRead(out var cancel));
+        Assert.Equal(started.RequestId, cancel!.Cancel.RequestId);
+
+        // A running app outlives the agent's connection; while the computer is offline the command cannot reach it.
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageReady, SessionId = started.SessionId });
+        registry.Disconnect(connection);
+        Assert.Equal(EndSessionOutcome.EndSessionOffline, registry.EndSession("m-1", "shop-a").Outcome);
     }
 
     [Fact]
@@ -542,6 +617,13 @@ public class AgentRegistryTests
         var denied = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, wrong, cancel));
         Assert.Equal(StatusCode.PermissionDenied, denied.StatusCode);
         await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, right, cancel);
+
+        var end = new EndSessionRequest { MachineId = "m-1" };
+        var endDenied = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(EndSessionMethod, null, wrong, end));
+        Assert.Equal(StatusCode.PermissionDenied, endDenied.StatusCode);
+        var ended = await relay.Invoker.AsyncUnaryCall(EndSessionMethod, null, right, end);
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.Equal(start.RequestId, ended.RequestId);
     }
 
     [Fact]
@@ -601,6 +683,8 @@ public class AgentRegistryTests
         new(MethodType.Unary, "rwvagent.AgentAdmin", "StartSession", Proto(StartSessionRequest.Parser), Proto(StartSessionResponse.Parser));
     private static readonly Method<CancelCommand, Empty> CancelLaunchMethod =
         new(MethodType.Unary, "rwvagent.AgentAdmin", "CancelLaunch", Proto(CancelCommand.Parser), Proto(Empty.Parser));
+    private static readonly Method<EndSessionRequest, EndSessionResponse> EndSessionMethod =
+        new(MethodType.Unary, "rwvagent.AgentAdmin", "EndSession", Proto(EndSessionRequest.Parser), Proto(EndSessionResponse.Parser));
     private static readonly Method<WatchLaunchRequest, LaunchProgress> WatchLaunchMethod =
         new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchLaunch", Proto(WatchLaunchRequest.Parser), Proto(LaunchProgress.Parser));
 

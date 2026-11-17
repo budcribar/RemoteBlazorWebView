@@ -30,6 +30,10 @@ namespace PeakSWC.RemoteWebView.Agents
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public enum CancelLaunchOutcome { NotFound, Queued, AlreadyFinished }
 
+    /// <param name="RequestId">The launch that was told to stop, when <paramref name="Outcome"/> is requested.</param>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
+    public sealed record EndSessionResult(EndSessionOutcome Outcome, string RequestId = "", string MachineName = "");
+
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed record SweepResult(IReadOnlyList<string> WentOffline, IReadOnlyList<string> Forgotten);
 
@@ -350,6 +354,42 @@ namespace PeakSWC.RemoteWebView.Agents
 
                 entry.Commands.Writer.TryWrite(new HubCommand { Cancel = new CancelCommand { RequestId = requestId } });
                 return CancelLaunchOutcome.Queued;
+            }
+        }
+
+        /// <summary>
+        /// Stops what the agent started on a computer: the running app, or a start still in progress. The agent already ends a launch
+        /// on a cancel for its request ID (it closes the app and reports ENDED), so this finds the computer's newest unfinished launch
+        /// and sends that cancel. A session the relay has no launch for cannot be stopped this way.
+        /// </summary>
+        public EndSessionResult EndSession(string machineId, string? groupScope = null)
+        {
+            lock (gate)
+            {
+                AgentEntry? entry = null;
+                if (!string.IsNullOrWhiteSpace(machineId))
+                    agents.TryGetValue(machineId, out entry);
+                if (entry == null || (groupScope != null && !string.Equals(entry.Group, groupScope, StringComparison.OrdinalIgnoreCase)))
+                    return new EndSessionResult(EndSessionOutcome.EndSessionNotFound);
+
+                LaunchEntry? live = null;
+                foreach (var launch in launches.Values)
+                {
+                    if (!string.Equals(launch.MachineId, entry.MachineId, StringComparison.OrdinalIgnoreCase) || IsFinal(launch.Latest.Stage))
+                        continue;
+                    if (live == null || launch.Updated > live.Updated)
+                        live = launch;
+                }
+
+                if (live == null)
+                    return new EndSessionResult(
+                        entry.Info.SessionRunning ? EndSessionOutcome.EndSessionNotAgentLaunched : EndSessionOutcome.EndSessionNotRunning,
+                        MachineName: entry.Info.MachineName);
+                if (!entry.Online || entry.ConnectionId == 0)
+                    return new EndSessionResult(EndSessionOutcome.EndSessionOffline, MachineName: entry.Info.MachineName);
+
+                entry.Commands.Writer.TryWrite(new HubCommand { Cancel = new CancelCommand { RequestId = live.RequestId } });
+                return new EndSessionResult(EndSessionOutcome.EndSessionRequested, live.RequestId, entry.Info.MachineName);
             }
         }
 

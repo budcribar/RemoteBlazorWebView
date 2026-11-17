@@ -105,6 +105,7 @@ service AgentAdmin {
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
   rpc WatchLaunch(WatchLaunchRequest) returns (stream LaunchProgress); // replays the latest stage first
   rpc CancelLaunch(CancelCommand) returns (google.protobuf.Empty);
+  rpc EndSession(EndSessionRequest) returns (EndSessionResponse);      // stops the app the agent started on that computer
 }
 
 message AgentInfo {
@@ -131,7 +132,8 @@ message AgentList {
 message StartSessionRequest {
   string machine_id = 1;
   bool unattended = 2;      // honoured only when the agent's ceiling is CONSENT_UNATTENDED_ALLOWED
-  string requester = 3;    // display name for the consent prompt; the relay fills it from the signed-in user when auth is on
+  string requester = 3;    // display name for the consent prompt; when auth is on the relay uses the signed-in user's name
+                           // and keeps only a short label the caller put after that same name: "Pat Lee (AI connector)"
 }
 
 message StartSessionResponse {
@@ -144,4 +146,22 @@ message StartSessionResponse {
 
 message WatchLaunchRequest {
   string request_id = 1;
+}
+
+message EndSessionRequest {
+  string machine_id = 1;
+}
+
+enum EndSessionOutcome {
+  END_SESSION_UNKNOWN = 0;
+  END_SESSION_REQUESTED = 1;           // the agent was told to stop the app (or the start in progress); session_running clears when it has
+  END_SESSION_NOT_RUNNING = 2;         // no session is running and no start is in progress
+  END_SESSION_NOT_AGENT_LAUNCHED = 3;  // a session is running that the relay has no launch for: started at the PC, or before the relay restarted
+  END_SESSION_OFFLINE = 4;             // the computer is offline, so the command cannot reach it
+  END_SESSION_NOT_FOUND = 5;           // no such computer for this caller
+}
+
+message EndSessionResponse {
+  EndSessionOutcome outcome = 1;
+  string request_id = 2;    // the launch that was told to stop, when outcome is END_SESSION_REQUESTED
 }
