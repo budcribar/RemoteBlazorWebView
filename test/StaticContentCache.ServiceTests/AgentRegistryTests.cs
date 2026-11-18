@@ -489,10 +489,28 @@ public class AgentRegistryTests
         using var watch = registry.SubscribeLaunch(start.RequestId)!;
 
         registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageWaitingForConsent });
-        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageDeclined, Detail = "No answer within 2 minutes" });
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageDeclined, Detail = "The person at the computer declined the session" });
 
         Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageWaitingForConsent, LaunchStage.StageDeclined }, (await ReadAll(watch.Reader)).Select(p => p.Stage));
         Assert.False(registry.GetAgent("m-1")!.SessionRunning);
+        Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
+    }
+
+    [Fact]
+    public async Task An_unanswered_consent_prompt_ends_the_watch_and_leaves_no_session()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        using var watch = registry.SubscribeLaunch(start.RequestId)!;
+
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageWaitingForConsent });
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageConsentTimedOut, Detail = "No answer within the consent time limit" });
+
+        Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageWaitingForConsent, LaunchStage.StageConsentTimedOut }, (await ReadAll(watch.Reader)).Select(p => p.Stage));
+        Assert.True(AgentRegistry.IsWatchTerminal(LaunchStage.StageConsentTimedOut));
+        Assert.False(registry.GetAgent("m-1")!.SessionRunning);
+        // The launch is over, so the same computer can be asked again straight away.
         Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
     }
 

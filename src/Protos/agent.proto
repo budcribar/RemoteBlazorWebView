@@ -63,9 +63,10 @@ enum LaunchStage {
   STAGE_VERIFYING = 4;
   STAGE_STARTING = 5;
   STAGE_READY = 6;      // the app is running and registered with the relay under session_id
-  STAGE_DECLINED = 7;   // the person at the PC said no (or didn't answer in time)
+  STAGE_DECLINED = 7;   // the person at the PC said no (agents older than STAGE_CONSENT_TIMED_OUT also send it for no answer)
   STAGE_FAILED = 8;
   STAGE_ENDED = 9;      // the app exited
+  STAGE_CONSENT_TIMED_OUT = 10;  // nobody at the PC answered the consent prompt within the time limit
 }
 
 message LaunchProgress {

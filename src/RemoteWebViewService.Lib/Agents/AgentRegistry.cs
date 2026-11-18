@@ -89,11 +89,11 @@ namespace PeakSWC.RemoteWebView.Agents
         }
 
         public static bool IsWatchTerminal(LaunchStage stage) =>
-            stage is LaunchStage.StageReady or LaunchStage.StageDeclined or LaunchStage.StageFailed or LaunchStage.StageEnded;
+            stage is LaunchStage.StageReady or LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
 
         // After these nothing more is expected for the request. READY is still followed by ENDED when the app exits.
         private static bool IsFinal(LaunchStage stage) =>
-            stage is LaunchStage.StageDeclined or LaunchStage.StageFailed or LaunchStage.StageEnded;
+            stage is LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
 
         public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "")
         {
