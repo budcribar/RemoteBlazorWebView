@@ -31,8 +31,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
-                    // Handle the case where refresh is not enabled
-                    if (!serviceState.Refresh)
+                    // The first load serves the page; a later one is a refresh (the app restarts), except the owner's first.
+                    if (ServesPage(serviceState, context))
                     {
                         // Retrieve and stream the home HTML file
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
@@ -55,6 +55,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         using Stream stream = fileStream.Stream;
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                         serviceState.Refresh = true;
+                        if (OwnerAccess.HasOwnerCookie(context, serviceState))
+                            serviceState.OwnerPageServed = true;
                         if (voiceKey is not null)
                             await context.Response.WriteAsync(VoiceRoom.ControllerScript(guid, voiceKey)).ConfigureAwait(false);
                     }
@@ -95,6 +97,16 @@ namespace PeakSWC.RemoteWebView.EndPoints
                
             };
         }
+
+        /// <summary>
+        /// Whether a load of /{id} is given the app's page (true) or counts as a refresh, which restarts the app (false).
+        /// The first load is given the page. So is the first load by the owner's own surface (it carries the owner cookie
+        /// that /app/{id}?role=owner&amp;key=... set), whoever came before it: after the PC restarts, a browser tab left on
+        /// the session can reach the new copy of the app before the app's own window does, and the window's load must not
+        /// then restart the app it belongs to. The owner's later loads are refreshes like anyone else's.
+        /// </summary>
+        internal static bool ServesPage(ServiceState serviceState, HttpContext context) =>
+            !serviceState.Refresh || (!serviceState.OwnerPageServed && OwnerAccess.HasOwnerCookie(context, serviceState));
 
         // The object captured before the loop is the registration that was live when
         // this wait started. A missing key or a different object means that registration

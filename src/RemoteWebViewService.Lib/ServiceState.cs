@@ -38,6 +38,11 @@ namespace PeakSWC.RemoteWebView
 
         /// <summary>The owner's own surface opened the controlling /app page (?role=owner); remote users join at /mirror.</summary>
         public bool OwnerHoldsApp { get; set; }
+        /// <summary>
+        /// The owner's own surface has been given the app's page once. Its first load of /{id} is never a refresh, even when
+        /// another browser loaded the page before it (Endpoints.ServesPage); a later load is.
+        /// </summary>
+        public bool OwnerPageServed { get; set; }
         /// <summary>Set (to 1) by the first accepted restart request, so pressing Restart twice restarts once.</summary>
         public int RestartRequested;
         public string Id { get; init; } = string.Empty;

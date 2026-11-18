@@ -89,6 +89,95 @@ public class SharedSessionEndpointTests
         Assert.Equal(StatusCodes.Status409Conflict, second.Response.StatusCode);
     }
 
+    // After the PC restarts, a browser tab left on the session can reach the new copy of the app before the app's own
+    // window does. The window, proven by the app's key, still gets in; the other browser's name stays on the session.
+    [Fact]
+    public async Task The_owner_with_the_key_is_not_locked_out_by_a_browser_that_took_the_app_page_first()
+    {
+        var (remote, state, id) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = state;
+        await Endpoints.Start()(remote);
+        Assert.True(state.InUse);
+        state.User = "Remote Tech";
+
+        var (owner, _, _) = NewRequest("?role=owner&key=app-secret", state, id);
+        await Endpoints.Start()(owner);
+
+        Assert.Equal(StatusCodes.Status302Found, owner.Response.StatusCode);
+        Assert.Equal($"/{id}?role=owner", owner.Response.Headers.Location.ToString());
+        Assert.True(state.OwnerHoldsApp);
+        Assert.True(state.InUse);
+        Assert.Equal("Remote Tech", state.User);
+        Assert.Contains($"{OwnerAccess.CookieName(id.ToString())}={state.OwnerToken}", owner.Response.Headers.SetCookie.ToString());
+    }
+
+    [Fact]
+    public async Task Without_an_owner_key_a_second_visitor_claiming_owner_is_still_locked_out()
+    {
+        var (first, state, id) = NewRequest("");
+        await using var _ = state;
+        await Endpoints.Start()(first);
+
+        var (second, _, _) = NewRequest("?role=owner", state, id);
+        await Endpoints.Start()(second);
+
+        Assert.Equal(StatusCodes.Status409Conflict, second.Response.StatusCode);
+        Assert.False(state.OwnerHoldsApp);
+    }
+
+    [Fact]
+    public async Task The_first_load_of_the_page_is_served_and_a_later_one_is_a_refresh()
+    {
+        var (context, state, _) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = state;
+
+        Assert.True(Endpoints.ServesPage(state, context));
+
+        state.Refresh = true; // the page has been served once
+        Assert.False(Endpoints.ServesPage(state, context));
+    }
+
+    // The failure this guards against: the owner's window loaded /{id} second, the relay took that for a refresh, and
+    // the app restarted itself seconds after coming back from a reboot.
+    [Fact]
+    public async Task The_owners_first_load_is_served_even_after_another_browser_loaded_the_page()
+    {
+        var (owner, state, id) = NewRequest("?role=owner", ownerKey: "app-secret");
+        await using var _ = state;
+        owner.Request.Headers.Cookie = $"{OwnerAccess.CookieName(id.ToString())}={state.OwnerToken}";
+        state.Refresh = true; // another browser was first
+
+        Assert.True(Endpoints.ServesPage(state, owner));
+
+        state.OwnerPageServed = true; // the owner has its page: loading it again is a refresh, as for anyone
+        Assert.False(Endpoints.ServesPage(state, owner));
+    }
+
+    [Theory]
+    [InlineData("wrong-token")]
+    [InlineData("")]
+    public async Task A_load_without_the_owner_token_after_the_first_is_a_refresh(string token)
+    {
+        var (context, state, id) = NewRequest("?role=owner", ownerKey: "app-secret");
+        await using var _ = state;
+        if (token.Length > 0)
+            context.Request.Headers.Cookie = $"{OwnerAccess.CookieName(id.ToString())}={token}";
+        state.Refresh = true;
+
+        Assert.False(Endpoints.ServesPage(state, context));
+    }
+
+    [Fact]
+    public async Task In_a_session_without_an_owner_key_the_owner_cookie_changes_nothing()
+    {
+        var (context, state, id) = NewRequest("?role=owner");
+        await using var _ = state;
+        context.Request.Headers.Cookie = $"{OwnerAccess.CookieName(id.ToString())}={state.OwnerToken}";
+        state.Refresh = true;
+
+        Assert.False(Endpoints.ServesPage(state, context));
+    }
+
     [Fact]
     public async Task The_owners_app_page_does_not_take_the_remote_end_of_the_voice_call()
     {

@@ -41,8 +41,13 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         return;
                     }
 
-                    // Check if the service is already in use
-                    if (serviceState.InUse)
+                    // Check if the service is already in use. The owner's own surface, proven by the app's key (checked above), is
+                    // never locked out: a remote browser that reached /app first (a tab left open from before the app was
+                    // restarted, say) must not keep the person at the PC out of their own window, where control is given and
+                    // taken back.
+                    bool keyedOwner = ownerPage && OwnerAccess.IsKeyed(serviceState);
+                    bool alreadyInUse = serviceState.InUse;
+                    if (alreadyInUse && !keyedOwner)
                     {
                         context.Response.StatusCode = StatusCodes.Status409Conflict; // Conflict
                         context.Response.ContentType = "text/html";
@@ -52,11 +57,15 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     // Notify that the browser is attached, if applicable
                     await serviceState.IPC.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
 
-                    // Set the service state only after notifying the client stream succeeds
-                    serviceState.Cookies = context.Request.Cookies;
-                    serviceState.InUse = true;
-                    markedInUse = true;
-                    serviceState.User = context.User.GetUserDisplayName() ?? "";
+                    // Set the service state only after notifying the client stream succeeds. An owner coming in after another
+                    // browser leaves that browser's cookies and name in place: it is still on the session.
+                    if (!alreadyInUse)
+                    {
+                        serviceState.Cookies = context.Request.Cookies;
+                        serviceState.InUse = true;
+                        markedInUse = true;
+                        serviceState.User = context.User.GetUserDisplayName() ?? "";
+                    }
 
                     // Notify all channels of the connection
                     foreach (var channel in serviceStateChannel.Values)
