@@ -425,6 +425,16 @@ public class ControlTransferTests
     }
 
     [Fact]
+    public async Task A_browser_that_leaves_as_soon_as_it_has_joined_is_not_left_in_the_session()
+    {
+        await using var s = new Session();
+        for (int i = 0; i < 50; i++) // the relay has had no time to start serving it
+            s.Join("gone-" + i).Leave();
+
+        await WaitFor(() => !Enumerable.Range(0, 50).Any(i => s.State.IPC.HasConnection("gone-" + i)));
+    }
+
+    [Fact]
     public async Task A_viewer_leaving_changes_nothing_but_the_roster()
     {
         await using var s = new Session();

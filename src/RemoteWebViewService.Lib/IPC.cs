@@ -41,7 +41,11 @@ namespace PeakSWC.RemoteWebView
                 if (latestScroll != null) channel.Writer.TryWrite(latestScroll);
                 observers.TryAdd(brn, channel);
             }
-            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, linkedToken.Token), linkedToken.Token);
+            // The loop must always start: it is what takes the browser out of the session again when its stream ends.
+            // Started with the stream's token it never ran for a browser that left straight after joining (a cancelled
+            // token cancels the start), and that browser stayed in the roster for the rest of the session.
+            var token = linkedToken.Token;
+            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, token), CancellationToken.None);
         }
 
         public Task ClientTask { get; }
