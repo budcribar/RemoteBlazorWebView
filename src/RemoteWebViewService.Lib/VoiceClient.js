@@ -13,6 +13,8 @@
     // (e.g. the bare host popup) when there is no bubble.
     const headless = window.RemoteVoiceHeadless === true;
     const subscribers = [];
+    // How long the page has to start listening (Blazor may draw the placeholder late) before the missing controls are reported.
+    const NO_CONTROLS_WARNING_MS = 10000;
     const panel = document.createElement('section');
     panel.setAttribute('aria-label', 'Remote voice');
     panel.style.cssText = host
@@ -237,6 +239,13 @@
             toggleMute() { if (mute.onclick) mute.onclick(); },
         };
         window.dispatchEvent(new Event('remotevoiceready'));
+        // This panel is hidden here, so something else has to show the controls: the session bar (it listens once the
+        // app's layout has the placeholder) or the app's own script. With neither, nobody can start or answer a call.
+        setTimeout(() => {
+            if (subscribers.length === 0)
+                console.warn('RemoteBlazorWebView: voice is on, but this page shows no voice controls. ' +
+                    'Add <div id="rbwv-session-controls"></div> to the layout, or draw your own from window.RemoteVoice.');
+        }, NO_CONTROLS_WARNING_MS);
     }
 
     display('offline', 'Connecting voice controls…');

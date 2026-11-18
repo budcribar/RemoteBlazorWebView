@@ -48,7 +48,7 @@ Only one connection controls the app at a time; the relay ignores input from eve
 
 **Session controls bar (opt-in).** Nothing is drawn on your pages unless you ask. There are three ways to go:
 
-- **No bar.** Leave the placeholder out. The session still works; with `ShareControl` there are then no buttons to hand control over (use an unattended session, or draw your own).
+- **No bar.** Leave the placeholder out. The session still works; with `ShareControl` there are then no buttons to hand control over (use an unattended session, or draw your own). The same goes for voice: with `EnableVoice` and no placeholder there are no call buttons on either side, so nobody can start or answer a call, and the browser console says so. Add the placeholder, or draw your own from `window.RemoteVoice`.
 - **The built-in bar.** Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where the bar should sit. Each browser draws its own bar over it (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). `data-restart="true"` adds *Restart app*; `data-host-name` / `data-remote-name` rename the two parties ("The host", "Remote user"), for example `data-remote-name="The technician"`. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes.
 - **Your own bar.** Put a `<template>` inside the placeholder and mark its elements with `data-rbwv`. Each browser gets a copy with only the parts that apply to it; the status is filled in and the buttons are wired. Layout, wording, classes and icons are yours:
 
