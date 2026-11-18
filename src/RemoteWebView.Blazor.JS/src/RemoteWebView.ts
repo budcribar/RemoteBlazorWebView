@@ -42,6 +42,11 @@ if (!window.RemoteBlazor) {
 
 window.RemoteBlazor.sequenceNum = 1;
 window.RemoteBlazor.clientId = '';
+
+// This connection's own secret. The relay sends every connection's clientId to every browser in the session (pages need
+// them to hand control over), so the clientId alone cannot show that a request is ours: the key goes with each of our
+// requests, and the relay never passes it on. Kept out of window.RemoteBlazor, with the other things only this script needs.
+let clientKey = '';
 window.RemoteBlazor.isPrimary = true;
 window.RemoteBlazor.isOwner = false;
 window.RemoteBlazor.isMirrorPage = false;
@@ -67,6 +72,7 @@ export function sendMessage(message: string) {
     }
     req.setId(id);
     req.setClientid(window.RemoteBlazor.clientId);
+    req.setClientkey(clientKey);
     req.setMessage(message);
     req.setSequence(window.RemoteBlazor.sequenceNum++);
     req.setUrl(navigationManagerFunctions.getLocationHref());
@@ -106,10 +112,15 @@ export function requestPrimary(targetClientId: string) {
     if (id == 'mirror') id = window.location.pathname.split('/')[2];
     req.setId(id);
     req.setClientid(window.RemoteBlazor.clientId);
+    req.setClientkey(clientKey);
     req.setTarget(targetClientId);
     client.setPrimary(req, {}, (err: RpcError | null, _response: Empty) => {
         if (err) console.log("SetPrimary grpc error", err.code, err.message);
     });
+}
+
+function newClientKey(): string {
+    return Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Session id from this page's address: /<id>/... for the app's page, /mirror/<id> for a read-only page.
@@ -123,6 +134,7 @@ export function requestRestart() {
     const req = new RestartRequest();
     req.setId(sessionId());
     req.setClientid(window.RemoteBlazor.clientId);
+    req.setClientkey(clientKey);
     client.restart(req, {}, (err: RpcError | null, _response: Empty) => {
         if (err) console.log("Restart grpc error", err.code, err.message);
     });
@@ -300,6 +312,9 @@ export function initializeRemoteWebView() {
     // control of the app (FrameControl.ts); any other page picks its own.
     const frameIdentity = readFrameIdentity();
     window.RemoteBlazor.clientId = frameIdentity.clientId ?? crypto.randomUUID();
+    // A frame's key comes from its parent with its id, so the same frame, drawn again, is the same connection to the
+    // relay. A parent from before keys existed passes none: the frame then sends none either, as it always did.
+    clientKey = frameIdentity.clientId ? (frameIdentity.clientKey ?? '') : newClientKey();
     // The machine owner's local control surface is launched with ?role=owner so the relay lets it reclaim control
     // (and a frame on that surface is the owner of its component's session).
     window.RemoteBlazor.isOwner = frameIdentity.owner || new URLSearchParams(window.location.search).get('role') === 'owner';
@@ -328,7 +343,7 @@ export function initializeRemoteWebView() {
         const control = window.RemoteControl;
         giveControlToWhoeverJoins({ subscribe: callback => control.subscribe(callback), requestPrimary });
     }
-    initParentFrameControl(() => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });
+    initParentFrameControl(clientKey, () => { if (window.RemoteBlazor.isMirrorPage) repointMirrorFrames(); });
     initFrameControl();
 
     // The connect handshake belongs to the controller (/app) page, which attaches the shared page context. A /mirror page
@@ -344,6 +359,7 @@ export function initializeRemoteWebView() {
     const message = new ReceiveMessageRequest();
     message.setId(id);
     message.setClientid(window.RemoteBlazor.clientId);
+    message.setClientkey(clientKey);
     message.setIsprimary(window.RemoteBlazor.isPrimary);
     message.setIsowner(window.RemoteBlazor.isOwner);
     // The relay set this cookie when the app's own window opened /app/<id>?role=owner with the app's owner key. When the

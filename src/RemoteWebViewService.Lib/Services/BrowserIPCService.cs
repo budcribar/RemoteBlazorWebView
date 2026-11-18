@@ -20,10 +20,20 @@ namespace PeakSWC.RemoteWebView
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             ServiceState? serviceState = null;
+            bool attached = false;
             try
             {
                 // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
                 serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+
+                // A clientId that is already known belongs to the connection that holds its key. Without this, any browser
+                // could open a stream under the controller's or the owner's clientId (the roster names both).
+                attached = serviceState.ClientKeys.Attach(request.ClientId, request.ClientKey);
+                if (!attached)
+                {
+                    logger.LogWarning("Connection refused: the clientId is in use with another key. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                    return;
+                }
 
                 // The machine owner's local control surface identifies itself (?role=owner). Only the owner may reclaim control.
                 // When the app sent an owner key, the claim needs the owner token too (OwnerAccess); without it the
@@ -97,6 +107,11 @@ namespace PeakSWC.RemoteWebView
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                if (attached && serviceState != null)
+                    serviceState.ClientKeys.Detach(request.ClientId, keep: request.ClientId == serviceState.PrimaryClientId || request.ClientId == serviceState.OwnerClientId);
             }
         }
 
@@ -201,9 +216,15 @@ namespace PeakSWC.RemoteWebView
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
 
-                // The first primary connection to send claims control for the session.
+                // The first primary connection to send claims control for the session. Its stream may not be open yet, so
+                // this can be the first the relay hears of the connection: its key is recorded here.
                 if (request.IsPrimary && string.IsNullOrEmpty(serviceState.PrimaryClientId))
                 {
+                    if (!serviceState.ClientKeys.Bind(request.ClientId, request.ClientKey))
+                    {
+                        logger.LogWarning("Claim of control refused: the clientId is in use with another key. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = false };
+                    }
                     serviceState.PrimaryClientId = request.ClientId;
                     serviceState.IPC.BroadcastParticipants(serviceState.OwnerClientId, serviceState.PrimaryClientId);
                 }
@@ -215,6 +236,14 @@ namespace PeakSWC.RemoteWebView
                 {
                     logger.LogDebug("Skipped send message '{Message}' from connection {ClientId}", request.Message, request.ClientId);
                     return new SendMessageResponse { Id = request.Id, Success = true };
+                }
+
+                // It names the controller: it must also be the controller. The controller's clientId is in every
+                // browser's roster; its key is not.
+                if (!serviceState.ClientKeys.Matches(request.ClientId, request.ClientKey))
+                {
+                    logger.LogWarning("Input refused: it names the controlling connection but does not carry its key. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                    return new SendMessageResponse { Id = request.Id, Success = false };
                 }
 
                 var state = serviceState.BrowserIPC;
@@ -280,6 +309,7 @@ namespace PeakSWC.RemoteWebView
         /// <summary>
         /// Control transfer (hand-off). The current controller may pass control to any attached connection; the owner
         /// may always reclaim control to itself; nothing else is honored, so the remote user can never seize control.
+        /// The requester is identified by its clientId and its key (ClientKeys), not by the clientId alone.
         /// </summary>
         public override async Task<Empty> SetPrimary(SetPrimaryRequest request, ServerCallContext context)
         {
@@ -306,9 +336,13 @@ namespace PeakSWC.RemoteWebView
             string current = serviceState.PrimaryClientId;
             string owner = serviceState.OwnerClientId;
 
+            // The requester must be who it says: every browser knows the controller's and the owner's clientId (the
+            // roster), only the connection itself knows its key. And it must be someone: before anyone has claimed
+            // control, the controller's clientId is empty, which a request with no clientId would otherwise equal.
             bool allowed =
-                requester == current ||                                               // current controller passes control
-                (requester == owner && target == owner && !string.IsNullOrEmpty(owner)); // owner reclaims to itself
+                !string.IsNullOrEmpty(requester) && serviceState.ClientKeys.Matches(requester, request.ClientKey) &&
+                (requester == current ||                                                  // current controller passes control
+                 (requester == owner && target == owner && !string.IsNullOrEmpty(owner))); // owner reclaims to itself
 
             if (!allowed)
             {
@@ -347,6 +381,7 @@ namespace PeakSWC.RemoteWebView
             var serviceState = tcs.Task.Result;
             string requester = request.ClientId;
             bool allowed = !string.IsNullOrEmpty(requester) && serviceState.IPC.HasConnection(requester) &&
+                serviceState.ClientKeys.Matches(requester, request.ClientKey) && // the roster names both; only they hold their key
                 (requester == serviceState.PrimaryClientId || requester == serviceState.OwnerClientId);
 
             if (!allowed)
