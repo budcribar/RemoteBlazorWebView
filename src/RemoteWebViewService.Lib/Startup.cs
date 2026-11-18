@@ -342,7 +342,10 @@ namespace PeakSWC.RemoteWebView
 
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", Endpoints.StartOrRefresh()).RequireSessionAccess(authorization);
-                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).RequireSessionAccess(authorization);
+                // Open without sign-in: it says only whether an app has registered this id, and the agent that started the app
+                // asks it (with no user to sign in) to learn when the app is up. Behind sign-in the agent got the sign-in page,
+                // could not tell, and fell back to waiting a fixed 20 seconds on every launch.
+                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).AllowAnonymous();
                 endpoints.MapGet("/grpcbaseuri", Endpoints.GrpcBaseUri()).RequireSessionAccess(authorization);           
                 endpoints.MapGet("/wait/{id:guid}", Endpoints.Wait()).RequireSessionAccess(authorization);
 #if STATS
