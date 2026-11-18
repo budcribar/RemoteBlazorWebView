@@ -97,6 +97,11 @@ include the session's `Group`, and for the app's own window, which needs no acco
 `/app/<id>?role=owner&key=<key>`. Only that page is the owner; `?role=owner` added to any other link is ignored.
 `ParticipantsChanged` on the control reports who is in the session, their names and who has control.
 
+**Connection keys.** Every browser in a session is sent the connection ids of the others, so that control can be
+handed over. An id therefore proves nothing: each page also picks a secret key, sends it with its own requests, and the
+relay accepts input, a hand-over or a restart from a connection only with that connection's key. Nothing to configure.
+An app built with packages from before keys existed sends none and works as before, without this protection.
+
 # Samples
 
 Check out the tutorial at https://github.com/budcribar/RemoteBlazorWebViewTutorial

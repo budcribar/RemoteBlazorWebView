@@ -63,6 +63,8 @@ message SendSequenceMessageRequest {
     string clientId = 5;
     string cookies = 6;
     bool isPrimary = 7;
+    // The sending connection's own secret (ClientKeys.cs): clientIds are public, this is what proves the request is its own.
+    string clientKey = 8;
 }
 
 message ReceiveMessageRequest {
@@ -75,6 +77,9 @@ message ReceiveMessageRequest {
     // The owner token the relay gave the owner's page (cookie rbwv-owner-<id>). Required with isOwner when the app
     // set an owner key.
     string ownerToken = 5;
+    // This connection's own secret, picked by the page and never sent to other browsers (ClientKeys.cs). Its later
+    // requests (SendMessage, SetPrimary, Restart) must carry the same one.
+    string clientKey = 6;
 }
 
 // Control transfer (hand-off): requester asks the relay to make 'target' the primary (controlling) connection.
@@ -84,6 +89,7 @@ message SetPrimaryRequest {
     string id = 1;
     string clientId = 2;  // the requesting connection
     string target = 3;    // the connection to make primary
+    string clientKey = 4; // the requesting connection's own secret
 }
 
 // Restart: a browser asks the relay to restart the app. The relay enforces policy: the connection that has control
@@ -91,6 +97,7 @@ message SetPrimaryRequest {
 message RestartRequest {
     string id = 1;
     string clientId = 2;  // the requesting connection
+    string clientKey = 3; // the requesting connection's own secret
 }
 
 message SendMessageResponse {
