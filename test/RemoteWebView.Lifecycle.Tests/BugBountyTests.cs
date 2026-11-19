@@ -173,7 +173,7 @@ public class BugBountyTests
         var channels = new ConcurrentDictionary<string, Channel<string>>();
         var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
 
-        await shutdown.Shutdown(id);
+        await shutdown.Shutdown(id, SessionEndReason.RequestedByApp);
 
         Assert.False(state.InUse);
         Assert.True(state.Token.IsCancellationRequested);

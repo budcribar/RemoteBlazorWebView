@@ -105,7 +105,7 @@ namespace PeakSWC.RemoteWebView
                 if (serviceState != null && serviceState.PrimaryClientId == request.ClientId)
                 {
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
-                    await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
+                    await shutdownService.Shutdown(request.Id, SessionEndReason.ControllerFailed, ex, $"controlling browser {request.ClientId}").ConfigureAwait(false);
                 }
             }
             finally
@@ -159,11 +159,9 @@ namespace PeakSWC.RemoteWebView
                 serviceState.BrowserIPC.ControlChange.Release();
             }
 
-            logger.LogInformation("Controlling connection closed, shutting down. Id: {Id}, ClientId: {ClientId}", id, clientId);
-            if (ex != null)
-                await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
-            else
-                await shutdownService.Shutdown(id).ConfigureAwait(false);
+            var ownerNote = string.IsNullOrEmpty(serviceState.OwnerClientId) ? "no owner" : $"owner {serviceState.OwnerClientId} not attached";
+            await shutdownService.Shutdown(id, ex is null ? SessionEndReason.ControllerLeft : SessionEndReason.ControllerFailed, ex,
+                $"controlling browser {clientId} left; {ownerNote}").ConfigureAwait(false);
         }
 
         /// <summary>
@@ -405,7 +403,7 @@ namespace PeakSWC.RemoteWebView
                     if (!await Endpoints.WaitForClientShutdown(serviceDictionary, request.Id, RestartGracePeriod, TimeSpan.FromMilliseconds(100)).ConfigureAwait(false))
                     {
                         logger.LogWarning("App did not shut down after a restart request; dropping the session. Id: {Id}", request.Id);
-                        await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+                        await shutdownService.Shutdown(request.Id, SessionEndReason.RestartNotHonoured, detail: $"requested by {requester}").ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)

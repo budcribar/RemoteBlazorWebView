@@ -105,7 +105,7 @@ namespace PeakSWC.RemoteWebView
                     await state.DisposeAsync().ConfigureAwait(false);
                     return;
                 }
-                await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
+                await shutdownService.Shutdown(request.Id, SessionEndReason.CreateWebViewFailed, ex).ConfigureAwait(false);
             }         
         }
      
@@ -172,7 +172,7 @@ namespace PeakSWC.RemoteWebView
                 // Clean up when the client disconnects
                 _fileSyncManager.RemoveClient(clientGuid);
                 logger.LogDebug("Cleaned up resources for client '{ClientGuid}'.", clientGuid);
-                await shutdownService.Shutdown(clientGuid);
+                await shutdownService.Shutdown(clientGuid, SessionEndReason.FileReadStreamEnded).ConfigureAwait(false);
             }
         }
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
@@ -180,7 +180,7 @@ namespace PeakSWC.RemoteWebView
             if (request == null || string.IsNullOrWhiteSpace(request.Id))
                 return new Empty();
 
-            await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+            await shutdownService.Shutdown(request.Id, SessionEndReason.RequestedByApp).ConfigureAwait(false);
             return new Empty();
         }
 
@@ -248,7 +248,7 @@ namespace PeakSWC.RemoteWebView
                                     {
                                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, writerToken.Token).ConfigureAwait(false);
                                         logger.LogWarning("Ping timeout for Id: {Id}", id);
-                                        await shutdownService.Shutdown(id).ConfigureAwait(false);
+                                        await shutdownService.Shutdown(id, SessionEndReason.PingTimeout, detail: $"no reply within {(message.PingIntervalSeconds > 0 ? message.PingIntervalSeconds : 30)} s").ConfigureAwait(false);
                                         break;
                                     }
                                 }
@@ -277,13 +277,13 @@ namespace PeakSWC.RemoteWebView
                 // No need to shutdown as we are in the process of shutting down
                 logger.LogInformation("Ping operation canceled for Id: {Id}", id);
                 if (!string.IsNullOrWhiteSpace(id))
-                    await shutdownService.Shutdown(id).ConfigureAwait(false);
+                    await shutdownService.Shutdown(id, SessionEndReason.PingStreamClosed).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Exception in Ping for Id: {Id}", id);
                 if (!string.IsNullOrWhiteSpace(id))
-                    await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
+                    await shutdownService.Shutdown(id, SessionEndReason.PingStreamFailed, ex).ConfigureAwait(false);
             }
             finally
             {

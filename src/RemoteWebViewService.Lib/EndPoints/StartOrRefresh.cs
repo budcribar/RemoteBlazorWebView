@@ -83,7 +83,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName)).ConfigureAwait(false);
 
                             // Shutdown since the client did not respond to the restart request
-                            await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid.ToString()).ConfigureAwait(false);
+                            await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid.ToString(), SessionEndReason.RefreshRestartTimedOut).ConfigureAwait(false);
                         }
                     }
                 }
