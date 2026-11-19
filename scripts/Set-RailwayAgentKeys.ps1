@@ -117,7 +117,7 @@ function Set-RailwayAgentKeys {
     $target = Get-TargetArgs
     # Railway commands act on the project linked to the current folder, so link a folder of our own.
     $linkDir = Join-Path $env:LOCALAPPDATA 'Set-RailwayAgentKeys'
-    New-Item -ItemType Directory -Force -Path $linkDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $linkDir -WhatIf:$false -Confirm:$false | Out-Null   # setup, also under -WhatIf
     Push-Location -LiteralPath $linkDir
     try {
         Invoke-Railway (@('link', '--project', $Project) + $target) | Out-Null
