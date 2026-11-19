@@ -111,7 +111,7 @@ namespace App
         Assert.Null((string?)view.Html); // ShowLink = false: no link page (the restart only notes the session id here)
 
         view.FireConnected(new Uri("https://localhost:5001/"), Guid.Parse(id));
-        Assert.Equal($"https://localhost:5001/mirror/{id}", (string)view.WebView.CoreWebView2.Navigated);
+        Assert.Equal(new Uri($"https://localhost:5001/mirror/{id}"), (Uri)view.NavigatedUrl); // waits for the WebView, never CoreWebView2 directly
 
         view.FireRefreshed();
         Assert.Equal(["-u=https://localhost:5001/", $"-i={id}"], Assert.Single(probe.Copies)); // a fresh copy on the same server and id

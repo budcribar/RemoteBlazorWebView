@@ -305,7 +305,7 @@ namespace FileSyncServer.Tests
 
                     webView.Connected += (sender, e) =>
                     {
-                        webView.WebView.CoreWebView2?.Navigate($"{e.Url}mirror/{e.Id}");
+                        webView.NavigateToUrl(new Uri($"{e.Url}mirror/{e.Id}"));
                         var user = e.User.Length > 0 ? $"by user {e.User.Length}" : "";
                         if (BlazorWebViewFormFactory.MainForm != null)
                         {
