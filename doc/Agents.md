@@ -63,6 +63,9 @@ Registrations, launches, declines and failures are written to the log and to the
 | `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession`, `CancelLaunch` and `EndSession` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
 
+On Railway, `scripts/Set-RailwayAgentKeys.ps1` sets the list with the Railway CLI, for example
+`./scripts/Set-RailwayAgentKeys.ps1 -Key test-shop -IncludeLocalAgentKey -Append -WhatIf` (drop `-WhatIf` to apply).
+
 ## Keepalive
 
 Kestrel sends HTTP/2 keepalive pings every 30 s on idle connections, and closes a connection after 60 s with no answer (`Program.cs`).
