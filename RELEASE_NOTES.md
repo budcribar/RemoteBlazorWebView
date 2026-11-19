@@ -1,5 +1,46 @@
 # Release notes
 
+## 10.0.15.2
+
+Upgrade the relay (RemoteWebViewService) and the packages together. Pages from 10.0.15.1 and older keep working on a
+10.0.15.2 relay, but they don't get the new protection against a viewer taking control.
+
+### Packages
+
+- **A page's requests carry a secret key.** Before, every browser in a session was sent every other browser's id, and the
+  relay checked only the id, so a viewer could take control, send input or restart the app by putting the controller's or
+  the owner's id in its own request. Each page now picks a key and sends it with its requests, and the relay never passes it
+  on. A remote component's frame takes its key from its parent page. Pages from older packages send no key and work as
+  before.
+- **`window.RemoteControl` reports the connection.** `getState().connectionState` is `connecting` until the first message
+  arrives, then `connected`. It becomes `reconnecting` while a lost or restarting session is waited for, and
+  `disconnected` once the page gives up. An app that shows control from `iHaveControl` should not treat a page as in
+  control unless this is `connected`: after a lost connection, the page keeps the control it last had.
+- Voice with no session bar placeholder warns in the browser console instead of silently showing no call buttons.
+
+### Relay (RemoteWebViewService and RemoteWebViewService.Lib)
+
+- **Agents are refused when `AGENT_ENROLLMENT_KEYS` is unset (behaviour change).** Outside Development, a relay with no
+  enrollment keys used to accept any agent. It now refuses all of them. **Set `AGENT_ENROLLMENT_KEYS` before deploying**,
+  or every agent is locked out. The `RemoteTicket` provider is unchanged.
+- **Shared sessions send non-owner browsers to the mirror.** In a session whose app sent an owner key, a browser asking
+  for `/app/<id>` or `/<id>` without the owner key or cookie is redirected to `/mirror/<id>`. A remote tab coming back after
+  the PC rebooted can no longer restart the app. A mirror reached before the app's own page is open gets a 503 page that
+  reloads itself every 3 seconds.
+- The owner's own window is never locked out or taken for a refresh when another browser reaches a restarted app first.
+- A browser that leaves straight after joining is removed from the session. Before, it stayed in the roster for the rest
+  of the session.
+- `/status/<id>` no longer needs sign-in, and it reports only a finished registration. Agent-started sessions on a relay
+  with sign-in no longer wait an extra 20 seconds.
+- **Signed RemoteTicket authorization** (`RemoteWebViewService.RemoteTicket`), with optional `IRelayEndpointExtension`,
+  `IShopSessionPolicy` and `IAgentTenantPolicy` hooks. The ticket can also come from the query string, and the relay then
+  sets its auth cookie.
+- Agent admin API: `EndSession` ends a computer's newest agent-started session, `PublishRelease` broadcasts a
+  `ReleaseAvailableCommand` to agents, `GetRequester` labels signed-in callers, and a new `STAGE_CONSENT_TIMED_OUT` launch
+  stage ends the watch when a consent prompt goes unanswered. Deploy the relay before agents that send the new stage.
+- Every session shutdown is logged once, at Warning, with its reason (`SessionEndReason`). Page requests on `/app`, `/<id>`
+  and `/mirror` log their decision at Information. The query, which can hold the owner key, is never logged.
+
 ## 10.0.15.1
 
 Packages only; the relay does not change.
