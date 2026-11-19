@@ -136,6 +136,20 @@ namespace PeakSWC.RemoteWebView.Agents
             return Task.FromResult(new EndSessionResponse { Outcome = result.Outcome, RequestId = result.RequestId });
         }
 
+        public override Task<Empty> PublishRelease(ReleaseAvailableCommand request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            if (access.GroupScope != null)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Global admin access is required to publish releases."));
+            if (!access.UnattendedAuthorized && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+                throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
+
+            int notified = registry.PublishRelease(request);
+            AgentEvents.Info(logger, Category,
+                $"Release announcement published (stable='{request.StableVersion}', prerelease='{request.PrereleaseVersion}'): notified {notified} online agent(s)");
+            return Task.FromResult(new Empty());
+        }
+
         private PeakSWC.RemoteWebView.AgentAdminAccessDecision RequireAccess(ServerCallContext context)
         {
             var access = ResolveAccess(context);

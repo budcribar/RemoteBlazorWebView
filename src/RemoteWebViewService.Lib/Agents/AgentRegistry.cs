@@ -76,6 +76,7 @@ namespace PeakSWC.RemoteWebView.Agents
         private readonly TimeProvider time;
         private TaskCompletionSource changed = NewSignal();
         private long nextConnectionId;
+        private ReleaseAvailableCommand? latestRelease;
 
         public AgentRegistry(TimeProvider? time = null)
         {
@@ -94,6 +95,38 @@ namespace PeakSWC.RemoteWebView.Agents
         // After these nothing more is expected for the request. READY is still followed by ENDED when the app exits.
         private static bool IsFinal(LaunchStage stage) =>
             stage is LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
+
+        /// <summary>
+        /// Caches the latest release versions and pushes a <see cref="ReleaseAvailableCommand"/> to every currently online agent.
+        /// Newly connecting agents also receive the cached announcement right after <c>AgentHello</c>.
+        /// </summary>
+        public int PublishRelease(ReleaseAvailableCommand release)
+        {
+            ArgumentNullException.ThrowIfNull(release);
+            var stable = release.StableVersion?.Trim() ?? string.Empty;
+            var prerelease = release.PrereleaseVersion?.Trim() ?? string.Empty;
+            if (stable.Length == 0 && prerelease.Length == 0)
+                return 0;
+
+            lock (gate)
+            {
+                latestRelease = new ReleaseAvailableCommand
+                {
+                    StableVersion = stable.Length > 0 ? stable : latestRelease?.StableVersion ?? string.Empty,
+                    PrereleaseVersion = prerelease.Length > 0 ? prerelease : latestRelease?.PrereleaseVersion ?? string.Empty,
+                };
+
+                int notified = 0;
+                foreach (var entry in agents.Values)
+                {
+                    if (!entry.Online)
+                        continue;
+                    if (entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() }))
+                        notified++;
+                }
+                return notified;
+            }
+        }
 
         public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "")
         {
@@ -137,6 +170,9 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.CachedAppVersion = hello.CachedAppVersion;
                 info.ConsentCeiling = hello.ConsentCeiling;
                 info.Lifetime = hello.Lifetime;
+
+                if (latestRelease != null)
+                    entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
 
                 connection = new AgentConnection(entry.MachineId, entry.ConnectionId, entry.Commands.Reader, entry.ConnectionCts.Token, previous != null, isNew);
                 NotifyChangedNoLock();

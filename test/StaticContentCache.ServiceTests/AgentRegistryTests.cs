@@ -92,6 +92,35 @@ public class AgentRegistryTests
         Assert.True(command!.Launch.RequireConsent);
     }
 
+    [Fact]
+    public void PublishRelease_broadcasts_to_online_agents_and_replays_to_newly_connected_agents()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var online = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var offline = registry.Register(Hello("m-2"), "10.0.0.2", null);
+        registry.Disconnect(offline);
+
+        int notified = registry.PublishRelease(new ReleaseAvailableCommand
+        {
+            StableVersion = "1.3.0",
+            PrereleaseVersion = "1.3.0-ci.800.1",
+        });
+
+        Assert.Equal(1, notified);
+        Assert.True(online.Commands.TryRead(out var pushed));
+        Assert.Equal(HubCommand.BodyOneofCase.ReleaseAvailable, pushed!.BodyCase);
+        Assert.Equal("1.3.0", pushed.ReleaseAvailable.StableVersion);
+        Assert.Equal("1.3.0-ci.800.1", pushed.ReleaseAvailable.PrereleaseVersion);
+        Assert.False(offline.Commands.TryRead(out _));
+
+        // A newly connecting agent receives the cached release announcement immediately on register.
+        var lateJoiner = registry.Register(Hello("m-3"), "10.0.0.3", null);
+        Assert.True(lateJoiner.Commands.TryRead(out var replayed));
+        Assert.Equal(HubCommand.BodyOneofCase.ReleaseAvailable, replayed!.BodyCase);
+        Assert.Equal("1.3.0", replayed.ReleaseAvailable.StableVersion);
+        Assert.Equal("1.3.0-ci.800.1", replayed.ReleaseAvailable.PrereleaseVersion);
+    }
+
     // ---------------------------------------------------------------- enrollment keys and options
 
     [Fact]

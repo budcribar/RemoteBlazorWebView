@@ -81,6 +81,7 @@ message HubCommand {
   oneof body {
     LaunchCommand launch = 1;
     CancelCommand cancel = 2;
+    ReleaseAvailableCommand release_available = 3;
   }
 }
 
@@ -97,6 +98,13 @@ message CancelCommand {
   string request_id = 1;
 }
 
+// Version-only hint pushed to connected agents when a newer app release is published.
+// Agents still download exclusively from their own trusted release feed and verified repository URLs.
+message ReleaseAvailableCommand {
+  string stable_version = 1;
+  string prerelease_version = 2;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Used by the admin site (gRPC-Web).
 // ---------------------------------------------------------------------------------------------
@@ -107,6 +115,7 @@ service AgentAdmin {
   rpc WatchLaunch(WatchLaunchRequest) returns (stream LaunchProgress); // replays the latest stage first
   rpc CancelLaunch(CancelCommand) returns (google.protobuf.Empty);
   rpc EndSession(EndSessionRequest) returns (EndSessionResponse);      // stops the app the agent started on that computer
+  rpc PublishRelease(ReleaseAvailableCommand) returns (google.protobuf.Empty); // notifies connected agents of new release versions
 }
 
 message AgentInfo {

@@ -32,4 +32,6 @@ namespace PeakSWC.RemoteWebView.Agent
     public sealed partial class StartSessionResponse;
     [Experimental(global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.AgentRegistry, UrlFormat = global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.UrlFormat)]
     public sealed partial class WatchLaunchRequest;
+    [Experimental(global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.AgentRegistry, UrlFormat = global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.UrlFormat)]
+    public sealed partial class ReleaseAvailableCommand;
 }
