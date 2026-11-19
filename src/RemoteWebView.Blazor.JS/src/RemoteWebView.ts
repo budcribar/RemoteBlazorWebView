@@ -5,7 +5,7 @@ import { receiveMessage } from './IPC';
 import { StatusCode } from "grpc-web";
 import { BrowserIPCClient } from "./generated/WebviewServiceClientPb";
 import { SendSequenceMessageRequest, SendMessageResponse, StringRequest, ReceiveMessageRequest, SetPrimaryRequest, RestartRequest } from "./generated/webview_pb";
-import { initControl, setParticipants, setPrimary, setRestarting, Participant } from './RemoteControl';
+import { initControl, setParticipants, setPrimary, setRestarting, setConnectionState, Participant } from './RemoteControl';
 import { initSessionControls } from './SessionControls';
 import { connectionLost } from './ConnectionLost';
 import { giveControlToWhoeverJoins } from './UnattendedControl';
@@ -173,7 +173,7 @@ function comeBackAfterRestart() {
             const response = await fetch(target, { cache: 'no-store', credentials: 'same-origin' });
             if (response.ok) { window.location.reload(); return; }
         } catch { /* relay not reachable right now; try again */ }
-        if (Date.now() - started > COME_BACK_GIVE_UP_MS) { showErrorNotification(); return; }
+        if (Date.now() - started > COME_BACK_GIVE_UP_MS) { setConnectionState('disconnected'); showErrorNotification(); return; }
         setTimeout(attempt, COME_BACK_RETRY_MS);
     };
     setTimeout(attempt, COME_BACK_FIRST_TRY_MS);
@@ -184,14 +184,17 @@ function comeBackAfterRestart() {
 // (a /mirror page in a browser), come back once the session answers. See ConnectionLost.ts.
 let leaving = false;
 function streamClosed() {
-    if (restartPending) { comeBackAfterRestart(); return; }
+    if (restartPending) { setConnectionState('reconnecting'); comeBackAfterRestart(); return; }
     // Leaving the page closes the stream too, and a frame's state is its parent page's business.
     if (leaving || isFramed()) return;
     const inAppWindow = !!(window as unknown as { chrome?: { webview?: unknown } }).chrome?.webview;
+    const canReturn = window.RemoteBlazor.isMirrorPage && !inAppWindow;
+    setConnectionState(canReturn ? 'reconnecting' : 'disconnected');
     connectionLost({
-        canReturn: window.RemoteBlazor.isMirrorPage && !inAppWindow,
+        canReturn,
         address: window.location.href,
         reload: () => window.location.reload(),
+        ended: () => setConnectionState('disconnected'),
     });
 }
 
@@ -372,6 +375,7 @@ export function initializeRemoteWebView() {
 
     stream.on('data', (response: StringRequest) => {
         console.info("BrowserIPC.ReceiveMessage: " + response.getRequest());
+        setConnectionState('connected');
         if (receiveControl(response.getRequest())) return;
         if (receiveScroll(response.getRequest())) return;
         receiveMessage(response.getRequest());
