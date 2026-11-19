@@ -312,7 +312,9 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
             if (t.Mirror)
             {
                 yield return "";
-                yield return $"    webView.Connected += (_, e) => {Invoke(wpf, "webView.WebView?.CoreWebView2?.Navigate($\"{e.Url}mirror/{e.Id}\")")};";
+                // NavigateToUrl waits for the WebView to finish initializing. Calling CoreWebView2 directly would drop the
+                // mirror when a browser connects before then (CoreWebView2 is still null), and the window would never join.
+                yield return "    webView.Connected += (_, e) => webView.NavigateToUrl(new global::System.Uri($\"{e.Url}mirror/{e.Id}\"));";
             }
             if (t.RestartOnRefresh)
             {
