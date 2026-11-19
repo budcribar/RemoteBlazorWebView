@@ -65,12 +65,10 @@ namespace PeakSWC.RemoteWebView.Services
                 try
                 {
                     ServiceState? known = client.Task.IsCompletedSuccessfully ? client.Task.Result : null;
-                    known?.TrySetEndReason(reason); // before anything cancels its token
                     RememberEnd(id, reason);
                     LogShutdown(id, reason, exception, detail, known);
 
                     var serviceState = known ?? await client.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                    serviceState.TrySetEndReason(reason);
                     try
                     {
                         await (serviceState.IPC?.WriteToClientAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
@@ -80,7 +78,7 @@ namespace PeakSWC.RemoteWebView.Services
                         logger.LogError(writeEx, "Failed writing shutdown message to client {Id}.", id);
                     }
                     serviceState.InUse = false;
-                    await serviceState.DisposeAsync().ConfigureAwait(false);
+                    await serviceState.EndAsync(reason).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {

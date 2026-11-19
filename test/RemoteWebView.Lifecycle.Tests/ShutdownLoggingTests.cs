@@ -90,7 +90,6 @@ public class ShutdownLoggingTests
 
         Assert.Equal(SessionEndReason.ControllerLeft, seenWhenCancelled);
         Assert.Equal(SessionEndReason.ControllerLeft, state.EndReason);
-        Assert.False(state.TrySetEndReason(SessionEndReason.PingTimeout));
     }
 
     [Fact]
@@ -113,7 +112,38 @@ public class ShutdownLoggingTests
     {
         var (_, _, state) = Make(Guid.NewGuid().ToString());
         Assert.Null(state.EndReason);
-        Assert.True(state.TrySetEndReason(SessionEndReason.RequestedByApp));
-        Assert.Equal(SessionEndReason.RequestedByApp, state.EndReason);
+        Assert.False(state.Token.IsCancellationRequested);
+    }
+
+    [Fact]
+    public void ReasonedSource_RecordsTheReasonBeforeTheTokenFires_FirstReasonWins()
+    {
+        using var source = new ReasonedCancellationTokenSource();
+        SessionEndReason? seen = null;
+        source.Token.Register(() => seen = source.Reason);
+
+        Assert.True(source.Cancel(SessionEndReason.PingTimeout));
+        Assert.False(source.Cancel(SessionEndReason.ControllerLeft));
+
+        Assert.Equal(SessionEndReason.PingTimeout, seen);
+        Assert.Equal(SessionEndReason.PingTimeout, source.Reason);
+    }
+
+    [Fact]
+    public void ReasonedSource_PlainCancel_HasNoReason()
+    {
+        using var source = new ReasonedCancellationTokenSource();
+        source.Cancel();
+        Assert.True(source.IsCancellationRequested);
+        Assert.Null(source.Reason);
+    }
+
+    [Fact]
+    public async Task Dispose_WithoutShutdown_CancelsWithNoReason()
+    {
+        var (_, _, state) = Make(Guid.NewGuid().ToString());
+        await state.DisposeAsync();
+        Assert.True(state.Token.IsCancellationRequested);
+        Assert.Null(state.EndReason);
     }
 }

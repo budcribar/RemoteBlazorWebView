@@ -15,7 +15,9 @@ namespace PeakSWC.RemoteWebView
     {
         public TaskCompletionSource<bool> FileManagerReady { get; set; } = new TaskCompletionSource<bool>();
         public IRequestCookieCollection? Cookies { get; set; }
-        private CancellationTokenSource? CancellationTokenSource { get; set; }
+        private ReasonedCancellationTokenSource? CancellationTokenSource { get; set; }
+        /// <summary>The session's source, kept after disposal so its reason can still be read.</summary>
+        private readonly ReasonedCancellationTokenSource _lifetime;
         public ILogger<RemoteWebViewService> Logger;
         public CancellationToken Token { get; }
         public string HtmlHostPath { get; init; } = string.Empty;
@@ -72,24 +74,20 @@ namespace PeakSWC.RemoteWebView
 
         public DateTime StartTime { get; } = DateTime.UtcNow;
 
-        private int _endReason = -1;
-
         /// <summary>
-        /// Why the session is ending, set before its token is cancelled (null while it runs). A CancellationToken can't carry a reason,
-        /// so code that sees the token fire checks this: set means the session is already being torn down for this reason and the
-        /// cancellation is a follow-on (log at Debug); null means the cancellation came from somewhere else and is worth reporting.
+        /// Why the session ended (null while it runs). Set by <see cref="EndAsync"/> in the same call that cancels <see cref="Token"/>,
+        /// so code that sees the token fire and finds a reason here knows the cancellation is a follow-on (log at Debug); no reason
+        /// means the cancellation came from somewhere else and is worth reporting.
         /// </summary>
-        public SessionEndReason? EndReason
-        {
-            get
-            {
-                var reason = Volatile.Read(ref _endReason);
-                return reason < 0 ? null : (SessionEndReason)reason;
-            }
-        }
+        public SessionEndReason? EndReason => _lifetime.Reason;
 
-        /// <summary>Records why the session ends. The first reason wins; returns false when one was already recorded.</summary>
-        public bool TrySetEndReason(SessionEndReason reason) => Interlocked.CompareExchange(ref _endReason, (int)reason, -1) == -1;
+        /// <summary>Ends the session: cancels its token with <paramref name="reason"/> recorded, then disposes it.</summary>
+        public async ValueTask EndAsync(SessionEndReason reason)
+        {
+            await DisposeAsyncCore(reason).ConfigureAwait(false);
+            Dispose(disposing: false);
+            GC.SuppressFinalize(this);
+        }
 
         private int _disposed = 0; // 0 = not disposed, 1 = disposed
 
@@ -117,7 +115,9 @@ namespace PeakSWC.RemoteWebView
             GC.SuppressFinalize(this);
         }
 
-        protected virtual async ValueTask DisposeAsyncCore()
+        protected virtual ValueTask DisposeAsyncCore() => DisposeAsyncCore(null);
+
+        private async ValueTask DisposeAsyncCore(SessionEndReason? reason)
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
@@ -126,10 +126,10 @@ namespace PeakSWC.RemoteWebView
             CancellationTokenSource = null;
             if (cts != null)
             {
-                // Signal cancellation
+                // Signal cancellation, with the reason recorded first when there is one
                 try
                 {
-                    cts.Cancel();
+                    if (reason is { } why) cts.Cancel(why); else cts.Cancel();
                 }
                 catch { }
 
@@ -253,8 +253,9 @@ namespace PeakSWC.RemoteWebView
         public ServiceState(ILogger<RemoteWebViewService> logger, bool enableMirrors)
         {
             EnableMirrors = enableMirrors;
-            CancellationTokenSource = new CancellationTokenSource();
-            Token = CancellationTokenSource.Token;
+            _lifetime = new ReasonedCancellationTokenSource();
+            CancellationTokenSource = _lifetime;
+            Token = _lifetime.Token;
             IPC = new IPC(Token,logger,EnableMirrors);
             Logger = logger;           
         }
