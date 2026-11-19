@@ -3,6 +3,7 @@ using Grpc.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Agent;
+using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>AgentAdmin: what the admin site (gRPC-Web) uses to list computers and start diagnostics on one.</summary>
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
-    public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options, PeakSWC.RemoteWebView.IAgentTenantPolicy? tenantPolicy = null) : AgentAdmin.AgentAdminBase
+    public class AgentAdminService(ILogger<AgentAdminService> logger, AgentRegistry registry, AgentOptions options, PeakSWC.RemoteWebView.IAgentTenantPolicy? tenantPolicy = null, ShutdownService? shutdownService = null) : AgentAdmin.AgentAdminBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentAdminService";
         private readonly PeakSWC.RemoteWebView.IAgentTenantPolicy policy = tenantPolicy ?? new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy();
@@ -54,7 +55,7 @@ namespace PeakSWC.RemoteWebView.Agents
         public override Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
         {
             var access = RequireAccess(context);
-            string requester = GetRequester(request, context);
+            string requester = GetRequester(request.Requester, context);
             string serverUrl = GetServerUrl(options, context);
             bool adminKeyConfigured = options.AdminKeyConfigured;
             bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
@@ -121,19 +122,28 @@ namespace PeakSWC.RemoteWebView.Agents
             return Task.FromResult(new Empty());
         }
 
-        public override Task<EndSessionResponse> EndSession(EndSessionRequest request, ServerCallContext context)
+        public override async Task<EndSessionResponse> EndSession(EndSessionRequest request, ServerCallContext context)
         {
             var access = RequireAccess(context);
             if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
 
+            string requester = GetRequester(request.Requester, context);
+
+            // End the relay's side first, with a reason, then tell the agent to close the app. The agent closes it within about half
+            // a second and its HTTP/2 connection faults; with the session already ended, the app's streams stop on the session's own
+            // cancellation and the late aborts log at Debug instead of as failures.
+            var planned = registry.PeekEndSession(request.MachineId, access.GroupScope);
+            if (planned.Outcome == EndSessionOutcome.EndSessionRequested && shutdownService != null && !string.IsNullOrEmpty(planned.SessionId))
+                await shutdownService.Shutdown(planned.SessionId, SessionEndReason.EndRequestedByAdmin, detail: "by " + requester).ConfigureAwait(false);
+
             var result = registry.EndSession(request.MachineId, access.GroupScope);
             if (result.Outcome == EndSessionOutcome.EndSessionRequested)
             {
                 string who = string.IsNullOrEmpty(result.MachineName) ? request.MachineId : $"{result.MachineName} ({request.MachineId})";
-                AgentEvents.Info(logger, Category, $"Diagnostics end requested on {who} by {GetRequester(null, context)}: request {result.RequestId}");
+                AgentEvents.Info(logger, Category, $"Diagnostics end requested on {who} by {requester}: request {result.RequestId}");
             }
-            return Task.FromResult(new EndSessionResponse { Outcome = result.Outcome, RequestId = result.RequestId });
+            return new EndSessionResponse { Outcome = result.Outcome, RequestId = result.RequestId };
         }
 
         public override Task<Empty> PublishRelease(ReleaseAvailableCommand request, ServerCallContext context)
@@ -184,7 +194,8 @@ namespace PeakSWC.RemoteWebView.Agents
         /// The signed-in user's name when authentication is on, else what the admin site sent, else "Someone". With authentication on the
         /// caller cannot choose the name, only add a short label after it (see <see cref="WithLabel"/>).
         /// </summary>
-        public static string GetRequester(StartSessionRequest? request, ServerCallContext context)
+        /// <param name="requested">The requester field the caller sent (StartSessionRequest or EndSessionRequest), or null.</param>
+        public static string GetRequester(string? requested, ServerCallContext context)
         {
             try
             {
@@ -193,7 +204,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 {
                     string? name = user.FindFirst("name")?.Value ?? user.Identity.Name;
                     if (!string.IsNullOrWhiteSpace(name))
-                        return WithLabel(name.Trim(), request?.Requester);
+                        return WithLabel(name.Trim(), requested);
                 }
             }
             catch (InvalidOperationException)
@@ -201,7 +212,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 // Not hosted by ASP.NET Core (unit tests).
             }
 
-            return string.IsNullOrWhiteSpace(request?.Requester) ? DefaultRequester : request.Requester.Trim();
+            return string.IsNullOrWhiteSpace(requested) ? DefaultRequester : requested.Trim();
         }
 
         /// <summary>

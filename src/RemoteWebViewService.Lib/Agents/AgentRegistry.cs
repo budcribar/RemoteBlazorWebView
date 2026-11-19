@@ -31,8 +31,9 @@ namespace PeakSWC.RemoteWebView.Agents
     public enum CancelLaunchOutcome { NotFound, Queued, AlreadyFinished }
 
     /// <param name="RequestId">The launch that was told to stop, when <paramref name="Outcome"/> is requested.</param>
+    /// <param name="SessionId">That launch's session ID, which is also the app's ID on the relay, when <paramref name="Outcome"/> is requested.</param>
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
-    public sealed record EndSessionResult(EndSessionOutcome Outcome, string RequestId = "", string MachineName = "");
+    public sealed record EndSessionResult(EndSessionOutcome Outcome, string RequestId = "", string MachineName = "", string SessionId = "");
 
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
     public sealed record SweepResult(IReadOnlyList<string> WentOffline, IReadOnlyList<string> Forgotten);
@@ -398,7 +399,15 @@ namespace PeakSWC.RemoteWebView.Agents
         /// on a cancel for its request ID (it closes the app and reports ENDED), so this finds the computer's newest unfinished launch
         /// and sends that cancel. A session the relay has no launch for cannot be stopped this way.
         /// </summary>
-        public EndSessionResult EndSession(string machineId, string? groupScope = null)
+        public EndSessionResult EndSession(string machineId, string? groupScope = null) => FindEnd(machineId, groupScope, send: true);
+
+        /// <summary>
+        /// What <see cref="EndSession"/> would do right now, without sending anything: lets the caller end the relay's side of the
+        /// session (with a reason) before the agent closes the app, so the app's streams are not torn down under a live session.
+        /// </summary>
+        public EndSessionResult PeekEndSession(string machineId, string? groupScope = null) => FindEnd(machineId, groupScope, send: false);
+
+        private EndSessionResult FindEnd(string machineId, string? groupScope, bool send)
         {
             lock (gate)
             {
@@ -424,8 +433,9 @@ namespace PeakSWC.RemoteWebView.Agents
                 if (!entry.Online || entry.ConnectionId == 0)
                     return new EndSessionResult(EndSessionOutcome.EndSessionOffline, MachineName: entry.Info.MachineName);
 
-                entry.Commands.Writer.TryWrite(new HubCommand { Cancel = new CancelCommand { RequestId = live.RequestId } });
-                return new EndSessionResult(EndSessionOutcome.EndSessionRequested, live.RequestId, entry.Info.MachineName);
+                if (send)
+                    entry.Commands.Writer.TryWrite(new HubCommand { Cancel = new CancelCommand { RequestId = live.RequestId } });
+                return new EndSessionResult(EndSessionOutcome.EndSessionRequested, live.RequestId, entry.Info.MachineName, live.SessionId);
             }
         }
 

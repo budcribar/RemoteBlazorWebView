@@ -84,6 +84,9 @@ namespace PeakSWC.RemoteWebView
                 foreach (var x in serviceStateChannel.Values)
                     x.Writer.TryWrite($"Start:{request.Id}");
                 state.IPC.ClientResponseStream = responseStream;
+                // Once the app's call has ended its response stream is complete, and a write to it throws; drop it so a shutdown
+                // notice for an app that has already gone is skipped instead of failing.
+                using var dropStream = context.CancellationToken.Register(() => state.IPC.ClientResponseStream = null);
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
 
@@ -167,6 +170,11 @@ namespace PeakSWC.RemoteWebView
 
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex) when (shutdownService.HasEnded(clientGuid, out var ended))
+            {
+                // The session ended first (e.g. an admin ended it and the agent then closed the app): the abort is expected.
+                logger.LogDebug(ex, "File-read stream for session {ClientGuid} stopped after the session ended ({Reason}).", clientGuid, ended);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
@@ -286,6 +294,10 @@ namespace PeakSWC.RemoteWebView
                 else if (!string.IsNullOrWhiteSpace(id))
                     // The session was still running, so the app's own ping stream went away: its connection closed or dropped.
                     await shutdownService.Shutdown(id, SessionEndReason.PingStreamClosed).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (shutdownService.HasEnded(id, out var ended))
+            {
+                logger.LogDebug(ex, "Ping stream for session {Id} stopped after the session ended ({Reason}).", id, ended);
             }
             catch (Exception ex)
             {

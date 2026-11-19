@@ -73,6 +73,11 @@ namespace PeakSWC.RemoteWebView.Services
                     {
                         await (serviceState.IPC?.WriteToClientAsync(new WebMessageResponse { Response = "shutdown:" }) ?? Task.CompletedTask).ConfigureAwait(false);
                     }
+                    catch (Exception writeEx) when (writeEx is InvalidOperationException or System.IO.IOException or OperationCanceledException)
+                    {
+                        // The app's stream is already complete or its connection is gone: there is nobody left to tell.
+                        logger.LogDebug(writeEx, "Shutdown message to client {Id} not delivered: its stream has closed.", id);
+                    }
                     catch (Exception writeEx)
                     {
                         logger.LogError(writeEx, "Failed writing shutdown message to client {Id}.", id);

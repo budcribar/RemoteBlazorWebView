@@ -155,14 +155,14 @@ public class AgentRegistryTests
     public void Requester_is_the_signed_in_user_else_the_request_else_a_default()
     {
         var anonymous = new CallContext(CancellationToken.None, new DefaultHttpContext());
-        Assert.Equal("Bob", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, anonymous));
-        Assert.Equal(AgentAdminService.DefaultRequester, AgentAdminService.GetRequester(new StartSessionRequest(), anonymous));
+        Assert.Equal("Bob", AgentAdminService.GetRequester("Bob", anonymous));
+        Assert.Equal(AgentAdminService.DefaultRequester, AgentAdminService.GetRequester(null, anonymous));
 
         var signedIn = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("name", "Alice Admin") }, "test")) };
-        Assert.Equal("Alice Admin", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin", AgentAdminService.GetRequester("Bob", new CallContext(CancellationToken.None, signedIn)));
         Assert.Equal("Alice Admin", AgentAdminService.GetRequester(null, new CallContext(CancellationToken.None, signedIn)));
         Assert.Equal("Alice Admin (AI connector)",
-            AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Alice Admin (AI connector)" }, new CallContext(CancellationToken.None, signedIn)));
+            AgentAdminService.GetRequester("Alice Admin (AI connector)", new CallContext(CancellationToken.None, signedIn)));
     }
 
     [Theory]

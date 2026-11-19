@@ -34,6 +34,9 @@ client code don't get the diagnostic, but the contract is just as likely to chan
   `GetAgents` and `WatchAgents` are always readable. `StartSession`, `CancelLaunch` and `EndSession` are gated by `AGENT_ADMIN_KEY` (below).
   `EndSession` takes a machine ID and sends the agent a cancel for that computer's newest unfinished launch, so the agent closes the app
   it started. It cannot end a session the relay has no launch for (started at the PC, or before the relay restarted).
+  The relay ends its own side of the session first (logged once as `Session <id> shut down: EndRequestedByAdmin (by <requester>)`) and
+  only then sends the cancel, so the app's streams aborting when the agent closes it log at Debug, not as failures. `EndSession`
+  takes the same `requester` as `StartSession`, so the `Diagnostics end requested ... by <requester>` line keeps its label.
   With authentication on, the requester shown in the consent prompt and the log is the signed-in user's name; the caller may only
   add a short label in parentheses after that same name, for example `Pat Lee (AI connector)`.
 - An agent shows as offline 90 s after its last message, or as soon as its stream ends. Offline agents stay listed for 7 days.

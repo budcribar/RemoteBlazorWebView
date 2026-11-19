@@ -23,5 +23,7 @@ namespace PeakSWC.RemoteWebView.Services
         RestartNotHonoured,
         /// <summary>A page refresh asked for a restart and the app didn't respond in time.</summary>
         RefreshRestartTimedOut,
+        /// <summary>An admin or connector asked the relay to end an agent-launched session (AgentAdmin.EndSession); the agent then closes the app.</summary>
+        EndRequestedByAdmin,
     }
 }
