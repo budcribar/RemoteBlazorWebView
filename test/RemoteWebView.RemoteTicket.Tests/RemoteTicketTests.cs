@@ -201,6 +201,19 @@ public class RemoteTicketTests
             Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
         };
 
+    [Fact]
+    public async Task The_relay_does_not_list_session_ids_when_tickets_are_required()
+    {
+        await using var server = await Start(new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.NotFound)));
+        AddSession(server, "bench");
+
+        // Built the way the gRPC host activates its services, so this checks the relay's own wiring.
+        var service = ActivatorUtilities.CreateInstance<PeakSWC.RemoteWebView.RemoteWebViewService>(server.Services);
+        var error = await Assert.ThrowsAsync<Grpc.Core.RpcException>(() => service.GetIds(new Google.Protobuf.WellKnownTypes.Empty(), null!));
+
+        Assert.Equal(Grpc.Core.StatusCode.PermissionDenied, error.StatusCode);
+    }
+
     private static async Task<EmbeddedRemoteWebViewServer> Start(AuthorityStub handler)
     {
         var options = new RemoteWebViewServerOptions { Authorization = new RemoteTicketAuthorization() };
