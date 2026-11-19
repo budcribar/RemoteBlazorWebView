@@ -64,7 +64,7 @@ Registrations, launches, declines and failures are written to the log and to the
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
 
 On Railway, `scripts/Set-RailwayAgentKeys.ps1` sets the list with the Railway CLI, for example
-`./scripts/Set-RailwayAgentKeys.ps1 -Key test-shop -IncludeLocalAgentKey -Append -WhatIf` (drop `-WhatIf` to apply).
+`./scripts/Set-RailwayAgentKeys.ps1 -Key test-shop -IncludeLocalAgentKey -Append -WhatIf` (drop `-WhatIf` to apply). Dot-sourcing the file defines a `Set-RailwayAgentKeys` function instead of running it.
 
 ## Keepalive
 
