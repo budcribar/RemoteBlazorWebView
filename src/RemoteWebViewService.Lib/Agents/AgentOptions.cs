@@ -15,8 +15,11 @@ namespace PeakSWC.RemoteWebView.Agents
         public const string AdminKeyVariable = "AGENT_ADMIN_KEY";
         public const string AdminKeyHeader = "x-admin-key";
 
-        // Empty means any enrollment key is accepted.
+        // Empty means any enrollment key is accepted, unless RequireKeys is set: then no agent is accepted.
         public IReadOnlyList<string> EnrollmentKeys { get; init; } = [];
+
+        // True outside the Development environment: an empty EnrollmentKeys list refuses every agent instead of accepting any key.
+        public bool RequireKeys { get; init; }
 
         // Null means "build it from the request's scheme and host".
         public string? PublicBaseUrl { get; init; }
@@ -24,15 +27,27 @@ namespace PeakSWC.RemoteWebView.Agents
         // Null means no admin key: StartSession always asks for consent.
         public string? AdminKey { get; init; }
 
-        public bool AcceptsAnyKey => EnrollmentKeys.Count == 0;
+        public bool AcceptsAnyKey => EnrollmentKeys.Count == 0 && !RequireKeys;
+
+        public bool RefusesEveryKey => EnrollmentKeys.Count == 0 && RequireKeys;
 
         public bool AdminKeyConfigured => AdminKey != null;
 
+        /// <summary>
+        /// Reads the agent settings. Outside the Development environment the enrollment keys are required:
+        /// with <see cref="EnrollmentKeysVariable"/> unset, the relay refuses every agent rather than accepting any key.
+        /// </summary>
         public static AgentOptions FromConfiguration(IConfiguration configuration) =>
-            Create(configuration[EnrollmentKeysVariable], configuration[PublicBaseUrlVariable], configuration[AdminKeyVariable]);
+            Create(configuration[EnrollmentKeysVariable], configuration[PublicBaseUrlVariable], configuration[AdminKeyVariable],
+                requireKeys: !IsDevelopment(configuration));
 
-        public static AgentOptions Create(string? enrollmentKeys, string? publicBaseUrl, string? adminKey = null) => new()
+        // The host copies ASPNETCORE_ENVIRONMENT / DOTNET_ENVIRONMENT into the "environment" key; unset means Production.
+        private static bool IsDevelopment(IConfiguration configuration) =>
+            string.Equals(configuration["environment"], "Development", StringComparison.OrdinalIgnoreCase);
+
+        public static AgentOptions Create(string? enrollmentKeys, string? publicBaseUrl, string? adminKey = null, bool requireKeys = false) => new()
         {
+            RequireKeys = requireKeys,
             EnrollmentKeys = (enrollmentKeys ?? string.Empty)
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Distinct(StringComparer.Ordinal)
@@ -49,8 +64,8 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public bool IsKeyAccepted(string? key)
         {
-            if (AcceptsAnyKey)
-                return true;
+            if (EnrollmentKeys.Count == 0)
+                return !RequireKeys;
             if (string.IsNullOrEmpty(key))
                 return false;
 
