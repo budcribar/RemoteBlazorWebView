@@ -13,10 +13,17 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null, IRelayAuthorization? authorization = null) : WebViewIPC.WebViewIPCBase
     {
+        /// <summary>
+        /// Every session id on the relay. Refused when the relay requires sign-in: a session id is what the browser calls
+        /// use to attach, so listing them to an anonymous caller would hand out every shop's sessions.
+        /// </summary>
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
+            if (authorization?.Enabled == true)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Listing session ids is turned off on a relay that requires sign-in."));
+
             var results = new IdArrayResponse();
             results.Responses.AddRange(serviceDictionary.Keys);
             return Task.FromResult(results);
