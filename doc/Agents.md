@@ -59,7 +59,7 @@ Registrations, launches, declines and failures are written to the log and to the
 
 | Variable | Meaning |
 |---|---|
-| `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents. If it's unset or empty, any key is accepted and a warning is logged once. |
+| `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents (constant-time comparison). If it's unset or empty, the relay refuses every agent with `PermissionDenied` "This relay has no enrollment keys configured, so it accepts no agents" and logs a warning once. Only in the Development environment (`ASPNETCORE_ENVIRONMENT=Development`) does an unset list accept any key, with a warning logged once. Set it before deploying a relay that agents already use: an agent whose key isn't listed is refused and keeps retrying. An agent sends the `key` from its `%ProgramData%\RemotePCDiagnostics\agent.json` (its `--key=` / `ENROLLMENT_KEY` at install). With the `RemoteTicket` provider the account host decides instead, and this list isn't used. |
 | `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession`, `CancelLaunch` and `EndSession` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
 

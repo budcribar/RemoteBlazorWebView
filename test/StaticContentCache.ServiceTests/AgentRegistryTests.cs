@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PeakSWC.RemoteWebView.Agent;
@@ -108,6 +109,49 @@ public class AgentRegistryTests
         Assert.False(closed.IsKeyAccepted("gamma"));
         Assert.False(closed.IsKeyAccepted(""));
         Assert.Equal("https://relay.example:34544", closed.PublicBaseUrl);
+    }
+
+    [Fact]
+    public void With_keys_required_and_none_set_every_key_is_refused()
+    {
+        var locked = AgentOptions.Create(null, null, requireKeys: true);
+        Assert.False(locked.AcceptsAnyKey);
+        Assert.True(locked.RefusesEveryKey);
+        Assert.False(locked.IsKeyAccepted("whatever"));
+        Assert.False(locked.IsKeyAccepted(""));
+        Assert.False(locked.IsKeyAccepted(null));
+
+        var decision = new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy().CheckEnrollment("whatever", locked);
+        Assert.False(decision.Accepted);
+        Assert.Equal(PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy.NoKeysConfiguredReason, decision.DenialReason);
+
+        var listed = AgentOptions.Create("alpha", null, requireKeys: true);
+        Assert.False(listed.RefusesEveryKey);
+        Assert.True(listed.IsKeyAccepted("alpha"));
+        Assert.False(listed.IsKeyAccepted("beta"));
+        Assert.Equal("The enrollment key was not accepted",
+            new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy().CheckEnrollment("beta", listed).DenialReason);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("Production", true)]
+    [InlineData("Staging", true)]
+    [InlineData("Development", false)]
+    [InlineData("development", false)]
+    public void Enrollment_keys_are_required_outside_Development(string? environment, bool required)
+    {
+        var settings = new Dictionary<string, string?> { ["environment"] = environment };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var options = AgentOptions.FromConfiguration(configuration);
+        Assert.Equal(required, options.RequireKeys);
+        Assert.Equal(!required, options.IsKeyAccepted("whatever"));
+
+        settings[AgentOptions.EnrollmentKeysVariable] = "alpha";
+        var keyed = AgentOptions.FromConfiguration(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+        Assert.True(keyed.IsKeyAccepted("alpha"));
+        Assert.False(keyed.IsKeyAccepted("whatever"));
     }
 
     [Fact]
@@ -601,6 +645,25 @@ public class AgentRegistryTests
             await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", "wrong") });
             var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
             Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
+        }
+
+        Assert.Empty(relay.Registry.GetAgentList().Agents);
+    }
+
+    [Fact]
+    public async Task Connect_refuses_every_agent_when_keys_are_required_and_none_are_set()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var options = new CallOptions(cancellationToken: timeout.Token);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create(null, null, requireKeys: true));
+
+        foreach (var key in new[] { "any-key", "" })
+        {
+            using var call = relay.Invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
+            await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", key) });
+            var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
+            Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
+            Assert.Equal(PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy.NoKeysConfiguredReason, ex.Status.Detail);
         }
 
         Assert.Empty(relay.Registry.GetAgentList().Agents);

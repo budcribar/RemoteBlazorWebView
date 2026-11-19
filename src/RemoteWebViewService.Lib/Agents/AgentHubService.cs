@@ -16,6 +16,7 @@ namespace PeakSWC.RemoteWebView.Agents
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentHubService";
         private readonly PeakSWC.RemoteWebView.IAgentTenantPolicy policy = tenantPolicy ?? new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy();
         private static int warnedAnyKey;
+        private static int warnedNoKeys;
 
         public override async Task Connect(IAsyncStreamReader<AgentMessage> requestStream, IServerStreamWriter<HubCommand> responseStream, ServerCallContext context)
         {
@@ -87,13 +88,16 @@ namespace PeakSWC.RemoteWebView.Agents
         private PeakSWC.RemoteWebView.AgentEnrollmentDecision AcceptEnrollment(AgentHello hello, string ip)
         {
             var decision = policy.CheckEnrollment(hello.EnrollmentKey, options);
+            bool keysDecide = policy is PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy;
             if (!decision.Accepted)
             {
+                if (keysDecide && options.RefusesEveryKey && Interlocked.Exchange(ref warnedNoKeys, 1) == 0)
+                    AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: every agent is refused. Set it to the keys your agents were installed with.");
                 AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted");
                 throw new RpcException(new Status(StatusCode.PermissionDenied, decision.DenialReason ?? "The enrollment key was not accepted"));
             }
 
-            if (options.AcceptsAnyKey && Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
+            if (keysDecide && options.AcceptsAnyKey && Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
                 AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: any agent enrollment key is accepted");
             return decision;
         }

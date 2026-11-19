@@ -18,10 +18,15 @@ namespace PeakSWC.RemoteWebView
     /// <summary>Default policy when no ticket authority is active: delegates directly to <see cref="Agents.AgentOptions"/> with no tenant scoping.</summary>
     public sealed class AllowAllAgentTenantPolicy : IAgentTenantPolicy
     {
-        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, Agents.AgentOptions options) =>
-            options.IsKeyAccepted(enrollmentKey)
-                ? new AgentEnrollmentDecision(true, string.Empty)
-                : new AgentEnrollmentDecision(false, string.Empty, "The enrollment key was not accepted");
+        public const string NoKeysConfiguredReason = "This relay has no enrollment keys configured, so it accepts no agents";
+
+        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, Agents.AgentOptions options)
+        {
+            if (options.IsKeyAccepted(enrollmentKey))
+                return new AgentEnrollmentDecision(true, string.Empty);
+            var reason = options.RefusesEveryKey ? NoKeysConfiguredReason : "The enrollment key was not accepted";
+            return new AgentEnrollmentDecision(false, string.Empty, reason);
+        }
 
         public AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, Agents.AgentOptions options) =>
             new(Allowed: true, GroupScope: null, UnattendedAuthorized: options.IsAdminKeyValid(adminKeyHeader));
