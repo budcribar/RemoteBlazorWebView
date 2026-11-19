@@ -25,15 +25,26 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var (guid, serviceDictionary) = client.Value;
                 var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
+                ServiceState? serviceState = null;
                 try
                 {
                     // Wait for the task to be completed or time out using the extension method
-                    var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // In a shared session only the owner's surface loads the app's page; any other browser is sent to the mirror,
+                    // so a remote tab coming back after the PC restarted can never be taken for a refresh and restart the app.
+                    if (SendsToMirror(serviceState, context))
+                    {
+                        LogPageRequest(context, guid.ToString(), serviceState, "sent to /mirror (no owner cookie)");
+                        RedirectToMirror(context, guid.ToString());
+                        return;
+                    }
 
                     // The first load serves the page; a later one is a refresh (the app restarts), except the owner's first.
                     if (ServesPage(serviceState, context))
                     {
+                        LogPageRequest(context, guid.ToString(), serviceState, serviceState.Refresh ? "served the page (the owner's first load)" : "served the page (first load)");
                         // Retrieve and stream the home HTML file
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
@@ -63,6 +74,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     else
                     {
                         // Handle the refresh logic
+                        LogPageRequest(context, guid.ToString(), serviceState, "refresh: the app is asked to restart");
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
 
                         // Wait for the client to shut down, with a timeout of 30 seconds
@@ -89,6 +101,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
                 catch (Exception)
                 {
+                    LogPageRequest(context, guid.ToString(), serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(RestartFailedPage.Html(guid.ToString(), true)).ConfigureAwait(false);

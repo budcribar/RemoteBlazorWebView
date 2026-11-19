@@ -89,6 +89,9 @@ namespace PeakSWC.RemoteWebView
 
                 shutdownService.Forget(request.Id);
                 serviceStateTaskSource.SetResult(state);
+                // Pairs with the shutdown line (ShutdownService), which says when and why the id was given up.
+                logger.LogInformation("Session {Id} registered: {ProcessName} (pid {Pid}) on {HostName}, group '{Group}', owner key: {Keyed}, mirrors: {Mirrors}",
+                    request.Id, request.ProcessName, request.Pid, request.HostName, group, OwnerAccess.IsKeyed(state) ? "yes" : "no", request.EnableMirrors ? "on" : "off");
 
                 await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
             }

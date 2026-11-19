@@ -35,9 +35,21 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     bool ownerPage = context.Request.Query["role"] == "owner";
                     if (ownerPage && OwnerAccess.IsKeyed(serviceState) && !OwnerAccess.KeyMatches(serviceState, context.Request.Query["key"]))
                     {
+                        LogPageRequest(context, guid, serviceState, "refused (owner page without the app's key)");
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         context.Response.ContentType = "text/plain";
                         await context.Response.WriteAsync("This link cannot open the owner's page.").ConfigureAwait(false);
+                        return;
+                    }
+
+                    // A shared session's /app page belongs to the owner's surface. Anyone else joins at the mirror, which can never
+                    // restart the app: after a reboot, a remote browser coming back here must not take the page from the app's
+                    // own window (and its later loads of /{id} must not count as refreshes). Unattended control still reaches
+                    // them there: the owner's page hands control to whoever joins.
+                    if (SendsToMirror(serviceState, context))
+                    {
+                        LogPageRequest(context, guid, serviceState, "sent to /mirror (no owner key or cookie)");
+                        RedirectToMirror(context, guid);
                         return;
                     }
 
@@ -49,6 +61,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     bool alreadyInUse = serviceState.InUse;
                     if (alreadyInUse && !keyedOwner)
                     {
+                        LogPageRequest(context, guid, serviceState, $"locked (in use by {serviceState.User})");
                         context.Response.StatusCode = StatusCodes.Status409Conflict; // Conflict
                         context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync(LockedPage.Html(serviceState.User, guid)).ConfigureAwait(false);
@@ -89,11 +102,13 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     var query = context.Request.Query.ContainsKey("key")
                         ? QueryString.Create(context.Request.Query.Where(q => q.Key != "key")).ToString()
                         : context.Request.QueryString.ToString();
+                    LogPageRequest(context, guid, serviceState, ownerPage ? $"owner took the app page; redirected to /{guid}" : $"took the app page; redirected to /{guid}");
                     context.Response.Redirect($"/{guid}{query}", permanent: false);
                 }
                
                 catch(Exception)
                 {
+                    LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     if (markedInUse && serviceState != null)
                     {
                         serviceState.InUse = false;
