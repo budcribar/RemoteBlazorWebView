@@ -106,6 +106,9 @@ namespace PeakSWC.RemoteWebView
                     lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
                     // Agent registrations, launches and declines are logged at Information so they reach the console (Railway logs)
                     lb.AddFilter("PeakSWC.RemoteWebView.Agents", Microsoft.Extensions.Logging.LogLevel.Information);
+                    // Session registrations, page requests and what the relay did with them (served, refresh, sent to the mirror),
+                    // control transfers and restart requests: what's needed to tell which browser restarted an app.
+                    lb.AddFilter("PeakSWC.RemoteWebView.RemoteWebViewService", Microsoft.Extensions.Logging.LogLevel.Information);
                     // EventLog is Windows-only; on Linux (containers) log to console instead
                     if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
                     // Configure EventLog provider

@@ -90,15 +90,16 @@ public class SharedSessionEndpointTests
     }
 
     // After the PC restarts, a browser tab left on the session can reach the new copy of the app before the app's own
-    // window does. The window, proven by the app's key, still gets in; the other browser's name stays on the session.
+    // window does. In a shared session it is sent to the mirror instead of taking the app page, so the window, proven by
+    // the app's key, gets its page and nothing the other browser does can count as a refresh (RemoteWebViewAdmin#24).
     [Fact]
-    public async Task The_owner_with_the_key_is_not_locked_out_by_a_browser_that_took_the_app_page_first()
+    public async Task The_owner_with_the_key_gets_the_app_page_after_a_browser_that_came_back_first()
     {
         var (remote, state, id) = NewRequest("", ownerKey: "app-secret");
         await using var _ = state;
         await Endpoints.Start()(remote);
-        Assert.True(state.InUse);
-        state.User = "Remote Tech";
+        Assert.Equal($"/mirror/{id}", remote.Response.Headers.Location.ToString());
+        Assert.False(state.InUse);
 
         var (owner, _, _) = NewRequest("?role=owner&key=app-secret", state, id);
         await Endpoints.Start()(owner);
@@ -107,8 +108,112 @@ public class SharedSessionEndpointTests
         Assert.Equal($"/{id}?role=owner", owner.Response.Headers.Location.ToString());
         Assert.True(state.OwnerHoldsApp);
         Assert.True(state.InUse);
-        Assert.Equal("Remote Tech", state.User);
         Assert.Contains($"{OwnerAccess.CookieName(id.ToString())}={state.OwnerToken}", owner.Response.Headers.SetCookie.ToString());
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("?control=remote", "?control=remote")]
+    [InlineData("?key=app-secret", "")] // a key without role=owner is not the owner page, and the key never travels on
+    public async Task In_a_shared_session_a_browser_without_the_owner_key_is_sent_from_the_app_page_to_the_mirror(string query, string kept)
+    {
+        using var lifetime = new CancellationTokenSource();
+        var room = VoiceRoom.Create(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), lifetime.Token)!;
+        var (context, state, id) = NewRequest(query, voice: room, ownerKey: "app-secret");
+        await using var _ = state;
+
+        await Endpoints.Start()(context);
+
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal($"/mirror/{id}{kept}", context.Response.Headers.Location.ToString());
+        Assert.False(state.InUse);           // the app page is still free for the app's own window
+        Assert.Equal("", state.User);
+        Assert.NotNull(room.TakeControllerForMirror()); // the remote end of the call is still there for the mirror page
+    }
+
+    [Fact]
+    public async Task In_a_shared_session_a_browser_is_sent_to_the_mirror_even_while_the_owner_holds_the_app_page()
+    {
+        var (owner, state, id) = NewRequest("?role=owner&key=app-secret", ownerKey: "app-secret");
+        await using var _ = state;
+        await Endpoints.Start()(owner);
+
+        var (remote, _, _) = NewRequest("", state, id);
+        await Endpoints.Start()(remote);
+
+        Assert.Equal(StatusCodes.Status302Found, remote.Response.StatusCode); // not the 409 locked page, whose button restarts the app
+        Assert.Equal($"/mirror/{id}", remote.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public async Task A_keyed_session_without_mirrors_keeps_the_app_page_for_whoever_comes_first()
+    {
+        var (context, state, id) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = state;
+        state.EnableMirrors = false;
+
+        await Endpoints.Start()(context);
+
+        Assert.Equal($"/{id}", context.Response.Headers.Location.ToString());
+        Assert.True(state.InUse);
+    }
+
+    // The restart after a reboot: a remote tab reloads /{id} after the app's page was served. It must reach the mirror,
+    // never the refresh that restarts the app.
+    [Fact]
+    public async Task In_a_shared_session_a_load_of_the_app_page_without_the_owner_cookie_goes_to_the_mirror_not_a_refresh()
+    {
+        var (context, state, id) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = state;
+        state.FileManagerReady.SetResult(true);
+        state.Refresh = true; // the app's page has been served
+
+        await Endpoints.StartOrRefresh()(context);
+
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal($"/mirror/{id}", context.Response.Headers.Location.ToString());
+        Assert.False(state.Token.IsCancellationRequested); // the session goes on
+    }
+
+    [Fact]
+    public async Task Only_a_shared_session_with_mirrors_sends_browsers_without_owner_proof_to_the_mirror()
+    {
+        var (plain, keyed, id) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = keyed;
+        Assert.True(Endpoints.SendsToMirror(keyed, plain));
+
+        var (withCookie, _, _) = NewRequest("", keyed, id);
+        withCookie.Request.Headers.Cookie = $"{OwnerAccess.CookieName(id.ToString())}={keyed.OwnerToken}";
+        Assert.False(Endpoints.SendsToMirror(keyed, withCookie));
+
+        var (withKey, _, _) = NewRequest("?role=owner&key=app-secret", keyed, id);
+        Assert.False(Endpoints.SendsToMirror(keyed, withKey));
+
+        var (other, unkeyed, _) = NewRequest("");
+        await using var __ = unkeyed;
+        Assert.False(Endpoints.SendsToMirror(unkeyed, other)); // older apps and remote components: unchanged
+    }
+
+    // A browser that comes back after a reboot can get to the mirror before the app's own window has opened its page.
+    // It is asked to try again (503, Retry-After, a page that reloads itself), not left on a bare error.
+    [Fact]
+    public async Task A_mirror_before_the_apps_page_is_open_waits_and_retries()
+    {
+        var (context, state, _) = NewRequest("", ownerKey: "app-secret");
+        await using var _ = state;
+        state.FileManagerReady.SetResult(true);
+        using var gone = new CancellationTokenSource();
+        gone.Cancel(); // skip the endpoint's own short wait for the app's page
+        context.RequestAborted = gone.Token;
+
+        await Endpoints.Mirror()(context);
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal("3", context.Response.Headers.RetryAfter.ToString());
+        context.Response.Body.Position = 0;
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Contains("http-equiv='refresh'", body);
+        Assert.Empty(state.IsMirroredConnection);
     }
 
     [Fact]
@@ -245,6 +350,43 @@ public class SharedSessionEndpointTests
         var key = room.TakeControllerForMirror();       // the real remote user
         Assert.False(string.IsNullOrEmpty(key));
         Assert.NotNull(room.Join(key!));
+    }
+
+    // RemoteWebViewAdmin#22: the relay log says which browser asked for which page and what the relay did, without the key.
+    [Fact]
+    public async Task Each_page_request_is_logged_with_its_decision_and_never_the_owner_key()
+    {
+        var (context, state, id) = NewRequest("?key=app-secret", ownerKey: "app-secret");
+        await using var _ = state;
+        var lines = new List<string>();
+        var services = new ServiceCollection();
+        services.AddLogging(); // Information and up, the level production keeps for this category
+        services.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(new LineCollector(lines));
+        services.AddSingleton(context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>());
+        services.AddSingleton(new ConcurrentDictionary<string, Channel<string>>());
+        context.RequestServices = services.BuildServiceProvider();
+        context.Request.Path = $"/app/{id}";
+        context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.7");
+
+        await Endpoints.Start()(context);
+
+        var line = Assert.Single(lines);
+        Assert.Contains($"Page /app/{id} for session {id}: sent to /mirror", line);
+        Assert.Contains("203.0.113.7", line);
+        Assert.Contains("owner proof: owner key", line); // a matching key, but not on the owner page (no role=owner)
+        Assert.DoesNotContain("app-secret", line);
+    }
+
+    private sealed class LineCollector(List<string> lines) : Microsoft.Extensions.Logging.ILoggerProvider, Microsoft.Extensions.Logging.ILogger
+    {
+        public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName) => this;
+        public void Dispose() { }
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            lock (lines) lines.Add(formatter(state, exception));
+        }
     }
 
     private static (DefaultHttpContext Context, ServiceState State, Guid Id) NewRequest(string query, ServiceState? existing = null, Guid? existingId = null, VoiceRoom? voice = null, string ownerKey = "")
