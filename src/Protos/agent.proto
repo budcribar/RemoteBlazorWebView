@@ -151,6 +151,7 @@ message WatchLaunchRequest {
 
 message EndSessionRequest {
   string machine_id = 1;
+  string requester = 2;    // who asks, for the audit line; the same rules as StartSessionRequest.requester
 }
 
 enum EndSessionOutcome {
