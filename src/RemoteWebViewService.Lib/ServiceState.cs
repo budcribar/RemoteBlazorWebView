@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -70,6 +71,25 @@ namespace PeakSWC.RemoteWebView
         public BrowserIPCState BrowserIPC { get; init; } = new();
 
         public DateTime StartTime { get; } = DateTime.UtcNow;
+
+        private int _endReason = -1;
+
+        /// <summary>
+        /// Why the session is ending, set before its token is cancelled (null while it runs). A CancellationToken can't carry a reason,
+        /// so code that sees the token fire checks this: set means the session is already being torn down for this reason and the
+        /// cancellation is a follow-on (log at Debug); null means the cancellation came from somewhere else and is worth reporting.
+        /// </summary>
+        public SessionEndReason? EndReason
+        {
+            get
+            {
+                var reason = Volatile.Read(ref _endReason);
+                return reason < 0 ? null : (SessionEndReason)reason;
+            }
+        }
+
+        /// <summary>Records why the session ends. The first reason wins; returns false when one was already recorded.</summary>
+        public bool TrySetEndReason(SessionEndReason reason) => Interlocked.CompareExchange(ref _endReason, (int)reason, -1) == -1;
 
         private int _disposed = 0; // 0 = not disposed, 1 = disposed
 

@@ -102,7 +102,9 @@ namespace PeakSWC.RemoteWebView
             catch (Exception ex)
             {
                 // serviceState may be null here if the wait above failed; only the current controller triggers teardown.
-                if (serviceState != null && serviceState.PrimaryClientId == request.ClientId)
+                if (serviceState?.EndReason is { } ending)
+                    logger.LogDebug("Browser stream {ClientId} for session {Id} stopped: the session is already ending ({Reason}).", request.ClientId, request.Id, ending);
+                else if (serviceState != null && serviceState.PrimaryClientId == request.ClientId)
                 {
                     logger.LogError(ex, "Exception in ReceiveMessage outer catch for primary connection. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     await shutdownService.Shutdown(request.Id, SessionEndReason.ControllerFailed, ex, $"controlling browser {request.ClientId}").ConfigureAwait(false);
@@ -300,7 +302,10 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Exception in SendMessage for Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                if (shutdownService.HasEnded(request.Id, out var ended))
+                    logger.LogDebug("Browser SendMessage from {ClientId} for session {Id} dropped: the session ended ({Reason}).", request.ClientId, request.Id, ended);
+                else
+                    logger.LogError(ex, "Exception in SendMessage for Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
         }

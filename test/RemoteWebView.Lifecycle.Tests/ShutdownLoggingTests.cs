@@ -76,4 +76,44 @@ public class ShutdownLoggingTests
         Assert.Single(log.Entries, e => e.Level == LogLevel.Warning);
         Assert.Contains(log.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains(nameof(SessionEndReason.PingStreamClosed)));
     }
+
+    [Fact]
+    public async Task Shutdown_RecordsEndReasonOnTheState_BeforeItsTokenFires_AndTheFirstReasonWins()
+    {
+        var id = Guid.NewGuid().ToString();
+        var (shutdown, _, state) = Make(id);
+        SessionEndReason? seenWhenCancelled = null;
+        state.Token.Register(() => seenWhenCancelled = state.EndReason);
+
+        await shutdown.Shutdown(id, SessionEndReason.ControllerLeft);
+        await shutdown.Shutdown(id, SessionEndReason.PingStreamClosed);
+
+        Assert.Equal(SessionEndReason.ControllerLeft, seenWhenCancelled);
+        Assert.Equal(SessionEndReason.ControllerLeft, state.EndReason);
+        Assert.False(state.TrySetEndReason(SessionEndReason.PingTimeout));
+    }
+
+    [Fact]
+    public async Task HasEnded_RemembersTheReason_UntilANewSessionReusesTheId()
+    {
+        var id = Guid.NewGuid().ToString();
+        var (shutdown, _, _) = Make(id);
+        Assert.False(shutdown.HasEnded(id, out _));
+
+        await shutdown.Shutdown(id, SessionEndReason.PingTimeout);
+
+        Assert.True(shutdown.HasEnded(id, out var reason));
+        Assert.Equal(SessionEndReason.PingTimeout, reason);
+        shutdown.Forget(id);
+        Assert.False(shutdown.HasEnded(id, out _));
+    }
+
+    [Fact]
+    public void A_RunningSession_HasNoEndReason()
+    {
+        var (_, _, state) = Make(Guid.NewGuid().ToString());
+        Assert.Null(state.EndReason);
+        Assert.True(state.TrySetEndReason(SessionEndReason.RequestedByApp));
+        Assert.Equal(SessionEndReason.RequestedByApp, state.EndReason);
+    }
 }

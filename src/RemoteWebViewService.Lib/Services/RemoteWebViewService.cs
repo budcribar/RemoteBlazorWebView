@@ -87,6 +87,7 @@ namespace PeakSWC.RemoteWebView
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
 
+                shutdownService.Forget(request.Id);
                 serviceStateTaskSource.SetResult(state);
 
                 await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
@@ -196,7 +197,10 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "SendMessage failed for Id: {Id}", request.Id);
+                if (shutdownService.HasEnded(request.Id, out var ended))
+                    logger.LogDebug("SendMessage from the app for session {Id} dropped: the session ended ({Reason}).", request.Id, ended);
+                else
+                    logger.LogError(ex, "SendMessage failed for Id: {Id}", request.Id);
             }
 
             return new SendMessageResponse { Id = request.Id, Success = false };
@@ -274,9 +278,10 @@ namespace PeakSWC.RemoteWebView
             }
             catch (OperationCanceledException)
             {
-                // No need to shutdown as we are in the process of shutting down
-                logger.LogInformation("Ping operation canceled for Id: {Id}", id);
-                if (!string.IsNullOrWhiteSpace(id))
+                if (shutdownService.HasEnded(id, out var ended))
+                    logger.LogDebug("Ping stream for session {Id} stopped: the session is already ending ({Reason}).", id, ended);
+                else if (!string.IsNullOrWhiteSpace(id))
+                    // The session was still running, so the app's own ping stream went away: its connection closed or dropped.
                     await shutdownService.Shutdown(id, SessionEndReason.PingStreamClosed).ConfigureAwait(false);
             }
             catch (Exception ex)
