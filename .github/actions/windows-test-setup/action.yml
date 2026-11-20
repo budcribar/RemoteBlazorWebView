@@ -2,25 +2,15 @@
 # Windows runner, so each one builds the same tree the old single job built,
 # in the same layout (paths the tests resolve are unchanged).
 #
-# Inputs pick the optional parts:
-# - js-tests:  also run the bundle's npm tests (only one job needs to).
-# - publish:   publish RemoteWebViewService to bin/publishNoAuth, trust the
-#              dev cert, and install the Playwright browsers.
-# - tutorial:  check out the net10 tutorial next to this checkout and publish
-#              the three apps the desktop tests start.
+# js-tests also runs the bundle's npm tests (only one job needs to).
+# windows-test-publish does the publishing the FileSyncServer tests need.
 
 name: Windows test setup
-description: Build remote.blazor.desktop.js and the test projects, and optionally publish the relay and the tutorial apps.
+description: Build remote.blazor.desktop.js and the test projects.
 
 inputs:
   js-tests:
     description: Run npm test for remote.blazor.desktop.js
-    default: "false"
-  publish:
-    description: Publish RemoteWebViewService (NoAuthorization), trust the dev cert, install Playwright browsers
-    default: "false"
-  tutorial:
-    description: Check out and publish the tutorial apps
     default: "false"
 
 runs:
@@ -115,168 +105,3 @@ runs:
           }
           dotnet build $project @args
         }
-
-    # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
-    # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
-    - name: Publish RemoteWebViewService (NoAuthorization)
-      if: inputs.publish == 'true'
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $PSNativeCommandUseErrorActionPreference = $true
-        dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj `
-          -c NoAuthorization `
-          --self-contained true `
-          -r win-x64 `
-          -o src/RemoteWebViewService/bin/publishNoAuth `
-          -p:EnableWindowsTargeting=true `
-          -p:Platform=x64 `
-          -p:GeneratePackageOnBuild=false
-        New-Item -ItemType Directory -Force -Path src/RemoteWebViewService/bin/publishNoAuth/wwwroot | Out-Null
-        if (-not (Test-Path 'src/RemoteWebViewService/bin/publishNoAuth/RemoteWebViewService.exe')) {
-          throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
-        }
-
-    # `dotnet dev-certs https --trust` and Import-PfxCertificate into
-    # CurrentUser\Root both wait on a certificate dialog on the hosted
-    # Windows image (runs 40223312855 and 40227579699). HttpClient trusts
-    # LocalMachine\Root, which does not prompt for an elevated runner.
-    # --check --trust only looks at CurrentUser\Root, so it is not used.
-    # (A composite step cannot set timeout-minutes; the job timeout covers it.)
-    - name: Trust the HTTPS development certificate
-      if: inputs.publish == 'true'
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $PSNativeCommandUseErrorActionPreference = $true
-        $pfx = Join-Path $env:RUNNER_TEMP 'aspnet-devcert.pfx'
-        dotnet dev-certs https -ep $pfx -p placeholder
-        $password = ConvertTo-SecureString placeholder -Force -AsPlainText
-        Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\My | Out-Null
-        Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
-        $thumbprint = (Get-PfxData -FilePath $pfx -Password $password).EndEntityCertificates[0].Thumbprint
-        $trusted = Get-ChildItem Cert:\LocalMachine\Root | Where-Object Thumbprint -eq $thumbprint
-        if (-not $trusted) { throw "Dev cert $thumbprint is not in LocalMachine\Root" }
-
-    # The tutorial net10 apps default to Developer mode and reference
-    # ..\..\RemoteBlazorWebView\src\..., which is this checkout once the
-    # tutorial tree sits next to it. NuGet.config in the tutorial repo is
-    # left as committed, including its local PeakSWC source. That directory
-    # is created empty so restore can see it; Developer mode does not read
-    # packages from it.
-    - name: Checkout tutorial (net10)
-      if: inputs.tutorial == 'true'
-      uses: actions/checkout@v4
-      with:
-        repository: budcribar/RemoteBlazorWebViewTutorial
-        ref: net10
-        path: _ci-tutorial
-        persist-credentials: false
-
-    - name: Publish tutorial apps
-      if: inputs.tutorial == 'true'
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $PSNativeCommandUseErrorActionPreference = $true
-        # The sibling checkout does not walk into this repo's global.json.
-        # Copy that pin into the tutorial tree so publish uses this line's SDK.
-        $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
-        if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-        Copy-Item -Path _ci-tutorial -Destination $dest -Recurse
-        Copy-Item -Path (Join-Path $env:GITHUB_WORKSPACE 'global.json') -Destination (Join-Path $dest 'global.json') -Force
-        Write-Host "dotnet $(dotnet --version)"
-        dotnet --list-sdks
-        # The committed local source does not exist on the runner. Creating
-        # the directory does not change NuGet.config and does not publish packages.
-        # net10's NuGet.config points at ...\budcribar\RemoteBlazorWebView\artifacts.
-        # A missing source fails restore with NU1301 even when nuget.org is listed.
-        New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
-        New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\budcribar\RemoteBlazorWebView\artifacts' | Out-Null
-        # WinForms and Photino default BuildMode to Release, which restores
-        # PeakSWC.RemoteBlazorWebView.* 10.0.13. Those packages are not in
-        # the empty local feed. Developer uses the project references.
-        $env:EnvBuildMode = 'Developer'
-        $common = @('-p:Platform=x64', '-p:EnableWindowsTargeting=true', '-p:GeneratePackageOnBuild=false')
-        $apps = @(
-          @{
-            Project = 'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj'
-            Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'
-            DebugTfm = 'net10.0-windows'
-          },
-          @{
-            Project = 'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj'
-            Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'
-            DebugTfm = 'net10.0-windows10.0.17763.0'
-          },
-          @{
-            Project = 'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
-            Exe = 'RemoteBlazorWebViewTutorial.exe'
-            DebugTfm = 'net10.0-windows'
-          }
-        )
-        foreach ($app in $apps) {
-          $project = Join-Path $dest $app.Project
-          $dir = Split-Path $project
-          $publish = Join-Path $dir 'bin\publish'
-          $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
-          Write-Host "Publish Release $($app.Project)"
-          dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
-          Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
-          $www = Join-Path $publish 'wwwroot'
-          if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
-          $embeddedWww = Join-Path $dir 'embedded\wwwroot'
-          New-Item -ItemType Directory -Force -Path $embeddedWww | Out-Null
-          Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force
-          Write-Host "Publish Embedded $($app.Project)"
-          dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
-          Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
-          Write-Host "Build Debug $($app.Project)"
-          dotnet build $project -c Debug @common
-          $expectedDir = Join-Path $dir "bin\x64\Debug\$($app.DebugTfm)"
-          $expectedExe = Join-Path $expectedDir $app.Exe
-          if (-not (Test-Path $expectedExe)) {
-            $debugRoot = Join-Path $dir 'bin\x64\Debug'
-            $found = Get-ChildItem $debugRoot -Recurse -Filter $app.Exe -ErrorAction SilentlyContinue |
-              Where-Object { $_.FullName -notmatch '\\ref\\' } |
-              Select-Object -First 1
-            if ($found) {
-              Write-Host "Copying debug output from $($found.DirectoryName) to $expectedDir"
-              New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
-              Copy-Item (Join-Path $found.DirectoryName '*') $expectedDir -Recurse -Force
-            }
-          }
-        }
-        $expected = @(
-          'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-          'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-          'RemoteBlazorWebViewTutorial.WinFormsApp\bin\x64\Debug\net10.0-windows\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-          'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe',
-          'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe',
-          'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net10.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe',
-          'RemoteBlazorWebViewTutorial\bin\publish\RemoteBlazorWebViewTutorial.exe',
-          'RemoteBlazorWebViewTutorial\bin\publishEmbedded\RemoteBlazorWebViewTutorial.exe',
-          'RemoteBlazorWebViewTutorial\bin\x64\Debug\net10.0-windows\RemoteBlazorWebViewTutorial.exe'
-        )
-        $missing = @()
-        foreach ($relative in $expected) {
-          $path = Join-Path $dest $relative
-          if (Test-Path $path) {
-            Write-Host "ok $path"
-          } else {
-            Write-Host "MISSING $path"
-            $leaf = Split-Path $relative -Leaf
-            $root = Join-Path $dest (Split-Path (Split-Path $relative))
-            Get-ChildItem $root -Recurse -Filter $leaf -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "found $($_.FullName)" }
-            $missing += $path
-          }
-        }
-        if ($missing.Count -gt 0) { throw "Tutorial outputs the tests look for were not produced." }
-
-    - name: Install Playwright browsers
-      if: inputs.publish == 'true'
-      shell: pwsh
-      run: |
-        $script = Get-ChildItem -Path test/FileSyncServer.Tests/bin -Recurse -Filter playwright.ps1 | Select-Object -First 1
-        if (-not $script) { throw 'playwright.ps1 was not produced by the FileSyncServer.Tests build' }
-        & $script.FullName install

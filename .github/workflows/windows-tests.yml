@@ -6,7 +6,7 @@
 # The old single job took about 42 minutes, 31 of them in one serial
 # FileSyncServer desktop step. The work is now split across parallel jobs on
 # separate runners, each of which builds the same tree in the same layout
-# (.github/actions/windows-test-setup):
+# (.github/actions/windows-test-setup, then windows-test-publish):
 #
 # - unit: the bundle's npm tests, the native toolchain helper tests, the seven
 #   module-serving / source generator / remote component / lifecycle / ticket
@@ -86,10 +86,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build
+        id: build
         uses: ./.github/actions/windows-test-setup
         with:
           js-tests: "true"
-          publish: "true"
 
       - name: Test native toolchain helpers
         run: |
@@ -120,11 +120,16 @@ jobs:
           }
           if ($failed) { exit 1 }
 
+      - name: Publish the relay and install Playwright
+        id: publish
+        if: always() && steps.build.outcome == 'success'
+        uses: ./.github/actions/windows-test-publish
+
       # Client.exe is copied into the test output by the FileSyncServer.Tests
       # build. These classes drive that client and the
       # publishNoAuth server, or only check the JS bundle size.
       - name: Test FileSyncServer headless
-        if: always()
+        if: always() && steps.publish.outcome == 'success'
         run: |
           $props = $env:TEST_PROPS.Split(' ')
           $filter = ($env:HEADLESS_CLASSES.Split(' ') | ForEach-Object { "FullyQualifiedName~$_" }) -join '|'
@@ -177,9 +182,30 @@ jobs:
 
       - name: Build
         uses: ./.github/actions/windows-test-setup
+
+      - name: Publish the relay and tutorial, install Playwright
+        uses: ./.github/actions/windows-test-publish
         with:
-          publish: "true"
           tutorial: "true"
+
+      # Each shard starts on a fresh runner, so its first test used to be the
+      # runner's first WebView2 and first Edge start. Those cold starts took
+      # longer than the tests allow (run 44794534176: the Photino tutorial
+      # crashed in NavigateToString on the first ReadyToConnect, and
+      # TestConnectedEvent's browser missed its wait). The old single job
+      # always had earlier tests warm both. This starts the Photino tutorial
+      # in local mode (no relay) and Edge once, then closes them.
+      - name: Warm up WebView2 and Edge
+        run: |
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+          $dir = Join-Path $dest 'RemoteBlazorWebViewTutorial\bin\x64\Debug\net10.0-windows'
+          $app = Start-Process -FilePath (Join-Path $dir 'RemoteBlazorWebViewTutorial.exe') -WorkingDirectory $dir -PassThru
+          $edge = Start-Process -FilePath 'msedge.exe' -ArgumentList '--no-first-run', '--no-default-browser-check', 'about:blank' -PassThru
+          Start-Sleep -Seconds 20
+          Write-Host "Tutorial running: $(-not $app.HasExited). Edge running: $(-not $edge.HasExited)."
+          foreach ($name in 'RemoteBlazorWebViewTutorial', 'msedge', 'msedgewebview2') {
+            Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          }
 
       # Full desktop and tutorial gate. Do not add Category!=Slow here; that filter is only for local and on-demand fast runs.
       # StartProcess gives up after 30s when a hosted session never creates a
