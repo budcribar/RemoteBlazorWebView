@@ -206,31 +206,34 @@ jobs:
           tutorial: "true"
 
       # Each shard starts on a fresh runner, so its first test used to be the
-      # runner's first Edge start and the first start of each Photino
-      # tutorial build (WebView2 creates that build's profile on its first
-      # start, which is slow). In the old single job, earlier tests always
-      # did both first. Without that, the Photino tutorial crashed in
-      # NavigateToString on ReadyToConnect (0xC0000005: WebView2 not ready
-      # yet; runs 44794534176 and 44798662282) and TestConnectedEvent's Edge
-      # missed its wait. This starts the three Photino builds the tests use
-      # in local mode (no relay) and Edge once, then closes them.
-      - name: Warm up WebView2 and Edge
+      # runner's first Edge start and the first start of a tutorial build
+      # (WebView2 creates each build's profile on its first start, which is
+      # slow). In the old single job, earlier tests always did both first.
+      # Without that, the Photino tutorial crashed in NavigateToString on
+      # ReadyToConnect (0xC0000005: WebView2 not ready yet), the first
+      # TestServerWpf test read about half its files, and TestConnectedEvent's
+      # Edge missed its wait (runs 44794534176, 44796565291, 44798662282).
+      # This starts the nine tutorial builds the tests use in local mode (no
+      # relay) and Edge once, then closes them.
+      - name: Warm up the tutorial builds and Edge
         run: |
           $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
-          $root = Join-Path $dest 'RemoteBlazorWebViewTutorial\bin'
-          $dirs = @(
-            (Join-Path $root 'publish'),
-            (Join-Path $root 'publishEmbedded'),
-            (Join-Path $root 'x64\Debug\net10.0-windows')
+          $apps = @(
+            @{ Dir = 'RemoteBlazorWebViewTutorial'; Exe = 'RemoteBlazorWebViewTutorial.exe'; DebugTfm = 'net10.0-windows' },
+            @{ Dir = 'RemoteBlazorWebViewTutorial.WinFormsApp'; Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'; DebugTfm = 'net10.0-windows' },
+            @{ Dir = 'RemoteBlazorWebViewTutorial.WpfApp'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'; DebugTfm = 'net10.0-windows10.0.17763.0' }
           )
-          $apps = foreach ($dir in $dirs) {
-            Start-Process -FilePath (Join-Path $dir 'RemoteBlazorWebViewTutorial.exe') -WorkingDirectory $dir -PassThru
+          $started = foreach ($app in $apps) {
+            $bin = Join-Path $dest "$($app.Dir)\bin"
+            foreach ($dir in (Join-Path $bin 'publish'), (Join-Path $bin 'publishEmbedded'), (Join-Path $bin "x64\Debug\$($app.DebugTfm)")) {
+              Start-Process -FilePath (Join-Path $dir $app.Exe) -WorkingDirectory $dir -PassThru
+            }
           }
           $edge = Start-Process -FilePath 'msedge.exe' -ArgumentList '--no-first-run', '--no-default-browser-check', 'about:blank' -PassThru
-          Start-Sleep -Seconds 25
-          Write-Host "Photino builds still running after 25s: $(@($apps | Where-Object { -not $_.HasExited }).Count) of $($dirs.Count)"
+          Start-Sleep -Seconds 30
+          Write-Host "Tutorial builds still running after 30s: $(@($started | Where-Object { -not $_.HasExited }).Count) of $(@($started).Count)"
           Write-Host "Edge running: $(-not $edge.HasExited)"
-          foreach ($name in 'RemoteBlazorWebViewTutorial', 'msedge', 'msedgewebview2') {
+          foreach ($name in 'RemoteBlazorWebViewTutorial', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial.WpfApp', 'msedge', 'msedgewebview2') {
             Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           }
           # Let the killed WebView2 processes release their profile folders.
