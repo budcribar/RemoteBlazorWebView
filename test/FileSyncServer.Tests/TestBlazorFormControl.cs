@@ -270,10 +270,12 @@ namespace FileSyncServer.Tests
                 webView.HostPage = @"wwwroot\index.html";
             });
 
-            // 10s is only for the browser to connect. The 3s pause used to run
-            // inside the handler before the signal, so a slow launch failed the
-            // wait even after Connected had fired.
-            await Task.WhenAny(connected.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+            // This wait is only for the browser to connect. The 3s pause used to
+            // run inside the handler before the signal, so a slow launch failed
+            // the wait even after Connected had fired. 30s, as in TestJsDownload:
+            // on a fresh runner this can be the first browser launch, and a cold
+            // Edge start took longer than the old 10s (run 44794534176).
+            await Task.WhenAny(connected.Task, Task.Delay(TimeSpan.FromSeconds(30)));
             Assert.True(connected.Task.IsCompletedSuccessfully);
             await Task.Delay(3000);
         }

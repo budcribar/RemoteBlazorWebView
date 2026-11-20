@@ -46,6 +46,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch cancels the run it supersedes. Manual
+# runs get a group of their own so a later one never cancels them.
+concurrency:
+  group: ${{ github.event_name == 'push' && format('server-branch-ci-push-{0}', github.ref) || format('server-branch-ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
