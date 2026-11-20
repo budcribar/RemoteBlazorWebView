@@ -46,6 +46,7 @@ message AgentHello {
   string cached_app_version = 7;  // empty when no app is cached
   ConsentMode consent_ceiling = 8;
   Lifetime lifetime = 9;
+  google.protobuf.Timestamp boot_time = 10;  // when Windows last started (UTC); unset on older agents
 }
 
 message Heartbeat {
@@ -133,6 +134,7 @@ message AgentInfo {
   string session_id = 12;
   string ip_address = 13;
   string group = 14;         // group slug owning this agent, empty for unscoped agents
+  google.protobuf.Timestamp boot_time = 15;  // from AgentHello; unset when the agent did not report it
 }
 
 message AgentList {

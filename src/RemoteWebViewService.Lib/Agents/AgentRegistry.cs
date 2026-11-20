@@ -171,6 +171,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.CachedAppVersion = hello.CachedAppVersion;
                 info.ConsentCeiling = hello.ConsentCeiling;
                 info.Lifetime = hello.Lifetime;
+                info.BootTime = hello.BootTime?.Clone();
 
                 if (latestRelease != null)
                     entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
