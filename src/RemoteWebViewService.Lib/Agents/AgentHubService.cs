@@ -93,7 +93,7 @@ namespace PeakSWC.RemoteWebView.Agents
             {
                 if (keysDecide && options.RefusesEveryKey && Interlocked.Exchange(ref warnedNoKeys, 1) == 0)
                     AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: every agent is refused. Set it to the keys your agents were installed with.");
-                AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted");
+                AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted ({decision.DenialReason ?? "no reason given"})");
                 throw new RpcException(new Status(StatusCode.PermissionDenied, decision.DenialReason ?? "The enrollment key was not accepted"));
             }
 
