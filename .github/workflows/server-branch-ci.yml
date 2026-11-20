@@ -46,6 +46,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
