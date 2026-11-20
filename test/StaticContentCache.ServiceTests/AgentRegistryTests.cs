@@ -75,6 +75,26 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public void Boot_time_from_the_hello_is_listed_and_a_reconnect_after_reboot_replaces_it()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var firstBoot = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 11, 19, 8, 0, 0, TimeSpan.Zero));
+        var hello = Hello("m-1");
+        hello.BootTime = firstBoot;
+        registry.Register(hello, "10.0.0.1", null);
+        Assert.Equal(firstBoot, registry.GetAgent("m-1")!.BootTime);
+
+        var rebooted = Hello("m-1");
+        rebooted.BootTime = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 11, 19, 17, 0, 0, TimeSpan.Zero));
+        registry.Register(rebooted, "10.0.0.1", null);
+        Assert.Equal(rebooted.BootTime, registry.GetAgent("m-1")!.BootTime);
+
+        // An older agent sends none: nothing is made up.
+        registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.Null(registry.GetAgent("m-1")!.BootTime);
+    }
+
+    [Fact]
     public void StartSession_with_a_wrong_admin_key_is_denied_before_anything_else()
     {
         var registry = new AgentRegistry(new ManualTime());
