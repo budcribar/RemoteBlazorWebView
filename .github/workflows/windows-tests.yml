@@ -206,23 +206,35 @@ jobs:
           tutorial: "true"
 
       # Each shard starts on a fresh runner, so its first test used to be the
-      # runner's first WebView2 and first Edge start. Those cold starts took
-      # longer than the tests allow (run 44794534176: the Photino tutorial
-      # crashed in NavigateToString on the first ReadyToConnect, and
-      # TestConnectedEvent's browser missed its wait). The old single job
-      # always had earlier tests warm both. This starts the Photino tutorial
+      # runner's first Edge start and the first start of each Photino
+      # tutorial build (WebView2 creates that build's profile on its first
+      # start, which is slow). In the old single job, earlier tests always
+      # did both first. Without that, the Photino tutorial crashed in
+      # NavigateToString on ReadyToConnect (0xC0000005: WebView2 not ready
+      # yet; runs 44794534176 and 44798662282) and TestConnectedEvent's Edge
+      # missed its wait. This starts the three Photino builds the tests use
       # in local mode (no relay) and Edge once, then closes them.
       - name: Warm up WebView2 and Edge
         run: |
           $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
-          $dir = Join-Path $dest 'RemoteBlazorWebViewTutorial\bin\x64\Debug\net10.0-windows'
-          $app = Start-Process -FilePath (Join-Path $dir 'RemoteBlazorWebViewTutorial.exe') -WorkingDirectory $dir -PassThru
+          $root = Join-Path $dest 'RemoteBlazorWebViewTutorial\bin'
+          $dirs = @(
+            (Join-Path $root 'publish'),
+            (Join-Path $root 'publishEmbedded'),
+            (Join-Path $root 'x64\Debug\net10.0-windows')
+          )
+          $apps = foreach ($dir in $dirs) {
+            Start-Process -FilePath (Join-Path $dir 'RemoteBlazorWebViewTutorial.exe') -WorkingDirectory $dir -PassThru
+          }
           $edge = Start-Process -FilePath 'msedge.exe' -ArgumentList '--no-first-run', '--no-default-browser-check', 'about:blank' -PassThru
-          Start-Sleep -Seconds 20
-          Write-Host "Tutorial running: $(-not $app.HasExited). Edge running: $(-not $edge.HasExited)."
+          Start-Sleep -Seconds 25
+          Write-Host "Photino builds still running after 25s: $(@($apps | Where-Object { -not $_.HasExited }).Count) of $($dirs.Count)"
+          Write-Host "Edge running: $(-not $edge.HasExited)"
           foreach ($name in 'RemoteBlazorWebViewTutorial', 'msedge', 'msedgewebview2') {
             Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           }
+          # Let the killed WebView2 processes release their profile folders.
+          Start-Sleep -Seconds 3
 
       # Full desktop and tutorial gate. Do not add Category!=Slow here; that filter is only for local and on-demand fast runs.
       # StartProcess gives up after 30s when a hosted session never creates a
