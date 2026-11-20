@@ -61,10 +61,13 @@ permissions:
   contents: read
   actions: write
 
-# github.workflow is the caller's name under workflow_call, so a release run
-# never shares a group with a push run. Only pushes cancel in progress.
+# Pushes to a branch share one group, so a newer push cancels the older run.
+# Every other run (manual dispatch, or Release packages through
+# workflow_call, where run_id is the release run's) gets a group of its own:
+# GitHub cancels a queued run in a group when a newer one queues, even
+# without cancel-in-progress, and a release must never lose its tests.
 concurrency:
-  group: windows-tests-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.event_name == 'push' && format('windows-tests-push-{0}', github.ref) || format('windows-tests-run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 env:
