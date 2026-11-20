@@ -97,6 +97,23 @@ jobs:
           pwsh -NoProfile -File test/RunTests.ToolchainTests.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The EndToEnd suite's first test is the runner's first Chrome start.
+      # On the win25 20261116 image that start answered DevTools after the
+      # suite's 15s wait in both branch runs (44794534176, 44796565291) while
+      # every later start passed. Start Chrome once so binaries are loaded.
+      - name: Warm up Chrome
+        run: |
+          $chrome = @(
+            'C:\Program Files\Google\Chrome\Application\chrome.exe',
+            'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $chrome) { Write-Host 'Chrome is not installed; nothing to warm up.'; exit 0 }
+          $profile = Join-Path $env:RUNNER_TEMP 'chrome-warmup'
+          $p = Start-Process -FilePath $chrome -ArgumentList '--headless=new', '--no-first-run', '--no-default-browser-check', "--user-data-dir=$profile", 'about:blank' -PassThru
+          Start-Sleep -Seconds 15
+          Write-Host "Chrome running after 15s: $(-not $p.HasExited)"
+          Get-Process -Name chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
       - name: Test module serving, source generators, and remote components
         run: |
           # All suites always run. PowerShell otherwise keeps only the last native exit code,
