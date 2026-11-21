@@ -772,6 +772,380 @@ public class AgentRegistryTests
         Assert.Equal("m-1", Assert.Single(watch.ResponseStream.Current.Agents).MachineId);
     }
 
+    // ---------------------------------------------------------------- UpdateRpcd
+
+    [Fact]
+    public async Task UpdateRpcd_forwards_the_command_and_returns_the_agents_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var task = registry.UpdateRpcdAsync("m-1", " stable ", " 1.2.0-ci.996.1 ", approved: false, approvedBy: " owner ", true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcd, command!.BodyCase);
+        Assert.Equal("stable", command.UpdateRpcd.Channel);
+        Assert.Equal("1.2.0-ci.996.1", command.UpdateRpcd.Version);
+        Assert.False(command.UpdateRpcd.Approved);
+        Assert.Equal("owner", command.UpdateRpcd.ApprovedBy);
+        Assert.False(string.IsNullOrEmpty(command.UpdateRpcd.RequestId));
+
+        // The fleet agent mints its own request id and does not echo the one on the command.
+        var checking = new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "checking",
+            Detail = "Checking the official GitHub release...",
+            Channel = "stable",
+        };
+        Assert.Equal("checking", registry.OnUpdateProgress(connection, checking)!.Stage);
+
+        var first = await task;
+        Assert.Equal("agent-req", first.Progress!.RequestId);
+        Assert.Equal("checking", first.Progress.Stage);
+        Assert.Equal("PC-m-1", first.MachineName);
+
+        var succeeded = new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.996.1",
+            Channel = "stable",
+            Detail = "RPCD 1.2.0-ci.996.1 is installed (was 1.2.0).",
+        };
+        registry.OnUpdateProgress(connection, succeeded);
+        var latest = registry.GetLatestUpdate("m-1");
+        Assert.Equal("1.2.0", latest!.OldVersion);
+        Assert.Equal("1.2.0-ci.996.1", latest.NewVersion);
+        Assert.True(latest.Terminal);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_refuses_a_bad_key_an_offline_computer_and_another_shop_without_sending()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+
+        var denied = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, adminKeyConfigured: true, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(denied.Denied);
+        Assert.Equal(ConsentPolicy.AdminKeyRequired, denied.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var otherShop = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, "shop-b", CancellationToken.None);
+        Assert.True(otherShop.NotFound);
+        Assert.Equal(AgentRegistry.UnknownAgentError, otherShop.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        registry.Disconnect(connection);
+        var offline = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, "shop-a", CancellationToken.None);
+        Assert.True(offline.Offline);
+        Assert.Equal(AgentRegistry.OfflineError, offline.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var missing = await registry.UpdateRpcdAsync("nope", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(missing.NotFound);
+        Assert.Equal(AgentRegistry.UnknownAgentError, missing.Error);
+
+        var none = await registry.UpdateRpcdAsync("", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.Equal(AgentRegistry.NoAgentError, none.Error);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_reports_an_agent_that_never_answers_as_too_old()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromMilliseconds(80) };
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var outcome = await registry.UpdateRpcdAsync("m-1", "prerelease", "", approved: true, approvedBy: null, true, true, null, CancellationToken.None);
+
+        Assert.True(outcome.TooOld);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, outcome.Error);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcd, command!.BodyCase);
+        Assert.True(command.UpdateRpcd.Approved);
+        Assert.Equal("", command.UpdateRpcd.ApprovedBy);
+        Assert.Null(registry.GetLatestUpdate("m-1"));
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_does_not_start_a_second_update_while_the_first_is_unanswered()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromSeconds(2) };
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var first = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+
+        var second = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.Equal("refused", second.Progress!.Stage);
+        Assert.Equal(AgentRegistry.UpdateInProgressError, second.Progress.Error);
+        Assert.True(second.Progress.Terminal);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable" });
+        Assert.Equal("checking", (await first).Progress!.Stage);
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_replays_the_latest_then_streams_until_the_landed_version()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, "owner", true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable" });
+        await started;
+
+        var watch = registry.OpenUpdateWatch("m-1", "agent-req", true, true, null);
+        Assert.NotNull(watch.Subscription);
+        Assert.True(watch.Subscription!.Replayed);
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("agent-req", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "downloading", Percent = 40, Channel = "stable" });
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+            Channel = "stable",
+        });
+
+        var seen = await ReadAll(watch.Subscription.Reader);
+        Assert.Equal(new[] { "checking", "downloading", "succeeded" }, seen.Select(p => p.Stage));
+        Assert.Equal("1.2.0", seen[^1].OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", seen[^1].NewVersion);
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_with_an_empty_request_follows_the_latest_and_asks_for_it()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var started = registry.UpdateRpcdAsync("m-1", "prerelease", "", true, null, true, true, "shop-a", CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "installing", Channel = "prerelease" });
+        await started;
+
+        var hidden = registry.OpenUpdateWatch("m-1", "", true, true, "shop-b");
+        Assert.True(hidden.NotFound);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var watch = registry.OpenUpdateWatch("m-1", "", true, true, "shop-a");
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal("", status!.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+        var seen = await ReadAll(watch.Subscription!.Reader);
+        Assert.Equal(new[] { "installing", "succeeded" }, seen.Select(p => p.Stage));
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_asks_the_agent_when_the_relay_has_no_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var watch = registry.OpenUpdateWatch("m-1", "", true, true, null);
+        Assert.False(watch.Subscription!.Replayed);
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+
+        var seen = Assert.Single(await ReadAll(watch.Subscription.Reader));
+        Assert.Equal("succeeded", seen.Stage);
+        Assert.Equal("1.2.0", seen.OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", seen.NewVersion);
+    }
+
+    [Fact]
+    public async Task An_update_survives_disconnect_and_the_reconnect_asks_for_the_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "installing", NewVersion = "1.2.0-ci.1000.1" });
+        await started;
+
+        registry.Disconnect(connection);
+        Assert.Equal("installing", registry.GetLatestUpdate("m-1")!.Stage);
+
+        var again = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.True(again.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("agent-req", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(again, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+        Assert.Equal("succeeded", registry.GetLatestUpdate("m-1")!.Stage);
+    }
+
+    [Fact]
+    public async Task An_agent_cannot_report_another_agents_update()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var other = registry.Register(Hello("m-2"), "10.0.0.2", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking" });
+        await started;
+
+        Assert.Null(registry.OnUpdateProgress(other, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "succeeded", Terminal = true, NewVersion = "9.9.9" }));
+        Assert.Equal("checking", registry.GetLatestUpdate("m-1")!.Stage);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_and_WatchUpdateRpcd_use_the_admin_key_shop_scope_and_ticket_decision()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromMilliseconds(80) };
+        registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var options = AgentOptions.Create(null, null, "admin-secret");
+        var open = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, options);
+        var context = new CallContext(CancellationToken.None);
+
+        var missingKey = await Assert.ThrowsAsync<RpcException>(() => open.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.PermissionDenied, missingKey.StatusCode);
+        Assert.Equal(ConsentPolicy.AdminKeyRequired, missingKey.Status.Detail);
+
+        var denied = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: false, GroupScope: null, UnattendedAuthorized: false, DenialReason: "Sign in to continue."));
+        var signedOut = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, options, denied);
+        var ticket = await Assert.ThrowsAsync<RpcException>(() => signedOut.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.PermissionDenied, ticket.StatusCode);
+        Assert.Equal("Sign in to continue.", ticket.Status.Detail);
+        var watchTicket = await Assert.ThrowsAsync<RpcException>(() => signedOut.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-1" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal("Sign in to continue.", watchTicket.Status.Detail);
+
+        var shop = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: true, GroupScope: "shop-a", UnattendedAuthorized: true));
+        var scoped = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, AgentOptions.Create(null, null), shop);
+        // m-1 is in shop-a and online, but it never answers the command, so the agent is too old to install updates.
+        var tooOld = await Assert.ThrowsAsync<RpcException>(() => scoped.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.FailedPrecondition, tooOld.StatusCode);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, tooOld.Status.Detail);
+        var watchOld = await Assert.ThrowsAsync<RpcException>(() => scoped.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-1" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal(StatusCode.FailedPrecondition, watchOld.StatusCode);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, watchOld.Status.Detail);
+
+        registry.Register(Hello("m-2"), "10.0.0.2", null, "shop-b");
+        var hidden = await Assert.ThrowsAsync<RpcException>(() => scoped.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-2", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.NotFound, hidden.StatusCode);
+        Assert.Equal(AgentRegistry.UnknownAgentError, hidden.Status.Detail);
+
+        var offline = await Assert.ThrowsAsync<RpcException>(() => scoped.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-2" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal(StatusCode.NotFound, offline.StatusCode);
+    }
+
+    [Fact]
+    public async Task Connect_UpdateRpcd_and_WatchUpdateRpcd_round_trip_over_grpc()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
+        var options = new CallOptions(cancellationToken: ct);
+        var admin = new CallOptions(new Metadata { { "x-admin-key", "admin-secret" } }, cancellationToken: ct);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create("key-1", ServerUrl, "admin-secret"));
+        var invoker = relay.Invoker;
+
+        using var connect = invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
+        await connect.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", "key-1") });
+        await WaitFor(async () => (await invoker.AsyncUnaryCall(GetAgentsMethod, null, options, new Empty())).Agents.Any(a => a.MachineId == "m-1" && a.Online), ct);
+
+        var updateTask = invoker.AsyncUnaryCall(UpdateRpcdMethod, null, admin, new UpdateRpcdAdminRequest
+        {
+            MachineId = "m-1",
+            Channel = "stable",
+            Version = "1.2.0-ci.1000.1",
+            Approved = true,
+            ApprovedBy = "owner",
+        });
+        Assert.True(await connect.ResponseStream.MoveNext(ct));
+        var command = connect.ResponseStream.Current.UpdateRpcd;
+        Assert.NotNull(command);
+        Assert.Equal("stable", command.Channel);
+        Assert.Equal("1.2.0-ci.1000.1", command.Version);
+        Assert.True(command.Approved);
+        Assert.Equal("owner", command.ApprovedBy);
+
+        await connect.RequestStream.WriteAsync(new AgentMessage
+        {
+            UpdateRpcd = new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable", Detail = "Checking the official GitHub release..." },
+        });
+        var first = await updateTask;
+        Assert.Equal("checking", first.Stage);
+        Assert.Equal("agent-req", first.RequestId);
+
+        using var watch = invoker.AsyncServerStreamingCall(WatchUpdateRpcdMethod, null, admin, new UpdateRpcdWatchRequest { MachineId = "m-1", RequestId = "agent-req" });
+        Assert.True(await watch.ResponseStream.MoveNext(ct));
+        Assert.Equal("checking", watch.ResponseStream.Current.Stage);
+
+        Assert.True(await connect.ResponseStream.MoveNext(ct));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, connect.ResponseStream.Current.BodyCase);
+        Assert.Equal("agent-req", connect.ResponseStream.Current.UpdateRpcdStatus.RequestId);
+
+        await connect.RequestStream.WriteAsync(new AgentMessage
+        {
+            UpdateRpcd = new UpdateRpcdProgress
+            {
+                RequestId = "agent-req",
+                Stage = "succeeded",
+                Terminal = true,
+                OldVersion = "1.2.0",
+                NewVersion = "1.2.0-ci.1000.1",
+                Channel = "stable",
+            },
+        });
+        Assert.True(await watch.ResponseStream.MoveNext(ct));
+        Assert.Equal("succeeded", watch.ResponseStream.Current.Stage);
+        Assert.Equal("1.2.0", watch.ResponseStream.Current.OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", watch.ResponseStream.Current.NewVersion);
+        Assert.False(await watch.ResponseStream.MoveNext(ct));
+
+        var wrong = new CallOptions(new Metadata { { "x-admin-key", "nope" } }, cancellationToken: ct);
+        var denied = await Assert.ThrowsAsync<RpcException>(async () => await invoker.AsyncUnaryCall(UpdateRpcdMethod, null, wrong, new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }));
+        Assert.Equal(StatusCode.PermissionDenied, denied.StatusCode);
+    }
+
+    private static async Task<List<UpdateRpcdProgress>> ReadAll(ChannelReader<UpdateRpcdProgress> reader)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var list = new List<UpdateRpcdProgress>();
+        await foreach (var item in reader.ReadAllAsync(cts.Token))
+            list.Add(item);
+        return list;
+    }
+
+    private sealed class ListWriter<T> : IServerStreamWriter<T>
+    {
+        public WriteOptions? WriteOptions { get; set; }
+        public Task WriteAsync(T message) => Task.CompletedTask;
+        public Task WriteAsync(T message, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static AgentHello Hello(string machineId, string key = "", ConsentMode ceiling = ConsentMode.ConsentAlwaysAsk) => new()
@@ -817,6 +1191,10 @@ public class AgentRegistryTests
         new(MethodType.Unary, "rwvagent.AgentAdmin", "EndSession", Proto(EndSessionRequest.Parser), Proto(EndSessionResponse.Parser));
     private static readonly Method<WatchLaunchRequest, LaunchProgress> WatchLaunchMethod =
         new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchLaunch", Proto(WatchLaunchRequest.Parser), Proto(LaunchProgress.Parser));
+    private static readonly Method<UpdateRpcdAdminRequest, UpdateRpcdProgress> UpdateRpcdMethod =
+        new(MethodType.Unary, "rwvagent.AgentAdmin", "UpdateRpcd", Proto(UpdateRpcdAdminRequest.Parser), Proto(UpdateRpcdProgress.Parser));
+    private static readonly Method<UpdateRpcdWatchRequest, UpdateRpcdProgress> WatchUpdateRpcdMethod =
+        new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchUpdateRpcd", Proto(UpdateRpcdWatchRequest.Parser), Proto(UpdateRpcdProgress.Parser));
 
     private sealed class Relay : IAsyncDisposable
     {

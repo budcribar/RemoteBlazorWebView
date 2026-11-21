@@ -51,6 +51,49 @@ namespace PeakSWC.RemoteWebView.Agents
         public void Dispose() => onDispose();
     }
 
+    /// <summary>The outcome of <see cref="AgentRegistry.UpdateRpcdAsync"/>.</summary>
+    /// <param name="Progress">The agent's first snapshot, when the command was forwarded and answered.</param>
+    /// <param name="Denied">The admin key was missing or wrong; the service turns this into PermissionDenied.</param>
+    /// <param name="Offline">The computer is registered but its agent stream is down.</param>
+    /// <param name="NotFound">No such computer for this caller.</param>
+    /// <param name="TooOld">The agent never answered. Agents built before update_rpcd drop the command.</param>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
+    public sealed record UpdateRpcdOutcome(
+        UpdateRpcdProgress? Progress,
+        string MachineName = "",
+        bool Denied = false,
+        bool Offline = false,
+        bool NotFound = false,
+        bool TooOld = false,
+        string? Error = null);
+
+    /// <summary>What <see cref="AgentRegistry.OpenUpdateWatch"/> decided.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
+    public sealed record UpdateWatch(
+        UpdateSubscription? Subscription,
+        bool Denied = false,
+        bool Offline = false,
+        bool NotFound = false,
+        string? Error = null);
+
+    /// <summary>Replays the latest RPCD update snapshot, then live ones. Ends after a terminal stage.</summary>
+    [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
+    public sealed class UpdateSubscription : IDisposable
+    {
+        private readonly Action onDispose;
+        internal UpdateSubscription(ChannelReader<UpdateRpcdProgress> reader, bool replayed, Action onDispose)
+        {
+            Reader = reader;
+            Replayed = replayed;
+            this.onDispose = onDispose;
+        }
+
+        public ChannelReader<UpdateRpcdProgress> Reader { get; }
+        /// <summary>True when <see cref="Reader"/> already holds a snapshot. An empty watch is waiting for the agent to answer.</summary>
+        public bool Replayed { get; }
+        public void Dispose() => onDispose();
+    }
+
     /// <summary>
     /// In-memory registry of agents and the launches started on them.
     /// All state is guarded by one lock: agents report every 30 s and launches are rare, so contention is negligible.
@@ -70,10 +113,20 @@ namespace PeakSWC.RemoteWebView.Agents
         public const string NoAgentError = "No computer was chosen";
         public const string InProgressError = "A start is already in progress for that computer";
         public const string DisconnectedDetail = "The computer disconnected";
+        /// <summary>The same words the fleet agent uses when it has no update handler. An older agent never answers at all.</summary>
+        public const string TooOldForUpdateError = "This agent cannot install RPCD updates.";
+        public const string UpdateInProgressError = "An RPCD update is already in progress.";
+
+        /// <summary>
+        /// How long <see cref="UpdateRpcdAsync"/> waits for the first snapshot. A current agent answers before it downloads
+        /// (its lock wait is a few seconds). An older agent drops the command and never answers.
+        /// </summary>
+        public TimeSpan UpdateAckTimeout { get; set; } = TimeSpan.FromSeconds(12);
 
         private readonly object gate = new();
         private readonly Dictionary<string, AgentEntry> agents = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, LaunchEntry> launches = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, UpdateEntry> updates = new(StringComparer.OrdinalIgnoreCase);
         private readonly TimeProvider time;
         private TaskCompletionSource changed = NewSignal();
         private long nextConnectionId;
@@ -96,6 +149,15 @@ namespace PeakSWC.RemoteWebView.Agents
         // After these nothing more is expected for the request. READY is still followed by ENDED when the app exits.
         private static bool IsFinal(LaunchStage stage) =>
             stage is LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
+
+        /// <summary>Terminal stages from the agent, plus <see cref="UpdateRpcdProgress.Terminal"/> when the agent set it.</summary>
+        public static bool IsUpdateTerminal(UpdateRpcdProgress? progress)
+        {
+            if (progress == null || string.IsNullOrEmpty(progress.Stage))
+                return false;
+            return progress.Terminal
+                || progress.Stage is "refused" or "already_up_to_date" or "succeeded" or "failed";
+        }
 
         /// <summary>
         /// Caches the latest release versions and pushes a <see cref="ReleaseAvailableCommand"/> to every currently online agent.
@@ -175,6 +237,13 @@ namespace PeakSWC.RemoteWebView.Agents
 
                 if (latestRelease != null)
                     entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
+
+                // Setup replaces the service. The new process reads the snapshot from disk and answers a status poll,
+                // including the version that landed. The command stays queued if this stream ends before it is sent.
+                if (!string.IsNullOrEmpty(entry.LatestUpdateRequestId)
+                    && updates.TryGetValue(entry.LatestUpdateRequestId, out var openUpdate)
+                    && !IsUpdateTerminal(openUpdate.Latest))
+                    QueueUpdateStatusNoLock(entry, openUpdate.RequestId);
 
                 connection = new AgentConnection(entry.MachineId, entry.ConnectionId, entry.Commands.Reader, entry.ConnectionCts.Token, previous != null, isNew);
                 NotifyChangedNoLock();
@@ -299,6 +368,209 @@ namespace PeakSWC.RemoteWebView.Agents
 
                 NotifyChangedNoLock();
                 return stored;
+            }
+        }
+
+        /// <summary>
+        /// Forwards an RPCD update to that computer's agent and waits for its first snapshot.
+        /// <paramref name="approved"/> is forwarded as given: the relay never turns it on.
+        /// The fleet agent mints its own request id; the snapshot it sends back is the one returned.
+        /// </summary>
+        public async Task<UpdateRpcdOutcome> UpdateRpcdAsync(
+            string machineId,
+            string? channel,
+            string? version,
+            bool approved,
+            string? approvedBy,
+            bool adminKeyConfigured,
+            bool adminKeyValid,
+            string? groupScope,
+            CancellationToken cancellationToken)
+        {
+            PendingUpdateAck? ack;
+            string machineKey;
+            lock (gate)
+            {
+                var begun = BeginUpdateNoLock(machineId, channel, version, approved, approvedBy, adminKeyConfigured, adminKeyValid, groupScope);
+                if (begun.Ack == null)
+                    return begun.Outcome!;
+                ack = begun.Ack;
+                machineKey = begun.MachineId;
+            }
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(UpdateAckTimeout);
+            try
+            {
+                var progress = await ack.Done.Task.WaitAsync(timeout.Token).ConfigureAwait(false);
+                return new UpdateRpcdOutcome(progress, ack.MachineName);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                AbandonAck(machineKey, ack);
+                return new UpdateRpcdOutcome(null, ack.MachineName, TooOld: true, Error: TooOldForUpdateError);
+            }
+            catch (OperationCanceledException)
+            {
+                AbandonAck(machineKey, ack);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Opens a watch of one update, or of the latest when <paramref name="requestId"/> is empty.
+        /// Replays the stored snapshot first and asks the agent for the copy it has now (empty request id means latest).
+        /// </summary>
+        public UpdateWatch OpenUpdateWatch(string machineId, string? requestId, bool adminKeyConfigured, bool adminKeyValid, string? groupScope)
+        {
+            lock (gate)
+            {
+                var decision = ConsentPolicy.Decide(false, ConsentMode.ConsentAlwaysAsk, adminKeyConfigured, adminKeyValid);
+                if (!decision.Allowed)
+                    return new UpdateWatch(null, Denied: true, Error: decision.Error ?? ConsentPolicy.AdminKeyRequired);
+
+                if (!TryVisibleAgentNoLock(machineId, groupScope, out var entry, out var missing))
+                    return new UpdateWatch(null, NotFound: true, Error: missing);
+
+                bool specific = !string.IsNullOrEmpty(requestId);
+                UpdateEntry? update = null;
+                if (specific)
+                {
+                    if (updates.TryGetValue(requestId!, out var found))
+                    {
+                        if (!string.Equals(found.MachineId, entry.MachineId, StringComparison.OrdinalIgnoreCase))
+                            return new UpdateWatch(null, NotFound: true, Error: UnknownAgentError);
+                        update = found;
+                    }
+                }
+                else if (!string.IsNullOrEmpty(entry.LatestUpdateRequestId)
+                    && updates.TryGetValue(entry.LatestUpdateRequestId, out var latest))
+                    update = latest;
+
+                bool replayed = update != null && !string.IsNullOrEmpty(update.Latest.Stage);
+                bool online = entry.Online && entry.ConnectionId != 0;
+                if (!replayed && !online)
+                    return new UpdateWatch(null, Offline: true, Error: OfflineError);
+
+                var channel = Channel.CreateUnbounded<UpdateRpcdProgress>();
+                if (replayed)
+                    channel.Writer.TryWrite(update!.Latest);
+                if (replayed && IsUpdateTerminal(update!.Latest))
+                {
+                    channel.Writer.TryComplete();
+                    return new UpdateWatch(new UpdateSubscription(channel.Reader, replayed: true, () => { }));
+                }
+
+                if (specific)
+                {
+                    update ??= new UpdateEntry(requestId!, entry.MachineId) { Group = entry.Group, Updated = time.GetUtcNow() };
+                    updates[update.RequestId] = update;
+                    update.Subscribers.Add(channel);
+                }
+                else
+                    entry.UpdateWatchers.Add(channel);
+
+                // Ask even when the stream is down: the command waits on the agent and is sent when it reconnects.
+                QueueUpdateStatusNoLock(entry, specific ? requestId! : string.Empty);
+                string watchedId = update?.RequestId ?? string.Empty;
+                return new UpdateWatch(new UpdateSubscription(channel.Reader, replayed, () =>
+                {
+                    lock (gate)
+                    {
+                        if (specific)
+                        {
+                            if (updates.TryGetValue(watchedId, out var current))
+                                current.Subscribers.Remove(channel);
+                        }
+                        else
+                            entry.UpdateWatchers.Remove(channel);
+                    }
+                    channel.Writer.TryComplete();
+                }));
+            }
+        }
+
+        /// <summary>Stores an update snapshot from an agent and fans it out. Returns the stored copy, or null when it was ignored.</summary>
+        public UpdateRpcdProgress? OnUpdateProgress(AgentConnection connection, UpdateRpcdProgress progress)
+        {
+            ArgumentNullException.ThrowIfNull(progress);
+            lock (gate)
+            {
+                if (!TryGetCurrentNoLock(connection, out var entry))
+                    return null;
+
+                entry.Online = true;
+                entry.LastSeen = time.GetUtcNow();
+                var stored = progress.Clone();
+
+                // A status poll with no request id (nothing in progress). It must not replace a real update.
+                if (string.IsNullOrEmpty(stored.RequestId))
+                {
+                    DeliverLatestNoLock(entry, stored);
+                    return stored;
+                }
+
+                if (!updates.TryGetValue(stored.RequestId, out var update))
+                {
+                    update = new UpdateEntry(stored.RequestId, entry.MachineId) { Group = entry.Group };
+                    updates[stored.RequestId] = update;
+                }
+                else if (!string.Equals(update.MachineId, entry.MachineId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (IsUpdateTerminal(update.Latest))
+                    return null;
+
+                bool newerThanLatest = string.IsNullOrEmpty(entry.LatestUpdateRequestId)
+                    || string.Equals(entry.LatestUpdateRequestId, stored.RequestId, StringComparison.OrdinalIgnoreCase)
+                    || !updates.TryGetValue(entry.LatestUpdateRequestId, out var currentLatest)
+                    || IsUpdateTerminal(currentLatest.Latest);
+
+                update.Latest = stored;
+                update.Updated = time.GetUtcNow();
+                if (newerThanLatest)
+                    entry.LatestUpdateRequestId = stored.RequestId;
+
+                foreach (var subscriber in update.Subscribers)
+                    subscriber.Writer.TryWrite(stored);
+                if (newerThanLatest)
+                    DeliverLatestNoLock(entry, stored);
+
+                if (IsUpdateTerminal(stored))
+                {
+                    foreach (var subscriber in update.Subscribers)
+                        subscriber.Writer.TryComplete();
+                    update.Subscribers.Clear();
+                    if (newerThanLatest)
+                        CompleteLatestWatchersNoLock(entry);
+                }
+
+                // The agent generates the request id. The first new, non-idle snapshot is the answer to the command we just sent.
+                var ack = entry.PendingAck;
+                if (ack != null
+                    && !string.Equals(stored.Stage, "idle", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(stored.RequestId, ack.IgnoreRequestId, StringComparison.OrdinalIgnoreCase))
+                {
+                    entry.PendingAck = null;
+                    ack.Done.TrySetResult(stored);
+                }
+
+                return stored;
+            }
+        }
+
+        public UpdateRpcdProgress? GetLatestUpdate(string machineId)
+        {
+            lock (gate)
+            {
+                if (string.IsNullOrWhiteSpace(machineId)
+                    || !agents.TryGetValue(machineId, out var entry)
+                    || string.IsNullOrEmpty(entry.LatestUpdateRequestId)
+                    || !updates.TryGetValue(entry.LatestUpdateRequestId, out var update))
+                    return null;
+                return update.Latest.Clone();
             }
         }
 
@@ -514,6 +786,7 @@ namespace PeakSWC.RemoteWebView.Agents
             {
                 SweepAgentsNoLock(now, wentOffline, forgotten, toCancel);
                 SweepLaunchesNoLock(now);
+                SweepUpdatesNoLock(now);
 
                 if (wentOffline.Count > 0 || forgotten.Count > 0)
                     NotifyChangedNoLock();
@@ -542,6 +815,138 @@ namespace PeakSWC.RemoteWebView.Agents
                     forgotten.Add(Describe(entry));
                 }
             }
+        }
+
+        private void SweepUpdatesNoLock(DateTimeOffset now)
+        {
+            foreach (var update in updates.Values.ToList())
+            {
+                if (now - update.Updated < ForgetLaunchAfter)
+                    continue;
+                foreach (var subscriber in update.Subscribers)
+                    subscriber.Writer.TryComplete();
+                updates.Remove(update.RequestId);
+                if (agents.TryGetValue(update.MachineId, out var entry)
+                    && string.Equals(entry.LatestUpdateRequestId, update.RequestId, StringComparison.OrdinalIgnoreCase))
+                    entry.LatestUpdateRequestId = null;
+            }
+        }
+
+        private BegunUpdate BeginUpdateNoLock(
+            string machineId,
+            string? channel,
+            string? version,
+            bool approved,
+            string? approvedBy,
+            bool adminKeyConfigured,
+            bool adminKeyValid,
+            string? groupScope)
+        {
+            if (!TryVisibleAgentNoLock(machineId, groupScope, out var entry, out var missing))
+            {
+                // The admin key is checked before anything about the computer is revealed.
+                var hidden = ConsentPolicy.Decide(false, ConsentMode.ConsentAlwaysAsk, adminKeyConfigured, adminKeyValid);
+                if (!hidden.Allowed)
+                    return BegunUpdate.Finished(new UpdateRpcdOutcome(null, Denied: true, Error: hidden.Error ?? ConsentPolicy.AdminKeyRequired));
+                return BegunUpdate.Finished(new UpdateRpcdOutcome(null, NotFound: true, Error: missing));
+            }
+
+            var decision = ConsentPolicy.Decide(false, entry.Info.ConsentCeiling, adminKeyConfigured, adminKeyValid);
+            if (!decision.Allowed)
+                return BegunUpdate.Finished(new UpdateRpcdOutcome(null, Denied: true, Error: decision.Error ?? ConsentPolicy.AdminKeyRequired));
+
+            if (!entry.Online || entry.ConnectionId == 0)
+                return BegunUpdate.Finished(new UpdateRpcdOutcome(null, entry.Info.MachineName, Offline: true, Error: OfflineError));
+
+            if (entry.PendingAck != null)
+            {
+                return BegunUpdate.Finished(new UpdateRpcdOutcome(
+                    RefusedUpdate(UpdateInProgressError),
+                    entry.Info.MachineName));
+            }
+
+            var ack = new PendingUpdateAck(entry.Info.MachineName, entry.LatestUpdateRequestId);
+            entry.PendingAck = ack;
+            // approved is copied as the caller sent it. Nothing here sets it true.
+            entry.Commands.Writer.TryWrite(new HubCommand
+            {
+                UpdateRpcd = new UpdateRpcdCommand
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    Channel = channel?.Trim() ?? string.Empty,
+                    Version = version?.Trim() ?? string.Empty,
+                    Approved = approved,
+                    ApprovedBy = approvedBy?.Trim() ?? string.Empty,
+                }
+            });
+            return new BegunUpdate(null, ack, entry.MachineId);
+        }
+
+        private bool TryVisibleAgentNoLock(string machineId, string? groupScope, out AgentEntry entry, out string error)
+        {
+            entry = null!;
+            if (string.IsNullOrWhiteSpace(machineId))
+            {
+                error = NoAgentError;
+                return false;
+            }
+            if (!agents.TryGetValue(machineId, out var found)
+                || (groupScope != null && !string.Equals(found.Group, groupScope, StringComparison.OrdinalIgnoreCase)))
+            {
+                error = UnknownAgentError;
+                return false;
+            }
+            entry = found;
+            error = string.Empty;
+            return true;
+        }
+
+        private void AbandonAck(string machineId, PendingUpdateAck ack)
+        {
+            lock (gate)
+            {
+                if (agents.TryGetValue(machineId, out var entry) && ReferenceEquals(entry.PendingAck, ack))
+                    entry.PendingAck = null;
+            }
+        }
+
+        private static void QueueUpdateStatusNoLock(AgentEntry entry, string requestId) =>
+            entry.Commands.Writer.TryWrite(new HubCommand { UpdateRpcdStatus = new UpdateRpcdStatusCommand { RequestId = requestId ?? string.Empty } });
+
+        private static void DeliverLatestNoLock(AgentEntry entry, UpdateRpcdProgress stored)
+        {
+            foreach (var watcher in entry.UpdateWatchers)
+                watcher.Writer.TryWrite(stored);
+        }
+
+        private static void CompleteLatestWatchersNoLock(AgentEntry entry)
+        {
+            foreach (var watcher in entry.UpdateWatchers)
+                watcher.Writer.TryComplete();
+            entry.UpdateWatchers.Clear();
+        }
+
+        private static UpdateRpcdProgress RefusedUpdate(string error) => new()
+        {
+            Stage = "refused",
+            Terminal = true,
+            Error = error,
+            Detail = error,
+        };
+
+        private readonly struct BegunUpdate(UpdateRpcdOutcome? outcome, PendingUpdateAck? ack, string machineId)
+        {
+            public UpdateRpcdOutcome? Outcome { get; } = outcome;
+            public PendingUpdateAck? Ack { get; } = ack;
+            public string MachineId { get; } = machineId;
+            public static BegunUpdate Finished(UpdateRpcdOutcome outcome) => new(outcome, null, string.Empty);
+        }
+
+        private sealed class PendingUpdateAck(string machineName, string? ignoreRequestId)
+        {
+            public TaskCompletionSource<UpdateRpcdProgress> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            public string MachineName { get; } = machineName;
+            public string? IgnoreRequestId { get; } = ignoreRequestId;
         }
 
         private void SweepLaunchesNoLock(DateTimeOffset now)
@@ -630,6 +1035,19 @@ namespace PeakSWC.RemoteWebView.Agents
             public IServerStreamWriter<HubCommand>? Writer { get; set; }
             // Per agent, not per stream: a reconnecting agent picks up what was queued for it.
             public Channel<HubCommand> Commands { get; } = Channel.CreateUnbounded<HubCommand>();
+            public PendingUpdateAck? PendingAck { get; set; }
+            public string? LatestUpdateRequestId { get; set; }
+            public List<Channel<UpdateRpcdProgress>> UpdateWatchers { get; } = [];
+        }
+
+        private sealed class UpdateEntry(string requestId, string machineId)
+        {
+            public string RequestId { get; } = requestId;
+            public string MachineId { get; } = machineId;
+            public string Group { get; set; } = string.Empty;
+            public UpdateRpcdProgress Latest { get; set; } = new();
+            public DateTimeOffset Updated { get; set; }
+            public List<Channel<UpdateRpcdProgress>> Subscribers { get; } = [];
         }
 
         private sealed class LaunchEntry(string requestId, string machineId, string sessionId)
