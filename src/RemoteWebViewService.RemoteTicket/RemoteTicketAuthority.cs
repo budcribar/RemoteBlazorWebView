@@ -28,6 +28,15 @@ namespace PeakSWC.RemoteWebView
 
         [JsonPropertyName("denialReason")]
         public string? DenialReason { get; set; }
+
+        [JsonPropertyName("role")]
+        public string? Role { get; set; }
+
+        [JsonPropertyName("unattendedAuthorized")]
+        public bool? UnattendedAuthorized { get; set; }
+
+        [JsonPropertyName("issuedAgentToken")]
+        public string? IssuedAgentToken { get; set; }
     }
 
     /// <summary>A test can register this handler; otherwise the relay uses the default sockets handler.</summary>
@@ -59,13 +68,18 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
-        public async Task<RemoteTicketAuthorizeResult> AuthorizeAsync(string? enrollmentKey, string? ticket, CancellationToken cancellationToken)
+        public async Task<RemoteTicketAuthorizeResult> AuthorizeAsync(
+            string? enrollmentKey,
+            string? ticket,
+            CancellationToken cancellationToken,
+            string? agentId = null,
+            string? agentToken = null)
         {
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, "api/relay/agents/authorize")
                 {
-                    Content = JsonContent.Create(new AuthorizeRequest(enrollmentKey, ticket)),
+                    Content = JsonContent.Create(new AuthorizeRequest(enrollmentKey, ticket, agentId, agentToken)),
                 };
                 request.Headers.TryAddWithoutValidation(SecretHeader, secret);
                 using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -83,7 +97,7 @@ namespace PeakSWC.RemoteWebView
         private static RemoteTicketAuthorizeResult Denied(string reason) =>
             new() { Accepted = false, DenialReason = reason };
 
-        private sealed record AuthorizeRequest(string? EnrollmentKey, string? Ticket);
+        private sealed record AuthorizeRequest(string? EnrollmentKey, string? Ticket, string? AgentId, string? AgentToken);
     }
 
     public readonly record struct RemoteTicketGroupLookup(bool Reachable, RemoteTicketGroupInfo? Info)

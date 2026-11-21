@@ -127,13 +127,16 @@ namespace PeakSWC.RemoteWebView
                 return Task.FromResult(AuthenticateResult.Fail(error ?? "invalid_ticket"));
 
             users.Remember(payload.Oid, payload.Groups);
-            var identity = new ClaimsIdentity(
-            [
-                new Claim("oid", payload.Oid),
-                new Claim("name", payload.Name ?? ""),
-                new Claim(ClaimTypes.Email, payload.Email ?? ""),
-                new Claim("tier", payload.Tier ?? ""),
-            ], RemoteTicketAuthorization.Scheme);
+            var claims = new List<Claim>
+            {
+                new("oid", payload.Oid),
+                new("name", payload.Name ?? ""),
+                new(ClaimTypes.Email, payload.Email ?? ""),
+                new("tier", payload.Tier ?? ""),
+            };
+            if (!string.IsNullOrWhiteSpace(payload.Role))
+                claims.Add(new Claim(ClaimTypes.Role, payload.Role));
+            var identity = new ClaimsIdentity(claims, RemoteTicketAuthorization.Scheme);
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), RemoteTicketAuthorization.Scheme)));
         }
 

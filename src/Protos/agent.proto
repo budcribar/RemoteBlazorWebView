@@ -48,6 +48,7 @@ message AgentHello {
   ConsentMode consent_ceiling = 8;
   Lifetime lifetime = 9;
   google.protobuf.Timestamp boot_time = 10;  // when Windows last started (UTC); unset on older agents
+  string agent_token = 11;                   // per-agent token assigned on first enrollment
 }
 
 message Heartbeat {
@@ -86,7 +87,12 @@ message HubCommand {
     ReleaseAvailableCommand release_available = 3;
     UpdateRpcdCommand update_rpcd = 4;          // install an official GitHub release; approved must be true
     UpdateRpcdStatusCommand update_rpcd_status = 5; // poll the latest update, or the one named by request_id
+    AssignAgentTokenCommand assign_agent_token = 6; // per-agent token issued on first enrollment
   }
+}
+
+message AssignAgentTokenCommand {
+  string agent_token = 1;
 }
 
 message LaunchCommand {

@@ -69,11 +69,14 @@ namespace PeakSWC.RemoteWebView
         public RemoteTicketAgentPolicy(HttpClient http, string secret) =>
             authority = new RemoteTicketAuthority(http, secret);
 
-        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options)
+        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) =>
+            CheckEnrollment(enrollmentKey, null, null, options);
+
+        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, string? machineId, string? agentToken, AgentOptions options)
         {
-            var result = authority.AuthorizeAsync(enrollmentKey, null, CancellationToken.None).GetAwaiter().GetResult();
+            var result = authority.AuthorizeAsync(enrollmentKey, null, CancellationToken.None, machineId, agentToken).GetAwaiter().GetResult();
             return result.Accepted
-                ? new AgentEnrollmentDecision(true, result.Group ?? "")
+                ? new AgentEnrollmentDecision(true, result.Group ?? "", null, result.IssuedAgentToken)
                 : new AgentEnrollmentDecision(false, "", result.DenialReason ?? "The enrollment key was not accepted");
         }
 
@@ -87,15 +90,22 @@ namespace PeakSWC.RemoteWebView
             if (!result.Accepted)
                 return new(Allowed: false, GroupScope: result.Group ?? "", UnattendedAuthorized: false, DenialReason: result.DenialReason ?? "Access denied");
             var scope = string.IsNullOrEmpty(result.Group) ? null : result.Group;
-            return new(Allowed: true, GroupScope: scope, UnattendedAuthorized: true);
+            var unattended = result.UnattendedAuthorized ?? IsRoleAllowedForUnattended(result.Role);
+            return new(Allowed: true, GroupScope: scope, UnattendedAuthorized: unattended, CallerRole: result.Role);
         }
+
+        private static bool IsRoleAllowedForUnattended(string? role) =>
+            string.IsNullOrWhiteSpace(role)
+            || role.Equals("owner", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("tech", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("admin", StringComparison.OrdinalIgnoreCase)
+            || role.Equals("operator", StringComparison.OrdinalIgnoreCase);
     }
 
     public static class RemoteTicketReader
     {
         public const string CookieName = "rwv-relay-ticket";
         public const string HeaderName = "x-relay-ticket";
-        private const string CookieAppendedItemKey = "__rwv_ticket_cookie_set";
 
         public static string? From(HttpContext? http)
         {
@@ -105,36 +115,7 @@ namespace PeakSWC.RemoteWebView
             if (!string.IsNullOrWhiteSpace(header))
                 return header.Trim();
 
-            string? queryTicket = null;
-            if (http.Request.Query.TryGetValue("ticket", out var ticketVal) && !string.IsNullOrWhiteSpace(ticketVal))
-                queryTicket = ticketVal.ToString().Trim();
-            else if (http.Request.Query.TryGetValue(CookieName, out var cookieVal) && !string.IsNullOrWhiteSpace(cookieVal))
-                queryTicket = cookieVal.ToString().Trim();
-
-            if (!string.IsNullOrEmpty(queryTicket))
-            {
-                try
-                {
-                    if (!http.Items.ContainsKey(CookieAppendedItemKey) && !http.Response.HasStarted)
-                    {
-                        http.Items[CookieAppendedItemKey] = true;
-                        http.Response.Cookies.Append(CookieName, queryTicket, new CookieOptions
-                        {
-                            SameSite = SameSiteMode.Lax,
-                            Path = "/",
-                            HttpOnly = true,
-                            Secure = true
-                        });
-                    }
-                }
-                catch
-                {
-                    // Response headers may have started or response does not support cookies
-                }
-                return queryTicket;
-            }
-
-            return http.Request.Cookies.TryGetValue(CookieName, out var cookie) && !string.IsNullOrWhiteSpace(cookie) ? cookie : null;
+            return http.Request.Cookies.TryGetValue(CookieName, out var cookie) && !string.IsNullOrWhiteSpace(cookie) ? cookie.Trim() : null;
         }
     }
 }

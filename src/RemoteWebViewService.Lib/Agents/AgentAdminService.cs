@@ -67,13 +67,14 @@ namespace PeakSWC.RemoteWebView.Agents
                 throw new RpcException(new Status(StatusCode.PermissionDenied, response.Error));
             }
             string who = string.IsNullOrEmpty(outcome.MachineName) ? request.MachineId : $"{outcome.MachineName} ({request.MachineId})";
+            string actor = string.IsNullOrWhiteSpace(access.CallerRole) ? requester : $"{requester} ({access.CallerRole})";
 
             if (response.Accepted)
                 AgentEvents.Info(logger, Category,
-                    $"Diagnostics requested on {who} by {requester}: request {response.RequestId}, session {response.SessionId}, " +
+                    $"Diagnostics requested on {who} by {actor}: request {response.RequestId}, session {response.SessionId}, " +
                     (outcome.RequireConsent ? "consent required" : "unattended"));
             else
-                AgentEvents.Info(logger, Category, $"Diagnostics request on {who} by {requester} refused: {response.Error}");
+                AgentEvents.Info(logger, Category, $"Diagnostics request on {who} by {actor} refused: {response.Error}");
 
             return Task.FromResult(response);
         }

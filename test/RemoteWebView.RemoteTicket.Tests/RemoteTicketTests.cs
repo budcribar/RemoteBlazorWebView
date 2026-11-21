@@ -140,7 +140,7 @@ public class RemoteTicketTests
     [Theory]
     [InlineData("ticket")]
     [InlineData(RemoteTicketReader.CookieName)]
-    public async Task Mirror_accepts_ticket_in_query_parameter_and_sets_cookie(string paramName)
+    public async Task Mirror_ignores_ticket_in_query_parameter(string paramName)
     {
         var handler = new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
         await using var host = await Start(handler);
@@ -150,42 +150,32 @@ public class RemoteTicketTests
         var token = RemoteTicketFormat.Create(Secret, Ticket("user-9", ["bench"], DateTimeOffset.UtcNow.AddMinutes(5)));
         var response = await anon.GetAsync($"mirror/{state.Id}?{paramName}={Uri.EscapeDataString(token)}");
 
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
-
-        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookieHeaders));
-        var cookieHeader = Assert.Single(cookieHeaders);
-        Assert.Contains($"{RemoteTicketReader.CookieName}={token}", cookieHeader);
-        Assert.Contains("path=/", cookieHeader, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("httponly", cookieHeader, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("samesite=lax", cookieHeader, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("secure", cookieHeader, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out _));
     }
 
     [Fact]
-    public void RemoteTicketFormat_accepts_both_base64url_and_legacy_raw_json_signatures()
+    public void RemoteTicketFormat_rejects_legacy_raw_json_signatures_and_reads_role()
     {
         var now = DateTimeOffset.UtcNow;
-        var payload = Ticket("user-legacy", ["bench"], now.AddHours(1));
+        var payload = Ticket("user-canonical", ["bench"], now.AddHours(1), role: "tech");
 
-        // 1. Standard format (signs base64url payload)
+        // Canonical format (signs base64url payload)
         var standardToken = RemoteTicketFormat.Create(Secret, payload);
         Assert.True(RemoteTicketFormat.TryRead(standardToken, Secret, now, out var standardParsed, out var standardErr), standardErr);
         Assert.NotNull(standardParsed);
-        Assert.Equal("user-legacy", standardParsed.Oid);
+        Assert.Equal("user-canonical", standardParsed.Oid);
+        Assert.Equal("tech", standardParsed.Role);
 
-        // 2. Legacy format (signs raw JSON bytes)
+        // Legacy raw-JSON signature format is rejected
         var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
         var b64Payload = Convert.ToBase64String(jsonBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var rawSigBytes = HMACSHA256.HashData(Encoding.UTF8.GetBytes(Secret), jsonBytes);
         var b64Sig = Convert.ToBase64String(rawSigBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var legacyToken = b64Payload + "." + b64Sig;
 
-        Assert.True(RemoteTicketFormat.TryRead(legacyToken, Secret, now, out var legacyParsed, out var legacyErr), legacyErr);
-        Assert.NotNull(legacyParsed);
-        Assert.Equal("user-legacy", legacyParsed.Oid);
-        Assert.Equal(["bench"], legacyParsed.Groups);
+        Assert.False(RemoteTicketFormat.TryRead(legacyToken, Secret, now, out _, out var legacyErr));
+        Assert.Equal("invalid_signature", legacyErr);
     }
 
     [Fact]
@@ -206,13 +196,62 @@ public class RemoteTicketTests
         new RemoteTicketAuthorization().ConfigureServices(new ServiceCollection(), Config(Secret));
     }
 
-    private static RemoteTicketPayload Ticket(string oid, string[] groups, DateTimeOffset exp) => new()
+    [Fact]
+    public void CheckAdminAccess_respects_authority_unattended_flag_and_role()
+    {
+        var handler = new AuthorityStub(request =>
+        {
+            var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            if (body.Contains("viewer-ticket", StringComparison.Ordinal))
+                return Json(new { accepted = true, group = "bench", role = "viewer", unattendedAuthorized = false });
+            return Json(new { accepted = true, group = "bench", role = "tech", unattendedAuthorized = true });
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://authority.example/") };
+        var policy = new RemoteTicketAgentPolicy(http, Secret);
+
+        var viewerCtx = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        viewerCtx.Request.Headers[RemoteTicketReader.HeaderName] = "viewer-ticket";
+        var viewerDecision = policy.CheckAdminAccess(viewerCtx, null, new PeakSWC.RemoteWebView.Agents.AgentOptions());
+        Assert.True(viewerDecision.Allowed);
+        Assert.False(viewerDecision.UnattendedAuthorized);
+        Assert.Equal("viewer", viewerDecision.CallerRole);
+
+        var techCtx = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        techCtx.Request.Headers[RemoteTicketReader.HeaderName] = "tech-ticket";
+        var techDecision = policy.CheckAdminAccess(techCtx, null, new PeakSWC.RemoteWebView.Agents.AgentOptions());
+        Assert.True(techDecision.Allowed);
+        Assert.True(techDecision.UnattendedAuthorized);
+        Assert.Equal("tech", techDecision.CallerRole);
+    }
+
+    [Fact]
+    public void CheckEnrollment_forwards_machine_id_and_agent_token_and_returns_issued_token()
+    {
+        string? capturedBody = null;
+        var handler = new AuthorityStub(request =>
+        {
+            capturedBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Json(new { accepted = true, group = "bench", issuedAgentToken = "rpd_agt_issued_123" });
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://authority.example/") };
+        var policy = new RemoteTicketAgentPolicy(http, Secret);
+
+        var decision = policy.CheckEnrollment("good-key", "pc-01", "prev-token", new PeakSWC.RemoteWebView.Agents.AgentOptions());
+        Assert.True(decision.Accepted);
+        Assert.Equal("bench", decision.Group);
+        Assert.Equal("rpd_agt_issued_123", decision.IssuedAgentToken);
+        Assert.Contains("\"agentId\":\"pc-01\"", capturedBody, StringComparison.Ordinal);
+        Assert.Contains("\"agentToken\":\"prev-token\"", capturedBody, StringComparison.Ordinal);
+    }
+
+    private static RemoteTicketPayload Ticket(string oid, string[] groups, DateTimeOffset exp, string role = "owner") => new()
     {
         Oid = oid,
         Name = "Pat Lee",
         Email = "pat@example.com",
         Groups = groups,
         Tier = "msp",
+        Role = role,
         Exp = exp.ToUnixTimeSeconds(),
     };
 
