@@ -56,7 +56,7 @@ namespace PeakSWC.RemoteWebView
            
             try
             {
-                var groups = await userService.GetUserGroups(request?.Oid ?? string.Empty).ConfigureAwait(false) ?? [];
+                var groups = await userService.GetUserGroups(CallerOid(request?.Oid, context)).ConfigureAwait(false) ?? [];
                 
                 await WriteResponse(responseStream, groups).ConfigureAwait(false);
 
@@ -74,10 +74,28 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
         {
-            var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
+            var groups = await userService.GetUserGroups(CallerOid(request?.Oid, context)).ConfigureAwait(false) ?? [];
             var response = new UserResponse();
             response.Groups.AddRange(groups);
             return response;
+        }
+
+        /// <summary>
+        /// The user whose groups decide what <see cref="GetClients"/> lists and what <see cref="GetUserGroups"/> returns.
+        /// When the relay requires sign-in, that is the signed-in caller (the ticket or sign-in on this call) and the oid in
+        /// the request is ignored; a call that is not signed in is refused. Without sign-in (<see cref="NoAuthorization"/>)
+        /// there is nobody to check, so the request's oid is used as before.
+        /// </summary>
+        private string CallerOid(string? requested, ServerCallContext context)
+        {
+            if (authorization?.Enabled != true)
+                return requested ?? string.Empty;
+
+            var user = CallContexts.Http(context)?.User;
+            var oid = user?.Identity?.IsAuthenticated == true ? user.GetUserObjectId() : null;
+            if (string.IsNullOrEmpty(oid))
+                throw new RpcException(new Status(StatusCode.Unauthenticated, "Sign in to continue."));
+            return oid;
         }
 
         public override async Task<Empty> SetCache(CacheRequest request, ServerCallContext context)
