@@ -138,6 +138,11 @@ message UpdateRpcdProgress {
   bool terminal = 7;
   string error = 8;
   string channel = 9;
+  // Set when Setup failed. installer_log is the masked tail of the /LOG file (about the last 200 lines).
+  // installer_exit_code is present only then, including 0 when Setup exited 0 but the version did not change.
+  // Keep in step with RemotePCDiagnostics' agent.proto: a field missing here is dropped on the way to Admin.
+  string installer_log = 10;
+  optional int32 installer_exit_code = 11;
 }
 
 // ---------------------------------------------------------------------------------------------

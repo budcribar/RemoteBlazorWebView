@@ -852,6 +852,45 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public async Task UpdateRpcd_is_refused_when_the_relay_has_no_admin_key()
+    {
+        // Nobody at the PC is asked before an update, so the no-key "allow but ask" start rule must not let one through.
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var refused = await registry.UpdateRpcdAsync("m-1", "stable", "", approved: true, null, adminKeyConfigured: false, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(refused.Denied);
+        Assert.Equal(ConsentPolicy.AdminKeyNotConfiguredForUpdate, refused.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var hidden = await registry.UpdateRpcdAsync("nope", "stable", "", approved: true, null, adminKeyConfigured: false, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(hidden.Denied);
+    }
+
+    [Fact]
+    public void UpdateRpcd_progress_keeps_the_installer_log_and_exit_code()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var stored = registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "failed",
+            Terminal = true,
+            InstallerLog = "Setup log tail",
+            InstallerExitCode = 1,
+        });
+
+        Assert.NotNull(stored);
+        Assert.Equal("Setup log tail", stored!.InstallerLog);
+        Assert.True(stored.HasInstallerExitCode);
+        Assert.Equal(1, stored.InstallerExitCode);
+        var wire = UpdateRpcdProgress.Parser.ParseFrom(stored.ToByteArray());
+        Assert.Equal("Setup log tail", wire.InstallerLog);
+        Assert.Equal(1, wire.InstallerExitCode);
+    }
+
+    [Fact]
     public async Task UpdateRpcd_reports_an_agent_that_never_answers_as_too_old()
     {
         var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromMilliseconds(80) };
