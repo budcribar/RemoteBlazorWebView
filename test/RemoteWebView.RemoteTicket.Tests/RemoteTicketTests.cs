@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PeakSWC.RemoteWebView;
@@ -11,7 +12,7 @@ namespace RemoteWebView.RemoteTicket.Tests;
 
 public class RemoteTicketTests
 {
-    private const string Secret = "relay-ticket-secret";
+    private const string Secret = "relay-ticket-secret-for-remote-ticket-tests";
     private static readonly DateTimeOffset Now = DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
 
     [Fact]
@@ -183,6 +184,24 @@ public class RemoteTicketTests
         Assert.NotNull(legacyParsed);
         Assert.Equal("user-legacy", legacyParsed.Oid);
         Assert.Equal(["bench"], legacyParsed.Groups);
+    }
+
+    [Fact]
+    public void The_provider_needs_a_configured_signing_key_of_at_least_32_bytes()
+    {
+        static IConfiguration Config(string? key) =>
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["RelayTicket:SigningKey"] = key,
+                    ["RelayTicket:AuthorityUrl"] = "https://authority.example",
+                })
+                .Build();
+
+        Assert.Equal("", RemoteTicketSettings.From(Config(null)).SigningKey);
+        Assert.Throws<InvalidOperationException>(() => new RemoteTicketAuthorization().ConfigureServices(new ServiceCollection(), Config(null)));
+        Assert.Throws<InvalidOperationException>(() => new RemoteTicketAuthorization().ConfigureServices(new ServiceCollection(), Config("short-key")));
+        new RemoteTicketAuthorization().ConfigureServices(new ServiceCollection(), Config(Secret));
     }
 
     private static RemoteTicketPayload Ticket(string oid, string[] groups, DateTimeOffset exp) => new()
