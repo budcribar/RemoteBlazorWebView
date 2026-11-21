@@ -1337,6 +1337,47 @@ public class AgentRegistryTests
         Assert.False(reconnected.IsNew);
     }
 
+    [Fact]
+    public void Register_accepts_a_newly_issued_token_even_when_an_older_one_is_remembered()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-reissued"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_old");
+        Assert.True(first.Commands.TryRead(out _));
+        registry.Disconnect(first);
+
+        // The authority issued a replacement (the agent never stored the old token, or the shop reset the computer).
+        var again = registry.Register(Hello("machine-reissued"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_new");
+        Assert.True(again.Commands.TryRead(out var assign));
+        Assert.Equal("rpd_agt_new", assign.AssignAgentToken.AgentToken);
+        registry.Disconnect(again);
+
+        // Only the replacement token is accepted from now on.
+        var stale = Hello("machine-reissued");
+        stale.AgentToken = "rpd_agt_old";
+        Assert.Throws<InvalidOperationException>(() => registry.Register(stale, "10.0.0.1", null, group: "shop-a"));
+        var current = Hello("machine-reissued");
+        current.AgentToken = "rpd_agt_new";
+        Assert.False(registry.Register(current, "10.0.0.1", null, group: "shop-a").IsNew);
+    }
+
+    [Fact]
+    public void Register_lets_an_offline_computer_move_shops_only_with_a_newly_issued_token()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-moving"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_a");
+        Assert.True(first.Commands.TryRead(out _));
+
+        // Online in shop A: shop B is refused even with a new token.
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b", issuedAgentToken: "rpd_agt_b"));
+
+        registry.Disconnect(first);
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b"));
+        var moved = registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b", issuedAgentToken: "rpd_agt_b");
+        Assert.False(moved.IsNew);
+    }
+
     private sealed class FixedPolicy(PeakSWC.RemoteWebView.AgentAdminAccessDecision decision) : PeakSWC.RemoteWebView.IAgentTenantPolicy
     {
         public PeakSWC.RemoteWebView.AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) => throw new NotImplementedException();
