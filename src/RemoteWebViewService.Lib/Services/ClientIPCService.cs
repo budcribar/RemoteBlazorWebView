@@ -1,7 +1,6 @@
 using System.Reflection;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -11,12 +10,24 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using PeakSWC.RemoteWebView.Agents;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, IUserService userService, IRelayAuthorization authorization, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
+    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, IUserService userService, RemoteFilesOptions filesOptions,
+        IRelayAuthorization? authorization = null, IAgentTenantPolicy? tenantPolicy = null, AgentOptions? agentOptions = null) : ClientIPC.ClientIPCBase
     {
+        /// <summary>What this caller of the relay-wide calls may see (RelayCallerScope): everything, some groups, or nothing.</summary>
+        private Task<RelayCallerScope> CallerScope(ServerCallContext context) =>
+            RelayCallerScope.ResolveAsync(context, authorization, tenantPolicy, agentOptions, userService);
+
+        private async Task RequireOperator(ServerCallContext context)
+        {
+            if (!(await CallerScope(context).ConfigureAwait(false)).IsOperator)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Only a relay operator may do this."));
+        }
+
         private async Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
             var list = new ClientResponseList();
@@ -77,22 +88,20 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         private string CallerOid(string? requested, ServerCallContext context)
         {
-            if (!authorization.Enabled)
+            if (authorization?.Enabled != true)
                 return requested ?? string.Empty;
 
-            HttpContext? http = null;
-            try { http = context?.GetHttpContext(); }
-            catch (InvalidOperationException) { }
-
-            var user = http?.User;
+            var user = CallContexts.Http(context)?.User;
             var oid = user?.Identity?.IsAuthenticated == true ? user.GetUserObjectId() : null;
             if (string.IsNullOrEmpty(oid))
                 throw new RpcException(new Status(StatusCode.Unauthenticated, "Sign in to continue."));
             return oid;
         }
 
-        public override Task<Empty> SetCache(CacheRequest request, ServerCallContext context)
+        public override async Task<Empty> SetCache(CacheRequest request, ServerCallContext context)
         {
+            await RequireOperator(context).ConfigureAwait(false);
+
             if (request.EnableServerCache != null)
             {
                 filesOptions.UseServerCache = request.EnableServerCache.Value;
@@ -105,8 +114,8 @@ namespace PeakSWC.RemoteWebView
                 filesOptions.UseClientCache = request.EnableClientCache.Value;
                 Console.WriteLine($"Client cache enabled = {request.EnableClientCache.Value}");
             }
-            
-            return Task.FromResult(new Empty());
+
+            return new Empty();
         }
 
 
@@ -115,8 +124,16 @@ namespace PeakSWC.RemoteWebView
             typeof(ClientIPCService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? typeof(ClientIPCService).Assembly.GetName().Version?.ToString() ?? "unknown";
 
+        /// <summary>
+        /// The relay's own figures and its sessions. An operator (and any caller on a relay without sign-in) sees every
+        /// session; a shop sees only its own; a caller who is not signed in is refused.
+        /// </summary>
         public override async Task<ServerResponse> GetServerStatus(Empty request, ServerCallContext context)
         {
+            var scope = await CallerScope(context).ConfigureAwait(false);
+            if (scope.IsNobody)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Sign in to see the relay's status."));
+
             var p = Process.GetCurrentProcess();
             var response = new ServerResponse
             {
@@ -131,7 +148,7 @@ namespace PeakSWC.RemoteWebView
                 ServerCacheEnabled = filesOptions.UseServerCache
             };
 
-            var responses = await GetConnectionResponses(serviceDictionary).ConfigureAwait(false);
+            var responses = await GetConnectionResponses(serviceDictionary, scope).ConfigureAwait(false);
             response.ConnectionResponses.AddRange(responses);
 
             foreach (var connection in responses)
@@ -169,7 +186,7 @@ namespace PeakSWC.RemoteWebView
             return responses;
         }
 
-        private static async Task<List<ConnectionResponse>> GetConnectionResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary)
+        private static async Task<List<ConnectionResponse>> GetConnectionResponses(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, RelayCallerScope scope)
         {
             var snapshotTasks = serviceDictionary.Values.Where(static pending => pending.Task.IsCompleted).ToList();
             var results = new List<ServiceState>();
@@ -185,7 +202,7 @@ namespace PeakSWC.RemoteWebView
                 }
             }
 
-            return results.Select(x => new ConnectionResponse
+            return results.Where(x => scope.Sees(x.Group)).Select(x => new ConnectionResponse
             {
                 HostName = x.HostName,
                 Id = x.Id,
@@ -199,7 +216,14 @@ namespace PeakSWC.RemoteWebView
             }).ToList();
         }
 
-        public override Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
+        /// <summary>The relay's log: every shop's sessions are in it, so only an operator may read it.</summary>
+        public override async Task<LoggedEventResponse> GetLoggedEvents(Empty request, ServerCallContext context)
+        {
+            await RequireOperator(context).ConfigureAwait(false);
+            return await ReadLoggedEvents().ConfigureAwait(false);
+        }
+
+        private static Task<LoggedEventResponse> ReadLoggedEvents()
         {
             if (!OperatingSystem.IsWindows())
             {

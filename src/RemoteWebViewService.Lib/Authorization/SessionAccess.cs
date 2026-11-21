@@ -54,8 +54,7 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            var groups = await users.GetUserGroups(context.User.GetUserObjectId() ?? string.Empty).ConfigureAwait(false) ?? [];
-            if (groups.Contains(state.Group))
+            if (await SessionMembership.IsMemberAsync(context.User, state, users).ConfigureAwait(false))
                 context.Succeed(requirement);
             // otherwise not succeeded: a signed-in user outside the session's group is refused (403)
         }

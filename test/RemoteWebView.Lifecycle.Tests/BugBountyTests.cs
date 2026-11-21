@@ -98,7 +98,6 @@ public class BugBountyTests
             channels,
             services,
             new FixedGroupUserService("admin"),
-            new NoAuthorization(),
             new RemoteFilesOptions());
 
         using var cts = new CancellationTokenSource();
@@ -601,7 +600,6 @@ public class BugBountyTests
             serviceStateChannel,
             serviceDictionary,
             new FixedGroupUserService("admin"),
-            new NoAuthorization(),
             new RemoteFilesOptions());
 
         using var cts1 = new CancellationTokenSource();
@@ -1175,7 +1173,6 @@ public class BugBountyTests
             new ConcurrentDictionary<string, Channel<string>>(),
             dict,
             new FixedGroupUserService("admin"),
-            new NoAuthorization(),
             new RemoteFilesOptions());
 
         var statusTask = service.GetServerStatus(new Google.Protobuf.WellKnownTypes.Empty(), new TestCallContext(CancellationToken.None));
@@ -1822,7 +1819,6 @@ public class BugBountyTests
             new ConcurrentDictionary<string, Channel<string>>(),
             new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>(),
             new NullGroupUserService(),
-            new NoAuthorization(),
             new RemoteFilesOptions());
 
         using var cts = new CancellationTokenSource();

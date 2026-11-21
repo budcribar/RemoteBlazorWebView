@@ -38,6 +38,9 @@ message CreateWebViewRequest {
   string ownerKey = 10;
   // The app understands "participants:" messages (ParticipantsChanged). Older apps throw on unknown commands.
   bool participantEvents = 11;
+  // A secret only the app knows. When set, the relay takes SendMessage, Shutdown, Ping and RequestClientFileRead for
+  // this session only from calls that carry it in the x-app-key header. Empty: older apps; the id alone is trusted.
+  string appKey = 12;
 }
 
 message WebMessageResponse {

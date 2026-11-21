@@ -36,6 +36,8 @@ namespace PeakSWC.RemoteWebView
         public string OwnerKey { get; init; } = string.Empty;
         /// <summary>Given to the owner's page (as a cookie) once it presents the owner key; its connection sends it back.</summary>
         public string OwnerToken { get; } = OwnerAccess.NewToken();
+        /// <summary>The app's own secret for its calls (CreateWebView appKey). Empty for older apps. See AppAccess.</summary>
+        public string AppKey { get; init; } = string.Empty;
         // Set once the owner has been given control at the start of the session. In mirror mode the owner's surface
         // connects only after the remote user (so the remote user may have claimed first); the first owner connection is
         // still promoted so the user starts in control, but only once - later owner reconnects do not grab control back.
