@@ -99,10 +99,15 @@ namespace PeakSWC.RemoteWebView.Agents
             return Task.FromResult(new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error });
         }
 
-        /// <summary>The admin key, when one is configured, for a caller that isn't scoped to a shop (the same rule as CancelLaunch).</summary>
+        /// <summary>
+        /// A caller that isn't scoped to a shop needs the admin key when one is configured (the rule CancelLaunch uses), unless its ticket
+        /// already says it may act for every shop: the admin site's own service identity, or a full admin.
+        /// </summary>
         private void RequireMutation(PeakSWC.RemoteWebView.AgentAdminAccessDecision access, ServerCallContext context)
         {
-            if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+            if (access.GroupScope != null || access.UnattendedAuthorized || access.CallerRole is "service" or "admin")
+                return;
+            if (options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
         }
 
