@@ -28,7 +28,7 @@ namespace PeakSWC.RemoteWebView.Agents
             AgentConnection connection;
             try
             {
-                connection = registry.Register(hello, ip, responseStream, decision.Group);
+                connection = registry.Register(hello, ip, responseStream, decision.Group, decision.IssuedAgentToken);
             }
             catch (InvalidOperationException ex)
             {
@@ -87,7 +87,7 @@ namespace PeakSWC.RemoteWebView.Agents
 
         private PeakSWC.RemoteWebView.AgentEnrollmentDecision AcceptEnrollment(AgentHello hello, string ip)
         {
-            var decision = policy.CheckEnrollment(hello.EnrollmentKey, options);
+            var decision = policy.CheckEnrollment(hello.EnrollmentKey, hello.MachineId, hello.AgentToken, options);
             bool keysDecide = policy is PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy;
             if (!decision.Accepted)
             {

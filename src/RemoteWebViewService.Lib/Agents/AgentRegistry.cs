@@ -191,7 +191,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "")
+        public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "", string? issuedAgentToken = null)
         {
             ArgumentNullException.ThrowIfNull(hello);
             if (string.IsNullOrWhiteSpace(hello.MachineId))
@@ -204,15 +204,34 @@ namespace PeakSWC.RemoteWebView.Agents
             {
                 bool isNew = !agents.TryGetValue(hello.MachineId, out var entry);
                 if (entry != null
-                    && entry.Online
                     && !string.IsNullOrEmpty(entry.Group)
                     && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("That computer is already enrolled to another shop.");
+
+                if (entry?.AgentTokenHash != null)
+                {
+                    var presentedHash = HashAgentToken(hello.AgentToken);
+                    if (presentedHash == null || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(entry.AgentTokenHash, presentedHash))
+                        throw new InvalidOperationException("The agent token for this computer is invalid.");
+                }
 
                 if (entry == null)
                 {
                     entry = new AgentEntry(hello.MachineId);
                     agents[hello.MachineId] = entry;
+                }
+
+                if (!string.IsNullOrWhiteSpace(issuedAgentToken))
+                {
+                    entry.AgentTokenHash = HashAgentToken(issuedAgentToken);
+                    entry.Commands.Writer.TryWrite(new HubCommand
+                    {
+                        AssignAgentToken = new AssignAgentTokenCommand { AgentToken = issuedAgentToken.Trim() },
+                    });
+                }
+                else if (entry.AgentTokenHash == null && !string.IsNullOrWhiteSpace(hello.AgentToken))
+                {
+                    entry.AgentTokenHash = HashAgentToken(hello.AgentToken);
                 }
 
                 entry.Group = group;
@@ -253,6 +272,11 @@ namespace PeakSWC.RemoteWebView.Agents
             previous?.Cancel();
             return connection;
         }
+
+        private static byte[]? HashAgentToken(string? token) =>
+            string.IsNullOrWhiteSpace(token)
+                ? null
+                : System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token.Trim()));
 
         /// <summary>Called when a Connect stream ends. Returns true when that stream was still the agent's current one.</summary>
         public bool Disconnect(AgentConnection connection) => Disconnect(connection, out _);
@@ -1030,6 +1054,7 @@ namespace PeakSWC.RemoteWebView.Agents
             public bool Online { get; set; }
             public string IpAddress { get; set; } = string.Empty;
             public string Group { get; set; } = string.Empty;
+            public byte[]? AgentTokenHash { get; set; }
             public long ConnectionId { get; set; }
             public CancellationTokenSource? ConnectionCts { get; set; }
             public IServerStreamWriter<HubCommand>? Writer { get; set; }

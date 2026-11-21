@@ -1306,6 +1306,37 @@ public class AgentRegistryTests
         Assert.False(cmd.Launch.RequireConsent);
     }
 
+    [Fact]
+    public void Register_preserves_group_binding_while_offline_and_validates_agent_token()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-bound"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_secret_1");
+
+        // The issued token is queued for the agent to persist.
+        Assert.True(first.Commands.TryRead(out var assignCmd));
+        Assert.Equal(HubCommand.BodyOneofCase.AssignAgentToken, assignCmd.BodyCase);
+        Assert.Equal("rpd_agt_secret_1", assignCmd.AssignAgentToken.AgentToken);
+
+        // Even while offline, another group cannot claim this machine_id.
+        registry.Disconnect(first);
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-bound"), "10.0.0.2", null, group: "shop-b"));
+
+        // Reconnect without the bound token or with the wrong token is rejected.
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-bound"), "10.0.0.2", null, group: "shop-a"));
+        var wrongHello = Hello("machine-bound");
+        wrongHello.AgentToken = "rpd_agt_wrong";
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(wrongHello, "10.0.0.2", null, group: "shop-a"));
+
+        // Reconnect with the matching token succeeds.
+        var validHello = Hello("machine-bound");
+        validHello.AgentToken = "rpd_agt_secret_1";
+        var reconnected = registry.Register(validHello, "10.0.0.1", null, group: "shop-a");
+        Assert.False(reconnected.IsNew);
+    }
+
     private sealed class FixedPolicy(PeakSWC.RemoteWebView.AgentAdminAccessDecision decision) : PeakSWC.RemoteWebView.IAgentTenantPolicy
     {
         public PeakSWC.RemoteWebView.AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) => throw new NotImplementedException();

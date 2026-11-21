@@ -22,6 +22,9 @@ namespace PeakSWC.RemoteWebView
         [JsonPropertyName("tier")]
         public string Tier { get; set; } = "";
 
+        [JsonPropertyName("role")]
+        public string Role { get; set; } = "";
+
         [JsonPropertyName("exp")]
         public long Exp { get; set; }
     }
@@ -76,12 +79,8 @@ namespace PeakSWC.RemoteWebView
             var expected = Sign(signingKey, parts[0]);
             if (given.Length != expected.Length || !CryptographicOperations.FixedTimeEquals(expected, given))
             {
-                var legacyExpected = HMACSHA256.HashData(Encoding.UTF8.GetBytes(signingKey), body);
-                if (given.Length != legacyExpected.Length || !CryptographicOperations.FixedTimeEquals(legacyExpected, given))
-                {
-                    error = "invalid_signature";
-                    return false;
-                }
+                error = "invalid_signature";
+                return false;
             }
 
             RemoteTicketPayload? parsed;
