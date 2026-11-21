@@ -1,4 +1,5 @@
 
+using Grpc.AspNetCore.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -224,13 +225,18 @@ namespace PeakSWC.RemoteWebView
 
             services.AddGrpc(options =>
             {
-                options.EnableDetailedErrors = true;
                 options.ResponseCompressionLevel = CompressionLevel.Optimal;
                 options.ResponseCompressionAlgorithm = "gzip";
 #if STATS
                 options.Interceptors.Add<StatsInterceptor>();
 #endif
             });
+            // Exception text goes back to gRPC callers only in Development. Elsewhere callers get the status code
+            // and any message the service set on purpose (RpcException); details stay in the relay's own log.
+            services.AddOptions<GrpcServiceOptions>()
+                .Configure<IHostEnvironment>((options, env) => options.EnableDetailedErrors = env.IsDevelopment());
+            if (!Embedded)
+                services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365));
             services.AddTransient<RemoteFileResolver>();
 
             services.AddCors(o =>
@@ -258,12 +264,11 @@ namespace PeakSWC.RemoteWebView
                 app.UseDeveloperExceptionPage();
                 app.UseWebAssemblyDebugging();
             }
-            else
+            else if (!Embedded)
             {
-                // TODO
-                //app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                //app.UseHsts();
+                // Tells browsers to stay on HTTPS for this host. Only sent on HTTPS responses and never for
+                // localhost, and off for the embedded loopback server, which may run plain HTTP.
+                app.UseHsts();
             }
 #if RATELIMIT
            
