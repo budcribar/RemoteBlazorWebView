@@ -845,13 +845,13 @@ namespace PeakSWC.RemoteWebView.Agents
             if (!TryVisibleAgentNoLock(machineId, groupScope, out var entry, out var missing))
             {
                 // The admin key is checked before anything about the computer is revealed.
-                var hidden = ConsentPolicy.Decide(false, ConsentMode.ConsentAlwaysAsk, adminKeyConfigured, adminKeyValid);
+                var hidden = ConsentPolicy.DecideUpdate(adminKeyConfigured, adminKeyValid);
                 if (!hidden.Allowed)
                     return BegunUpdate.Finished(new UpdateRpcdOutcome(null, Denied: true, Error: hidden.Error ?? ConsentPolicy.AdminKeyRequired));
                 return BegunUpdate.Finished(new UpdateRpcdOutcome(null, NotFound: true, Error: missing));
             }
 
-            var decision = ConsentPolicy.Decide(false, entry.Info.ConsentCeiling, adminKeyConfigured, adminKeyValid);
+            var decision = ConsentPolicy.DecideUpdate(adminKeyConfigured, adminKeyValid);
             if (!decision.Allowed)
                 return BegunUpdate.Finished(new UpdateRpcdOutcome(null, Denied: true, Error: decision.Error ?? ConsentPolicy.AdminKeyRequired));
 
