@@ -30,6 +30,8 @@ namespace PeakSWC.RemoteWebView
             var settings = RemoteTicketSettings.From(configuration);
             if (string.IsNullOrEmpty(settings.SigningKey))
                 throw new InvalidOperationException("RelayTicket:SigningKey (or RELAY_TICKET_SECRET) is required for the RemoteTicket provider.");
+            if (System.Text.Encoding.UTF8.GetByteCount(settings.SigningKey) < RemoteTicketSettings.MinimumSigningKeyBytes)
+                throw new InvalidOperationException($"RelayTicket:SigningKey (or RELAY_TICKET_SECRET) must be at least {RemoteTicketSettings.MinimumSigningKeyBytes} bytes for the RemoteTicket provider.");
             if (string.IsNullOrEmpty(settings.AuthorityUrl))
                 throw new InvalidOperationException("RelayTicket:AuthorityUrl is required for the RemoteTicket provider.");
 
@@ -67,6 +69,9 @@ namespace PeakSWC.RemoteWebView
 
     public sealed class RemoteTicketSettings
     {
+        /// <summary>The shortest signing key the RemoteTicket provider starts with. The account host uses the same limit.</summary>
+        public const int MinimumSigningKeyBytes = 32;
+
         public string SigningKey { get; init; } = "";
         public string AuthorityUrl { get; init; } = "";
         public string LoginUrl { get; init; } = "";
@@ -79,11 +84,10 @@ namespace PeakSWC.RemoteWebView
                 key = configuration["RELAY_TICKET_SECRET"];
             if (string.IsNullOrWhiteSpace(key))
                 key = configuration["RelayTicket__SigningKey"];
-            if (string.IsNullOrWhiteSpace(key))
-                key = "remoteblazorwebview-relay-ticket-shared-secret-key-32b";
+            // No built-in default: without a configured key, ConfigureServices refuses to start the provider.
             return new RemoteTicketSettings
             {
-                SigningKey = key.Trim(),
+                SigningKey = key?.Trim() ?? "",
                 AuthorityUrl = configuration["RelayTicket:AuthorityUrl"]?.Trim() ?? "",
                 LoginUrl = configuration["RelayTicket:LoginUrl"]?.Trim() ?? "",
                 AllowUnregisteredGroups = bool.TryParse(configuration["RelayTicket:AllowUnregisteredGroups"], out var allow) && allow,
