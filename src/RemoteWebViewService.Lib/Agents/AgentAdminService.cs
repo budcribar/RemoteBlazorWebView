@@ -57,20 +57,7 @@ namespace PeakSWC.RemoteWebView.Agents
             var access = RequireAccess(context);
             string requester = GetRequester(request.Requester, context);
             string serverUrl = GetServerUrl(options, context);
-            bool adminKeyConfigured = options.AdminKeyConfigured;
-            bool adminKeyValid = options.IsAdminKeyValid(GetAdminKey(context));
-            if (access.UnattendedAuthorized)
-            {
-                adminKeyConfigured = true;
-                adminKeyValid = true;
-            }
-            else if (access.GroupScope != null)
-            {
-                adminKeyConfigured = true;
-                adminKeyValid = false;
-            }
-            else if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
-                AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
+            var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
 
             var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope);
             var response = outcome.Response;
@@ -158,6 +145,100 @@ namespace PeakSWC.RemoteWebView.Agents
             AgentEvents.Info(logger, Category,
                 $"Release announcement published (stable='{request.StableVersion}', prerelease='{request.PrereleaseVersion}'): notified {notified} online agent(s)");
             return Task.FromResult(new Empty());
+        }
+
+        public override async Task<UpdateRpcdProgress> UpdateRpcd(UpdateRpcdAdminRequest request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
+            var outcome = await registry.UpdateRpcdAsync(
+                request.MachineId,
+                request.Channel,
+                request.Version,
+                request.Approved,
+                request.ApprovedBy,
+                adminKeyConfigured,
+                adminKeyValid,
+                access.GroupScope,
+                context.CancellationToken).ConfigureAwait(false);
+
+            if (outcome.Denied)
+            {
+                AgentEvents.Warn(logger, $"RPCD update on {request.MachineId} refused: missing or wrong {AgentOptions.AdminKeyHeader}");
+                throw new RpcException(new Status(StatusCode.PermissionDenied, outcome.Error ?? ConsentPolicy.AdminKeyRequired));
+            }
+
+            string who = string.IsNullOrEmpty(outcome.MachineName) ? request.MachineId : $"{outcome.MachineName} ({request.MachineId})";
+            if (outcome.NotFound)
+                throw new RpcException(new Status(StatusCode.NotFound, outcome.Error ?? AgentRegistry.UnknownAgentError));
+            if (outcome.Offline)
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, outcome.Error ?? AgentRegistry.OfflineError));
+            if (outcome.TooOld)
+            {
+                AgentEvents.Warn(logger, $"RPCD update on {who} refused: {AgentRegistry.TooOldForUpdateError}");
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, outcome.Error ?? AgentRegistry.TooOldForUpdateError));
+            }
+
+            var progress = outcome.Progress ?? throw new RpcException(new Status(StatusCode.Internal, "The update did not return a status"));
+            AgentEvents.Info(logger, Category,
+                $"RPCD update on {who}: channel '{request.Channel}', version '{request.Version}', approved {request.Approved}, stage {progress.Stage}, request {progress.RequestId}");
+            return progress;
+        }
+
+        public override async Task WatchUpdateRpcd(UpdateRpcdWatchRequest request, IServerStreamWriter<UpdateRpcdProgress> responseStream, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
+            var opened = registry.OpenUpdateWatch(request.MachineId, request.RequestId, adminKeyConfigured, adminKeyValid, access.GroupScope);
+            if (opened.Denied)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, opened.Error ?? ConsentPolicy.AdminKeyRequired));
+            if (opened.NotFound)
+                throw new RpcException(new Status(StatusCode.NotFound, opened.Error ?? AgentRegistry.UnknownAgentError));
+            if (opened.Offline)
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, opened.Error ?? AgentRegistry.OfflineError));
+
+            var subscription = opened.Subscription ?? throw new RpcException(new Status(StatusCode.Internal, "The update watch did not open"));
+            using var _ = subscription;
+            var token = context.CancellationToken;
+            try
+            {
+                if (!subscription.Replayed)
+                {
+                    using var ack = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    ack.CancelAfter(registry.UpdateAckTimeout);
+                    try
+                    {
+                        if (!await subscription.Reader.WaitToReadAsync(ack.Token).ConfigureAwait(false))
+                            throw new RpcException(new Status(StatusCode.FailedPrecondition, AgentRegistry.TooOldForUpdateError));
+                    }
+                    catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                    {
+                        throw new RpcException(new Status(StatusCode.FailedPrecondition, AgentRegistry.TooOldForUpdateError));
+                    }
+                }
+
+                await foreach (var progress in subscription.Reader.ReadAllAsync(token).ConfigureAwait(false))
+                    await responseStream.WriteAsync(progress, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // The admin client disconnected.
+            }
+        }
+
+        /// <summary>
+        /// The same admin-key inputs <see cref="StartSession"/> uses. A relay ticket that may start a session unattended counts as the key.
+        /// A shop-scoped caller who is not authorized for that is refused, the same as <see cref="StartSession"/>.
+        /// </summary>
+        private (bool Configured, bool Valid) MutationAuthority(PeakSWC.RemoteWebView.AgentAdminAccessDecision access, ServerCallContext context)
+        {
+            if (access.UnattendedAuthorized)
+                return (true, true);
+            if (access.GroupScope != null)
+                return (true, false);
+            if (!options.AdminKeyConfigured && Interlocked.Exchange(ref warnedNoAdminKey, 1) == 0)
+                AgentEvents.Warn(logger, $"{AgentOptions.AdminKeyVariable} is not set: every diagnostics start asks the person at the PC for consent");
+            return (options.AdminKeyConfigured, options.IsAdminKeyValid(GetAdminKey(context)));
         }
 
         private PeakSWC.RemoteWebView.AgentAdminAccessDecision RequireAccess(ServerCallContext context)

@@ -127,6 +127,11 @@ namespace PeakSWC.RemoteWebView.Agents
                     if (stored != null)
                         LogProgress(hello, stored);
                     break;
+                case AgentMessage.BodyOneofCase.UpdateRpcd:
+                    var update = registry.OnUpdateProgress(connection, message.UpdateRpcd);
+                    if (update != null)
+                        LogUpdate(hello, update);
+                    break;
                 case AgentMessage.BodyOneofCase.Hello:
                     logger.LogWarning("Agent {MachineId} sent a second AgentHello; ignored", hello.MachineId);
                     break;
@@ -175,6 +180,29 @@ namespace PeakSWC.RemoteWebView.Agents
                     logger.LogDebug("Launch progress {Stage} on {Where}: {Detail}", progress.Stage, where, progress.Detail);
                     break;
             }
+        }
+
+        private void LogUpdate(AgentHello hello, UpdateRpcdProgress progress)
+        {
+            string where = $"{hello.MachineName} ({hello.MachineId}), request {progress.RequestId}";
+            if (!AgentRegistry.IsUpdateTerminal(progress))
+            {
+                logger.LogDebug("RPCD update {Stage} on {Where}: {Detail}", progress.Stage, where, progress.Detail);
+                return;
+            }
+
+            string message = $"RPCD update {progress.Stage} on {where}: {FirstSentence(progress.Error, progress.Detail)}";
+            if (progress.Stage is "failed" or "refused")
+                AgentEvents.Warn(logger, message);
+            else
+                AgentEvents.Info(logger, Category, message);
+        }
+
+        private static string FirstSentence(string? error, string? detail)
+        {
+            if (!string.IsNullOrWhiteSpace(error))
+                return error;
+            return detail ?? string.Empty;
         }
 
         public static string GetRemoteIp(ServerCallContext context)

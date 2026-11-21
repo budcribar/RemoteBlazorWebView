@@ -33,6 +33,7 @@ message AgentMessage {
     AgentHello hello = 1;
     Heartbeat heartbeat = 2;
     LaunchProgress progress = 3;
+    UpdateRpcdProgress update_rpcd = 4; // progress for an update_rpcd command; the relay forwards it to WatchUpdateRpcd
   }
 }
 
@@ -83,6 +84,8 @@ message HubCommand {
     LaunchCommand launch = 1;
     CancelCommand cancel = 2;
     ReleaseAvailableCommand release_available = 3;
+    UpdateRpcdCommand update_rpcd = 4;          // install an official GitHub release; approved must be true
+    UpdateRpcdStatusCommand update_rpcd_status = 5; // poll the latest update, or the one named by request_id
   }
 }
 
@@ -106,6 +109,37 @@ message ReleaseAvailableCommand {
   string prerelease_version = 2;
 }
 
+// Install the official GitHub release of RPCD. The agent refuses unless approved is true.
+// channel is "stable" or "prerelease". version is optional (empty = the current release on that channel).
+// approved_by is an audit label only. It is not approval, and it must not carry a customer name.
+// The relay does not send an installer URL or a checksum. The agent downloads from GitHub itself.
+message UpdateRpcdCommand {
+  string request_id = 1;
+  string channel = 2;
+  string version = 3;
+  bool approved = 4;
+  string approved_by = 5;
+}
+
+// Empty request_id asks for the latest update on this PC.
+message UpdateRpcdStatusCommand {
+  string request_id = 1;
+}
+
+// One pollable snapshot. terminal is true for refused, already_up_to_date, succeeded, and failed.
+// old_version is the build before the attempt. new_version is the release being installed, then the build now on disk.
+message UpdateRpcdProgress {
+  string request_id = 1;
+  string stage = 2;
+  string detail = 3;
+  int32 percent = 4;
+  string old_version = 5;
+  string new_version = 6;
+  bool terminal = 7;
+  string error = 8;
+  string channel = 9;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Used by the admin site (gRPC-Web).
 // ---------------------------------------------------------------------------------------------
@@ -117,6 +151,23 @@ service AgentAdmin {
   rpc CancelLaunch(CancelCommand) returns (google.protobuf.Empty);
   rpc EndSession(EndSessionRequest) returns (EndSessionResponse);      // stops the app the agent started on that computer
   rpc PublishRelease(ReleaseAvailableCommand) returns (google.protobuf.Empty); // notifies connected agents of new release versions
+  // Forwards UpdateRpcdCommand to that computer's agent and returns the first progress (often "checking" or a refusal).
+  rpc UpdateRpcd(UpdateRpcdAdminRequest) returns (UpdateRpcdProgress);
+  // Replays the latest progress first, then each change until terminal. request_id empty = the latest update.
+  rpc WatchUpdateRpcd(UpdateRpcdWatchRequest) returns (stream UpdateRpcdProgress);
+}
+
+message UpdateRpcdAdminRequest {
+  string machine_id = 1;
+  string channel = 2;
+  string version = 3;
+  bool approved = 4;
+  string approved_by = 5;
+}
+
+message UpdateRpcdWatchRequest {
+  string machine_id = 1;
+  string request_id = 2;
 }
 
 message AgentInfo {
