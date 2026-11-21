@@ -603,7 +603,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null, string? requesterUserId = null)
         {
             lock (gate)
             {
@@ -639,6 +639,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 var launch = new LaunchEntry(requestId, entry.MachineId, sessionId)
                 {
                     Group = entry.Group,
+                    StartedBy = requesterUserId ?? string.Empty,
                     Latest = new LaunchProgress
                     {
                         RequestId = requestId,
@@ -676,6 +677,23 @@ namespace PeakSWC.RemoteWebView.Agents
 
             static StartSessionOutcome Refused(string error, string machineName) =>
                 new(new StartSessionResponse { Accepted = false, Error = error }, machineName, true);
+        }
+
+        /// <summary>
+        /// The signed-in user id of whoever asked for the session with this id, or null when the relay started no such session
+        /// or it was asked for without sign-in. That user is the one given control (SessionControllers).
+        /// </summary>
+        public string? StartedBy(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId))
+                return null;
+            lock (gate)
+            {
+                foreach (var launch in launches.Values)
+                    if (launch.SessionId == sessionId && !string.IsNullOrEmpty(launch.StartedBy))
+                        return launch.StartedBy;
+            }
+            return null;
         }
 
         public CancelLaunchOutcome CancelLaunch(string requestId, string? groupScope = null)
@@ -1086,6 +1104,8 @@ namespace PeakSWC.RemoteWebView.Agents
             public string MachineId { get; } = machineId;
             public string SessionId { get; } = sessionId;
             public string Group { get; set; } = string.Empty;
+            /// <summary>The signed-in user id of whoever asked for the session (empty without sign-in). See <see cref="StartedBy(string)"/>.</summary>
+            public string StartedBy { get; init; } = string.Empty;
             public LaunchProgress Latest { get; set; } = new();
             public DateTimeOffset Updated { get; set; }
             public List<Channel<LaunchProgress>> Subscribers { get; } = [];

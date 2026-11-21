@@ -1,6 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Agents;
 using PeakSWC.RemoteWebView.Services;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null, IRelayAuthorization? authorization = null) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null, IRelayAuthorization? authorization = null, AgentRegistry? agents = null) : WebViewIPC.WebViewIPCBase
     {
         /// <summary>
         /// Every session id on the relay. Refused when the relay requires sign-in: a session id is what the browser calls
@@ -84,6 +85,8 @@ namespace PeakSWC.RemoteWebView
                 AppKey = request.AppKey,
             };
             state.IPC.ParticipantEvents = request.ParticipantEvents;
+            // A session an agent started for a signed-in user: only that user is given control (others may watch).
+            state.Controllers.Add(agents?.StartedBy(request.Id));
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try

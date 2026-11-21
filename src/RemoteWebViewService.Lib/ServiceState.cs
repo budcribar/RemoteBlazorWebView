@@ -32,6 +32,8 @@ namespace PeakSWC.RemoteWebView
         public ClientKeys ClientKeys { get; } = new();
         // The connection launched by the machine owner (the local control surface). It may always reclaim control; the remote user never may.
         public string OwnerClientId { get; set; } = string.Empty;
+        /// <summary>Who may be given control. Limited to the requester for sessions started through AgentAdmin; see SessionControllers.</summary>
+        public SessionControllers Controllers { get; }
         /// <summary>The app's secret for its own owner page (CreateWebView ownerKey). Empty for older apps. See OwnerAccess.</summary>
         public string OwnerKey { get; init; } = string.Empty;
         /// <summary>Given to the owner's page (as a cookie) once it presents the owner key; its connection sends it back.</summary>
@@ -258,7 +260,8 @@ namespace PeakSWC.RemoteWebView
             _lifetime = new ReasonedCancellationTokenSource();
             CancellationTokenSource = _lifetime;
             Token = _lifetime.Token;
-            IPC = new IPC(Token,logger,EnableMirrors);
+            Controllers = new SessionControllers();
+            IPC = new IPC(Token,logger,EnableMirrors) { Controllers = Controllers };
             Logger = logger;           
         }
     }
