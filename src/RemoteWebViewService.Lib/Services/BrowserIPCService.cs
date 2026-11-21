@@ -56,7 +56,7 @@ namespace PeakSWC.RemoteWebView
                 // The signed-in name, for the roster and the app's audit (ParticipantsChanged). The page's sign-in cookie comes
                 // with its gRPC-Web call when the relay serves both; otherwise (and without authorization) it is empty.
                 var userName = SignedInName(context);
-                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary) { UserName = userName }, linkedToken);
+                serviceState.IPC.BrowserResponseStream(new BrowserResponseNode(responseStream, request.ClientId, request.IsPrimary) { UserName = userName, UserId = SignedInId(context) }, linkedToken);
 
                 // The machine owner holds control from the start. The owner's surface may connect after the remote user
                 // (in mirror mode it connects only once the remote user is present), so promote it on its first
@@ -126,6 +126,21 @@ namespace PeakSWC.RemoteWebView
                 if (attached && serviceState != null)
                     serviceState.ClientKeys.Detach(request.ClientId, keep: request.ClientId == serviceState.PrimaryClientId || request.ClientId == serviceState.OwnerClientId);
             }
+        }
+
+        private static string SignedInId(ServerCallContext context) =>
+            CallContexts.Http(context)?.User is { Identity.IsAuthenticated: true } user ? user.GetUserObjectId() ?? string.Empty : string.Empty;
+
+        /// <summary>
+        /// A session limited to some users (SessionControllers) is claimed only by the owner's page or by one of them: any
+        /// other member of the group may watch, but not take control first.
+        /// </summary>
+        private static bool MayClaimControl(ServiceState serviceState, ServerCallContext context)
+        {
+            if (!serviceState.Controllers.IsLimited)
+                return true;
+            var http = CallContexts.Http(context);
+            return http is not null && (OwnerAccess.HasOwnerCookie(http, serviceState) || serviceState.Controllers.Lists(SignedInId(context)));
         }
 
         private static string SignedInName(ServerCallContext context)
@@ -237,6 +252,11 @@ namespace PeakSWC.RemoteWebView
                     if (!await BrowserCallAccess.AllowsAsync(context, serviceState, authorization, users).ConfigureAwait(false))
                     {
                         logger.LogWarning("Claim of control refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = false };
+                    }
+                    if (!MayClaimControl(serviceState, context))
+                    {
+                        logger.LogWarning("Claim of control refused: control is kept for the user who started this session. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                         return new SendMessageResponse { Id = request.Id, Success = false };
                     }
                     if (!serviceState.ClientKeys.Bind(request.ClientId, request.ClientKey))
@@ -385,6 +405,22 @@ namespace PeakSWC.RemoteWebView
 
             if (target == current)
                 return new Empty(); // already controlling
+
+            // A session limited to some users (SessionControllers): control goes to one of them, so a page that hands control
+            // to whoever joins (unattended sessions) cannot give it to another member who is only watching. A listed user who
+            // holds control may still hand it to anyone on purpose, and that person is added to the list.
+            var controllers = serviceState.Controllers;
+            if (controllers.IsLimited && target != owner)
+            {
+                string targetUser = serviceState.IPC.ConnectionUserId(target) ?? string.Empty;
+                bool handOff = requester == current && requester != owner && controllers.Lists(serviceState.IPC.ConnectionUserId(requester));
+                if (!controllers.Lists(targetUser) && !handOff)
+                {
+                    logger.LogInformation("SetPrimary denied: control is kept for the user who started this session. Id: {Id}, requester: {Requester}, target: {Target}", request.Id, requester, target);
+                    return new Empty();
+                }
+                controllers.Add(targetUser);
+            }
 
             await PromoteAsync(serviceState, target).ConfigureAwait(false);
             logger.LogInformation("Control transferred. Id: {Id}, from: {From}, to: {To}", request.Id, current, target);

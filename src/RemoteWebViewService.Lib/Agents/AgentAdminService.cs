@@ -59,7 +59,7 @@ namespace PeakSWC.RemoteWebView.Agents
             string serverUrl = GetServerUrl(options, context);
             var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
 
-            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope);
+            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope, RequesterUserId(context));
             var response = outcome.Response;
             if (outcome.Denied)
             {
@@ -277,6 +277,10 @@ namespace PeakSWC.RemoteWebView.Agents
         /// caller cannot choose the name, only add a short label after it (see <see cref="WithLabel"/>).
         /// </summary>
         /// <param name="requested">The requester field the caller sent (StartSessionRequest or EndSessionRequest), or null.</param>
+        /// <summary>The signed-in caller's user id, or null without sign-in. The session it starts gives control only to that user.</summary>
+        private static string? RequesterUserId(ServerCallContext context) =>
+            CallContexts.Http(context)?.User is { Identity.IsAuthenticated: true } user ? user.GetUserObjectId() : null;
+
         public static string GetRequester(string? requested, ServerCallContext context)
         {
             try
