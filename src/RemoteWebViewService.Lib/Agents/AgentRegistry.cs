@@ -203,12 +203,17 @@ namespace PeakSWC.RemoteWebView.Agents
             lock (gate)
             {
                 bool isNew = !agents.TryGetValue(hello.MachineId, out var entry);
+                // An offline computer keeps its shop, unless the authority just issued it a new token for the new shop
+                // (the old shop reset it). A computer that is online in another shop is always refused.
                 if (entry != null
                     && !string.IsNullOrEmpty(entry.Group)
-                    && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase))
+                    && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase)
+                    && (entry.Online || string.IsNullOrWhiteSpace(issuedAgentToken)))
                     throw new InvalidOperationException("That computer is already enrolled to another shop.");
 
-                if (entry?.AgentTokenHash != null)
+                // A newly issued token means the authority has already decided this connect (first enrollment, a replacement
+                // token, or a reset), so the token remembered here is out of date and must not refuse it.
+                if (entry?.AgentTokenHash != null && string.IsNullOrWhiteSpace(issuedAgentToken))
                 {
                     var presentedHash = HashAgentToken(hello.AgentToken);
                     if (presentedHash == null || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(entry.AgentTokenHash, presentedHash))
