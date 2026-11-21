@@ -3,6 +3,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PeakSWC.RemoteWebView;
@@ -212,6 +214,109 @@ public class RemoteTicketTests
         var error = await Assert.ThrowsAsync<Grpc.Core.RpcException>(() => service.GetIds(new Google.Protobuf.WellKnownTypes.Empty(), null!));
 
         Assert.Equal(Grpc.Core.StatusCode.PermissionDenied, error.StatusCode);
+    }
+
+    [Fact]
+    public async Task Client_listing_uses_the_signed_in_user_not_the_user_id_in_the_request()
+    {
+        await using var server = await Start(new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.NotFound)));
+        var mine = AddSession(server, "bench");
+        AddSession(server, "other");
+
+        // Another shop's user signs in first, so the relay knows their groups.
+        await SignedIn(server, Ticket("user-other", ["other"], DateTimeOffset.UtcNow.AddMinutes(5)));
+
+        var service = ActivatorUtilities.CreateInstance<ClientIPCService>(server.Services);
+        var caller = await SignedIn(server, Ticket("user-bench", ["bench"], DateTimeOffset.UtcNow.AddMinutes(5)));
+
+        var groups = await service.GetUserGroups(new UserRequest { Oid = "user-other" }, caller);
+        Assert.Equal(["bench"], groups.Groups);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var listed = await FirstClientList(service, new UserMessageRequest { Id = Guid.NewGuid().ToString(), Oid = "user-other" }, await SignedIn(server, Ticket("user-bench", ["bench"], DateTimeOffset.UtcNow.AddMinutes(5)), cts.Token));
+        var only = Assert.Single(listed.ClientResponses);
+        Assert.Equal(mine.Id, only.Id);
+    }
+
+    [Fact]
+    public async Task Client_listing_refuses_a_call_without_a_valid_ticket()
+    {
+        await using var server = await Start(new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.NotFound)));
+        AddSession(server, "bench");
+        await SignedIn(server, Ticket("user-bench", ["bench"], DateTimeOffset.UtcNow.AddMinutes(5)));
+        var service = ActivatorUtilities.CreateInstance<ClientIPCService>(server.Services);
+
+        var anonymous = await SignedIn(server, null);
+        var error = await Assert.ThrowsAsync<Grpc.Core.RpcException>(() => service.GetUserGroups(new UserRequest { Oid = "user-bench" }, anonymous));
+        Assert.Equal(Grpc.Core.StatusCode.Unauthenticated, error.StatusCode);
+
+        var expired = await SignedIn(server, Ticket("user-bench", ["bench"], DateTimeOffset.UtcNow.AddMinutes(-1)));
+        error = await Assert.ThrowsAsync<Grpc.Core.RpcException>(() => service.GetUserGroups(new UserRequest { Oid = "user-bench" }, expired));
+        Assert.Equal(Grpc.Core.StatusCode.Unauthenticated, error.StatusCode);
+
+        var writer = new ListWriter(null);
+        error = await Assert.ThrowsAsync<Grpc.Core.RpcException>(() => service.GetClients(new UserMessageRequest { Id = "x", Oid = "user-bench" }, writer, anonymous));
+        Assert.Equal(Grpc.Core.StatusCode.Unauthenticated, error.StatusCode);
+        Assert.Empty(writer.Written);
+    }
+
+    /// <summary>A gRPC call context for a request that carried <paramref name="ticket"/> (or none), authenticated by the relay's own scheme.</summary>
+    private static async Task<CallContext> SignedIn(EmbeddedRemoteWebViewServer server, RemoteTicketPayload? ticket, CancellationToken cancellationToken = default)
+    {
+        // Each request gets its own scope, as in the relay; the scope lives as long as the test's server.
+        var http = new DefaultHttpContext { RequestServices = server.Services.CreateScope().ServiceProvider };
+        if (ticket != null)
+            http.Request.Headers[RemoteTicketReader.HeaderName] = RemoteTicketFormat.Create(Secret, ticket);
+        var result = await http.AuthenticateAsync(RemoteTicketAuthorization.Scheme);
+        if (result.Succeeded)
+            http.User = result.Principal!;
+        return new CallContext(http, cancellationToken);
+    }
+
+    private static async Task<ClientResponseList> FirstClientList(ClientIPCService service, UserMessageRequest request, CallContext context)
+    {
+        var writer = new ListWriter(context.Cancel);
+        try { await service.GetClients(request, writer, context); }
+        catch (OperationCanceledException) { }
+        return Assert.Single(writer.Written);
+    }
+
+    private sealed class ListWriter(Action? afterFirst) : Grpc.Core.IServerStreamWriter<ClientResponseList>
+    {
+        public List<ClientResponseList> Written { get; } = [];
+        public Grpc.Core.WriteOptions? WriteOptions { get; set; }
+        public Task WriteAsync(ClientResponseList message)
+        {
+            Written.Add(message);
+            afterFirst?.Invoke();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CallContext : Grpc.Core.ServerCallContext
+    {
+        private readonly CancellationTokenSource cts;
+
+        public CallContext(HttpContext http, CancellationToken cancellationToken)
+        {
+            cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            UserState["__HttpContext"] = http; // where Grpc.AspNetCore's GetHttpContext() finds it
+        }
+
+        public void Cancel() => cts.Cancel();
+
+        protected override string MethodCore => "test";
+        protected override string HostCore => "localhost";
+        protected override string PeerCore => "peer";
+        protected override DateTime DeadlineCore => DateTime.MaxValue;
+        protected override Grpc.Core.Metadata RequestHeadersCore { get; } = new();
+        protected override CancellationToken CancellationTokenCore => cts.Token;
+        protected override Grpc.Core.Metadata ResponseTrailersCore { get; } = new();
+        protected override Grpc.Core.Status StatusCore { get; set; }
+        protected override Grpc.Core.WriteOptions? WriteOptionsCore { get; set; }
+        protected override Grpc.Core.AuthContext AuthContextCore => null!;
+        protected override Grpc.Core.ContextPropagationToken CreatePropagationTokenCore(Grpc.Core.ContextPropagationOptions? options) => null!;
+        protected override Task WriteResponseHeadersAsyncCore(Grpc.Core.Metadata responseHeaders) => Task.CompletedTask;
     }
 
     private static async Task<EmbeddedRemoteWebViewServer> Start(AuthorityStub handler)

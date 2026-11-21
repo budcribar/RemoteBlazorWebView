@@ -1,6 +1,7 @@
 using System.Reflection;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -14,7 +15,7 @@ using PeakSWC.RemoteWebView.RemoteStaticFiles;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, IUserService userService, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
+    public class ClientIPCService(ILogger<ClientIPCService> logger, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, IUserService userService, IRelayAuthorization authorization, RemoteFilesOptions filesOptions) : ClientIPC.ClientIPCBase
     {
         private async Task WriteResponse(IServerStreamWriter<ClientResponseList> responseStream, IReadOnlyList<string> groups)
         {
@@ -44,7 +45,7 @@ namespace PeakSWC.RemoteWebView
            
             try
             {
-                var groups = await userService.GetUserGroups(request?.Oid ?? string.Empty).ConfigureAwait(false) ?? [];
+                var groups = await userService.GetUserGroups(CallerOid(request?.Oid, context)).ConfigureAwait(false) ?? [];
                 
                 await WriteResponse(responseStream, groups).ConfigureAwait(false);
 
@@ -62,10 +63,32 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<UserResponse> GetUserGroups(UserRequest request, ServerCallContext context)
         {
-            var groups = await userService.GetUserGroups(request.Oid).ConfigureAwait(false);
+            var groups = await userService.GetUserGroups(CallerOid(request?.Oid, context)).ConfigureAwait(false) ?? [];
             var response = new UserResponse();
             response.Groups.AddRange(groups);
             return response;
+        }
+
+        /// <summary>
+        /// The user whose groups decide what <see cref="GetClients"/> lists and what <see cref="GetUserGroups"/> returns.
+        /// When the relay requires sign-in, that is the signed-in caller (the ticket or sign-in on this call) and the oid in
+        /// the request is ignored; a call that is not signed in is refused. Without sign-in (<see cref="NoAuthorization"/>)
+        /// there is nobody to check, so the request's oid is used as before.
+        /// </summary>
+        private string CallerOid(string? requested, ServerCallContext context)
+        {
+            if (!authorization.Enabled)
+                return requested ?? string.Empty;
+
+            HttpContext? http = null;
+            try { http = context?.GetHttpContext(); }
+            catch (InvalidOperationException) { }
+
+            var user = http?.User;
+            var oid = user?.Identity?.IsAuthenticated == true ? user.GetUserObjectId() : null;
+            if (string.IsNullOrEmpty(oid))
+                throw new RpcException(new Status(StatusCode.Unauthenticated, "Sign in to continue."));
+            return oid;
         }
 
         public override Task<Empty> SetCache(CacheRequest request, ServerCallContext context)

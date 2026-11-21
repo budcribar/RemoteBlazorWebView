@@ -40,6 +40,7 @@ public class BugReviewTests
             new ConcurrentDictionary<string, Channel<string>>(),
             services,
             null!,
+            new NoAuthorization(),
             new RemoteFilesOptions());
 
         var response = await ipc.GetServerStatus(new Empty(), null!);

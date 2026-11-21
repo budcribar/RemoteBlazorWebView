@@ -57,6 +57,7 @@ public class ServerStatusRegistrationTests
             new ConcurrentDictionary<string, Channel<string>>(),
             services,
             null!,
+            new NoAuthorization(),
             new RemoteFilesOptions());
         return (ipc, services, state);
     }
