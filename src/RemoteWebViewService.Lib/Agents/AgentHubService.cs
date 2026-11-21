@@ -132,6 +132,10 @@ namespace PeakSWC.RemoteWebView.Agents
                     if (update != null)
                         LogUpdate(hello, update);
                     break;
+                case AgentMessage.BodyOneofCase.Metrics:
+                    int delivered = registry.OnMetrics(connection, message.Metrics);
+                    logger.LogDebug("Agent {MachineId} uploaded {Count} metrics run(s) to {Watchers} watcher(s)", hello.MachineId, message.Metrics.Runs.Count, delivered);
+                    break;
                 case AgentMessage.BodyOneofCase.Hello:
                     logger.LogWarning("Agent {MachineId} sent a second AgentHello; ignored", hello.MachineId);
                     break;

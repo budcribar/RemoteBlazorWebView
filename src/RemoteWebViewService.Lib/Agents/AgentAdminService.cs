@@ -52,6 +52,60 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
+        public override async Task WatchMetrics(Empty request, IServerStreamWriter<MetricsUpload> responseStream, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            RequireMutation(access, context);
+            using var subscription = registry.SubscribeMetrics(access.GroupScope);
+            var token = context.CancellationToken;
+            try
+            {
+                await foreach (var upload in subscription.Reader.ReadAllAsync(token).ConfigureAwait(false))
+                    await responseStream.WriteAsync(upload, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // The admin client disconnected; unacknowledged runs stay in the agents' outboxes.
+            }
+        }
+
+        public override Task<Empty> AckMetrics(MetricsAckRequest request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            RequireMutation(access, context);
+            // An offline agent keeps the runs and uploads them again; Admin saves by run id, so that is never a duplicate.
+            registry.AckMetrics(request.MachineId, request.ThroughSeq, access.GroupScope, out _);
+            return Task.FromResult(new Empty());
+        }
+
+        public override Task<MetricsCommandResponse> SetMetricsSchedule(MetricsScheduleRequest request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            RequireMutation(access, context);
+            if (request.Schedule == null)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "schedule is required"));
+            bool sent = registry.SetMetricsSchedule(request.MachineId, request.Schedule, access.GroupScope, out var error);
+            if (sent)
+                AgentEvents.Info(logger, Category, $"Scheduled metrics set on {request.MachineId}: revision {request.Schedule.Revision}, " +
+                    (request.Schedule.Enabled ? $"every {request.Schedule.IntervalMinutes} min" : "off"));
+            return Task.FromResult(new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error });
+        }
+
+        public override Task<MetricsCommandResponse> CollectMetrics(CollectMetricsRequest request, ServerCallContext context)
+        {
+            var access = RequireAccess(context);
+            RequireMutation(access, context);
+            bool sent = registry.CollectMetrics(request.MachineId, access.GroupScope, out var error);
+            return Task.FromResult(new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error });
+        }
+
+        /// <summary>The admin key, when one is configured, for a caller that isn't scoped to a shop (the same rule as CancelLaunch).</summary>
+        private void RequireMutation(PeakSWC.RemoteWebView.AgentAdminAccessDecision access, ServerCallContext context)
+        {
+            if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
+                throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
+        }
+
         public override Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
         {
             var access = RequireAccess(context);

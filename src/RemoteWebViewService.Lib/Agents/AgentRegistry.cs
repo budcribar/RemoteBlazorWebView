@@ -99,7 +99,7 @@ namespace PeakSWC.RemoteWebView.Agents
     /// All state is guarded by one lock: agents report every 30 s and launches are rare, so contention is negligible.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
-    public sealed class AgentRegistry
+    public sealed partial class AgentRegistry
     {
         public static readonly TimeSpan OfflineAfter = TimeSpan.FromSeconds(90);
         public static readonly TimeSpan ForgetAgentAfter = TimeSpan.FromDays(7);
@@ -258,6 +258,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.ConsentCeiling = hello.ConsentCeiling;
                 info.Lifetime = hello.Lifetime;
                 info.BootTime = hello.BootTime?.Clone();
+                info.MetricsScheduleRevision = hello.MetricsScheduleRevision;
 
                 if (latestRelease != null)
                     entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
@@ -335,7 +336,8 @@ namespace PeakSWC.RemoteWebView.Agents
                     || info.SignedInUser != heartbeat.SignedInUser
                     || info.SessionRunning != heartbeat.SessionRunning
                     || info.SessionId != heartbeat.SessionId
-                    || info.CachedAppVersion != heartbeat.CachedAppVersion;
+                    || info.CachedAppVersion != heartbeat.CachedAppVersion
+                    || info.MetricsScheduleRevision != heartbeat.MetricsScheduleRevision;
 
                 entry.Online = true;
                 entry.LastSeen = time.GetUtcNow();
@@ -343,6 +345,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.SessionRunning = heartbeat.SessionRunning;
                 info.SessionId = heartbeat.SessionId;
                 info.CachedAppVersion = heartbeat.CachedAppVersion;
+                info.MetricsScheduleRevision = heartbeat.MetricsScheduleRevision;
 
                 // last_seen alone is refreshed by the periodic WatchAgents push; don't wake every watcher every 30 s per agent.
                 if (changedAnything)
