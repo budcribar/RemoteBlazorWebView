@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null) : BrowserIPC.BrowserIPCBase
+    public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null, IUserService? users = null) : BrowserIPC.BrowserIPCBase
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
@@ -25,6 +25,13 @@ namespace PeakSWC.RemoteWebView
             {
                 // Must not be context.CancellationToken: a disconnecting browser would cancel this wait and shut down early.
                 serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+
+                // With sign-in on, the same people who may open the session's pages: the owner's page, or a member of its group.
+                if (!await BrowserCallAccess.AllowsAsync(context, serviceState, authorization, users, request.OwnerToken).ConfigureAwait(false))
+                {
+                    logger.LogWarning("Connection refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Sign in to a group that may open this session."));
+                }
 
                 // A clientId that is already known belongs to the connection that holds its key. Without this, any browser
                 // could open a stream under the controller's or the owner's clientId (the roster names both).
@@ -98,6 +105,10 @@ namespace PeakSWC.RemoteWebView
                 }
 
                 await OnConnectionClosed(serviceState, request.Id, request.ClientId, null).ConfigureAwait(false);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.PermissionDenied)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -218,8 +229,16 @@ namespace PeakSWC.RemoteWebView
 
                 // The first primary connection to send claims control for the session. Its stream may not be open yet, so
                 // this can be the first the relay hears of the connection: its key is recorded here.
+                // Only a connection the session's pages would let in may claim it. Nothing else needs the check here: every
+                // later message is dropped unless it comes from the controller, and every controller was let in (by this
+                // claim, by ReceiveMessage, or as a SetPrimary target, which must have an open stream).
                 if (request.IsPrimary && string.IsNullOrEmpty(serviceState.PrimaryClientId))
                 {
+                    if (!await BrowserCallAccess.AllowsAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                    {
+                        logger.LogWarning("Claim of control refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = false };
+                    }
                     if (!serviceState.ClientKeys.Bind(request.ClientId, request.ClientKey))
                     {
                         logger.LogWarning("Claim of control refused: the clientId is in use with another key. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
@@ -320,6 +339,11 @@ namespace PeakSWC.RemoteWebView
                 return new Empty();
 
             var serviceState = tcs.Task.Result;
+            if (!await BrowserCallAccess.AllowsAsync(context, serviceState, authorization, users, clientId: request.ClientId, clientKey: request.ClientKey).ConfigureAwait(false))
+            {
+                logger.LogWarning("SetPrimary refused: not signed in to this session's group. Id: {Id}, requester: {Requester}", request.Id, request.ClientId);
+                return new Empty();
+            }
             // One change of controller at a time: this request is judged against the result of any change before it.
             await serviceState.BrowserIPC.ControlChange.WaitAsync(context.CancellationToken).ConfigureAwait(false);
             try
@@ -383,6 +407,11 @@ namespace PeakSWC.RemoteWebView
 
             var serviceState = tcs.Task.Result;
             string requester = request.ClientId;
+            if (!await BrowserCallAccess.AllowsAsync(context, serviceState, authorization, users, clientId: requester, clientKey: request.ClientKey).ConfigureAwait(false))
+            {
+                logger.LogWarning("Restart refused: not signed in to this session's group. Id: {Id}, requester: {Requester}", request.Id, requester);
+                return new Empty();
+            }
             bool allowed = !string.IsNullOrEmpty(requester) && serviceState.IPC.HasConnection(requester) &&
                 serviceState.ClientKeys.Matches(requester, request.ClientKey) && // the roster names both; only they hold their key
                 (requester == serviceState.PrimaryClientId || requester == serviceState.OwnerClientId);
