@@ -15,9 +15,51 @@ namespace PeakSWC.RemoteWebView
 {
     public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null, IUserService? users = null) : BrowserIPC.BrowserIPCBase
     {
+        internal static readonly TimeSpan SessionPollInterval = TimeSpan.FromMilliseconds(250);
+
+        /// <summary>Waits for an app to register <paramref name="id"/> without adding an entry for it. Null when none did in time.</summary>
+        private async Task<PendingSession?> WaitForSessionAsync(string id, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (true)
+            {
+                var pending = PendingSessions.TryJoin(serviceDictionary, id);
+                if (pending != null)
+                    return pending;
+                if (DateTime.UtcNow >= deadline)
+                    return null;
+                try
+                {
+                    await Task.Delay(SessionPollInterval, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
+            }
+        }
+
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            PendingSession? pending;
+            if (authorization?.Enabled == true && CallContexts.Http(context)?.User?.Identity?.IsAuthenticated != true)
+            {
+                // Not signed in: only the owner's page may connect, and its token or cookie can be checked only once the app
+                // has registered. Wait for the app's entry without adding one, so a caller that is not signed in adds nothing.
+                pending = await WaitForSessionAsync(request.Id, TimeSpan.FromSeconds(60), context.CancellationToken).ConfigureAwait(false);
+                if (pending == null)
+                {
+                    logger.LogWarning("Connection refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Sign in to a group that may open this session."));
+                }
+            }
+            else
+            {
+                pending = PendingSessions.Join(serviceDictionary, request.Id);
+            }
+
+            using var _ = pending;
+            var serviceStateTaskSource = pending.Source;
 
             ServiceState? serviceState = null;
             bool attached = false;
@@ -221,20 +263,27 @@ namespace PeakSWC.RemoteWebView
         {
             // A new primary page starts at sequence 1 and may arrive before CreateWebView.
             // Later messages, including a dying WebView after deregister, must not create an entry.
-            TaskCompletionSource<ServiceState> serviceStateTaskSource;
+            PendingSession? pending;
             if (request.IsPrimary && request.Sequence == 1)
             {
-                serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                if (authorization?.Enabled == true && !serviceDictionary.ContainsKey(request.Id))
+                {
+                    var http = CallContexts.Http(context);
+                    if (http?.User?.Identity?.IsAuthenticated != true)
+                    {
+                        logger.LogWarning("Claim of control refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = false };
+                    }
+                }
+                pending = PendingSessions.Join(serviceDictionary, request.Id);
             }
-            else if (!serviceDictionary.TryGetValue(request.Id, out var existing) || existing == null)
+            else if ((pending = PendingSessions.TryJoin(serviceDictionary, request.Id)) == null)
             {
                 logger.LogDebug("Dropped browser SendMessage for client {Id} at sequence {Sequence}.", request.Id, request.Sequence);
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
-            else
-            {
-                serviceStateTaskSource = existing;
-            }
+            using var _ = pending;
+            var serviceStateTaskSource = pending.Source;
 
             try
             {
@@ -306,11 +355,12 @@ namespace PeakSWC.RemoteWebView
                         if (request.Message == "connected:")
                         {
                             request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
-                            // With sign-in on, the app gets the page's cookies (the sign-in among them) for its own WebView.
+                            // Never forward relay/auth cookies (tickets, ASP.NET auth, owner/voice tokens) to the desktop client.
                             if (authorization?.Enabled == true)
                             {
-                                request.Cookies = serviceState.Cookies != null
-                                    ? JsonSerializer.Serialize(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value), JsonContext.Default.DictionaryStringString)
+                                var safeCookies = RelayCookieFilter.FilterForClient(serviceState.Cookies);
+                                request.Cookies = safeCookies.Count > 0
+                                    ? JsonSerializer.Serialize(safeCookies, JsonContext.Default.DictionaryStringString)
                                     : string.Empty;
                             }
                         }

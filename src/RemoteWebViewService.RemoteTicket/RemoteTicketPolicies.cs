@@ -72,21 +72,27 @@ namespace PeakSWC.RemoteWebView
         public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) =>
             CheckEnrollment(enrollmentKey, null, null, options);
 
-        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, string? machineId, string? agentToken, AgentOptions options)
+        public AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, string? machineId, string? agentToken, AgentOptions options) =>
+            CheckEnrollmentAsync(enrollmentKey, machineId, agentToken, options).GetAwaiter().GetResult();
+
+        public async Task<AgentEnrollmentDecision> CheckEnrollmentAsync(string? enrollmentKey, string? machineId, string? agentToken, AgentOptions options, CancellationToken cancellationToken = default)
         {
-            var result = authority.AuthorizeAsync(enrollmentKey, null, CancellationToken.None, machineId, agentToken).GetAwaiter().GetResult();
+            var result = await authority.AuthorizeAsync(enrollmentKey, null, cancellationToken, machineId, agentToken).ConfigureAwait(false);
             return result.Accepted
                 ? new AgentEnrollmentDecision(true, result.Group ?? "", null, result.IssuedAgentToken)
                 : new AgentEnrollmentDecision(false, "", result.DenialReason ?? "The enrollment key was not accepted");
         }
 
-        public AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options)
+        public AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options) =>
+            CheckAdminAccessAsync(httpContext, adminKeyHeader, options).GetAwaiter().GetResult();
+
+        public async Task<AgentAdminAccessDecision> CheckAdminAccessAsync(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options, CancellationToken cancellationToken = default)
         {
             var ticket = RemoteTicketReader.From(httpContext);
             if (string.IsNullOrEmpty(ticket))
                 return new(Allowed: false, GroupScope: "", UnattendedAuthorized: false, DenialReason: "Sign in to continue.");
 
-            var result = authority.AuthorizeAsync(null, ticket, CancellationToken.None).GetAwaiter().GetResult();
+            var result = await authority.AuthorizeAsync(null, ticket, cancellationToken).ConfigureAwait(false);
             if (!result.Accepted)
                 return new(Allowed: false, GroupScope: result.Group ?? "", UnattendedAuthorized: false, DenialReason: result.DenialReason ?? "Access denied");
             var scope = string.IsNullOrEmpty(result.Group) ? null : result.Group;

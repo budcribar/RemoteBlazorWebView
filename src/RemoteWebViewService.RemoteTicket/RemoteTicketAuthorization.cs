@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -95,13 +96,40 @@ namespace PeakSWC.RemoteWebView
         }
     }
 
-    public sealed class RemoteTicketUsers
+    public sealed class RemoteTicketUsers : IDisposable
     {
-        private readonly ConcurrentDictionary<string, string[]> groups = new(StringComparer.Ordinal);
+        public const int DefaultMaxEntries = 10_000;
+        public static readonly TimeSpan DefaultSlidingExpiration = TimeSpan.FromHours(1);
 
-        public void Remember(string oid, string[] userGroups) => groups[oid] = userGroups;
+        private readonly Microsoft.Extensions.Caching.Memory.MemoryCache cache;
+        private readonly TimeSpan slidingExpiration;
 
-        public IReadOnlyList<string> Groups(string oid) => groups.TryGetValue(oid, out var found) ? found : [];
+        public RemoteTicketUsers() : this(DefaultMaxEntries, DefaultSlidingExpiration) { }
+
+        public RemoteTicketUsers(int maxEntries, TimeSpan slidingExpiration)
+        {
+            this.slidingExpiration = slidingExpiration;
+            cache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+            {
+                SizeLimit = maxEntries
+            });
+        }
+
+        public void Remember(string oid, string[] userGroups)
+        {
+            if (string.IsNullOrEmpty(oid))
+                return;
+            cache.Set(oid, userGroups, new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions
+            {
+                Size = 1,
+                SlidingExpiration = slidingExpiration
+            });
+        }
+
+        public IReadOnlyList<string> Groups(string oid) =>
+            !string.IsNullOrEmpty(oid) && cache.TryGetValue(oid, out string[]? found) && found is not null ? found : [];
+
+        public void Dispose() => cache.Dispose();
     }
 
     public sealed class RemoteTicketUserService(RemoteTicketUsers users) : IUserService

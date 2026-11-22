@@ -54,6 +54,51 @@ namespace PeakSWC.RemoteWebView
             var groups = await users.GetUserGroups(user.GetUserObjectId() ?? string.Empty).ConfigureAwait(false) ?? [];
             return groups.Contains(state.Group);
         }
+
+        /// <summary>
+        /// HTTP session access check used after a session resolves (for example after waiting on a pre-opened
+        /// /app/{id} or /mirror/{id} URL, and for static files served by RemoteFilesMiddleware).
+        /// </summary>
+        public static async Task<bool> AllowsHttpAsync(HttpContext http, ServiceState state, IRelayAuthorization? authorization, IUserService? users)
+        {
+            if (authorization?.Enabled != true)
+                return true;
+            if (OwnerAccess.HasOwnerCookie(http, state) ||
+                (http.Request.Query["role"] == "owner" && OwnerAccess.KeyMatches(state, http.Request.Query["key"])))
+                return true;
+            return users is not null && await IsMemberAsync(http.User, state, users).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Strips relay and framework authentication cookies before forwarding browser cookies to the desktop client.
+    /// The desktop client runs on a customer machine and must never receive a technician's relay ticket, ASP.NET
+    /// auth cookies, owner tokens, or voice tokens.
+    /// </summary>
+    public static class RelayCookieFilter
+    {
+        public static bool IsSensitive(string name) =>
+            string.IsNullOrEmpty(name) ||
+            name.Equals("rwv-relay-ticket", StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("rbwv-test-user", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("rbwv-owner-", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("rbwv-voice-", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith(".AspNetCore.", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("__Host-", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("__Secure-", StringComparison.OrdinalIgnoreCase);
+
+        public static Dictionary<string, string> FilterForClient(IRequestCookieCollection? cookies)
+        {
+            var filtered = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (cookies is null)
+                return filtered;
+            foreach (var c in cookies)
+            {
+                if (!IsSensitive(c.Key))
+                    filtered[c.Key] = c.Value;
+            }
+            return filtered;
+        }
     }
 
     /// <summary>
@@ -71,7 +116,7 @@ namespace PeakSWC.RemoteWebView
         public bool Sees(string group) => All || Groups.Contains(group);
 
         /// <summary>
-        /// The operator check is the one AgentAdmin uses (<see cref="IAgentTenantPolicy.CheckAdminAccess"/>): allowed with
+        /// The operator check is the one AgentAdmin uses (<see cref="IAgentTenantPolicy.CheckAdminAccessAsync"/>): allowed with
         /// no group scope and authorized for unattended starts (a relay ticket for every shop, or a valid x-admin-key).
         /// A shop-scoped ticket sees its own shop; any other signed-in user sees the groups they are in.
         /// </summary>
@@ -84,7 +129,7 @@ namespace PeakSWC.RemoteWebView
             var http = CallContexts.Http(context);
             if (policy is not null && options is not null)
             {
-                var access = policy.CheckAdminAccess(http, CallContexts.Header(context, AgentOptions.AdminKeyHeader), options);
+                var access = await policy.CheckAdminAccessAsync(http, CallContexts.Header(context, AgentOptions.AdminKeyHeader), options, context?.CancellationToken ?? default).ConfigureAwait(false);
                 if (access.Allowed && access.GroupScope is null && access.UnattendedAuthorized)
                     return Everything;
                 if (access.Allowed && !string.IsNullOrEmpty(access.GroupScope))

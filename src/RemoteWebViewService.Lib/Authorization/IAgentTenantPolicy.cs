@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace PeakSWC.RemoteWebView
@@ -15,7 +17,11 @@ namespace PeakSWC.RemoteWebView
         AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, Agents.AgentOptions options);
         AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, string? machineId, string? agentToken, Agents.AgentOptions options) =>
             CheckEnrollment(enrollmentKey, options);
+        Task<AgentEnrollmentDecision> CheckEnrollmentAsync(string? enrollmentKey, string? machineId, string? agentToken, Agents.AgentOptions options, CancellationToken cancellationToken = default) =>
+            Task.FromResult(CheckEnrollment(enrollmentKey, machineId, agentToken, options));
         AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, Agents.AgentOptions options);
+        Task<AgentAdminAccessDecision> CheckAdminAccessAsync(HttpContext? httpContext, string? adminKeyHeader, Agents.AgentOptions options, CancellationToken cancellationToken = default) =>
+            Task.FromResult(CheckAdminAccess(httpContext, adminKeyHeader, options));
     }
 
     /// <summary>Default policy when no ticket authority is active: delegates directly to <see cref="Agents.AgentOptions"/> with no tenant scoping.</summary>

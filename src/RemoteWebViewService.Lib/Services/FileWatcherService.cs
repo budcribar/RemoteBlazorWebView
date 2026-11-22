@@ -1,6 +1,7 @@
 using Grpc.Core;
-
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Agents;
 using System.IO;
 using System.Threading.Tasks;
 using System;
@@ -8,21 +9,51 @@ using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class FileWatcherService(ILogger<FileWatcherService> logger) : FileWatcherIPC.FileWatcherIPCBase
+    public class FileWatcherService(
+        ILogger<FileWatcherService> logger,
+        IRelayAuthorization? authorization = null,
+        IAgentTenantPolicy? tenantPolicy = null,
+        AgentOptions? agentOptions = null,
+        IUserService? userService = null,
+        IConfiguration? configuration = null) : FileWatcherIPC.FileWatcherIPCBase
     {
         public override async Task WatchFile(WatchFileRequest request, IServerStreamWriter<WatchFileResponse> responseStream, ServerCallContext context)
         {
+            if (authorization?.Enabled == true)
+            {
+                var scope = await RelayCallerScope.ResolveAsync(context, authorization, tenantPolicy, agentOptions, userService).ConfigureAwait(false);
+                if (!scope.IsOperator)
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Only a relay operator may watch files."));
+            }
+
             string filePath = request?.FilePath ?? string.Empty;
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "FilePath cannot be null or empty."));
             }
 
-            logger.LogInformation($"Client requested to watch file: {filePath}");
-
-            if (!File.Exists(filePath))
+            string fullPath = Path.GetFullPath(filePath);
+            string? allowedRoot = configuration?["FileWatcher:AllowedRoot"];
+            if (authorization?.Enabled == true && string.IsNullOrWhiteSpace(allowedRoot))
             {
-                logger.LogWarning($"File {filePath} does not exist.");
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "FileWatcher:AllowedRoot must be configured when sign-in is enabled."));
+            }
+            if (!string.IsNullOrWhiteSpace(allowedRoot))
+            {
+                string normalizedRoot = Path.GetFullPath(allowedRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                if (!fullPath.StartsWith(normalizedRoot, comparison))
+                {
+                    logger.LogWarning("Rejected WatchFile request outside allowed root: {FilePath}", filePath);
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "FilePath is outside the allowed root directory."));
+                }
+            }
+
+            logger.LogInformation($"Client requested to watch file: {fullPath}");
+
+            if (!File.Exists(fullPath))
+            {
+                logger.LogWarning($"File {fullPath} does not exist.");
                 throw new RpcException(new Status(StatusCode.NotFound, $"File {filePath} does not exist."));
             }
 
@@ -38,7 +69,7 @@ namespace PeakSWC.RemoteWebView
             }, context.CancellationToken).ConfigureAwait(false);
 
             // Stream the initial file
-            await StreamFileInChunks(filePath, responseStream, context.CancellationToken).ConfigureAwait(false);
+            await StreamFileInChunks(fullPath, responseStream, context.CancellationToken).ConfigureAwait(false);
 
             // Send zero-length chunk to indicate end of initial transfer
             await responseStream.WriteAsync(new WatchFileResponse
@@ -50,7 +81,6 @@ namespace PeakSWC.RemoteWebView
             }, context.CancellationToken).ConfigureAwait(false);
 
             // Start watching for changes
-            string fullPath = Path.GetFullPath(filePath);
             string watchDir = Path.GetDirectoryName(fullPath) is { Length: > 0 } d ? d : Directory.GetCurrentDirectory();
             FileSystemWatcher? watcher = new(watchDir, Path.GetFileName(fullPath))
             {
