@@ -60,7 +60,8 @@ namespace PeakSWC.RemoteWebView
                 return;
             }
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            using var pending = PendingSessions.Join(serviceDictionary, request.Id);
+            var serviceStateTaskSource = pending.Source;
 
             if (serviceStateTaskSource.Task.IsCompleted)
             {
@@ -153,7 +154,8 @@ namespace PeakSWC.RemoteWebView
 
             logger.LogDebug("Client '{ClientGuid}' connected and initialized.", clientGuid);
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            using var pending = PendingSessions.Join(serviceDictionary, clientGuid);
+            var serviceStateTaskSource = pending.Source;
             ServiceState serviceState;
             try
             {
@@ -161,8 +163,6 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (!serviceStateTaskSource.Task.IsCompleted)
-                    serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(clientGuid, serviceStateTaskSource));
                 logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
                 await shutdownService.Shutdown(clientGuid, SessionEndReason.FileReadStreamEnded).ConfigureAwait(false);
                 return;
@@ -235,7 +235,8 @@ namespace PeakSWC.RemoteWebView
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            using var pending = PendingSessions.Join(serviceDictionary, request.Id);
+            var serviceStateTaskSource = pending.Source;
 
             try
             {
@@ -250,8 +251,6 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (!serviceStateTaskSource.Task.IsCompleted)
-                    serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(request.Id, serviceStateTaskSource));
                 if (shutdownService.HasEnded(request.Id, out var ended))
                     logger.LogDebug("SendMessage from the app for session {Id} dropped: the session ended ({Reason}).", request.Id, ended);
                 else
@@ -287,17 +286,8 @@ namespace PeakSWC.RemoteWebView
                     id = message.Id;
                     if (serviceState == null)
                     {
-                        var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-                        try
-                        {
-                            serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
-                        }
-                        catch
-                        {
-                            if (!serviceStateTaskSource.Task.IsCompleted)
-                                serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(id.ToString(), serviceStateTaskSource));
-                            throw;
-                        }
+                        using (var pending = PendingSessions.Join(serviceDictionary, id.ToString()))
+                            serviceState = await pending.Source.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                         if (!AppAccess.Allows(serviceState, context))
                         {
                             // Not the app: the session is left alone (shutting it down here would hand anyone a way to end it).

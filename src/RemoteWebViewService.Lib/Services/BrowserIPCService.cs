@@ -15,20 +15,51 @@ namespace PeakSWC.RemoteWebView
 {
     public class BrowserIPCService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ShutdownService shutdownService, IRelayAuthorization? authorization = null, IUserService? users = null) : BrowserIPC.BrowserIPCBase
     {
+        internal static readonly TimeSpan SessionPollInterval = TimeSpan.FromMilliseconds(250);
+
+        /// <summary>Waits for an app to register <paramref name="id"/> without adding an entry for it. Null when none did in time.</summary>
+        private async Task<PendingSession?> WaitForSessionAsync(string id, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (true)
+            {
+                var pending = PendingSessions.TryJoin(serviceDictionary, id);
+                if (pending != null)
+                    return pending;
+                if (DateTime.UtcNow >= deadline)
+                    return null;
+                try
+                {
+                    await Task.Delay(SessionPollInterval, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
+            }
+        }
+
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
-            if (authorization?.Enabled == true && !serviceDictionary.ContainsKey(request.Id))
+            PendingSession? pending;
+            if (authorization?.Enabled == true && CallContexts.Http(context)?.User?.Identity?.IsAuthenticated != true)
             {
-                var http = CallContexts.Http(context);
-                bool hasCallerIdentity = http?.User?.Identity?.IsAuthenticated == true || !string.IsNullOrEmpty(request.OwnerToken);
-                if (!hasCallerIdentity)
+                // Not signed in: only the owner's page may connect, and its token or cookie can be checked only once the app
+                // has registered. Wait for the app's entry without adding one, so a caller that is not signed in adds nothing.
+                pending = await WaitForSessionAsync(request.Id, TimeSpan.FromSeconds(60), context.CancellationToken).ConfigureAwait(false);
+                if (pending == null)
                 {
                     logger.LogWarning("Connection refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
                     throw new RpcException(new Status(StatusCode.PermissionDenied, "Sign in to a group that may open this session."));
                 }
             }
+            else
+            {
+                pending = PendingSessions.Join(serviceDictionary, request.Id);
+            }
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            using var _ = pending;
+            var serviceStateTaskSource = pending.Source;
 
             ServiceState? serviceState = null;
             bool attached = false;
@@ -123,9 +154,6 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
-                    serviceDictionary.TryRemove(KeyValuePair.Create(request.Id, serviceStateTaskSource));
-
                 // serviceState may be null here if the wait above failed; only the current controller triggers teardown.
                 if (serviceState?.EndReason is { } ending)
                     logger.LogDebug("Browser stream {ClientId} for session {Id} stopped: the session is already ending ({Reason}).", request.ClientId, request.Id, ending);
@@ -235,7 +263,7 @@ namespace PeakSWC.RemoteWebView
         {
             // A new primary page starts at sequence 1 and may arrive before CreateWebView.
             // Later messages, including a dying WebView after deregister, must not create an entry.
-            TaskCompletionSource<ServiceState> serviceStateTaskSource;
+            PendingSession? pending;
             if (request.IsPrimary && request.Sequence == 1)
             {
                 if (authorization?.Enabled == true && !serviceDictionary.ContainsKey(request.Id))
@@ -247,17 +275,15 @@ namespace PeakSWC.RemoteWebView
                         return new SendMessageResponse { Id = request.Id, Success = false };
                     }
                 }
-                serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                pending = PendingSessions.Join(serviceDictionary, request.Id);
             }
-            else if (!serviceDictionary.TryGetValue(request.Id, out var existing) || existing == null)
+            else if ((pending = PendingSessions.TryJoin(serviceDictionary, request.Id)) == null)
             {
                 logger.LogDebug("Dropped browser SendMessage for client {Id} at sequence {Sequence}.", request.Id, request.Sequence);
                 return new SendMessageResponse { Id = request.Id, Success = false };
             }
-            else
-            {
-                serviceStateTaskSource = existing;
-            }
+            using var _ = pending;
+            var serviceStateTaskSource = pending.Source;
 
             try
             {
@@ -365,9 +391,6 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
-                if (!serviceStateTaskSource.Task.IsCompleted)
-                    serviceDictionary.TryRemove(KeyValuePair.Create(request.Id, serviceStateTaskSource));
-
                 if (shutdownService.HasEnded(request.Id, out var ended))
                     logger.LogDebug("Browser SendMessage from {ClientId} for session {Id} dropped: the session ended ({Reason}).", request.ClientId, request.Id, ended);
                 else

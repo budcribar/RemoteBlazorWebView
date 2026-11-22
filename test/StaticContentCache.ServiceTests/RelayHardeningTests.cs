@@ -22,13 +22,12 @@ using PeakSWC.RemoteWebView.Services;
 namespace StaticContentCache.Tests;
 
 /// <summary>
-/// Regression tests for the remaining findings in the RemoteBlazorWebView security review:
-/// F1 (FileWatcherService auth/confinement/dev gating), F5 (cookie filtering), F6 (RemoteFilesMiddleware auth +
-/// ServiceDictionary unbounded GetOrAdd DoS), F8 (CORS AllowedOrigins), and F9 (pre-session TOCTOU + bounded user cache).
+/// Relay hardening tests: file watcher gating and root, cookie filtering, static file and session page access,
+/// session dictionary entries, CORS origins, and the bounded user cache.
 /// </summary>
-public class SecurityReviewHardeningTests
+public class RelayHardeningTests
 {
-    // ---- F1: FileWatcherService ----
+    // ---- FileWatcherService ----
 
     [Fact]
     public async Task FileWatcherService_refuses_non_operator_when_sign_in_is_enabled()
@@ -85,7 +84,7 @@ public class SecurityReviewHardeningTests
     }
 
     [Fact]
-    public async Task FileWatcherService_rejects_path_traversal_outside_AllowedRoot()
+    public async Task FileWatcherService_rejects_paths_outside_AllowedRoot()
     {
         var allowedDir = Path.Combine(Path.GetTempPath(), "rbwv-fw-allowed-" + Guid.NewGuid().ToString("N"));
         var outsideFile = Path.Combine(Path.GetTempPath(), "rbwv-fw-outside-" + Guid.NewGuid().ToString("N") + ".txt");
@@ -104,10 +103,10 @@ public class SecurityReviewHardeningTests
                 userService: new FakeUserService(new FakeUsers()),
                 configuration: config);
 
-            var traversalPath = Path.Combine(allowedDir, "..", Path.GetFileName(outsideFile));
+            var outsidePath = Path.Combine(allowedDir, "..", Path.GetFileName(outsideFile));
             var headers = new Metadata { { AgentOptions.AdminKeyHeader, "secret-admin-key" } };
             var error = await Assert.ThrowsAsync<RpcException>(() =>
-                service.WatchFile(new WatchFileRequest { FilePath = traversalPath }, new NullWatchWriter(), new TestCallContext(http: AnonymousHttp(), headers: headers)));
+                service.WatchFile(new WatchFileRequest { FilePath = outsidePath }, new NullWatchWriter(), new TestCallContext(http: AnonymousHttp(), headers: headers)));
 
             Assert.Equal(StatusCode.PermissionDenied, error.StatusCode);
         }
@@ -158,7 +157,7 @@ public class SecurityReviewHardeningTests
         }
     }
 
-    // ---- F5: RelayCookieFilter ----
+    // ---- RelayCookieFilter ----
 
     [Fact]
     public void RelayCookieFilter_strips_auth_owner_voice_and_framework_cookies()
@@ -186,7 +185,7 @@ public class SecurityReviewHardeningTests
         Assert.DoesNotContain(".AspNetCore.Cookies", filtered.Keys);
     }
 
-    // ---- F6: RemoteFilesMiddleware auth & ServiceDictionary DoS ----
+    // ---- RemoteFilesMiddleware and session dictionary entries ----
 
     [Fact]
     public async Task RemoteFilesMiddleware_returns_404_for_unknown_guid_without_inserting_into_ServiceDictionary()
@@ -265,12 +264,26 @@ public class SecurityReviewHardeningTests
         var browser = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, sessions, shutdown, new FakeAuthorization(), new FakeUserService(new FakeUsers()));
 
         var randomId = Guid.NewGuid().ToString();
-        var error = await Assert.ThrowsAsync<RpcException>(() => browser.ReceiveMessage(
-            new ReceiveMessageRequest { Id = randomId, ClientId = "c1", ClientKey = "k1" },
-            new NullStringWriter(),
-            new TestCallContext(http: AnonymousHttp())));
+        // Not signed in: the call waits for the app without adding an entry; the caller hanging up ends the wait.
+        using (var hangUp = new CancellationTokenSource(TimeSpan.FromMilliseconds(600)))
+        {
+            var error = await Assert.ThrowsAsync<RpcException>(() => browser.ReceiveMessage(
+                new ReceiveMessageRequest { Id = randomId, ClientId = "c1", ClientKey = "k1" },
+                new NullStringWriter(),
+                new TestCallContext(hangUp.Token, http: AnonymousHttp())));
+            Assert.Equal(StatusCode.PermissionDenied, error.StatusCode);
+        }
+        Assert.Empty(sessions);
 
-        Assert.Equal(StatusCode.PermissionDenied, error.StatusCode);
+        // Any owner token, checked or not, adds nothing either.
+        var waiting = browser.ReceiveMessage(
+            new ReceiveMessageRequest { Id = randomId, ClientId = "c1", ClientKey = "k1", OwnerToken = "not-a-real-token" },
+            new NullStringWriter(),
+            new TestCallContext(new CancellationTokenSource(TimeSpan.FromMilliseconds(600)).Token, http: AnonymousHttp()));
+        await Task.Delay(200);
+        Assert.Empty(sessions);
+        var ownerError = await Assert.ThrowsAsync<RpcException>(() => waiting);
+        Assert.Equal(StatusCode.PermissionDenied, ownerError.StatusCode);
         Assert.Empty(sessions);
 
         var sendResult = await browser.SendMessage(
@@ -281,7 +294,76 @@ public class SecurityReviewHardeningTests
         Assert.Empty(sessions);
     }
 
-    // ---- F8: CORS AllowedOrigins ----
+    [Fact]
+    public void PendingSessions_keeps_the_entry_until_the_last_waiter_leaves()
+    {
+        var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var first = PendingSessions.Join(sessions, "s1");
+        var second = PendingSessions.Join(sessions, "s1");
+        Assert.Same(first.Source, second.Source);
+
+        first.Dispose();
+        Assert.True(sessions.TryGetValue("s1", out var still));
+        Assert.Same(second.Source, still);
+
+        second.Dispose();
+        Assert.Empty(sessions);
+    }
+
+    [Fact]
+    public void PendingSessions_never_removes_a_completed_entry()
+    {
+        var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var waiter = PendingSessions.Join(sessions, "s1");
+        waiter.Source.SetResult(new ServiceState(NullLogger<RemoteWebViewService>.Instance, false));
+        waiter.Dispose();
+        Assert.True(sessions.ContainsKey("s1"));
+    }
+
+    [Fact]
+    public void PendingSessions_join_after_the_last_waiter_left_gets_a_new_entry()
+    {
+        var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var gone = PendingSessions.Join(sessions, "s1");
+        var abandoned = gone.Source;
+        gone.Dispose();
+
+        using var app = PendingSessions.Join(sessions, "s1");
+        Assert.NotSame(abandoned, app.Source);
+        Assert.Same(app.Source, sessions["s1"]);
+        // The app registering on the new entry is seen by anyone who looks the id up.
+        app.Source.SetResult(new ServiceState(NullLogger<RemoteWebViewService>.Instance, false));
+        Assert.True(sessions["s1"].Task.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public void PendingSessions_TryJoin_never_adds_an_entry()
+    {
+        var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        Assert.Null(PendingSessions.TryJoin(sessions, "s1"));
+        Assert.Empty(sessions);
+
+        using var app = PendingSessions.Join(sessions, "s1");
+        using var joined = PendingSessions.TryJoin(sessions, "s1");
+        Assert.NotNull(joined);
+        Assert.Same(app.Source, joined!.Source);
+    }
+
+    [Fact]
+    public async Task PendingSessions_many_waiters_leaving_in_parallel_remove_the_entry_once()
+    {
+        var sessions = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        for (int round = 0; round < 50; round++)
+        {
+            var leases = Enumerable.Range(0, 16).Select(_ => PendingSessions.Join(sessions, "s1")).ToArray();
+            var source = leases[0].Source;
+            Assert.All(leases, l => Assert.Same(source, l.Source));
+            await Task.WhenAll(leases.Select(l => Task.Run(l.Dispose)));
+            Assert.Empty(sessions);
+        }
+    }
+
+    // ---- CORS AllowedOrigins ----
 
     [Fact]
     public async Task Startup_restricts_CORS_when_AllowedOrigins_is_configured()
@@ -315,7 +397,7 @@ public class SecurityReviewHardeningTests
         Assert.False(blockedResp.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
-    // ---- F9: Post-wait TOCTOU group re-check in Start endpoint ----
+    // ---- Group re-check after waiting in the Start endpoint ----
 
     [Fact]
     public async Task Start_rechecks_group_membership_after_waiting_for_pre_opened_session()

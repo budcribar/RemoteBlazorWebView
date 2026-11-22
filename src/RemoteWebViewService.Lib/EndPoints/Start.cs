@@ -21,7 +21,8 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                 var (parsedGuid, serviceDictionary) = client.Value;
                 string guid = parsedGuid.ToString();
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                using var pending = PendingSessions.Join(serviceDictionary, guid);
+                var serviceStateTaskSource = pending.Source;
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
 
                 ServiceState? serviceState = null;
@@ -124,9 +125,6 @@ namespace PeakSWC.RemoteWebView.EndPoints
                
                 catch(Exception)
                 {
-                    if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
-                        serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(guid, serviceStateTaskSource));
-
                     LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     if (markedInUse && serviceState != null)
                     {
