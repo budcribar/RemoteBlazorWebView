@@ -23,7 +23,7 @@ namespace PeakSWC.RemoteWebView.Agents
             var callToken = context.CancellationToken;
             var hello = await ReadHelloAsync(requestStream, callToken).ConfigureAwait(false);
             string ip = GetRemoteIp(context);
-            var decision = AcceptEnrollment(hello, ip);
+            var decision = await AcceptEnrollmentAsync(hello, ip, callToken).ConfigureAwait(false);
 
             AgentConnection connection;
             try
@@ -85,9 +85,9 @@ namespace PeakSWC.RemoteWebView.Agents
             return hello;
         }
 
-        private PeakSWC.RemoteWebView.AgentEnrollmentDecision AcceptEnrollment(AgentHello hello, string ip)
+        private async Task<PeakSWC.RemoteWebView.AgentEnrollmentDecision> AcceptEnrollmentAsync(AgentHello hello, string ip, CancellationToken cancellationToken)
         {
-            var decision = policy.CheckEnrollment(hello.EnrollmentKey, hello.MachineId, hello.AgentToken, options);
+            var decision = await policy.CheckEnrollmentAsync(hello.EnrollmentKey, hello.MachineId, hello.AgentToken, options, cancellationToken).ConfigureAwait(false);
             bool keysDecide = policy is PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy;
             if (!decision.Accepted)
             {

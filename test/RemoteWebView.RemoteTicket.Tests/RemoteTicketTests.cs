@@ -377,6 +377,44 @@ public class RemoteTicketTests
         protected override Task WriteResponseHeadersAsyncCore(Grpc.Core.Metadata responseHeaders) => Task.CompletedTask;
     }
 
+    [Fact]
+    public void RemoteTicketUsers_enforces_size_limit()
+    {
+        using var users = new RemoteTicketUsers(maxEntries: 2, slidingExpiration: TimeSpan.FromMinutes(5));
+        users.Remember("u1", ["shop-a"]);
+        users.Remember("u2", ["shop-b"]);
+        users.Remember("u3", ["shop-c"]);
+
+        Assert.Equal(["shop-a"], users.Groups("u1"));
+        Assert.Equal(["shop-b"], users.Groups("u2"));
+        // Third insert exceeds SizeLimit=2 and is not admitted.
+        Assert.Empty(users.Groups("u3"));
+    }
+
+    [Fact]
+    public async Task RemoteTicketAgentPolicy_async_methods_authorize_without_blocking()
+    {
+        using var handler = new AuthorityStub(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"accepted":true,"group":"shop-a","role":"tech","unattendedAuthorized":true,"issuedAgentToken":"tok-1"}""", System.Text.Encoding.UTF8, "application/json")
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://authority.example/") };
+        var policy = new RemoteTicketAgentPolicy(http, Secret);
+        var options = new PeakSWC.RemoteWebView.Agents.AgentOptions();
+
+        var enroll = await policy.CheckEnrollmentAsync("enroll-key", "pc-1", null, options);
+        Assert.True(enroll.Accepted);
+        Assert.Equal("shop-a", enroll.Group);
+        Assert.Equal("tok-1", enroll.IssuedAgentToken);
+
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        httpContext.Request.Headers[RemoteTicketReader.HeaderName] = "signed-ticket";
+        var admin = await policy.CheckAdminAccessAsync(httpContext, null, options);
+        Assert.True(admin.Allowed);
+        Assert.Equal("shop-a", admin.GroupScope);
+        Assert.True(admin.UnattendedAuthorized);
+    }
+
     private static async Task<EmbeddedRemoteWebViewServer> Start(AuthorityStub handler)
     {
         var options = new RemoteWebViewServerOptions { Authorization = new RemoteTicketAuthorization() };

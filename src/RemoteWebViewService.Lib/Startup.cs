@@ -239,21 +239,38 @@ namespace PeakSWC.RemoteWebView
                 services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365));
             services.AddTransient<RemoteFileResolver>();
 
+            var allowedOrigins = ReadAllowedOrigins(configuration);
             services.AddCors(o =>
             {
                 o.AddPolicy("CorsPolicy", builder =>
                 {
-                    builder.AllowAnyOrigin();
+                    if (allowedOrigins.Length > 0)
+                        builder.WithOrigins(allowedOrigins);
+                    else
+                        builder.AllowAnyOrigin();
                     builder.AllowAnyHeader();
                     builder.AllowAnyMethod();
-
-                    // TODO tighten this up
-                    //builder.WithOrigins("localhost:443", "localhost", "YourCustomDomain");
-                    // builder.WithMethods("POST, OPTIONS");
-                    //builder.AllowAnyHeader();
-                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message","Grpc-Encoding", "Grpc-Accept-Encoding", "X-Grpc-Web", "User-Agent");
+                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message", "Grpc-Encoding", "Grpc-Accept-Encoding", "X-Grpc-Web", "User-Agent");
                 });
             });
+        }
+
+        private static string[] ReadAllowedOrigins(IConfiguration configuration)
+        {
+            var origins = new List<string>();
+            var raw = configuration["Cors:AllowedOrigins"];
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    origins.Add(part);
+            }
+            var section = configuration.GetSection("Cors:AllowedOrigins");
+            foreach (var child in section.GetChildren())
+            {
+                if (!string.IsNullOrWhiteSpace(child.Value))
+                    origins.Add(child.Value.Trim());
+            }
+            return origins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -323,7 +340,8 @@ namespace PeakSWC.RemoteWebView
             {
                 if (adminServices)
                 {
-                    endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
+                    if (env.IsDevelopment() || GetBool(configuration, "FileWatcher:Enabled", false))
+                        endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
                     endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 }
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();

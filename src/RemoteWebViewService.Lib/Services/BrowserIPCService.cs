@@ -17,6 +17,17 @@ namespace PeakSWC.RemoteWebView
     {
         public override async Task ReceiveMessage(ReceiveMessageRequest request, IServerStreamWriter<StringRequest> responseStream, ServerCallContext context)
         {
+            if (authorization?.Enabled == true && !serviceDictionary.ContainsKey(request.Id))
+            {
+                var http = CallContexts.Http(context);
+                bool hasCallerIdentity = http?.User?.Identity?.IsAuthenticated == true || !string.IsNullOrEmpty(request.OwnerToken);
+                if (!hasCallerIdentity)
+                {
+                    logger.LogWarning("Connection refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Sign in to a group that may open this session."));
+                }
+            }
+
             var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
 
             ServiceState? serviceState = null;
@@ -112,6 +123,9 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
+                if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
+                    serviceDictionary.TryRemove(KeyValuePair.Create(request.Id, serviceStateTaskSource));
+
                 // serviceState may be null here if the wait above failed; only the current controller triggers teardown.
                 if (serviceState?.EndReason is { } ending)
                     logger.LogDebug("Browser stream {ClientId} for session {Id} stopped: the session is already ending ({Reason}).", request.ClientId, request.Id, ending);
@@ -224,6 +238,15 @@ namespace PeakSWC.RemoteWebView
             TaskCompletionSource<ServiceState> serviceStateTaskSource;
             if (request.IsPrimary && request.Sequence == 1)
             {
+                if (authorization?.Enabled == true && !serviceDictionary.ContainsKey(request.Id))
+                {
+                    var http = CallContexts.Http(context);
+                    if (http?.User?.Identity?.IsAuthenticated != true)
+                    {
+                        logger.LogWarning("Claim of control refused: not signed in to this session's group. Id: {Id}, ClientId: {ClientId}", request.Id, request.ClientId);
+                        return new SendMessageResponse { Id = request.Id, Success = false };
+                    }
+                }
                 serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
             }
             else if (!serviceDictionary.TryGetValue(request.Id, out var existing) || existing == null)
@@ -306,11 +329,12 @@ namespace PeakSWC.RemoteWebView
                         if (request.Message == "connected:")
                         {
                             request.Message += context.GetHttpContext().Connection.RemoteIpAddress + "|" + serviceState.User;
-                            // With sign-in on, the app gets the page's cookies (the sign-in among them) for its own WebView.
+                            // Never forward relay/auth cookies (tickets, ASP.NET auth, owner/voice tokens) to the desktop client.
                             if (authorization?.Enabled == true)
                             {
-                                request.Cookies = serviceState.Cookies != null
-                                    ? JsonSerializer.Serialize(serviceState.Cookies.ToDictionary(c => c.Key, c => c.Value), JsonContext.Default.DictionaryStringString)
+                                var safeCookies = RelayCookieFilter.FilterForClient(serviceState.Cookies);
+                                request.Cookies = safeCookies.Count > 0
+                                    ? JsonSerializer.Serialize(safeCookies, JsonContext.Default.DictionaryStringString)
                                     : string.Empty;
                             }
                         }
@@ -341,6 +365,9 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
+                if (!serviceStateTaskSource.Task.IsCompleted)
+                    serviceDictionary.TryRemove(KeyValuePair.Create(request.Id, serviceStateTaskSource));
+
                 if (shutdownService.HasEnded(request.Id, out var ended))
                     logger.LogDebug("Browser SendMessage from {ClientId} for session {Id} dropped: the session ended ({Reason}).", request.ClientId, request.Id, ended);
                 else

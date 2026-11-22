@@ -132,13 +132,31 @@ namespace PeakSWC.RemoteWebView.RemoteStaticFiles
             logger.LogDebug("Received GET request for file '{SubPath}' from client ID '{ClientId}'", subPath, clientId);
 
             var serviceDictionary = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientId.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            if (!serviceDictionary.TryGetValue(clientId.ToString(), out var serviceStateTaskSource))
+            {
+                logger.LogDebug("Rejecting static file request for unknown session '{ClientId}'", clientId);
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                await context.Response.WriteAsync("Session not found.", context.RequestAborted).ConfigureAwait(false);
+                return;
+            }
 
             // Step 1: Retrieve client metadata
             FileMetadata clientMetadata;
             try
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), context.RequestAborted).ConfigureAwait(false);
+                var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                if (authorization?.Enabled == true)
+                {
+                    var users = context.RequestServices.GetService<IUserService>();
+                    if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                    {
+                        context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                            ? StatusCodes.Status403Forbidden
+                            : StatusCodes.Status401Unauthorized;
+                        return;
+                    }
+                }
                 var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60), context.RequestAborted).ConfigureAwait(false);
                 clientMetadata = await remoteFileResolver.GetFileMetaDataAsync(clientId.ToString(), subPath).ConfigureAwait(false);
                 FileStats.Update(serviceState, clientId.ToString(), clientMetadata);

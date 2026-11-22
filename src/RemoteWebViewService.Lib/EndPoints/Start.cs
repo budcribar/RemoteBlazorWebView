@@ -30,6 +30,22 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 {
                     serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
+                    // Re-verify session access after waiting: SessionAccessHandler lets an authenticated user through
+                    // when the session had not registered yet (pre-opened URL), so verify group membership now.
+                    var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                    if (authorization?.Enabled == true)
+                    {
+                        var users = context.RequestServices.GetService<IUserService>();
+                        if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                        {
+                            LogPageRequest(context, guid, serviceState, "refused (not a member of this session's group)");
+                            context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                                ? StatusCodes.Status403Forbidden
+                                : StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
                     // The owner's page: when the app sent an owner key, only the page the app opened with that key is the owner.
                     // A wrong or missing key is refused before it can take the /app page.
                     bool ownerPage = context.Request.Query["role"] == "owner";
@@ -108,6 +124,9 @@ namespace PeakSWC.RemoteWebView.EndPoints
                
                 catch(Exception)
                 {
+                    if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
+                        serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(guid, serviceStateTaskSource));
+
                     LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     if (markedInUse && serviceState != null)
                     {

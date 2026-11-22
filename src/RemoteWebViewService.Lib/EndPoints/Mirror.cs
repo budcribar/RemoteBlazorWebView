@@ -33,6 +33,22 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 {
                     // Wait for the task to be completed or time out using the extension method
                     serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // Re-verify session access after waiting on a pre-opened /mirror/{id} URL.
+                    var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                    if (authorization?.Enabled == true)
+                    {
+                        var users = context.RequestServices.GetService<IUserService>();
+                        if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                        {
+                            LogPageRequest(context, guid, serviceState, "refused (not a member of this session's group)");
+                            context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                                ? StatusCodes.Status403Forbidden
+                                : StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     // A browser has the client's page: started from /app/{id} (InUse), or loaded straight from /{id} (Refresh), which is
                     // how a remote component's frame loads it. The frame and its mirror render at the same time, so give the app's page a
@@ -99,6 +115,9 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
                 catch(Exception)
                 {
+                    if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
+                        serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(guid, serviceStateTaskSource));
+
                     LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     context.Response.StatusCode = 404;
                     await context.Response.WriteAsync("Service state not found").ConfigureAwait(false);

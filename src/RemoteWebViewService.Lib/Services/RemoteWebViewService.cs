@@ -161,6 +161,8 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
+                if (!serviceStateTaskSource.Task.IsCompleted)
+                    serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(clientGuid, serviceStateTaskSource));
                 logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
                 await shutdownService.Shutdown(clientGuid, SessionEndReason.FileReadStreamEnded).ConfigureAwait(false);
                 return;
@@ -248,6 +250,8 @@ namespace PeakSWC.RemoteWebView
             }
             catch (Exception ex)
             {
+                if (!serviceStateTaskSource.Task.IsCompleted)
+                    serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(request.Id, serviceStateTaskSource));
                 if (shutdownService.HasEnded(request.Id, out var ended))
                     logger.LogDebug("SendMessage from the app for session {Id} dropped: the session ended ({Reason}).", request.Id, ended);
                 else
@@ -284,7 +288,16 @@ namespace PeakSWC.RemoteWebView
                     if (serviceState == null)
                     {
                         var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-                        serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                        try
+                        {
+                            serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            if (!serviceStateTaskSource.Task.IsCompleted)
+                                serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(id.ToString(), serviceStateTaskSource));
+                            throw;
+                        }
                         if (!AppAccess.Allows(serviceState, context))
                         {
                             // Not the app: the session is left alone (shutting it down here would hand anyone a way to end it).

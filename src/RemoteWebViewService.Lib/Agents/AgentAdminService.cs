@@ -20,10 +20,10 @@ namespace PeakSWC.RemoteWebView.Agents
         public static readonly TimeSpan WatchAgentsInterval = TimeSpan.FromSeconds(15);
         private static int warnedNoAdminKey;
 
-        public override Task<AgentList> GetAgents(Empty request, ServerCallContext context)
+        public override async Task<AgentList> GetAgents(Empty request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
-            return Task.FromResult(registry.GetAgentList(access.GroupScope));
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            return registry.GetAgentList(access.GroupScope);
         }
 
         public override async Task WatchAgents(Empty request, IServerStreamWriter<AgentList> responseStream, ServerCallContext context)
@@ -35,7 +35,8 @@ namespace PeakSWC.RemoteWebView.Agents
                 {
                     // Take the signal before the snapshot so a change in between still wakes us.
                     var changed = registry.Changed;
-                    await responseStream.WriteAsync(registry.GetAgentList(RequireAccess(context).GroupScope), token).ConfigureAwait(false);
+                    var access = await RequireAccessAsync(context).ConfigureAwait(false);
+                    await responseStream.WriteAsync(registry.GetAgentList(access.GroupScope), token).ConfigureAwait(false);
                     try
                     {
                         await changed.WaitAsync(WatchAgentsInterval, token).ConfigureAwait(false);
@@ -54,7 +55,7 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override async Task WatchMetrics(Empty request, IServerStreamWriter<MetricsUpload> responseStream, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             RequireMutation(access, context);
             using var subscription = registry.SubscribeMetrics(access.GroupScope);
             var token = context.CancellationToken;
@@ -69,18 +70,18 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public override Task<Empty> AckMetrics(MetricsAckRequest request, ServerCallContext context)
+        public override async Task<Empty> AckMetrics(MetricsAckRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             RequireMutation(access, context);
             // An offline agent keeps the runs and uploads them again; Admin saves by run id, so that is never a duplicate.
             registry.AckMetrics(request.MachineId, request.ThroughSeq, access.GroupScope, out _);
-            return Task.FromResult(new Empty());
+            return new Empty();
         }
 
-        public override Task<MetricsCommandResponse> SetMetricsSchedule(MetricsScheduleRequest request, ServerCallContext context)
+        public override async Task<MetricsCommandResponse> SetMetricsSchedule(MetricsScheduleRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             RequireMutation(access, context);
             if (request.Schedule == null)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "schedule is required"));
@@ -88,15 +89,15 @@ namespace PeakSWC.RemoteWebView.Agents
             if (sent)
                 AgentEvents.Info(logger, Category, $"Scheduled metrics set on {request.MachineId}: revision {request.Schedule.Revision}, " +
                     (request.Schedule.Enabled ? $"every {request.Schedule.IntervalMinutes} min" : "off"));
-            return Task.FromResult(new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error });
+            return new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error };
         }
 
-        public override Task<MetricsCommandResponse> CollectMetrics(CollectMetricsRequest request, ServerCallContext context)
+        public override async Task<MetricsCommandResponse> CollectMetrics(CollectMetricsRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             RequireMutation(access, context);
             bool sent = registry.CollectMetrics(request.MachineId, access.GroupScope, out var error);
-            return Task.FromResult(new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error });
+            return new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error };
         }
 
         /// <summary>
@@ -111,9 +112,9 @@ namespace PeakSWC.RemoteWebView.Agents
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
         }
 
-        public override Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
+        public override async Task<StartSessionResponse> StartSession(StartSessionRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             string requester = GetRequester(request.Requester, context);
             string serverUrl = GetServerUrl(options, context);
             var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
@@ -135,12 +136,12 @@ namespace PeakSWC.RemoteWebView.Agents
             else
                 AgentEvents.Info(logger, Category, $"Diagnostics request on {who} by {actor} refused: {response.Error}");
 
-            return Task.FromResult(response);
+            return response;
         }
 
         public override async Task WatchLaunch(WatchLaunchRequest request, IServerStreamWriter<LaunchProgress> responseStream, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             using var subscription = registry.SubscribeLaunch(request.RequestId, access.GroupScope)
                 ?? throw new RpcException(new Status(StatusCode.NotFound, "No launch with that request_id"));
             var token = context.CancellationToken;
@@ -155,9 +156,9 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public override Task<Empty> CancelLaunch(CancelCommand request, ServerCallContext context)
+        public override async Task<Empty> CancelLaunch(CancelCommand request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
 
@@ -166,12 +167,12 @@ namespace PeakSWC.RemoteWebView.Agents
                 throw new RpcException(new Status(StatusCode.NotFound, "No launch with that request_id"));
             if (outcome == CancelLaunchOutcome.Queued)
                 AgentEvents.Info(logger, Category, $"Cancel requested for launch {request.RequestId}");
-            return Task.FromResult(new Empty());
+            return new Empty();
         }
 
         public override async Task<EndSessionResponse> EndSession(EndSessionRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             if (access.GroupScope == null && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
                 throw new RpcException(new Status(StatusCode.PermissionDenied, ConsentPolicy.AdminKeyRequired));
 
@@ -193,9 +194,9 @@ namespace PeakSWC.RemoteWebView.Agents
             return new EndSessionResponse { Outcome = result.Outcome, RequestId = result.RequestId };
         }
 
-        public override Task<Empty> PublishRelease(ReleaseAvailableCommand request, ServerCallContext context)
+        public override async Task<Empty> PublishRelease(ReleaseAvailableCommand request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             if (access.GroupScope != null)
                 throw new RpcException(new Status(StatusCode.PermissionDenied, "Global admin access is required to publish releases."));
             if (!access.UnattendedAuthorized && options.AdminKeyConfigured && !options.IsAdminKeyValid(GetAdminKey(context)))
@@ -204,12 +205,12 @@ namespace PeakSWC.RemoteWebView.Agents
             int notified = registry.PublishRelease(request);
             AgentEvents.Info(logger, Category,
                 $"Release announcement published (stable='{request.StableVersion}', prerelease='{request.PrereleaseVersion}'): notified {notified} online agent(s)");
-            return Task.FromResult(new Empty());
+            return new Empty();
         }
 
         public override async Task<UpdateRpcdProgress> UpdateRpcd(UpdateRpcdAdminRequest request, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
             var outcome = await registry.UpdateRpcdAsync(
                 request.MachineId,
@@ -247,7 +248,7 @@ namespace PeakSWC.RemoteWebView.Agents
 
         public override async Task WatchUpdateRpcd(UpdateRpcdWatchRequest request, IServerStreamWriter<UpdateRpcdProgress> responseStream, ServerCallContext context)
         {
-            var access = RequireAccess(context);
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
             var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
             var opened = registry.OpenUpdateWatch(request.MachineId, request.RequestId, adminKeyConfigured, adminKeyValid, access.GroupScope);
             if (opened.Denied)
@@ -301,20 +302,20 @@ namespace PeakSWC.RemoteWebView.Agents
             return (options.AdminKeyConfigured, options.IsAdminKeyValid(GetAdminKey(context)));
         }
 
-        private PeakSWC.RemoteWebView.AgentAdminAccessDecision RequireAccess(ServerCallContext context)
+        private async Task<PeakSWC.RemoteWebView.AgentAdminAccessDecision> RequireAccessAsync(ServerCallContext context)
         {
-            var access = ResolveAccess(context);
+            var access = await ResolveAccessAsync(context).ConfigureAwait(false);
             if (!access.Allowed)
                 throw new RpcException(new Status(StatusCode.PermissionDenied, access.DenialReason ?? "Access denied"));
             return access;
         }
 
-        private PeakSWC.RemoteWebView.AgentAdminAccessDecision ResolveAccess(ServerCallContext context)
+        private Task<PeakSWC.RemoteWebView.AgentAdminAccessDecision> ResolveAccessAsync(ServerCallContext context)
         {
             HttpContext? http = null;
             try { http = context.GetHttpContext(); }
             catch (InvalidOperationException) { }
-            return policy.CheckAdminAccess(http, GetAdminKey(context), options);
+            return policy.CheckAdminAccessAsync(http, GetAdminKey(context), options, context.CancellationToken);
         }
 
         /// <summary>The x-admin-key request header (gRPC metadata), or null.</summary>

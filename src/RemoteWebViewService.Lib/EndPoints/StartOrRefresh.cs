@@ -30,6 +30,22 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 {
                     // Wait for the task to be completed or time out using the extension method
                     serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // Re-verify session access after waiting on a pre-opened /{id} URL.
+                    var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                    if (authorization?.Enabled == true)
+                    {
+                        var users = context.RequestServices.GetService<IUserService>();
+                        if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                        {
+                            LogPageRequest(context, guid.ToString(), serviceState, "refused (not a member of this session's group)");
+                            context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                                ? StatusCodes.Status403Forbidden
+                                : StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
                     // In a shared session only the owner's surface loads the app's page; any other browser is sent to the mirror,
@@ -101,6 +117,9 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
                 catch (Exception)
                 {
+                    if (serviceState == null && !serviceStateTaskSource.Task.IsCompleted)
+                        serviceDictionary.TryRemove(System.Collections.Generic.KeyValuePair.Create(guid.ToString(), serviceStateTaskSource));
+
                     LogPageRequest(context, guid.ToString(), serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     context.Response.ContentType = "text/html";
