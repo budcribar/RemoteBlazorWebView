@@ -29,8 +29,7 @@
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Based on maui 10.0.130. 10.0.15.2: each page's requests carry a secret key, so a viewer can no longer take control by sending another browser's id; window.RemoteControl reports connectionState (connecting, connected, reconnecting, disconnected); the relay refuses agents when AGENT_ENROLLMENT_KEYS is unset and sends non-owner browsers in shared sessions to the mirror. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
-    <PlatformTarget>x64</PlatformTarget>
-    <Platforms>x64</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Developer|x64'">

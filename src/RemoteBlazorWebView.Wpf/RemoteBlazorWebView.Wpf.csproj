@@ -20,7 +20,8 @@
 		<AssemblyName>PeakSWC.RemoteBlazorWebView.Wpf</AssemblyName>
 		<Nullable>annotations</Nullable>
 		<Configurations>Debug;Release;Embedded;Developer</Configurations>
-		<Platforms>x64</Platforms>
+		<Platforms>x64;AnyCPU</Platforms>
+		<PlatformTarget>AnyCPU</PlatformTarget>
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
