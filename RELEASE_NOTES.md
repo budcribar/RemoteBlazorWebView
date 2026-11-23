@@ -1,5 +1,20 @@
 # Release notes
 
+## 10.0.15.3
+
+### Packages
+
+- **AnyCPU IL for all packages and source generators.** Both Roslyn source generators (`PeakSWC.RemoteBlazorWebView.SourceGenerators` and `PeakSWC.RemoteBlazorWebView.RemoteComponents.Generators`) and all seven packed libraries now explicitly set `<PlatformTarget>AnyCPU</PlatformTarget>`, fixing `CS8034` analyzer load failures and runtime architecture mismatches on Windows ARM64.
+- **Photino** fires `ReadyToConnect` only after WebView2 has started.
+- **Mirror** waits for the WebView before showing the mirror on connect.
+
+### Relay (RemoteWebViewService and RemoteWebViewService.Lib)
+
+- **Per-agent token binding and ticket hardening.** Adds per-agent token binding (accepting a newly issued agent token over the remembered one), ticket role claims, header/cookie-only ticket reading, and a minimum 32-byte `RelayTicket` signing key.
+- **Remote RPCD updates & metrics.** Forwards remote RPCD updates from Admin to the fleet agent (requiring an admin key and carrying the installer log), passes PC boot time and scheduled metrics from agents to Admin, and lets the admin site's service ticket call metrics endpoints.
+- **Session control & waiting.** Gives control of agent-started sessions to the user who asked for them, and keeps a waiting session entry until its last waiter leaves.
+- **Security hardening.** Applies session sign-in rules to gRPC calls, refuses `GetIds` when sign-in is required, scopes client/group listing to the signed-in caller, limits gRPC error details to Development, adds HSTS, and logs why an agent's enrollment key was refused.
+
 ## 10.0.15.2
 
 Upgrade the relay (RemoteWebViewService) and the packages together. Pages from 10.0.15.1 and older keep working on a

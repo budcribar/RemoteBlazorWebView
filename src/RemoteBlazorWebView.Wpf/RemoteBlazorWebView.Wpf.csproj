@@ -25,7 +25,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on maui 10.0.130. 10.0.15.2: each page's requests carry a secret key, so a viewer can no longer take control by sending another browser's id; window.RemoteControl reports connectionState (connecting, connected, reconnecting, disconnected); the relay refuses agents when AGENT_ENROLLMENT_KEYS is unset and sends non-owner browsers in shared sessions to the mirror. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on maui 10.0.130. 10.0.15.3: all seven packages and both Roslyn source generators emit AnyCPU IL for native Windows ARM64 support; relay adds per-agent token binding, RPCD update forwarding, scheduled metrics/boot-time reporting, and security hardening. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>
