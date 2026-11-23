@@ -10,6 +10,7 @@
     <LangVersion>latest</LangVersion>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
+    <PlatformTarget>AnyCPU</PlatformTarget>
 
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <IsPackable>true</IsPackable>
