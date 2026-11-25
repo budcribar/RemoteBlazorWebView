@@ -144,11 +144,13 @@ namespace PeakSWC.RemoteWebView.Agents
         }
 
         public static bool IsWatchTerminal(LaunchStage stage) =>
-            stage is LaunchStage.StageReady or LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
+            stage is LaunchStage.StageReady or LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageConditionsNotMet
+                or LaunchStage.StageFailed or LaunchStage.StageEnded;
 
         // After these nothing more is expected for the request. READY is still followed by ENDED when the app exits.
         private static bool IsFinal(LaunchStage stage) =>
-            stage is LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageFailed or LaunchStage.StageEnded;
+            stage is LaunchStage.StageDeclined or LaunchStage.StageConsentTimedOut or LaunchStage.StageConditionsNotMet or LaunchStage.StageFailed
+                or LaunchStage.StageEnded;
 
         /// <summary>Terminal stages from the agent, plus <see cref="UpdateRpcdProgress.Terminal"/> when the agent set it.</summary>
         public static bool IsUpdateTerminal(UpdateRpcdProgress? progress)
@@ -260,6 +262,8 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.BootTime = hello.BootTime?.Clone();
                 info.MetricsScheduleRevision = hello.MetricsScheduleRevision;
                 info.AlertSettingsRevision = hello.AlertSettingsRevision;
+                info.UtcOffsetMinutes = hello.UtcOffsetMinutes;
+                info.PowerSource = hello.PowerSource;
 
                 if (latestRelease != null)
                     entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
@@ -339,7 +343,9 @@ namespace PeakSWC.RemoteWebView.Agents
                     || info.SessionId != heartbeat.SessionId
                     || info.CachedAppVersion != heartbeat.CachedAppVersion
                     || info.MetricsScheduleRevision != heartbeat.MetricsScheduleRevision
-                    || info.AlertSettingsRevision != heartbeat.AlertSettingsRevision;
+                    || info.AlertSettingsRevision != heartbeat.AlertSettingsRevision
+                    || info.UtcOffsetMinutes != heartbeat.UtcOffsetMinutes
+                    || info.PowerSource != heartbeat.PowerSource;
 
                 entry.Online = true;
                 entry.LastSeen = time.GetUtcNow();
@@ -349,6 +355,8 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.CachedAppVersion = heartbeat.CachedAppVersion;
                 info.MetricsScheduleRevision = heartbeat.MetricsScheduleRevision;
                 info.AlertSettingsRevision = heartbeat.AlertSettingsRevision;
+                info.UtcOffsetMinutes = heartbeat.UtcOffsetMinutes;
+                info.PowerSource = heartbeat.PowerSource;
 
                 // last_seen alone is refreshed by the periodic WatchAgents push; don't wake every watcher every 30 s per agent.
                 if (changedAnything)
@@ -609,7 +617,22 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null, string? requesterUserId = null, bool hidden = false)
+        /// <summary>Launch conditions with values kept in range (minutes of the day 0 to 1439, idle 0 to 240), or null when none is set.</summary>
+        public static LaunchConditions? Clean(LaunchConditions? c)
+        {
+            if (c is null)
+                return null;
+            var clean = new LaunchConditions
+            {
+                RequireAcPower = c.RequireAcPower,
+                MinIdleMinutes = Math.Clamp(c.MinIdleMinutes, 0, 240),
+                WindowStartMinute = Math.Clamp(c.WindowStartMinute, 0, 1439),
+                WindowEndMinute = Math.Clamp(c.WindowEndMinute, 0, 1439),
+            };
+            return clean.RequireAcPower || clean.MinIdleMinutes > 0 || clean.WindowStartMinute != clean.WindowEndMinute ? clean : null;
+        }
+
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null, string? requesterUserId = null, bool hidden = false, LaunchConditions? conditions = null)
         {
             lock (gate)
             {
@@ -669,6 +692,8 @@ namespace PeakSWC.RemoteWebView.Agents
                         Group = entry.Group,
                         // No window only when nobody is asked: a consent prompt needs the person to see the app.
                         Hidden = hidden && !requireConsent,
+                        // Conditions only make sense for a hidden run: a session someone asked for at the PC starts at once.
+                        Conditions = hidden && !requireConsent ? Clean(conditions) : null,
                     }
                 });
 
