@@ -159,6 +159,7 @@ message LaunchCommand {
   string requester = 4;     // shown in the consent prompt
   bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
   string group = 6;          // group slug (-g=) from the account host, else empty
+  bool hidden = 7;           // start the app with no visible window (--no-window); set only for unattended sessions
 }
 
 message CancelCommand {
@@ -304,6 +305,8 @@ message StartSessionRequest {
   bool unattended = 2;      // honoured only when the agent's ceiling is CONSENT_UNATTENDED_ALLOWED
   string requester = 3;    // display name for the consent prompt; when auth is on the relay uses the signed-in user's name
                            // and keeps only a short label the caller put after that same name: "Pat Lee (AI connector)"
+  bool hidden = 4;          // start the app with no visible window, for checks run at a quiet time; honoured only when the
+                           // session is unattended (no consent prompt), older agents ignore it and show the window
 }
 
 message StartSessionResponse {

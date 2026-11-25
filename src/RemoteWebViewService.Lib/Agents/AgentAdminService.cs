@@ -119,7 +119,7 @@ namespace PeakSWC.RemoteWebView.Agents
             string serverUrl = GetServerUrl(options, context);
             var (adminKeyConfigured, adminKeyValid) = MutationAuthority(access, context);
 
-            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope, RequesterUserId(context));
+            var outcome = registry.StartSession(request.MachineId, request.Unattended, requester, serverUrl, adminKeyConfigured, adminKeyValid, access.GroupScope, RequesterUserId(context), request.Hidden);
             var response = outcome.Response;
             if (outcome.Denied)
             {
