@@ -100,6 +100,53 @@ namespace PeakSWC.RemoteWebView.Agents
             return new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error };
         }
 
+        public override async Task WatchAlerts(Empty request, IServerStreamWriter<AlertUpload> responseStream, ServerCallContext context)
+        {
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            RequireMutation(access, context);
+            using var subscription = registry.SubscribeAlerts(access.GroupScope);
+            var token = context.CancellationToken;
+            try
+            {
+                await foreach (var upload in subscription.Reader.ReadAllAsync(token).ConfigureAwait(false))
+                    await responseStream.WriteAsync(upload, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // The admin client disconnected; unacknowledged alerts stay in the agents' outboxes.
+            }
+        }
+
+        public override async Task<Empty> AckAlerts(AlertsAckRequest request, ServerCallContext context)
+        {
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            RequireMutation(access, context);
+            // An offline agent keeps the alerts and uploads them again; Admin saves by alert id and seq, so that is never a duplicate.
+            registry.AckAlerts(request.MachineId, request.ThroughSeq, access.GroupScope, out _);
+            return new Empty();
+        }
+
+        public override async Task<MetricsCommandResponse> SetAlertSettings(AlertSettingsRequest request, ServerCallContext context)
+        {
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            RequireMutation(access, context);
+            if (request.Settings == null)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "settings is required"));
+            bool sent = registry.SetAlertSettings(request.MachineId, request.Settings, access.GroupScope, out var error);
+            if (sent)
+                AgentEvents.Info(logger, Category, $"Alert settings set on {request.MachineId}: revision {request.Settings.Revision}, " +
+                    (request.Settings.Enabled ? "on" : "off"));
+            return new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error };
+        }
+
+        public override async Task<MetricsCommandResponse> SetAlertState(AlertStateRequest request, ServerCallContext context)
+        {
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            RequireMutation(access, context);
+            bool sent = registry.SetAlertState(request.MachineId, request.AlertId, request.State, access.GroupScope, out var error);
+            return new MetricsCommandResponse { Sent = sent, Error = sent ? string.Empty : error };
+        }
+
         /// <summary>
         /// A caller that isn't scoped to a shop needs the admin key when one is configured (the rule CancelLaunch uses), unless its ticket
         /// already says it may act for every shop: the admin site's own service identity, or a full admin.
