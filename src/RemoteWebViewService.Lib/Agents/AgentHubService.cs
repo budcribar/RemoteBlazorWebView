@@ -178,6 +178,9 @@ namespace PeakSWC.RemoteWebView.Agents
                 case LaunchStage.StageConsentTimedOut:
                     AgentEvents.Info(logger, Category, $"Diagnostics consent went unanswered on {where}: {progress.Detail}");
                     break;
+                case LaunchStage.StageConditionsNotMet:
+                    AgentEvents.Info(logger, Category, $"Scheduled diagnostics not started on {where}: {progress.Detail}");
+                    break;
                 case LaunchStage.StageFailed:
                     AgentEvents.Warn(logger, $"Diagnostics failed to start on {where}: {progress.Detail}");
                     break;

@@ -400,6 +400,61 @@ public class AgentRegistryTests
         Assert.Equal(expectHidden, command!.Launch.Hidden);
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)] // a window someone sees starts at once, with no conditions
+    public void StartSession_passes_launch_conditions_only_with_a_hidden_session(bool hidden, bool expectConditions)
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1", ceiling: ConsentMode.ConsentUnattendedAllowed), "10.0.0.1", null);
+        var conditions = new LaunchConditions { RequireAcPower = true, MinIdleMinutes = 999, WindowStartMinute = 1320, WindowEndMinute = 99999 };
+
+        Assert.True(registry.StartSession("m-1", true, "Bob", ServerUrl, true, true, hidden: hidden, conditions: conditions).Response.Accepted);
+        Assert.True(connection.Commands.TryRead(out var command));
+        if (!expectConditions)
+        {
+            Assert.Null(command!.Launch.Conditions);
+            return;
+        }
+        var sent = command!.Launch.Conditions;
+        Assert.True(sent.RequireAcPower);
+        Assert.Equal(240, sent.MinIdleMinutes);
+        Assert.Equal(1320, sent.WindowStartMinute);
+        Assert.Equal(1439, sent.WindowEndMinute);
+    }
+
+    [Fact]
+    public void Launch_conditions_that_ask_for_nothing_are_not_sent()
+    {
+        Assert.Null(AgentRegistry.Clean(new LaunchConditions { WindowStartMinute = 300, WindowEndMinute = 300 }));
+        Assert.Null(AgentRegistry.Clean(null));
+        Assert.NotNull(AgentRegistry.Clean(new LaunchConditions { MinIdleMinutes = 15 }));
+    }
+
+    [Fact]
+    public void Hello_and_heartbeat_carry_the_pcs_time_offset_and_power_source()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var hello = Hello("m-1");
+        hello.UtcOffsetMinutes = -420;
+        hello.PowerSource = PowerSource.PowerAc;
+        var connection = registry.Register(hello, "10.0.0.1", null);
+        var info = registry.GetAgent("m-1")!;
+        Assert.Equal(-420, info.UtcOffsetMinutes);
+        Assert.Equal(PowerSource.PowerAc, info.PowerSource);
+
+        registry.OnHeartbeat(connection, new Heartbeat { UtcOffsetMinutes = -360, PowerSource = PowerSource.PowerBattery });
+        info = registry.GetAgent("m-1")!;
+        Assert.Equal(-360, info.UtcOffsetMinutes);
+        Assert.Equal(PowerSource.PowerBattery, info.PowerSource);
+    }
+
+    [Fact]
+    public void Conditions_not_met_ends_the_launch()
+    {
+        Assert.True(AgentRegistry.IsWatchTerminal(LaunchStage.StageConditionsNotMet));
+    }
+
     [Fact]
     public void CancelLaunch_queues_a_cancel_command()
     {

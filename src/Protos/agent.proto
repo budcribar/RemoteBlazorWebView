@@ -53,6 +53,8 @@ message AgentHello {
   string agent_token = 11;                   // per-agent token assigned on first enrollment
   int64 metrics_schedule_revision = 12;      // revision of the scheduled-metrics setting the agent has saved (0 = none yet)
   int64 alert_settings_revision = 13;        // revision of the alert setting the agent has saved (0 = none yet: its defaults)
+  int32 utc_offset_minutes = 14;             // the PC's local time minus UTC, in minutes, now (with daylight saving)
+  PowerSource power_source = 15;             // on AC or on battery now; POWER_UNKNOWN on older agents
 }
 
 message Heartbeat {
@@ -62,6 +64,24 @@ message Heartbeat {
   string cached_app_version = 4;
   int64 metrics_schedule_revision = 5;  // as in AgentHello
   int64 alert_settings_revision = 6;    // as in AgentHello
+  int32 utc_offset_minutes = 7;         // as in AgentHello
+  PowerSource power_source = 8;         // as in AgentHello
+}
+
+// Where the PC gets its power. A desktop with no battery reports POWER_AC.
+enum PowerSource {
+  POWER_UNKNOWN = 0;
+  POWER_AC = 1;
+  POWER_BATTERY = 2;
+}
+
+// What must hold on the PC before the agent starts a hidden session for scheduled checks. The agent checks them right before it
+// starts the app, and answers STAGE_CONDITIONS_NOT_MET (detail says which one) instead of starting it. All unset: no conditions.
+message LaunchConditions {
+  bool require_ac_power = 1;       // plugged in (a PC with no battery always is)
+  int32 min_idle_minutes = 2;      // nobody has used the keyboard or mouse for this long (a locked session counts as idle)
+  int32 window_start_minute = 3;   // allowed hours in the PC's local time, minutes after midnight; start == end means any time.
+  int32 window_end_minute = 4;     // the window may cross midnight (1320 to 360 is 10 PM to 6 AM)
 }
 
 enum LaunchStage {
@@ -76,6 +96,7 @@ enum LaunchStage {
   STAGE_FAILED = 8;
   STAGE_ENDED = 9;      // the app exited
   STAGE_CONSENT_TIMED_OUT = 10;  // nobody at the PC answered the consent prompt within the time limit
+  STAGE_CONDITIONS_NOT_MET = 11; // a LaunchConditions rule didn't hold (on battery, someone is using the PC, outside the hours); nothing started
 }
 
 message LaunchProgress {
@@ -240,6 +261,7 @@ message LaunchCommand {
   bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
   string group = 6;          // group slug (-g=) from the account host, else empty
   bool hidden = 7;           // start the app with no visible window (--no-window); set only for unattended sessions
+  LaunchConditions conditions = 8;  // set only with hidden; older agents ignore it
 }
 
 message CancelCommand {
@@ -407,6 +429,8 @@ message AgentInfo {
   google.protobuf.Timestamp boot_time = 15;  // from AgentHello; unset when the agent did not report it
   int64 metrics_schedule_revision = 16;      // the scheduled-metrics revision the agent last reported
   int64 alert_settings_revision = 17;        // the alert-settings revision the agent last reported
+  int32 utc_offset_minutes = 18;             // from the last hello or heartbeat
+  PowerSource power_source = 19;             // from the last hello or heartbeat
 }
 
 message AgentList {
@@ -420,6 +444,7 @@ message StartSessionRequest {
                            // and keeps only a short label the caller put after that same name: "Pat Lee (AI connector)"
   bool hidden = 4;          // start the app with no visible window, for checks run at a quiet time; honoured only when the
                            // session is unattended (no consent prompt), older agents ignore it and show the window
+  LaunchConditions conditions = 5;  // checked by the agent before it starts the app; sent only with hidden
 }
 
 message StartSessionResponse {
