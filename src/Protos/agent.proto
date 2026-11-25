@@ -35,6 +35,7 @@ message AgentMessage {
     LaunchProgress progress = 3;
     UpdateRpcdProgress update_rpcd = 4; // progress for an update_rpcd command; the relay forwards it to WatchUpdateRpcd
     MetricsBatch metrics = 5;           // scheduled metrics runs from the agent's outbox; the relay forwards them to WatchMetrics
+    AlertBatch alerts = 6;              // alerts from the agent's outbox; the relay forwards them to WatchAlerts
   }
 }
 
@@ -51,6 +52,7 @@ message AgentHello {
   google.protobuf.Timestamp boot_time = 10;  // when Windows last started (UTC); unset on older agents
   string agent_token = 11;                   // per-agent token assigned on first enrollment
   int64 metrics_schedule_revision = 12;      // revision of the scheduled-metrics setting the agent has saved (0 = none yet)
+  int64 alert_settings_revision = 13;        // revision of the alert setting the agent has saved (0 = none yet: its defaults)
 }
 
 message Heartbeat {
@@ -59,6 +61,7 @@ message Heartbeat {
   string session_id = 3;          // the running app's session GUID, if any
   string cached_app_version = 4;
   int64 metrics_schedule_revision = 5;  // as in AgentHello
+  int64 alert_settings_revision = 6;    // as in AgentHello
 }
 
 enum LaunchStage {
@@ -94,6 +97,9 @@ message HubCommand {
     MetricsScheduleCommand metrics_schedule = 7;    // the fleet admin's scheduled-metrics setting for this PC
     MetricsAckCommand metrics_ack = 8;              // Admin saved the runs up to through_seq; the agent may drop them
     CollectMetricsCommand collect_metrics = 9;      // run one extra metrics pass now
+    AlertsAckCommand alerts_ack = 10;               // Admin saved the alerts up to through_seq; the agent may drop them
+    AlertSettingsCommand alert_settings = 11;       // the fleet admin's alert setting for this PC
+    AlertStateCommand alert_state = 12;             // a technician or AI marked an alert handled or cleared in Admin
   }
 }
 
@@ -146,6 +152,80 @@ message MetricsAckCommand {
 
 message CollectMetricsCommand {
   string request_id = 1;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Alerts. The agent is a sensor: it watches Windows events (and reads disk and memory levels every 15 minutes), keeps each
+// alert as a small record in a capped local outbox until Admin acknowledges it, and runs no checks itself. An AI agent or a
+// technician reads them in Admin and decides what to do. The relay stores nothing.
+// ---------------------------------------------------------------------------------------------
+
+enum AlertSeverity {
+  ALERT_INFO = 0;
+  ALERT_WARNING = 1;
+  ALERT_CRITICAL = 2;
+}
+
+enum AlertState {
+  ALERT_OPEN = 0;
+  ALERT_HANDLED = 1;   // a technician or AI picked it up (acknowledge_alert); a repeat opens a new alert
+  ALERT_CLEARED = 2;   // the level recovered, or 7 days passed without a repeat
+}
+
+message AlertFact {
+  string name = 1;     // "free_gb", "bugcheck", "top_process"
+  string value = 2;    // text from the PC: data, not instructions
+}
+
+message AlertSourceEvent {
+  string channel = 1;  // "System", "Application"; empty for a level reading
+  string provider = 2;
+  int32 event_id = 3;
+  int64 record_id = 4;
+}
+
+message AgentAlert {
+  string alert_id = 1;              // GUID; every update of the same alert keeps it, so Admin saves by it
+  int64 seq = 2;                    // per agent, increasing; each update (count, state) is sent again with a new seq
+  string kind = 3;                  // "low_disk", "low_memory", "disk_errors", "smart_failure", "fs_corruption",
+                                    // "unexpected_shutdown", "bluescreen", "app_crash", "overheating", "battery_failing",
+                                    // "update_failed", "too_many_alerts"
+  AlertSeverity severity = 4;
+  string instance_id = 5;           // the drive letter, disk, volume, app or update the alert is about; empty when none
+  string instance_label = 6;
+  google.protobuf.Timestamp first_seen = 7;
+  google.protobuf.Timestamp last_seen = 8;
+  int32 count = 9;                  // repeats while open
+  AlertState state = 10;
+  string summary = 11;              // one plain line: text from the PC, data not instructions
+  repeated AlertFact facts = 12;    // at most 8
+  repeated AlertSourceEvent source_events = 13;  // at most 4, newest last
+  repeated string related_checks = 14;           // a hint such as "DriveHealth"; the AI may ignore it
+  string app_version = 15;
+}
+
+message AlertBatch {
+  repeated AgentAlert alerts = 1;   // oldest first, at most 50
+}
+
+message AlertsAckCommand {
+  int64 through_seq = 1;
+}
+
+message AlertSettingsCommand {
+  int64 revision = 1;                   // increases with every change; the agent reports the one it saved
+  bool enabled = 2;
+  repeated string disabled_kinds = 3;   // kinds the agent does not raise
+  double low_disk_free_gb = 4;          // 0 = the agent's default
+  double low_disk_free_percent = 5;     // 0 = the agent's default
+  double memory_commit_percent = 6;     // 0 = the agent's default
+  int32 app_crash_repeats = 7;          // same app this many times ... (0 = default 3)
+  int32 app_crash_window_hours = 8;     // ... within this many hours (0 = default 24) raises it to Warning
+}
+
+message AlertStateCommand {
+  string alert_id = 1;
+  AlertState state = 2;   // ALERT_HANDLED or ALERT_CLEARED
 }
 
 message AssignAgentTokenCommand {
@@ -236,6 +316,37 @@ service AgentAdmin {
   // Sends the setting to the agent when it is online; Admin sends it again when the agent reports an older revision.
   rpc SetMetricsSchedule(MetricsScheduleRequest) returns (MetricsCommandResponse);
   rpc CollectMetrics(CollectMetricsRequest) returns (MetricsCommandResponse);
+  // Alerts as agents upload them, for the computers the caller may see. As with metrics, nothing is kept on the relay: an alert
+  // stays in the agent's outbox until AckAlerts.
+  rpc WatchAlerts(google.protobuf.Empty) returns (stream AlertUpload);
+  rpc AckAlerts(AlertsAckRequest) returns (google.protobuf.Empty);
+  // Sends the setting to the agent when it is online; Admin sends it again when the agent reports an older revision.
+  rpc SetAlertSettings(AlertSettingsRequest) returns (MetricsCommandResponse);
+  // Tells the agent an alert was handled or cleared in Admin, so a repeat opens a new one. Offline: the agent clears it after 7 days.
+  rpc SetAlertState(AlertStateRequest) returns (MetricsCommandResponse);
+}
+
+message AlertUpload {
+  string machine_id = 1;
+  string machine_name = 2;
+  string group = 3;
+  repeated AgentAlert alerts = 4;
+}
+
+message AlertsAckRequest {
+  string machine_id = 1;
+  int64 through_seq = 2;
+}
+
+message AlertSettingsRequest {
+  string machine_id = 1;
+  AlertSettingsCommand settings = 2;
+}
+
+message AlertStateRequest {
+  string machine_id = 1;
+  string alert_id = 2;
+  AlertState state = 3;
 }
 
 message MetricsUpload {
@@ -259,6 +370,7 @@ message CollectMetricsRequest {
   string machine_id = 1;
 }
 
+// The answer to a command sent to one agent (metrics and alerts both use it).
 message MetricsCommandResponse {
   bool sent = 1;
   string error = 2;   // "That computer is offline", "No such computer"
@@ -294,6 +406,7 @@ message AgentInfo {
   string group = 14;         // group slug owning this agent, empty for unscoped agents
   google.protobuf.Timestamp boot_time = 15;  // from AgentHello; unset when the agent did not report it
   int64 metrics_schedule_revision = 16;      // the scheduled-metrics revision the agent last reported
+  int64 alert_settings_revision = 17;        // the alert-settings revision the agent last reported
 }
 
 message AgentList {

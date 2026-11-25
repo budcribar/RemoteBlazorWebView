@@ -259,6 +259,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.Lifetime = hello.Lifetime;
                 info.BootTime = hello.BootTime?.Clone();
                 info.MetricsScheduleRevision = hello.MetricsScheduleRevision;
+                info.AlertSettingsRevision = hello.AlertSettingsRevision;
 
                 if (latestRelease != null)
                     entry.Commands.Writer.TryWrite(new HubCommand { ReleaseAvailable = latestRelease.Clone() });
@@ -337,7 +338,8 @@ namespace PeakSWC.RemoteWebView.Agents
                     || info.SessionRunning != heartbeat.SessionRunning
                     || info.SessionId != heartbeat.SessionId
                     || info.CachedAppVersion != heartbeat.CachedAppVersion
-                    || info.MetricsScheduleRevision != heartbeat.MetricsScheduleRevision;
+                    || info.MetricsScheduleRevision != heartbeat.MetricsScheduleRevision
+                    || info.AlertSettingsRevision != heartbeat.AlertSettingsRevision;
 
                 entry.Online = true;
                 entry.LastSeen = time.GetUtcNow();
@@ -346,6 +348,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 info.SessionId = heartbeat.SessionId;
                 info.CachedAppVersion = heartbeat.CachedAppVersion;
                 info.MetricsScheduleRevision = heartbeat.MetricsScheduleRevision;
+                info.AlertSettingsRevision = heartbeat.AlertSettingsRevision;
 
                 // last_seen alone is refreshed by the periodic WatchAgents push; don't wake every watcher every 30 s per agent.
                 if (changedAnything)
