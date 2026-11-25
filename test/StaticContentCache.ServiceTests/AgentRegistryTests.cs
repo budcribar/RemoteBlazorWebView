@@ -383,6 +383,23 @@ public class AgentRegistryTests
         Assert.Equal(response.SessionId, latest.SessionId);
     }
 
+    [Theory]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, true, true, true)]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, true, false, false)]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, false, true, false)] // the person is asked, so the window shows
+    [InlineData(ConsentMode.ConsentAlwaysAsk, true, true, false)]
+    public void StartSession_asks_for_no_window_only_on_an_unattended_session(ConsentMode ceiling, bool unattended, bool hidden, bool expectHidden)
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1", ceiling: ceiling), "10.0.0.1", null);
+
+        var response = registry.StartSession("m-1", unattended, "Bob", ServerUrl, true, true, hidden: hidden).Response;
+
+        Assert.True(response.Accepted, response.Error);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(expectHidden, command!.Launch.Hidden);
+    }
+
     [Fact]
     public void CancelLaunch_queues_a_cancel_command()
     {

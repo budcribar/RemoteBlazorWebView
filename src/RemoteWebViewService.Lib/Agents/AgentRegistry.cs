@@ -606,7 +606,7 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
-        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null, string? requesterUserId = null)
+        public StartSessionOutcome StartSession(string machineId, bool unattended, string requester, string serverUrl, bool adminKeyConfigured, bool adminKeyValid, string? groupScope = null, string? requesterUserId = null, bool hidden = false)
         {
             lock (gate)
             {
@@ -664,6 +664,8 @@ namespace PeakSWC.RemoteWebView.Agents
                         Requester = requester ?? string.Empty,
                         RequireConsent = requireConsent,
                         Group = entry.Group,
+                        // No window only when nobody is asked: a consent prompt needs the person to see the app.
+                        Hidden = hidden && !requireConsent,
                     }
                 });
 
