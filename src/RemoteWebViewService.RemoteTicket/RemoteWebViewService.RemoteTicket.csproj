@@ -13,6 +13,8 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <NoWarn>$(NoWarn);RWV001</NoWarn>
+    <!-- Part of the Native AOT relay (-p:RelayAot=true): keep trim/AOT analyzer warnings on at build time. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

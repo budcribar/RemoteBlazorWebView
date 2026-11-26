@@ -59,7 +59,7 @@ namespace PeakSWC.RemoteWebView
                     return RemoteTicketGroupLookup.Unknown();
                 if (!response.IsSuccessStatusCode)
                     return RemoteTicketGroupLookup.Unreachable();
-                var body = await response.Content.ReadFromJsonAsync<RemoteTicketGroupInfo>(cancellationToken).ConfigureAwait(false);
+                var body = await response.Content.ReadFromJsonAsync(RemoteTicketJsonContext.Default.RemoteTicketGroupInfo, cancellationToken).ConfigureAwait(false);
                 return body == null ? RemoteTicketGroupLookup.Unreachable() : RemoteTicketGroupLookup.Found(body);
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
@@ -79,13 +79,13 @@ namespace PeakSWC.RemoteWebView
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, "api/relay/agents/authorize")
                 {
-                    Content = JsonContent.Create(new AuthorizeRequest(enrollmentKey, ticket, agentId, agentToken)),
+                    Content = JsonContent.Create(new AuthorizeRequest(enrollmentKey, ticket, agentId, agentToken), RemoteTicketJsonContext.Default.AuthorizeRequest),
                 };
                 request.Headers.TryAddWithoutValidation(SecretHeader, secret);
                 using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                     return Denied("The relay authority could not be reached.");
-                var body = await response.Content.ReadFromJsonAsync<RemoteTicketAuthorizeResult>(cancellationToken).ConfigureAwait(false);
+                var body = await response.Content.ReadFromJsonAsync(RemoteTicketJsonContext.Default.RemoteTicketAuthorizeResult, cancellationToken).ConfigureAwait(false);
                 return body ?? Denied("The relay authority could not be reached.");
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
@@ -97,7 +97,7 @@ namespace PeakSWC.RemoteWebView
         private static RemoteTicketAuthorizeResult Denied(string reason) =>
             new() { Accepted = false, DenialReason = reason };
 
-        private sealed record AuthorizeRequest(string? EnrollmentKey, string? Ticket, string? AgentId, string? AgentToken);
+        internal sealed record AuthorizeRequest(string? EnrollmentKey, string? Ticket, string? AgentId, string? AgentToken);
     }
 
     public readonly record struct RemoteTicketGroupLookup(bool Reachable, RemoteTicketGroupInfo? Info)
