@@ -265,11 +265,10 @@ namespace PeakSWC.RemoteWebView
                     origins.Add(part);
             }
             var section = configuration.GetSection("Cors:AllowedOrigins");
-            foreach (var child in section.GetChildren())
-            {
-                if (!string.IsNullOrWhiteSpace(child.Value))
-                    origins.Add(child.Value.Trim());
-            }
+            origins.AddRange(section.GetChildren()
+                .Select(child => child.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
             return origins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
