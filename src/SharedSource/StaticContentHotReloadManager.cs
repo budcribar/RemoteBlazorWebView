@@ -45,7 +45,7 @@ namespace PeakSWC.RemoteBlazorWebView
 			{ (ApplicationAssemblyName, "_framework/static-content-hot-reload.js"), ("text/javascript", Encoding.UTF8.GetBytes(NotifyCssUpdatedScript)) }
 		};
 
-		private static readonly object _updatedContentLock = new();
+		private static readonly Lock _updatedContentLock = new();
 
 		private static readonly ConditionalWeakTable<WebViewManager, AttachmentState> s_attachmentStates = new();
 
@@ -143,7 +143,7 @@ namespace PeakSWC.RemoteBlazorWebView
 
 		internal sealed class AttachmentState
 		{
-			private readonly object _lock = new();
+			private readonly Lock _lock = new();
 			private readonly Func<Task> _addNotifier;
 			private readonly Func<Task> _removeNotifier;
 			private Task _lastOperation = Task.CompletedTask;
