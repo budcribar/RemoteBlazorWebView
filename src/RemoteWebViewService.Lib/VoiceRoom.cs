@@ -19,7 +19,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
     private const int MaxMessageSize = 16 * 1024;
     private readonly string _controllerKey = NewKey();
     private readonly string _pageKey = NewKey();
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private Peer? _host;
     private Peer? _controller;
     private bool _pageGranted;
