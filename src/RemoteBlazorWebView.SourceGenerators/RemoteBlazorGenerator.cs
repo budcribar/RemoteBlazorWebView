@@ -32,7 +32,7 @@ namespace PeakSWC.RemoteBlazorWebView.SourceGenerators
                 static (ctx, ct) => Read(ctx, ct));
 
             var modeProperty = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
-                options.GlobalOptions.TryGetValue("build_property.RemoteBlazorMode", out var value) ? value?.Trim() ?? "" : "");
+                options.GlobalOptions.TryGetValue("build_property.RemoteBlazorMode", out var value) ? value.Trim() : "");
 
             context.RegisterSourceOutput(targets.Combine(modeProperty), static (spc, pair) => Emit(spc, pair.Left, pair.Right));
         }

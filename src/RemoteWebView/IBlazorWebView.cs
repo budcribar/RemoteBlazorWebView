@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
@@ -27,7 +27,7 @@ namespace PeakSWC.RemoteWebView
         public bool EnableMirrors { get; set; }
 
         /// <summary>Secret for this app's own owner page; sent to the relay with CreateWebView. Empty: none (see OwnerAccess on the relay).</summary>
-        public string OwnerKey { get => string.Empty; set { } }
+        public string OwnerKey { get => string.Empty; set { _ = value; } }
 
         public uint PingIntervalSeconds { get; set; }
 
@@ -50,7 +50,7 @@ namespace PeakSWC.RemoteWebView
         /// thread: start the new copy, then end this process (a window cannot be closed from here). Unset (the default),
         /// a restart request to an app whose UI thread is stuck does nothing.
         /// </summary>
-        public Action? RestartWhenUnresponsive { get => null; set { } }
+        public Action? RestartWhenUnresponsive { get => null; set { _ = value; } }
         
         public void NavigateToString(string htmlContent);
 

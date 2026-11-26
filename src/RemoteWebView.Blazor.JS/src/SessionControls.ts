@@ -196,7 +196,7 @@ function action(part: BarPart, confirmRestart: boolean): (() => void) | undefine
     switch (part) {
         case 'give': return () => { const target = control && otherParty(control); if (target) startSwitch(target.id); };
         case 'take': return () => { if (control) startSwitch(control.myClientId); };
-        case 'copy-link': return copyShareLink;
+        case 'copy-link': return () => { void copyShareLink(); };
         case 'restart': return confirmRestart ? askRestart : restartNow;
         case 'restart-confirm': return restartNow;
         case 'restart-cancel': return () => { endConfirm(); render(); };

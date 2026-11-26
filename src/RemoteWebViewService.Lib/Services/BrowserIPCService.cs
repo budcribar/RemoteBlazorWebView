@@ -104,7 +104,7 @@ namespace PeakSWC.RemoteWebView
                 // (in mirror mode it connects only once the remote user is present), so promote it on its first
                 // connection even if the remote user already claimed control - but only once, so a later owner reconnect
                 // does not grab control back. PromoteAsync also broadcasts the roster; otherwise just tell everyone present.
-                await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+                await serviceState.BrowserIPC.ControlChange.WaitAsync(CancellationToken.None).ConfigureAwait(false);
                 try
                 {
                     if (isOwner && !serviceState.OwnerControlInitialized)
@@ -205,7 +205,7 @@ namespace PeakSWC.RemoteWebView
         {
             // Decided under the control-change lock: a hand-off in progress finishes first, so this sees who really
             // holds control now (the leaver may just have been given it, or just have given it away).
-            await serviceState.BrowserIPC.ControlChange.WaitAsync().ConfigureAwait(false);
+            await serviceState.BrowserIPC.ControlChange.WaitAsync(CancellationToken.None).ConfigureAwait(false);
             try
             {
                 if (serviceState.PrimaryClientId != clientId)
@@ -244,7 +244,7 @@ namespace PeakSWC.RemoteWebView
             serviceState.PrimaryClientId = targetClientId;
 
             var state = serviceState.BrowserIPC;
-            await state.Semaphore.WaitAsync().ConfigureAwait(false);
+            await state.Semaphore.WaitAsync(CancellationToken.None).ConfigureAwait(false);
             try
             {
                 state.SequenceNum = 1;
@@ -530,7 +530,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     logger.LogError(ex, "Restart follow-up failed. Id: {Id}", request.Id);
                 }
-            });
+            }, CancellationToken.None);
 
             return new Empty();
         }

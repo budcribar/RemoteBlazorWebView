@@ -173,7 +173,7 @@
         if (message.type === 'accept' && !host && state === 'calling') {
             display('connecting', 'Connecting voice…');
             // Run permission acquisition independently so an end message can cancel it.
-            startOffer(call);
+            void startOffer(call);
         } else if (message.type === 'ice' && ['connecting', 'active'].includes(state)) {
             if (peer?.remoteDescription) await peer.addIceCandidate(message.candidate);
             else if (candidates.length < 128) candidates.push(message.candidate);

@@ -249,7 +249,8 @@ public class ControlTransferTests
     public async Task Restart_for_an_unknown_session_does_nothing()
     {
         await using var s = new Session();
-        await s.Ipc.Restart(new RestartRequest { Id = Guid.NewGuid().ToString(), ClientId = "a" }, new CallContext(CancellationToken.None));
+        var ex = await Record.ExceptionAsync(() => s.Ipc.Restart(new RestartRequest { Id = Guid.NewGuid().ToString(), ClientId = "a" }, new CallContext(CancellationToken.None)));
+        Assert.Null(ex);
     }
 
     [Fact]

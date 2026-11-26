@@ -83,7 +83,7 @@ jobs:
           pushd src/RemoteWebView.Blazor.JS >/dev/null
           yarn install --immutable # NOSONAR githubactions:S6505 protoc and protoc-gen-grpc-web require postinstall to place binaries
           pushd Web.JS >/dev/null
-          npm install --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
           popd >/dev/null
           python3 - <<'PY'
           import os

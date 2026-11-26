@@ -1,4 +1,4 @@
-﻿/*
+/*
  The MIT License (MIT)
 
 Copyright (c) 2015 Microsoft Corporation
@@ -30,6 +30,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+
+namespace PeakSWC.RemoteWebView;
 
 /// <summary>
 /// Helper class to call a protected API and process its result

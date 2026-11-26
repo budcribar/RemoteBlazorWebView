@@ -56,6 +56,7 @@ public class SessionCallAccessTests
             new CallContext(cancel.Token, s.SignedIn("tech", Shop)));
 
         await WaitFor(() => s.State.IPC.HasConnection("tech"));
+        Assert.True(s.State.IPC.HasConnection("tech"));
         cancel.Cancel();
         await stream.WaitAsync(TimeSpan.FromSeconds(5));
     }
@@ -70,6 +71,7 @@ public class SessionCallAccessTests
             new NullWriter(), new CallContext(cancel.Token, Anonymous()));
 
         await WaitFor(() => s.State.OwnerClientId == "owner");
+        Assert.Equal("owner", s.State.OwnerClientId);
         cancel.Cancel();
         await stream.WaitAsync(TimeSpan.FromSeconds(5));
     }
@@ -200,6 +202,7 @@ public class SessionCallAccessTests
         await s.App().Shutdown(new IdMessageRequest { Id = s.Id }, new CallContext());
 
         await WaitFor(() => !s.IsRegistered);
+        Assert.False(s.IsRegistered);
     }
 
     // ---- helpers ----
