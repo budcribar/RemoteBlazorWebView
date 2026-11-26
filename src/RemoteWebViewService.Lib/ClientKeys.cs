@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -21,7 +22,7 @@ namespace PeakSWC.RemoteWebView
             public int Streams { get; set; }
         }
 
-        private readonly object gate = new();
+        private readonly Lock gate = new();
         private readonly Dictionary<string, Entry> entries = new(StringComparer.Ordinal);
 
         /// <summary>
