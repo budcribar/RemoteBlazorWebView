@@ -140,11 +140,11 @@ if ($process) {
 # Node 22.3.0 via nvm-windows, the manager documented in src/RemoteWebView.Blazor.JS/Build.md.
 # An existing nvm.exe is kept. A missing one is the official 1.2.2 no-install zip
 # (https://github.com/coreybutler/nvm-windows/releases/download/1.2.2/nvm-noinstall.zip),
-# checked against that release's published MD5. settings.txt matches install.cmd.
+# checked against that release's SHA-256. settings.txt matches install.cmd.
 # The symlink stays under LocalAppData so an existing Program Files Node.js install is left alone.
 $script:RunTestsNodeVersion = '22.3.0'
 $script:RunTestsNvmVersion = '1.2.2'
-$script:RunTestsNvmZipMd5 = 'D654C26A04E35A318D5939F8CEB09934'
+$script:RunTestsNvmZipSha256 = '74232EA51C060ECD44ECF2CEBEE314ED9E3F6DA56E1F9484D8D46C4E8BB6AE0E'
 
 function Get-RunTestsNodeVersion {
     $node = Get-Command node -ErrorAction SilentlyContinue
@@ -213,9 +213,9 @@ function Add-RunTestsUserPathEntry {
 
 function Assert-RunTestsNvmPackage {
     param([string] $Path)
-    $hash = (Get-FileHash -Algorithm MD5 -Path $Path).Hash
-    if ($hash -ne $script:RunTestsNvmZipMd5) {
-        throw "checksum mismatch for nvm-noinstall.zip (expected MD5 $($script:RunTestsNvmZipMd5), got $hash)."
+    $hash = (Get-FileHash -Algorithm SHA256 -Path $Path).Hash
+    if ($hash -ne $script:RunTestsNvmZipSha256) {
+        throw "checksum mismatch for nvm-noinstall.zip (expected SHA-256 $($script:RunTestsNvmZipSha256), got $hash)."
     }
 }
 

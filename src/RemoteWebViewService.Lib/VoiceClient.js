@@ -17,9 +17,12 @@
     const NO_CONTROLS_WARNING_MS = 10000;
     const panel = document.createElement('section');
     panel.setAttribute('aria-label', 'Remote voice');
-    panel.style.cssText = host
-        ? 'font:16px system-ui;padding:12px'
-        : 'position:fixed;top:12px;right:12px;z-index:9999;padding:8px;color:#111;background:#fff;border:1px solid #888;border-radius:6px;font:14px system-ui';
+    Object.assign(panel.style, host
+        ? { font: '16px system-ui', padding: '12px' }
+        : {
+            position: 'fixed', top: '12px', right: '12px', zIndex: '9999', padding: '8px',
+            color: '#111', background: '#fff', border: '1px solid #888', borderRadius: '6px', font: '14px system-ui'
+        });
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
     const action = document.createElement('button');

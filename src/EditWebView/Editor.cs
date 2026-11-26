@@ -152,12 +152,12 @@ namespace EditWebView
         private void EditAssemblyInfo()
         {
             _text = System.Text.RegularExpressions.Regex.Replace(_text,
-                @"^[^\r\n]*InternalsVisibleTo\(""Microsoft\.[^\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+                @"^[^\r\n]*InternalsVisibleTo\(""Microsoft\.[^\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline, TimeSpan.FromSeconds(5));
 
             if (!_text.Contains("InternalsVisibleTo", StringComparison.Ordinal))
             {
                 _text = System.Text.RegularExpressions.Regex.Replace(_text,
-                    @"^using System\.Runtime\.CompilerServices;[^\S\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+                    @"^using System\.Runtime\.CompilerServices;[^\S\r\n]*(\r?\n|$)", "", System.Text.RegularExpressions.RegexOptions.Multiline, TimeSpan.FromSeconds(5));
             }
         }
 

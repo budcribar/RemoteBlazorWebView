@@ -71,7 +71,7 @@ let desiredForFrames: string | null = null;
 function postToFrames() {
     if (!desiredForFrames) return;
     document.querySelectorAll(frameSelector).forEach(f =>
-        (f as HTMLIFrameElement).contentWindow?.postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*'));
+        (f as HTMLIFrameElement).contentWindow?.postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*')); // NOSONAR typescript:S2819 sandboxed iframe has opaque origin "null"; payload is only derived public primaryId
 }
 
 /**
@@ -99,11 +99,12 @@ export function initParentFrameControl(clientKey: string, onIdentityReady: () =>
     });
 
     window.addEventListener('message', e => {
+        if (e.origin !== 'null' && e.origin !== window.location.origin) return;
         const d = e.data;
         if (!d || typeof d !== 'object' || d.type !== 'rbwv-control-query' || !desiredForFrames) return;
         for (const f of Array.from(document.querySelectorAll(frameSelector))) {
             if ((f as HTMLIFrameElement).contentWindow === e.source) {
-                (e.source as Window).postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*');
+                (e.source as Window).postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*'); // NOSONAR typescript:S2819 sandboxed iframe has opaque origin "null"; verified by contentWindow === e.source
                 return;
             }
         }
@@ -134,11 +135,12 @@ export function initFrameControl() {
     if (!isFramed()) return;
     window.addEventListener('message', e => {
         if (e.source !== window.parent) return;
+        if (e.origin !== 'null' && e.origin !== window.location.origin && window.location.origin !== 'null') return;
         const d = e.data;
         if (!d || typeof d !== 'object' || d.type !== 'rbwv-parent-control' || typeof d.primaryId !== 'string' || !idPattern.test(d.primaryId)) return;
         desired = d.primaryId;
         evaluate();
     });
     window.RemoteControl?.subscribe(() => evaluate());
-    window.parent.postMessage({ type: 'rbwv-control-query' }, '*');
+    window.parent.postMessage({ type: 'rbwv-control-query' }, '*'); // NOSONAR typescript:S2819 sandboxed iframe has opaque origin "null"; message carries no sensitive data
 }
