@@ -121,6 +121,7 @@ message HubCommand {
     AlertsAckCommand alerts_ack = 10;               // Admin saved the alerts up to through_seq; the agent may drop them
     AlertSettingsCommand alert_settings = 11;       // the fleet admin's alert setting for this PC
     AlertStateCommand alert_state = 12;             // a technician or AI marked an alert handled or cleared in Admin
+    CancelUpdateRpcdCommand cancel_update_rpcd = 13; // stop an update that is still waiting for the PC to be free
   }
 }
 
@@ -287,12 +288,19 @@ message UpdateRpcdCommand {
   string approved_by = 5;
 }
 
+// Stops an update that is still in the "waiting" stage (the PC was busy when it was asked). The agent answers with an
+// update_rpcd progress whose stage is "cancelled". An update past waiting is not stopped. Empty request_id = the latest.
+message CancelUpdateRpcdCommand {
+  string request_id = 1;
+}
+
 // Empty request_id asks for the latest update on this PC.
 message UpdateRpcdStatusCommand {
   string request_id = 1;
 }
 
-// One pollable snapshot. terminal is true for refused, already_up_to_date, succeeded, failed, and agent_not_updated.
+// One pollable snapshot. terminal is true for refused, already_up_to_date, succeeded, failed, cancelled and agent_not_updated.
+// waiting means the PC was busy (a check, fix or other work running): the agent starts the update when it is free.
 // agent_not_updated means the app is new_version and the installed agent service is not that build.
 // old_version is the build before the attempt. new_version is the release being installed, then the build now on disk.
 message UpdateRpcdProgress {
@@ -331,6 +339,8 @@ service AgentAdmin {
   rpc UpdateRpcd(UpdateRpcdAdminRequest) returns (UpdateRpcdProgress);
   // Replays the latest progress first, then each change until terminal. request_id empty = the latest update.
   rpc WatchUpdateRpcd(UpdateRpcdWatchRequest) returns (stream UpdateRpcdProgress);
+  // Asks the agent to stop an update that is still waiting for the PC to be free. The result arrives on WatchUpdateRpcd.
+  rpc CancelUpdateRpcd(UpdateRpcdWatchRequest) returns (CancelUpdateRpcdResponse);
   // Scheduled metrics runs as agents upload them, for the computers the caller may see. Nothing is kept on the relay: a run
   // stays in the agent's outbox until AckMetrics, so a subscriber that was away gets it on the agent's next upload.
   rpc WatchMetrics(google.protobuf.Empty) returns (stream MetricsUpload);
@@ -409,6 +419,11 @@ message UpdateRpcdAdminRequest {
 message UpdateRpcdWatchRequest {
   string machine_id = 1;
   string request_id = 2;
+}
+
+message CancelUpdateRpcdResponse {
+  bool sent = 1;
+  string error = 2;   // "That computer is offline", "No such computer"
 }
 
 message AgentInfo {

@@ -44,4 +44,8 @@ namespace PeakSWC.RemoteWebView.Agent
     public sealed partial class UpdateRpcdAdminRequest;
     [Experimental(global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.AgentRegistry, UrlFormat = global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.UrlFormat)]
     public sealed partial class UpdateRpcdWatchRequest;
+    [Experimental(global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.AgentRegistry, UrlFormat = global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.UrlFormat)]
+    public sealed partial class CancelUpdateRpcdCommand;
+    [Experimental(global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.AgentRegistry, UrlFormat = global::PeakSWC.RemoteWebView.Agents.ExperimentalApi.UrlFormat)]
+    public sealed partial class CancelUpdateRpcdResponse;
 }

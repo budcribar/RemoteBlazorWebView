@@ -119,6 +119,10 @@ namespace PeakSWC.RemoteWebView.Agents
         public bool CollectMetrics(string machineId, string? groupScope, out string error) =>
             SendIfOnline(machineId, groupScope, new HubCommand { CollectMetrics = new CollectMetricsCommand { RequestId = Guid.NewGuid().ToString() } }, out error);
 
+        /// <summary>Asks the agent to stop an update that is still waiting for the PC to be free. Never queued for an offline computer.</summary>
+        public bool CancelUpdateRpcd(string machineId, string? requestId, string? groupScope, out string error) =>
+            SendIfOnline(machineId, groupScope, new HubCommand { CancelUpdateRpcd = new CancelUpdateRpcdCommand { RequestId = requestId?.Trim() ?? string.Empty } }, out error);
+
         private bool SendIfOnline(string machineId, string? groupScope, HubCommand command, out string error)
         {
             lock (gate)
