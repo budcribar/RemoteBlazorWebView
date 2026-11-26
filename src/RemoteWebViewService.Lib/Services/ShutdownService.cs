@@ -48,13 +48,6 @@ namespace PeakSWC.RemoteWebView.Services
             _ended[id] = (reason, now);
         }
 
-        /// <summary>
-        /// Tears the session down and logs why, once, at Warning (the production relay drops Information), with who the app was and
-        /// how long the session ran. A second call for a session that is already gone logs at Debug only.
-        /// </summary>
-        /// <param name="reason">Why the session ends.</param>
-        /// <param name="exception">The error behind it, when there is one.</param>
-        /// <param name="detail">Extra context for the log line, e.g. which browser connection left.</param>
         private void NotifyChannels(string id)
         {
             try
@@ -71,6 +64,13 @@ namespace PeakSWC.RemoteWebView.Services
             }
         }
 
+        /// <summary>
+        /// Tears the session down and logs why, once, at Warning (the production relay drops Information), with who the app was and
+        /// how long the session ran. A second call for a session that is already gone logs at Debug only.
+        /// </summary>
+        /// <param name="reason">Why the session ends.</param>
+        /// <param name="exception">The error behind it, when there is one.</param>
+        /// <param name="detail">Extra context for the log line, e.g. which browser connection left.</param>
         public async Task Shutdown(string id, SessionEndReason reason, Exception? exception = null, string? detail = null)
         {
             if (string.IsNullOrWhiteSpace(id))
