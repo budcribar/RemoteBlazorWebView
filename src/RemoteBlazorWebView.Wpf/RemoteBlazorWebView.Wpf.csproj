@@ -25,7 +25,7 @@
 		<LangVersion>preview</LangVersion>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
-		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.1: all seven packages and both Roslyn source generators emit AnyCPU IL for native Windows ARM64 support; adds signed RemoteTicket authorization, per-agent token binding, session key protection, RPCD update forwarding/cancel, scheduled metrics/alerts/boot-time reporting, and relay security hardening. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
+		<PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.1.10. 11.0.1.1: all seven packages and both Roslyn source generators emit AnyCPU IL for native Windows ARM64 support; adds signed RemoteTicket authorization, per-agent token binding, session key protection, RPCD update forwarding/cancel, scheduled metrics/alerts/boot-time reporting, and relay security hardening. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -43,7 +43,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.36.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="11.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="11.0.1.10" />
 	</ItemGroup>
 
 	<ItemGroup>

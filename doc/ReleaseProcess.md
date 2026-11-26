@@ -20,19 +20,19 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.1` and does not set `VersionSuffix`, so the package version is `11.0.1`. `global.json` pins SDK `11.0.100`, which is GA.
+`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.1.1` and does not set `VersionSuffix`, so the package version is `11.0.1.1`. `global.json` pins SDK `11.0.1.100`, which is GA.
 
 The rule going forward:
 
 - The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json` and the major of `VersionPrefix`.
-- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net11 that is `11.0.1` with no suffix. The script does not replace a GA SDK with `10.0.0`.
+- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net11 that is `11.0.1.1` with no suffix. The script does not replace a GA SDK with `10.0.0`.
 - When the SDK is a prerelease, `VersionPrefix` is `{major}.0.0` unless `version_override` is set. The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `rc.2` becomes `rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A committed suffix spelled `rc.2` or `preview.5` is rewritten the same way.
 - `version_override` is a single token such as `10.0.14` or `10.0.13-rc2`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`. It replaces both the committed GA version and the prerelease derivation.
 - `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `10.0.13` with patch `1` is `10.0.13-p1` (`VersionSuffix` `p1`).
 
-`11.0.0-rc2` and `11.0.0` are already on nuget.org. `11.0.1` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
+`11.0.0-rc2` and `11.0.0` are already on nuget.org. `11.0.1.1` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
 
-SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1` and leave `patch` empty.
+SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1.1` and leave `patch` empty.
 
 `eng/derive-package-version.sh` implements this and does not edit the tree. The workflow prints the result and uploads it. It does not commit and it does not push. The maintainer commits the two property values in `Directory.Build.props` on the line being released.
 
