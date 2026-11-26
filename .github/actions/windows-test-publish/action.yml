@@ -121,8 +121,15 @@ runs:
           $publish = Join-Path $dir 'bin\publish'
           $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
           Write-Host "Publish Release $($app.Project)"
-          dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
-          Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+          $isWpf = $app.Project -like '*WpfApp*'
+          if ($isWpf) {
+            # .NET 11 WPF Release publish is multi-file (PublishSingleFile=false) so mixed-mode assemblies stay beside the exe.
+            dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish -p:PublishSingleFile=false @common
+          } else {
+            dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
+            # WinForms and Photino stay single-file: exe plus wwwroot.
+            Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
+          }
           $www = Join-Path $publish 'wwwroot'
           if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
           $embeddedWww = Join-Path $dir 'embedded\wwwroot'
