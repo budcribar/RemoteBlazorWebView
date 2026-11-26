@@ -234,12 +234,12 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
     public virtual async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        await _cts.CancelAsync().ConfigureAwait(false);
+        await _cts.CancelAsync();
         if (_module is not null)
         {
-            try { await _module.InvokeVoidAsync("unwatch", _frame).ConfigureAwait(false); }
+            try { await _module.InvokeVoidAsync("unwatch", _frame); }
             catch (Exception ex) { NoteScriptGone(ex); }
-            try { await _module.DisposeAsync().ConfigureAwait(false); }
+            try { await _module.DisposeAsync(); }
             catch (Exception ex) { NoteScriptGone(ex); }
         }
         _sink?.Dispose();
