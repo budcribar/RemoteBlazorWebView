@@ -55,6 +55,22 @@ namespace PeakSWC.RemoteWebView.Services
         /// <param name="reason">Why the session ends.</param>
         /// <param name="exception">The error behind it, when there is one.</param>
         /// <param name="detail">Extra context for the log line, e.g. which browser connection left.</param>
+        private void NotifyChannels(string id)
+        {
+            try
+            {
+                foreach (var channel in serviceStateChannel.Values)
+                {
+                    if (!channel.Writer.TryWrite($"Shutdown:{id}"))
+                        logger.LogError("Failed to write shutdown notification to channel for client {Id}.", id);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed shutdown for client {Id} during channel notification.", id);
+            }
+        }
+
         public async Task Shutdown(string id, SessionEndReason reason, Exception? exception = null, string? detail = null)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -90,20 +106,7 @@ namespace PeakSWC.RemoteWebView.Services
                     logger.LogError(ex, "Failed shutdown for client {Id}.", id);
                 }
 
-                try
-                {
-                    foreach (var channel in serviceStateChannel.Values)
-                    {
-                        if (!channel.Writer.TryWrite($"Shutdown:{id}"))
-                        {
-                            logger.LogError("Failed to write shutdown notification to channel for client {Id}.", id);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed shutdown for client {Id} during channel notification.", id);
-                }
+                NotifyChannels(id);
             }
             else
             {
@@ -116,10 +119,11 @@ namespace PeakSWC.RemoteWebView.Services
             const string Template = "Session {Id} shut down: {Reason}{Detail}. App: {ProcessName} pid {Pid} on {HostName}, group {Group}, "
                 + "ran {Duration}, controller {Primary}, owner {Owner}, max ping {MaxPing} ms";
             var suffix = string.IsNullOrWhiteSpace(detail) ? string.Empty : " (" + detail + ")";
-            var duration = state is null ? "unknown" : (DateTime.UtcNow - state.StartTime).ToString(@"d\.hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+            const string Unknown = "unknown";
+            var duration = state is null ? Unknown : (DateTime.UtcNow - state.StartTime).ToString(@"d\.hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
             object[] args =
             [
-                id, reason, suffix, state?.ProcessName ?? "unknown", state?.Pid ?? 0, state?.HostName ?? "unknown", state?.Group ?? "unknown",
+                id, reason, suffix, state?.ProcessName ?? Unknown, state?.Pid ?? 0, state?.HostName ?? Unknown, state?.Group ?? Unknown,
                 duration, Or(state?.PrimaryClientId), Or(state?.OwnerClientId), (int)(state?.MaxClientPing.TotalMilliseconds ?? 0),
             ];
             if (exception is null)
