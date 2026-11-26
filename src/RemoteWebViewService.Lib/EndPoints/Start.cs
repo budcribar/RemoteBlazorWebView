@@ -126,12 +126,14 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 catch(Exception)
                 {
                     LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
-                    if (markedInUse && serviceState != null)
+                    // markedInUse is set only after serviceState is assigned, so the null check was always true here.
+                    if (markedInUse)
                     {
-                        serviceState.InUse = false;
-                        serviceState.OwnerHoldsApp = false;
-                        serviceState.Cookies = null;
-                        serviceState.User = "";
+                        var state = serviceState!;
+                        state.InUse = false;
+                        state.OwnerHoldsApp = false;
+                        state.Cookies = null;
+                        state.User = "";
                     }
                     if (!context.Response.HasStarted)
                     {
