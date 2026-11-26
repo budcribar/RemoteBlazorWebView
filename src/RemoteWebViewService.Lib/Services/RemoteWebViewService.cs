@@ -16,6 +16,7 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null, IRelayAuthorization? authorization = null, AgentRegistry? agents = null) : WebViewIPC.WebViewIPCBase
     {
+        private const string CreateFailed = "createFailed:";
         /// <summary>
         /// Every session id on the relay. Refused when the relay requires sign-in: a session id is what the browser calls
         /// use to attach, so listing them to an anonymous caller would hand out every shop's sessions.
@@ -35,7 +36,7 @@ namespace PeakSWC.RemoteWebView
             if (request == null || string.IsNullOrWhiteSpace(request.Id))
             {
                 logger.LogError("CreateWebView called with null or empty Id.");
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = CreateFailed }, CancellationToken.None).ConfigureAwait(false);
                 return;
             }
 
@@ -46,7 +47,7 @@ namespace PeakSWC.RemoteWebView
             if (serviceDictionary.TryGetValue(request.Id, out var existing) && existing.Task.IsCompleted)
             {
                 logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = CreateFailed }, CancellationToken.None).ConfigureAwait(false);
                 return;
             }
 
@@ -56,7 +57,7 @@ namespace PeakSWC.RemoteWebView
             if (!decision.Allowed)
             {
                 logger.LogWarning("CreateWebView denied for Id {Id} in group {Group}: {ErrorCode}. {Message}", request.Id, group, decision.ErrorCode, decision.Message);
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" + (decision.ErrorCode ?? "denied") }, CancellationToken.None).ConfigureAwait(false);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = CreateFailed + (decision.ErrorCode ?? "denied") }, CancellationToken.None).ConfigureAwait(false);
                 return;
             }
 
@@ -66,7 +67,7 @@ namespace PeakSWC.RemoteWebView
             if (serviceStateTaskSource.Task.IsCompleted)
             {
                 logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
-                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = CreateFailed }, CancellationToken.None).ConfigureAwait(false);
                 return;
             }     
 
@@ -343,10 +344,10 @@ namespace PeakSWC.RemoteWebView
             {
                 throw;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 if (shutdownService.HasEnded(id, out var ended))
-                    logger.LogDebug("Ping stream for session {Id} stopped: the session is already ending ({Reason}).", id, ended);
+                    logger.LogDebug(ex, "Ping stream for session {Id} stopped: the session is already ending ({Reason}).", id, ended);
                 else if (!string.IsNullOrWhiteSpace(id))
                     // The session was still running, so the app's own ping stream went away: its connection closed or dropped.
                     await shutdownService.Shutdown(id, SessionEndReason.PingStreamClosed).ConfigureAwait(false);
