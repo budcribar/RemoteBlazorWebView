@@ -17,6 +17,25 @@ namespace PeakSWC.RemoteWebView
         IUserService? userService = null,
         IConfiguration? configuration = null) : FileWatcherIPC.FileWatcherIPCBase
     {
+        private string AllowedPath(string filePath)
+        {
+            string fullPath = Path.GetFullPath(filePath);
+            string? allowedRoot = configuration?["FileWatcher:AllowedRoot"];
+            if (authorization?.Enabled == true && string.IsNullOrWhiteSpace(allowedRoot))
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "FileWatcher:AllowedRoot must be configured when sign-in is enabled."));
+            if (string.IsNullOrWhiteSpace(allowedRoot))
+                return fullPath;
+
+            string normalizedRoot = Path.GetFullPath(allowedRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (!fullPath.StartsWith(normalizedRoot, comparison))
+            {
+                logger.LogWarning("Rejected WatchFile request outside allowed root: {FilePath}", filePath);
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "FilePath is outside the allowed root directory."));
+            }
+            return fullPath;
+        }
+
         public override async Task WatchFile(WatchFileRequest request, IServerStreamWriter<WatchFileResponse> responseStream, ServerCallContext context)
         {
             if (authorization?.Enabled == true)
@@ -32,28 +51,13 @@ namespace PeakSWC.RemoteWebView
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "FilePath cannot be null or empty."));
             }
 
-            string fullPath = Path.GetFullPath(filePath);
-            string? allowedRoot = configuration?["FileWatcher:AllowedRoot"];
-            if (authorization?.Enabled == true && string.IsNullOrWhiteSpace(allowedRoot))
-            {
-                throw new RpcException(new Status(StatusCode.PermissionDenied, "FileWatcher:AllowedRoot must be configured when sign-in is enabled."));
-            }
-            if (!string.IsNullOrWhiteSpace(allowedRoot))
-            {
-                string normalizedRoot = Path.GetFullPath(allowedRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-                if (!fullPath.StartsWith(normalizedRoot, comparison))
-                {
-                    logger.LogWarning("Rejected WatchFile request outside allowed root: {FilePath}", filePath);
-                    throw new RpcException(new Status(StatusCode.PermissionDenied, "FilePath is outside the allowed root directory."));
-                }
-            }
+            string fullPath = AllowedPath(filePath);
 
-            logger.LogInformation($"Client requested to watch file: {fullPath}");
+            logger.LogInformation("Client requested to watch file: {FilePath}", fullPath);
 
             if (!File.Exists(fullPath))
             {
-                logger.LogWarning($"File {fullPath} does not exist.");
+                logger.LogWarning("File {FilePath} does not exist.", fullPath);
                 throw new RpcException(new Status(StatusCode.NotFound, $"File {filePath} does not exist."));
             }
 
