@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -12,7 +13,7 @@ namespace PeakSWC.RemoteWebView
     public sealed class SessionControllers
     {
         private readonly HashSet<string> users = new(StringComparer.Ordinal);
-        private readonly object gate = new();
+        private readonly Lock gate = new();
 
         /// <summary>True once a user has been named: from then on only listed users may be given control.</summary>
         public bool IsLimited
