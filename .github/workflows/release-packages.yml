@@ -48,12 +48,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this workflow
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: workflow
 
       - name: Checkout the selected line
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.line }}
           fetch-depth: 0
@@ -114,7 +114,7 @@ jobs:
           cat "$GITHUB_WORKSPACE/PackageReleaseNotes.txt"
 
       - name: Upload the version plan and notes
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-plan-${{ inputs.line }}
           path: |
@@ -139,12 +139,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout this workflow
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: workflow
 
       - name: Checkout the selected line
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.line }}
           fetch-depth: 0
@@ -153,7 +153,7 @@ jobs:
       # The three UI packages include the tutorial README via a path outside
       # this repo. The tutorial is not packed and this checkout is not pushed.
       - name: Checkout the tutorial README
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: budcribar/RemoteBlazorWebViewTutorial
           ref: ${{ inputs.line }}
@@ -161,12 +161,12 @@ jobs:
           persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: line/global.json
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22.3.0
 
@@ -261,7 +261,7 @@ jobs:
           Get-Content "$env:GITHUB_WORKSPACE/packages/SHA256SUMS.txt"
 
       - name: Upload packages and checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: packages-${{ inputs.line }}-${{ steps.version.outputs.version }}
           path: packages/**
@@ -281,7 +281,7 @@ jobs:
       contents: read
     steps:
       - name: Download packed packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: packages-*
           path: packages
