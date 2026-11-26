@@ -33,6 +33,10 @@
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
 
+	<!-- RelayAot=true is the Railway relay (see Dockerfile): Native AOT, with the RemoteTicket provider but without Azure AD
+	     B2C, because Microsoft.Identity.Web can't be AOT-compiled. Publish it with -r linux-x64 and self-contained. -->
+	<PublishAot Condition="'$(RelayAot)' == 'true'">True</PublishAot>
+	<PublishTrimmed Condition="'$(RelayAot)' == 'true'">True</PublishTrimmed>
     <!-- Change to true when publishing locally -->
 	<PublishAot Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishAot>
 	<PublishTrimmed Condition="'$(Configuration)' == 'NoAuthorization'">True</PublishTrimmed>
@@ -66,15 +70,17 @@
   <ItemGroup>
     <ProjectReference Include="..\RemoteWebViewService.Lib\RemoteWebViewService.Lib.csproj" />
   </ItemGroup>
-  <!-- Azure AD B2C sign-in ("Authorization:Provider": "AzureB2C"): in every configuration but the native relay
-       (NoAuthorization, AOT). A relay built with -c Authorization also requires it by default. Which provider runs is a
+  <!-- Azure AD B2C sign-in ("Authorization:Provider": "AzureB2C"): in every configuration but the native relays
+       (NoAuthorization, and RelayAot=true). A relay built with -c Authorization also requires it by default. Which provider runs is a
        setting, not a compile-time switch: see IRelayAuthorization. -->
-  <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
+  <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization' and '$(RelayAot)' != 'true'">
     <ProjectReference Include="..\RemoteWebViewService.AzureB2C\RemoteWebViewService.AzureB2C.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
     <ProjectReference Include="..\RemoteWebViewService.RemoteTicket\RemoteWebViewService.RemoteTicket.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
+    <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization' or '$(RelayAot)' == 'true'" />
     <Compile Remove="Authorization\RemoteTicketRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
     <Compile Remove="Authorization\AzureB2CByDefault.cs" Condition="'$(Configuration)' != 'Authorization'" />
   </ItemGroup>
@@ -91,29 +97,13 @@
   </ItemGroup>
  
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <!-- Azure.Identity, Microsoft.Graph.Beta (83 MB) with its Graph.Core/Kiota pins, JwtBearer and Hosting.WindowsServices
+         were referenced here but no code used them. The Azure AD B2C packages (Identity.Web, OpenIdConnect, Newtonsoft.Json)
+         come with RemoteWebViewService.AzureB2C, so builds without it (NoAuthorization, RelayAot) don't carry them. -->
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
-	  
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="11.0.0" />
 	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0" />
-	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0" NoWarn="NU1605" />
-	  
-    <PackageReference Include="Microsoft.Graph.Beta" Version="6.9.0-preview" />
-    <PackageReference Include="Microsoft.Graph.Core" Version="4.0.1" />
-    <PackageReference Include="Microsoft.Kiota.Abstractions" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Authentication.Azure" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Http.HttpClientLibrary" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Serialization.Form" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Serialization.Json" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Serialization.Multipart" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Kiota.Serialization.Text" Version="2.1.6" />
-    <PackageReference Condition="'$(Configuration)' != 'NoAuthorization'" Include="Newtonsoft.Json" Version="13.0.4" />
-  
-    <PackageReference Include="Microsoft.Identity.Web" Version="4.18.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="4.18.0" />
   </ItemGroup>
   <ItemGroup>
 	  <None Include="..\..\icons\favicon-32x32.png" Link="favicon-32x32.png">

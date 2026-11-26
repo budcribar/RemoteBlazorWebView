@@ -36,13 +36,12 @@ namespace PeakSWC.RemoteWebView
     public static class RemoteTicketFormat
     {
         private const string MalformedTicket = "malformed_ticket";
-        private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
         public static string Create(string signingKey, RemoteTicketPayload payload)
         {
             ArgumentException.ThrowIfNullOrEmpty(signingKey);
             ArgumentNullException.ThrowIfNull(payload);
-            var jsonPart = Base64Url(JsonSerializer.SerializeToUtf8Bytes(payload, Json));
+            var jsonPart = Base64Url(JsonSerializer.SerializeToUtf8Bytes(payload, RemoteTicketJsonContext.Default.RemoteTicketPayload));
             var signature = Base64Url(Sign(signingKey, jsonPart));
             return jsonPart + "." + signature;
         }
@@ -87,7 +86,7 @@ namespace PeakSWC.RemoteWebView
             RemoteTicketPayload? parsed;
             try
             {
-                parsed = JsonSerializer.Deserialize<RemoteTicketPayload>(body, Json);
+                parsed = JsonSerializer.Deserialize(body, RemoteTicketJsonContext.Default.RemoteTicketPayload);
             }
             catch (JsonException)
             {
