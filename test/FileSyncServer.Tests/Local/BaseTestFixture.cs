@@ -50,13 +50,24 @@ namespace FileSyncServer.Tests.Local
                     throw new InvalidOperationException(DescribeFailure("No browser contexts found in the connected WebView2 instance."));
                 }
 
-                var pages = contexts[0].Pages.ToList();
-                if (pages.Count == 0)
+                // DevTools can accept the connection before WebView2 has created
+                // the app's page (run 44798662282, a shard's first app start), so
+                // wait for one rather than failing on an empty list.
+                var context = contexts[0];
+                var page = context.Pages.FirstOrDefault();
+                if (page == null)
                 {
-                    throw new InvalidOperationException(DescribeFailure("No pages found in the first browser context."));
+                    try
+                    {
+                        page = await context.WaitForPageAsync(new BrowserContextWaitForPageOptions { Timeout = 30_000 });
+                    }
+                    catch (Microsoft.Playwright.PlaywrightException)
+                    {
+                        throw new InvalidOperationException(DescribeFailure("No pages found in the first browser context."));
+                    }
                 }
 
-                Page = pages[0];
+                Page = page;
                 await TestAppWindowPlacement.FitAsync(AppProcess, Page);
             }
             catch

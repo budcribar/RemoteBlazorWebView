@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PeakSWC.RemoteWebView.Agent;
@@ -74,6 +75,26 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public void Boot_time_from_the_hello_is_listed_and_a_reconnect_after_reboot_replaces_it()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var firstBoot = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 11, 19, 8, 0, 0, TimeSpan.Zero));
+        var hello = Hello("m-1");
+        hello.BootTime = firstBoot;
+        registry.Register(hello, "10.0.0.1", null);
+        Assert.Equal(firstBoot, registry.GetAgent("m-1")!.BootTime);
+
+        var rebooted = Hello("m-1");
+        rebooted.BootTime = Timestamp.FromDateTimeOffset(new DateTimeOffset(2026, 11, 19, 17, 0, 0, TimeSpan.Zero));
+        registry.Register(rebooted, "10.0.0.1", null);
+        Assert.Equal(rebooted.BootTime, registry.GetAgent("m-1")!.BootTime);
+
+        // An older agent sends none: nothing is made up.
+        registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.Null(registry.GetAgent("m-1")!.BootTime);
+    }
+
+    [Fact]
     public void StartSession_with_a_wrong_admin_key_is_denied_before_anything_else()
     {
         var registry = new AgentRegistry(new ManualTime());
@@ -90,6 +111,35 @@ public class AgentRegistryTests
         Assert.True(asked.Response.Accepted);
         Assert.True(connection.Commands.TryRead(out var command));
         Assert.True(command!.Launch.RequireConsent);
+    }
+
+    [Fact]
+    public void PublishRelease_broadcasts_to_online_agents_and_replays_to_newly_connected_agents()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var online = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var offline = registry.Register(Hello("m-2"), "10.0.0.2", null);
+        registry.Disconnect(offline);
+
+        int notified = registry.PublishRelease(new ReleaseAvailableCommand
+        {
+            StableVersion = "1.3.0",
+            PrereleaseVersion = "1.3.0-ci.800.1",
+        });
+
+        Assert.Equal(1, notified);
+        Assert.True(online.Commands.TryRead(out var pushed));
+        Assert.Equal(HubCommand.BodyOneofCase.ReleaseAvailable, pushed!.BodyCase);
+        Assert.Equal("1.3.0", pushed.ReleaseAvailable.StableVersion);
+        Assert.Equal("1.3.0-ci.800.1", pushed.ReleaseAvailable.PrereleaseVersion);
+        Assert.False(offline.Commands.TryRead(out _));
+
+        // A newly connecting agent receives the cached release announcement immediately on register.
+        var lateJoiner = registry.Register(Hello("m-3"), "10.0.0.3", null);
+        Assert.True(lateJoiner.Commands.TryRead(out var replayed));
+        Assert.Equal(HubCommand.BodyOneofCase.ReleaseAvailable, replayed!.BodyCase);
+        Assert.Equal("1.3.0", replayed.ReleaseAvailable.StableVersion);
+        Assert.Equal("1.3.0-ci.800.1", replayed.ReleaseAvailable.PrereleaseVersion);
     }
 
     // ---------------------------------------------------------------- enrollment keys and options
@@ -111,6 +161,49 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public void With_keys_required_and_none_set_every_key_is_refused()
+    {
+        var locked = AgentOptions.Create(null, null, requireKeys: true);
+        Assert.False(locked.AcceptsAnyKey);
+        Assert.True(locked.RefusesEveryKey);
+        Assert.False(locked.IsKeyAccepted("whatever"));
+        Assert.False(locked.IsKeyAccepted(""));
+        Assert.False(locked.IsKeyAccepted(null));
+
+        var decision = new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy().CheckEnrollment("whatever", locked);
+        Assert.False(decision.Accepted);
+        Assert.Equal(PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy.NoKeysConfiguredReason, decision.DenialReason);
+
+        var listed = AgentOptions.Create("alpha", null, requireKeys: true);
+        Assert.False(listed.RefusesEveryKey);
+        Assert.True(listed.IsKeyAccepted("alpha"));
+        Assert.False(listed.IsKeyAccepted("beta"));
+        Assert.Equal("The enrollment key was not accepted",
+            new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy().CheckEnrollment("beta", listed).DenialReason);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("Production", true)]
+    [InlineData("Staging", true)]
+    [InlineData("Development", false)]
+    [InlineData("development", false)]
+    public void Enrollment_keys_are_required_outside_Development(string? environment, bool required)
+    {
+        var settings = new Dictionary<string, string?> { ["environment"] = environment };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var options = AgentOptions.FromConfiguration(configuration);
+        Assert.Equal(required, options.RequireKeys);
+        Assert.Equal(!required, options.IsKeyAccepted("whatever"));
+
+        settings[AgentOptions.EnrollmentKeysVariable] = "alpha";
+        var keyed = AgentOptions.FromConfiguration(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+        Assert.True(keyed.IsKeyAccepted("alpha"));
+        Assert.False(keyed.IsKeyAccepted("whatever"));
+    }
+
+    [Fact]
     public void Server_url_uses_PUBLIC_BASE_URL_else_the_request_scheme_and_host()
     {
         var http = new DefaultHttpContext();
@@ -126,12 +219,32 @@ public class AgentRegistryTests
     public void Requester_is_the_signed_in_user_else_the_request_else_a_default()
     {
         var anonymous = new CallContext(CancellationToken.None, new DefaultHttpContext());
-        Assert.Equal("Bob", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, anonymous));
-        Assert.Equal(AgentAdminService.DefaultRequester, AgentAdminService.GetRequester(new StartSessionRequest(), anonymous));
+        Assert.Equal("Bob", AgentAdminService.GetRequester("Bob", anonymous));
+        Assert.Equal(AgentAdminService.DefaultRequester, AgentAdminService.GetRequester(null, anonymous));
 
         var signedIn = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("name", "Alice Admin") }, "test")) };
-        Assert.Equal("Alice Admin", AgentAdminService.GetRequester(new StartSessionRequest { Requester = "Bob" }, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin", AgentAdminService.GetRequester("Bob", new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin", AgentAdminService.GetRequester(null, new CallContext(CancellationToken.None, signedIn)));
+        Assert.Equal("Alice Admin (AI connector)",
+            AgentAdminService.GetRequester("Alice Admin (AI connector)", new CallContext(CancellationToken.None, signedIn)));
     }
+
+    [Theory]
+    [InlineData("Alice Admin (AI connector)", "Alice Admin (AI connector)")]
+    [InlineData("  Alice Admin (AI connector)  ", "Alice Admin (AI connector)")]
+    [InlineData("Alice Admin (web-2)", "Alice Admin (web-2)")]
+    [InlineData("Bob (AI connector)", "Alice Admin")]              // another name
+    [InlineData("Alice Admin and Bob (AI connector)", "Alice Admin")]
+    [InlineData("Alice Admin (Bob) (AI connector)", "Alice Admin")] // parentheses inside the label
+    [InlineData("Alice Admin (really Bob, the owner)", "Alice Admin")]
+    [InlineData("Alice Admin (0123456789012345678901234567890123)", "Alice Admin")] // 34 characters
+    [InlineData("Alice Admin ()", "Alice Admin")]
+    [InlineData("Alice Admin (AI connector", "Alice Admin")]
+    [InlineData("Alice Admin", "Alice Admin")]
+    [InlineData("", "Alice Admin")]
+    [InlineData(null, "Alice Admin")]
+    public void A_signed_in_requester_keeps_only_a_short_label_after_their_own_name(string? requested, string expected) =>
+        Assert.Equal(expected, AgentAdminService.WithLabel("Alice Admin", requested));
 
     // ---------------------------------------------------------------- online / offline / expiry
 
@@ -270,6 +383,78 @@ public class AgentRegistryTests
         Assert.Equal(response.SessionId, latest.SessionId);
     }
 
+    [Theory]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, true, true, true)]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, true, false, false)]
+    [InlineData(ConsentMode.ConsentUnattendedAllowed, false, true, false)] // the person is asked, so the window shows
+    [InlineData(ConsentMode.ConsentAlwaysAsk, true, true, false)]
+    public void StartSession_asks_for_no_window_only_on_an_unattended_session(ConsentMode ceiling, bool unattended, bool hidden, bool expectHidden)
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1", ceiling: ceiling), "10.0.0.1", null);
+
+        var response = registry.StartSession("m-1", unattended, "Bob", ServerUrl, true, true, hidden: hidden).Response;
+
+        Assert.True(response.Accepted, response.Error);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(expectHidden, command!.Launch.Hidden);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)] // a window someone sees starts at once, with no conditions
+    public void StartSession_passes_launch_conditions_only_with_a_hidden_session(bool hidden, bool expectConditions)
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1", ceiling: ConsentMode.ConsentUnattendedAllowed), "10.0.0.1", null);
+        var conditions = new LaunchConditions { RequireAcPower = true, MinIdleMinutes = 999, WindowStartMinute = 1320, WindowEndMinute = 99999 };
+
+        Assert.True(registry.StartSession("m-1", true, "Bob", ServerUrl, true, true, hidden: hidden, conditions: conditions).Response.Accepted);
+        Assert.True(connection.Commands.TryRead(out var command));
+        if (!expectConditions)
+        {
+            Assert.Null(command!.Launch.Conditions);
+            return;
+        }
+        var sent = command!.Launch.Conditions;
+        Assert.True(sent.RequireAcPower);
+        Assert.Equal(240, sent.MinIdleMinutes);
+        Assert.Equal(1320, sent.WindowStartMinute);
+        Assert.Equal(1439, sent.WindowEndMinute);
+    }
+
+    [Fact]
+    public void Launch_conditions_that_ask_for_nothing_are_not_sent()
+    {
+        Assert.Null(AgentRegistry.Clean(new LaunchConditions { WindowStartMinute = 300, WindowEndMinute = 300 }));
+        Assert.Null(AgentRegistry.Clean(null));
+        Assert.NotNull(AgentRegistry.Clean(new LaunchConditions { MinIdleMinutes = 15 }));
+    }
+
+    [Fact]
+    public void Hello_and_heartbeat_carry_the_pcs_time_offset_and_power_source()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var hello = Hello("m-1");
+        hello.UtcOffsetMinutes = -420;
+        hello.PowerSource = PowerSource.PowerAc;
+        var connection = registry.Register(hello, "10.0.0.1", null);
+        var info = registry.GetAgent("m-1")!;
+        Assert.Equal(-420, info.UtcOffsetMinutes);
+        Assert.Equal(PowerSource.PowerAc, info.PowerSource);
+
+        registry.OnHeartbeat(connection, new Heartbeat { UtcOffsetMinutes = -360, PowerSource = PowerSource.PowerBattery });
+        info = registry.GetAgent("m-1")!;
+        Assert.Equal(-360, info.UtcOffsetMinutes);
+        Assert.Equal(PowerSource.PowerBattery, info.PowerSource);
+    }
+
+    [Fact]
+    public void Conditions_not_met_ends_the_launch()
+    {
+        Assert.True(AgentRegistry.IsWatchTerminal(LaunchStage.StageConditionsNotMet));
+    }
+
     [Fact]
     public void CancelLaunch_queues_a_cancel_command()
     {
@@ -282,6 +467,61 @@ public class AgentRegistryTests
         Assert.True(connection.Commands.TryRead(out var cancel));
         Assert.Equal(response.RequestId, cancel!.Cancel.RequestId);
         Assert.Equal(CancelLaunchOutcome.NotFound, registry.CancelLaunch(Guid.NewGuid().ToString()));
+    }
+
+    [Fact]
+    public void EndSession_cancels_the_running_launch_and_reports_what_it_cannot_end()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("m-1").Outcome);
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("").Outcome);
+
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.Equal(EndSessionOutcome.EndSessionNotRunning, registry.EndSession("m-1").Outcome);
+
+        // A session someone started at the PC: running, but the relay has no launch to cancel.
+        registry.OnHeartbeat(connection, new Heartbeat { SessionRunning = true, SessionId = Guid.NewGuid().ToString() });
+        Assert.Equal(EndSessionOutcome.EndSessionNotAgentLaunched, registry.EndSession("m-1").Outcome);
+        registry.OnHeartbeat(connection, new Heartbeat());
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var started = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageReady, SessionId = started.SessionId });
+
+        var ended = registry.EndSession("M-1");
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.Equal(started.RequestId, ended.RequestId);
+        Assert.True(connection.Commands.TryRead(out var cancel));
+        Assert.Equal(started.RequestId, cancel!.Cancel.RequestId);
+
+        // The agent closes the app and reports ENDED; after that there is nothing left to end.
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageEnded, SessionId = started.SessionId });
+        Assert.Equal(EndSessionOutcome.EndSessionNotRunning, registry.EndSession("m-1").Outcome);
+        Assert.False(connection.Commands.TryRead(out _));
+    }
+
+    [Fact]
+    public void EndSession_also_stops_a_start_in_progress_and_respects_group_scope_and_offline()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var started = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true, "shop-a").Response;
+        Assert.True(started.Accepted);
+        Assert.True(connection.Commands.TryRead(out _));
+
+        Assert.Equal(EndSessionOutcome.EndSessionNotFound, registry.EndSession("m-1", "shop-b").Outcome);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var ended = registry.EndSession("m-1", "shop-a");
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.True(connection.Commands.TryRead(out var cancel));
+        Assert.Equal(started.RequestId, cancel!.Cancel.RequestId);
+
+        // A running app outlives the agent's connection; while the computer is offline the command cannot reach it.
+        registry.OnProgress(connection, new LaunchProgress { RequestId = started.RequestId, Stage = LaunchStage.StageReady, SessionId = started.SessionId });
+        registry.Disconnect(connection);
+        Assert.Equal(EndSessionOutcome.EndSessionOffline, registry.EndSession("m-1", "shop-a").Outcome);
     }
 
     [Fact]
@@ -414,10 +654,28 @@ public class AgentRegistryTests
         using var watch = registry.SubscribeLaunch(start.RequestId)!;
 
         registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageWaitingForConsent });
-        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageDeclined, Detail = "No answer within 2 minutes" });
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageDeclined, Detail = "The person at the computer declined the session" });
 
         Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageWaitingForConsent, LaunchStage.StageDeclined }, (await ReadAll(watch.Reader)).Select(p => p.Stage));
         Assert.False(registry.GetAgent("m-1")!.SessionRunning);
+        Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
+    }
+
+    [Fact]
+    public async Task An_unanswered_consent_prompt_ends_the_watch_and_leaves_no_session()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var start = registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response;
+        using var watch = registry.SubscribeLaunch(start.RequestId)!;
+
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageWaitingForConsent });
+        registry.OnProgress(connection, new LaunchProgress { RequestId = start.RequestId, Stage = LaunchStage.StageConsentTimedOut, Detail = "No answer within the consent time limit" });
+
+        Assert.Equal(new[] { LaunchStage.StageQueued, LaunchStage.StageWaitingForConsent, LaunchStage.StageConsentTimedOut }, (await ReadAll(watch.Reader)).Select(p => p.Stage));
+        Assert.True(AgentRegistry.IsWatchTerminal(LaunchStage.StageConsentTimedOut));
+        Assert.False(registry.GetAgent("m-1")!.SessionRunning);
+        // The launch is over, so the same computer can be asked again straight away.
         Assert.True(registry.StartSession("m-1", false, "Bob", ServerUrl, true, true).Response.Accepted);
     }
 
@@ -514,6 +772,25 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public async Task Connect_refuses_every_agent_when_keys_are_required_and_none_are_set()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var options = new CallOptions(cancellationToken: timeout.Token);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create(null, null, requireKeys: true));
+
+        foreach (var key in new[] { "any-key", "" })
+        {
+            using var call = relay.Invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
+            await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", key) });
+            var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
+            Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
+            Assert.Equal(PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy.NoKeysConfiguredReason, ex.Status.Detail);
+        }
+
+        Assert.Empty(relay.Registry.GetAgentList().Agents);
+    }
+
+    [Fact]
     public async Task StartSession_and_CancelLaunch_need_the_admin_key_when_one_is_set()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -542,6 +819,13 @@ public class AgentRegistryTests
         var denied = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, wrong, cancel));
         Assert.Equal(StatusCode.PermissionDenied, denied.StatusCode);
         await relay.Invoker.AsyncUnaryCall(CancelLaunchMethod, null, right, cancel);
+
+        var end = new EndSessionRequest { MachineId = "m-1" };
+        var endDenied = await Assert.ThrowsAsync<RpcException>(async () => await relay.Invoker.AsyncUnaryCall(EndSessionMethod, null, wrong, end));
+        Assert.Equal(StatusCode.PermissionDenied, endDenied.StatusCode);
+        var ended = await relay.Invoker.AsyncUnaryCall(EndSessionMethod, null, right, end);
+        Assert.Equal(EndSessionOutcome.EndSessionRequested, ended.Outcome);
+        Assert.Equal(start.RequestId, ended.RequestId);
     }
 
     [Fact]
@@ -558,6 +842,419 @@ public class AgentRegistryTests
         relay.Registry.Register(Hello("m-1"), "10.0.0.1", null);
         Assert.True(await watch.ResponseStream.MoveNext(timeout.Token));
         Assert.Equal("m-1", Assert.Single(watch.ResponseStream.Current.Agents).MachineId);
+    }
+
+    // ---------------------------------------------------------------- UpdateRpcd
+
+    [Fact]
+    public async Task UpdateRpcd_forwards_the_command_and_returns_the_agents_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var task = registry.UpdateRpcdAsync("m-1", " stable ", " 1.2.0-ci.996.1 ", approved: false, approvedBy: " owner ", true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcd, command!.BodyCase);
+        Assert.Equal("stable", command.UpdateRpcd.Channel);
+        Assert.Equal("1.2.0-ci.996.1", command.UpdateRpcd.Version);
+        Assert.False(command.UpdateRpcd.Approved);
+        Assert.Equal("owner", command.UpdateRpcd.ApprovedBy);
+        Assert.False(string.IsNullOrEmpty(command.UpdateRpcd.RequestId));
+
+        // The fleet agent mints its own request id and does not echo the one on the command.
+        var checking = new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "checking",
+            Detail = "Checking the official GitHub release...",
+            Channel = "stable",
+        };
+        Assert.Equal("checking", registry.OnUpdateProgress(connection, checking)!.Stage);
+
+        var first = await task;
+        Assert.Equal("agent-req", first.Progress!.RequestId);
+        Assert.Equal("checking", first.Progress.Stage);
+        Assert.Equal("PC-m-1", first.MachineName);
+
+        var succeeded = new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.996.1",
+            Channel = "stable",
+            Detail = "RPCD 1.2.0-ci.996.1 is installed (was 1.2.0).",
+        };
+        registry.OnUpdateProgress(connection, succeeded);
+        var latest = registry.GetLatestUpdate("m-1");
+        Assert.Equal("1.2.0", latest!.OldVersion);
+        Assert.Equal("1.2.0-ci.996.1", latest.NewVersion);
+        Assert.True(latest.Terminal);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_refuses_a_bad_key_an_offline_computer_and_another_shop_without_sending()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+
+        var denied = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, adminKeyConfigured: true, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(denied.Denied);
+        Assert.Equal(ConsentPolicy.AdminKeyRequired, denied.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var otherShop = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, "shop-b", CancellationToken.None);
+        Assert.True(otherShop.NotFound);
+        Assert.Equal(AgentRegistry.UnknownAgentError, otherShop.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        registry.Disconnect(connection);
+        var offline = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, "shop-a", CancellationToken.None);
+        Assert.True(offline.Offline);
+        Assert.Equal(AgentRegistry.OfflineError, offline.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var missing = await registry.UpdateRpcdAsync("nope", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(missing.NotFound);
+        Assert.Equal(AgentRegistry.UnknownAgentError, missing.Error);
+
+        var none = await registry.UpdateRpcdAsync("", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.Equal(AgentRegistry.NoAgentError, none.Error);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_is_refused_when_the_relay_has_no_admin_key()
+    {
+        // Nobody at the PC is asked before an update, so the no-key "allow but ask" start rule must not let one through.
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var refused = await registry.UpdateRpcdAsync("m-1", "stable", "", approved: true, null, adminKeyConfigured: false, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(refused.Denied);
+        Assert.Equal(ConsentPolicy.AdminKeyNotConfiguredForUpdate, refused.Error);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var hidden = await registry.UpdateRpcdAsync("nope", "stable", "", approved: true, null, adminKeyConfigured: false, adminKeyValid: false, null, CancellationToken.None);
+        Assert.True(hidden.Denied);
+    }
+
+    [Fact]
+    public void UpdateRpcd_progress_keeps_the_installer_log_and_exit_code()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var stored = registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "failed",
+            Terminal = true,
+            InstallerLog = "Setup log tail",
+            InstallerExitCode = 1,
+        });
+
+        Assert.NotNull(stored);
+        Assert.Equal("Setup log tail", stored!.InstallerLog);
+        Assert.True(stored.HasInstallerExitCode);
+        Assert.Equal(1, stored.InstallerExitCode);
+        var wire = UpdateRpcdProgress.Parser.ParseFrom(stored.ToByteArray());
+        Assert.Equal("Setup log tail", wire.InstallerLog);
+        Assert.Equal(1, wire.InstallerExitCode);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_reports_an_agent_that_never_answers_as_too_old()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromMilliseconds(80) };
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var outcome = await registry.UpdateRpcdAsync("m-1", "prerelease", "", approved: true, approvedBy: null, true, true, null, CancellationToken.None);
+
+        Assert.True(outcome.TooOld);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, outcome.Error);
+        Assert.True(connection.Commands.TryRead(out var command));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcd, command!.BodyCase);
+        Assert.True(command.UpdateRpcd.Approved);
+        Assert.Equal("", command.UpdateRpcd.ApprovedBy);
+        Assert.Null(registry.GetLatestUpdate("m-1"));
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_does_not_start_a_second_update_while_the_first_is_unanswered()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromSeconds(2) };
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var first = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+
+        var second = await registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.Equal("refused", second.Progress!.Stage);
+        Assert.Equal(AgentRegistry.UpdateInProgressError, second.Progress.Error);
+        Assert.True(second.Progress.Terminal);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable" });
+        Assert.Equal("checking", (await first).Progress!.Stage);
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_replays_the_latest_then_streams_until_the_landed_version()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, "owner", true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable" });
+        await started;
+
+        var watch = registry.OpenUpdateWatch("m-1", "agent-req", true, true, null);
+        Assert.NotNull(watch.Subscription);
+        Assert.True(watch.Subscription!.Replayed);
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("agent-req", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "downloading", Percent = 40, Channel = "stable" });
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+            Channel = "stable",
+        });
+
+        var seen = await ReadAll(watch.Subscription.Reader);
+        Assert.Equal(new[] { "checking", "downloading", "succeeded" }, seen.Select(p => p.Stage));
+        Assert.Equal("1.2.0", seen[^1].OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", seen[^1].NewVersion);
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_with_an_empty_request_follows_the_latest_and_asks_for_it()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var started = registry.UpdateRpcdAsync("m-1", "prerelease", "", true, null, true, true, "shop-a", CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "installing", Channel = "prerelease" });
+        await started;
+
+        var hidden = registry.OpenUpdateWatch("m-1", "", true, true, "shop-b");
+        Assert.True(hidden.NotFound);
+        Assert.False(connection.Commands.TryRead(out _));
+
+        var watch = registry.OpenUpdateWatch("m-1", "", true, true, "shop-a");
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal("", status!.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+        var seen = await ReadAll(watch.Subscription!.Reader);
+        Assert.Equal(new[] { "installing", "succeeded" }, seen.Select(p => p.Stage));
+    }
+
+    [Fact]
+    public async Task WatchUpdateRpcd_asks_the_agent_when_the_relay_has_no_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        var watch = registry.OpenUpdateWatch("m-1", "", true, true, null);
+        Assert.False(watch.Subscription!.Replayed);
+        Assert.True(connection.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+
+        var seen = Assert.Single(await ReadAll(watch.Subscription.Reader));
+        Assert.Equal("succeeded", seen.Stage);
+        Assert.Equal("1.2.0", seen.OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", seen.NewVersion);
+    }
+
+    [Fact]
+    public async Task An_update_survives_disconnect_and_the_reconnect_asks_for_the_snapshot()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "installing", NewVersion = "1.2.0-ci.1000.1" });
+        await started;
+
+        registry.Disconnect(connection);
+        Assert.Equal("installing", registry.GetLatestUpdate("m-1")!.Stage);
+
+        var again = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        Assert.True(again.Commands.TryRead(out var status));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, status!.BodyCase);
+        Assert.Equal("agent-req", status.UpdateRpcdStatus.RequestId);
+
+        registry.OnUpdateProgress(again, new UpdateRpcdProgress
+        {
+            RequestId = "agent-req",
+            Stage = "succeeded",
+            Terminal = true,
+            OldVersion = "1.2.0",
+            NewVersion = "1.2.0-ci.1000.1",
+        });
+        Assert.Equal("succeeded", registry.GetLatestUpdate("m-1")!.Stage);
+    }
+
+    [Fact]
+    public async Task An_agent_cannot_report_another_agents_update()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+        var other = registry.Register(Hello("m-2"), "10.0.0.2", null);
+        var started = registry.UpdateRpcdAsync("m-1", "stable", "", true, null, true, true, null, CancellationToken.None);
+        Assert.True(connection.Commands.TryRead(out _));
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking" });
+        await started;
+
+        Assert.Null(registry.OnUpdateProgress(other, new UpdateRpcdProgress { RequestId = "agent-req", Stage = "succeeded", Terminal = true, NewVersion = "9.9.9" }));
+        Assert.Equal("checking", registry.GetLatestUpdate("m-1")!.Stage);
+    }
+
+    [Fact]
+    public async Task UpdateRpcd_and_WatchUpdateRpcd_use_the_admin_key_shop_scope_and_ticket_decision()
+    {
+        var registry = new AgentRegistry(new ManualTime()) { UpdateAckTimeout = TimeSpan.FromMilliseconds(80) };
+        registry.Register(Hello("m-1"), "10.0.0.1", null, "shop-a");
+        var options = AgentOptions.Create(null, null, "admin-secret");
+        var open = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, options);
+        var context = new CallContext(CancellationToken.None);
+
+        var missingKey = await Assert.ThrowsAsync<RpcException>(() => open.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.PermissionDenied, missingKey.StatusCode);
+        Assert.Equal(ConsentPolicy.AdminKeyRequired, missingKey.Status.Detail);
+
+        var denied = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: false, GroupScope: null, UnattendedAuthorized: false, DenialReason: "Sign in to continue."));
+        var signedOut = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, options, denied);
+        var ticket = await Assert.ThrowsAsync<RpcException>(() => signedOut.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.PermissionDenied, ticket.StatusCode);
+        Assert.Equal("Sign in to continue.", ticket.Status.Detail);
+        var watchTicket = await Assert.ThrowsAsync<RpcException>(() => signedOut.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-1" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal("Sign in to continue.", watchTicket.Status.Detail);
+
+        var shop = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: true, GroupScope: "shop-a", UnattendedAuthorized: true));
+        var scoped = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, AgentOptions.Create(null, null), shop);
+        // m-1 is in shop-a and online, but it never answers the command, so the agent is too old to install updates.
+        var tooOld = await Assert.ThrowsAsync<RpcException>(() => scoped.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.FailedPrecondition, tooOld.StatusCode);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, tooOld.Status.Detail);
+        var watchOld = await Assert.ThrowsAsync<RpcException>(() => scoped.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-1" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal(StatusCode.FailedPrecondition, watchOld.StatusCode);
+        Assert.Equal(AgentRegistry.TooOldForUpdateError, watchOld.Status.Detail);
+
+        registry.Register(Hello("m-2"), "10.0.0.2", null, "shop-b");
+        var hidden = await Assert.ThrowsAsync<RpcException>(() => scoped.UpdateRpcd(new UpdateRpcdAdminRequest { MachineId = "m-2", Channel = "stable", Approved = true }, context));
+        Assert.Equal(StatusCode.NotFound, hidden.StatusCode);
+        Assert.Equal(AgentRegistry.UnknownAgentError, hidden.Status.Detail);
+
+        var offline = await Assert.ThrowsAsync<RpcException>(() => scoped.WatchUpdateRpcd(new UpdateRpcdWatchRequest { MachineId = "m-2" }, new ListWriter<UpdateRpcdProgress>(), context));
+        Assert.Equal(StatusCode.NotFound, offline.StatusCode);
+    }
+
+    [Fact]
+    public async Task Connect_UpdateRpcd_and_WatchUpdateRpcd_round_trip_over_grpc()
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
+        var options = new CallOptions(cancellationToken: ct);
+        var admin = new CallOptions(new Metadata { { "x-admin-key", "admin-secret" } }, cancellationToken: ct);
+        await using var relay = await Relay.StartAsync(AgentOptions.Create("key-1", ServerUrl, "admin-secret"));
+        var invoker = relay.Invoker;
+
+        using var connect = invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
+        await connect.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", "key-1") });
+        await WaitFor(async () => (await invoker.AsyncUnaryCall(GetAgentsMethod, null, options, new Empty())).Agents.Any(a => a.MachineId == "m-1" && a.Online), ct);
+
+        var updateTask = invoker.AsyncUnaryCall(UpdateRpcdMethod, null, admin, new UpdateRpcdAdminRequest
+        {
+            MachineId = "m-1",
+            Channel = "stable",
+            Version = "1.2.0-ci.1000.1",
+            Approved = true,
+            ApprovedBy = "owner",
+        });
+        Assert.True(await connect.ResponseStream.MoveNext(ct));
+        var command = connect.ResponseStream.Current.UpdateRpcd;
+        Assert.NotNull(command);
+        Assert.Equal("stable", command.Channel);
+        Assert.Equal("1.2.0-ci.1000.1", command.Version);
+        Assert.True(command.Approved);
+        Assert.Equal("owner", command.ApprovedBy);
+
+        await connect.RequestStream.WriteAsync(new AgentMessage
+        {
+            UpdateRpcd = new UpdateRpcdProgress { RequestId = "agent-req", Stage = "checking", Channel = "stable", Detail = "Checking the official GitHub release..." },
+        });
+        var first = await updateTask;
+        Assert.Equal("checking", first.Stage);
+        Assert.Equal("agent-req", first.RequestId);
+
+        using var watch = invoker.AsyncServerStreamingCall(WatchUpdateRpcdMethod, null, admin, new UpdateRpcdWatchRequest { MachineId = "m-1", RequestId = "agent-req" });
+        Assert.True(await watch.ResponseStream.MoveNext(ct));
+        Assert.Equal("checking", watch.ResponseStream.Current.Stage);
+
+        Assert.True(await connect.ResponseStream.MoveNext(ct));
+        Assert.Equal(HubCommand.BodyOneofCase.UpdateRpcdStatus, connect.ResponseStream.Current.BodyCase);
+        Assert.Equal("agent-req", connect.ResponseStream.Current.UpdateRpcdStatus.RequestId);
+
+        await connect.RequestStream.WriteAsync(new AgentMessage
+        {
+            UpdateRpcd = new UpdateRpcdProgress
+            {
+                RequestId = "agent-req",
+                Stage = "succeeded",
+                Terminal = true,
+                OldVersion = "1.2.0",
+                NewVersion = "1.2.0-ci.1000.1",
+                Channel = "stable",
+            },
+        });
+        Assert.True(await watch.ResponseStream.MoveNext(ct));
+        Assert.Equal("succeeded", watch.ResponseStream.Current.Stage);
+        Assert.Equal("1.2.0", watch.ResponseStream.Current.OldVersion);
+        Assert.Equal("1.2.0-ci.1000.1", watch.ResponseStream.Current.NewVersion);
+        Assert.False(await watch.ResponseStream.MoveNext(ct));
+
+        var wrong = new CallOptions(new Metadata { { "x-admin-key", "nope" } }, cancellationToken: ct);
+        var denied = await Assert.ThrowsAsync<RpcException>(async () => await invoker.AsyncUnaryCall(UpdateRpcdMethod, null, wrong, new UpdateRpcdAdminRequest { MachineId = "m-1", Channel = "stable", Approved = true }));
+        Assert.Equal(StatusCode.PermissionDenied, denied.StatusCode);
+    }
+
+    private static async Task<List<UpdateRpcdProgress>> ReadAll(ChannelReader<UpdateRpcdProgress> reader)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var list = new List<UpdateRpcdProgress>();
+        await foreach (var item in reader.ReadAllAsync(cts.Token))
+            list.Add(item);
+        return list;
+    }
+
+    private sealed class ListWriter<T> : IServerStreamWriter<T>
+    {
+        public WriteOptions? WriteOptions { get; set; }
+        public Task WriteAsync(T message) => Task.CompletedTask;
+        public Task WriteAsync(T message, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     // ---------------------------------------------------------------- helpers
@@ -601,8 +1298,14 @@ public class AgentRegistryTests
         new(MethodType.Unary, "rwvagent.AgentAdmin", "StartSession", Proto(StartSessionRequest.Parser), Proto(StartSessionResponse.Parser));
     private static readonly Method<CancelCommand, Empty> CancelLaunchMethod =
         new(MethodType.Unary, "rwvagent.AgentAdmin", "CancelLaunch", Proto(CancelCommand.Parser), Proto(Empty.Parser));
+    private static readonly Method<EndSessionRequest, EndSessionResponse> EndSessionMethod =
+        new(MethodType.Unary, "rwvagent.AgentAdmin", "EndSession", Proto(EndSessionRequest.Parser), Proto(EndSessionResponse.Parser));
     private static readonly Method<WatchLaunchRequest, LaunchProgress> WatchLaunchMethod =
         new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchLaunch", Proto(WatchLaunchRequest.Parser), Proto(LaunchProgress.Parser));
+    private static readonly Method<UpdateRpcdAdminRequest, UpdateRpcdProgress> UpdateRpcdMethod =
+        new(MethodType.Unary, "rwvagent.AgentAdmin", "UpdateRpcd", Proto(UpdateRpcdAdminRequest.Parser), Proto(UpdateRpcdProgress.Parser));
+    private static readonly Method<UpdateRpcdWatchRequest, UpdateRpcdProgress> WatchUpdateRpcdMethod =
+        new(MethodType.ServerStreaming, "rwvagent.AgentAdmin", "WatchUpdateRpcd", Proto(UpdateRpcdWatchRequest.Parser), Proto(UpdateRpcdProgress.Parser));
 
     private sealed class Relay : IAsyncDisposable
     {
@@ -656,6 +1359,101 @@ public class AgentRegistryTests
             await _host.StopAsync();
             _host.Dispose();
         }
+    }
+
+    [Fact]
+    public async Task Platform_admin_with_null_group_scope_starts_unattended_session_without_consent()
+    {
+        var registry = new AgentRegistry();
+        var connection = registry.Register(Hello("machine-1", ceiling: ConsentMode.ConsentUnattendedAllowed), "10.0.0.1", null);
+
+        var policy = new FixedPolicy(new PeakSWC.RemoteWebView.AgentAdminAccessDecision(Allowed: true, GroupScope: null, UnattendedAuthorized: true));
+        var service = new AgentAdminService(Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentAdminService>.Instance, registry, AgentOptions.Create(null, null), policy);
+
+        var response = await service.StartSession(new StartSessionRequest { MachineId = "machine-1", Unattended = true }, new CallContext(CancellationToken.None));
+        Assert.True(response.Accepted);
+
+        Assert.True(connection.Commands.TryRead(out var cmd));
+        Assert.NotNull(cmd.Launch);
+        Assert.False(cmd.Launch.RequireConsent);
+    }
+
+    [Fact]
+    public void Register_preserves_group_binding_while_offline_and_validates_agent_token()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-bound"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_secret_1");
+
+        // The issued token is queued for the agent to persist.
+        Assert.True(first.Commands.TryRead(out var assignCmd));
+        Assert.Equal(HubCommand.BodyOneofCase.AssignAgentToken, assignCmd.BodyCase);
+        Assert.Equal("rpd_agt_secret_1", assignCmd.AssignAgentToken.AgentToken);
+
+        // Even while offline, another group cannot claim this machine_id.
+        registry.Disconnect(first);
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-bound"), "10.0.0.2", null, group: "shop-b"));
+
+        // Reconnect without the bound token or with the wrong token is rejected.
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-bound"), "10.0.0.2", null, group: "shop-a"));
+        var wrongHello = Hello("machine-bound");
+        wrongHello.AgentToken = "rpd_agt_wrong";
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(wrongHello, "10.0.0.2", null, group: "shop-a"));
+
+        // Reconnect with the matching token succeeds.
+        var validHello = Hello("machine-bound");
+        validHello.AgentToken = "rpd_agt_secret_1";
+        var reconnected = registry.Register(validHello, "10.0.0.1", null, group: "shop-a");
+        Assert.False(reconnected.IsNew);
+    }
+
+    [Fact]
+    public void Register_accepts_a_newly_issued_token_even_when_an_older_one_is_remembered()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-reissued"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_old");
+        Assert.True(first.Commands.TryRead(out _));
+        registry.Disconnect(first);
+
+        // The authority issued a replacement (the agent never stored the old token, or the shop reset the computer).
+        var again = registry.Register(Hello("machine-reissued"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_new");
+        Assert.True(again.Commands.TryRead(out var assign));
+        Assert.Equal("rpd_agt_new", assign.AssignAgentToken.AgentToken);
+        registry.Disconnect(again);
+
+        // Only the replacement token is accepted from now on.
+        var stale = Hello("machine-reissued");
+        stale.AgentToken = "rpd_agt_old";
+        Assert.Throws<InvalidOperationException>(() => registry.Register(stale, "10.0.0.1", null, group: "shop-a"));
+        var current = Hello("machine-reissued");
+        current.AgentToken = "rpd_agt_new";
+        Assert.False(registry.Register(current, "10.0.0.1", null, group: "shop-a").IsNew);
+    }
+
+    [Fact]
+    public void Register_lets_an_offline_computer_move_shops_only_with_a_newly_issued_token()
+    {
+        var registry = new AgentRegistry();
+        var first = registry.Register(Hello("machine-moving"), "10.0.0.1", null, group: "shop-a", issuedAgentToken: "rpd_agt_a");
+        Assert.True(first.Commands.TryRead(out _));
+
+        // Online in shop A: shop B is refused even with a new token.
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b", issuedAgentToken: "rpd_agt_b"));
+
+        registry.Disconnect(first);
+        Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b"));
+        var moved = registry.Register(Hello("machine-moving"), "10.0.0.2", null, group: "shop-b", issuedAgentToken: "rpd_agt_b");
+        Assert.False(moved.IsNew);
+    }
+
+    private sealed class FixedPolicy(PeakSWC.RemoteWebView.AgentAdminAccessDecision decision) : PeakSWC.RemoteWebView.IAgentTenantPolicy
+    {
+        public PeakSWC.RemoteWebView.AgentEnrollmentDecision CheckEnrollment(string? enrollmentKey, AgentOptions options) => throw new NotImplementedException();
+        public PeakSWC.RemoteWebView.AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options) => decision;
     }
 
     private sealed class ManualTime : TimeProvider

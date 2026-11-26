@@ -1,103 +1,98 @@
-# Builds and runs every test project on a Windows runner.
+# Builds and runs every test project on Windows runners.
 #
-# Push to net11 and workflow_dispatch only. Pull requests are omitted so this
-# does not run for forks.
+# Push to net11, net11-ci, workflow_dispatch, and workflow_call (Release
+# packages). Pull requests are omitted so this does not run for forks.
 #
-# RemoteBlazorWebView is built before the projects that reference it, and before
-# the tutorial. StressServer is not built: it embeds a tutorial executable.
+# The old single job took about 42 minutes, 31 of them in one serial
+# FileSyncServer desktop step. The work is now split across parallel jobs on
+# separate runners, each of which builds the same tree in the same layout
+# (.github/actions/windows-test-setup, then windows-test-publish):
 #
-# FileSyncServer.Tests splits in two:
-# - Headless tests (published Client.exe + RemoteWebViewService publishNoAuth,
-#   and the production JS size check) fail the job when they fail.
-# - The desktop step starts tutorial executables. dotnet test's parent is dotnet,
-#   so Utilities.RelativeRoot is seven levels up from
+# - unit: the bundle's npm tests, the native toolchain helper tests, the seven
+#   module-serving / source generator / remote component / lifecycle / ticket
+#   suites, and FileSyncServer headless (published Client.exe +
+#   RemoteWebViewService publishNoAuth, and the production JS size check).
+# - desktop (matrix): the FileSyncServer desktop and tutorial classes, split
+#   into shards by test class. The tests inside FileSyncServer.Tests run one
+#   at a time (DisableTestParallelization) because they share ports and the
+#   interactive desktop; separate runners share neither, so shards can run at
+#   the same time. The `rest` shard runs everything not named by another
+#   shard or by the headless filter, so a new test class is never dropped.
+#
+# A newer push to the same branch cancels the run it supersedes. Release runs
+# (workflow_call) and manual dispatches are never cancelled.
+#
+# Manual dispatch can set `suite: quick` to run only the unit job (about a
+# third of the time) while iterating on a branch. Pushes and releases always
+# run the full suite.
+#
+# FileSyncServer desktop notes:
+# - The desktop tests start tutorial executables. dotnet test's parent is
+#   dotnet, so Utilities.RelativeRoot is seven levels up from
 #   test/FileSyncServer.Tests/bin/x64/Release/<tfm>, then
 #   RemoteBlazorWebViewTutorial\... A GitHub checkout of this repo is
 #   D:\a\RemoteBlazorWebView\RemoteBlazorWebView, so the tutorial has to be the
 #   sibling D:\a\RemoteBlazorWebView\RemoteBlazorWebViewTutorial. actions/checkout
-#   only writes inside the workspace, so the workflow checks the tutorial out
+#   only writes inside the workspace, so the setup action checks the tutorial out
 #   here and copies it to that sibling. The copy is outside this checkout, so
 #   it does not see this repo's global.json; CI writes the same pin into the
 #   copy (the tutorial repo is not modified). The tutorial's default BuildMode
 #   is Developer, which project-references this repo. Its NuGet.config is not
-#   modified. The desktop step fails the job when a hosted runner
-#   cannot host an interactive WebView2.
+#   modified. A desktop shard fails the run when a hosted runner cannot host
+#   an interactive WebView2.
 
 name: Windows tests
 
 on:
   push:
-    branches: [net11]
+    branches: [net11, net11-ci]
   workflow_dispatch:
+    inputs:
+      suite:
+        description: "full runs every job. quick runs only the unit job (no desktop or tutorial tests), for iterating on a branch."
+        type: choice
+        default: full
+        options:
+          - full
+          - quick
   workflow_call:
 
 permissions:
   contents: read
   actions: write
 
-jobs:
-  test:
-    runs-on: windows-latest
-    timeout-minutes: 120
+# Pushes to a branch share one group, so a newer push cancels the older run.
+# Every other run (manual dispatch, or Release packages through
+# workflow_call, where run_id is the release run's) gets a group of its own:
+# GitHub cancels a queued run in a group when a newer one queues, even
+# without cancel-in-progress, and a release must never lose its tests.
+concurrency:
+  group: ${{ github.event_name == 'push' && format('windows-tests-push-{0}', github.ref) || format('windows-tests-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
+env:
+  # Test runs use these on every dotnet test call.
+  TEST_PROPS: -c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false -p:PackAsTool=false
+  # The classes FileSyncServer headless runs. The desktop `rest` shard excludes them.
+  HEADLESS_CLASSES: FileFetchingTests ClientCachingTests ServerCachingTests ConcurrentRequestsTests LoadTest PerformanceTests TestMisc
+
+jobs:
+  unit:
+    name: Unit and headless
+    runs-on: windows-latest
+    timeout-minutes: 45
     defaults:
       run:
         shell: pwsh
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # global.json pins 11.0.100-rc.3.26522.148 (allowPrerelease, rollForward
-      # latestMinor). mcr.microsoft.com/dotnet/sdk:11.0 and :11.0.100-rc.3 ship
-      # that SDK. The 11.0-preview tag is still preview.7 and is not used.
-      # No project targets net10.0. The MAUI workload is not required: tests do
-      # not build MAUI apps (ASP.NET Core packages are 11.0.0-rc.3.26522.148;
-      # WebView WinForms/WPF packages stay 11.0.0-rc.2.26505.5; EditWebView
-      # vendors MAUI 11.0.100-rc.2.26513.2 sources when it runs).
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Build
+        id: build
+        uses: ./.github/actions/windows-test-setup
         with:
-          global-json-file: global.json
-          cache: true
-          cache-dependency-path: "**/*.csproj"
-
-      # RunTests.ps1 builds remote.blazor.desktop.js with Node 22.3.0, yarn, and
-      # webpack. protoc.exe is already in src/RemoteWebView.Blazor.JS/protoc/bin.
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.3.0
-
-      - name: Build remote.blazor.desktop.js
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          corepack enable
-          corepack prepare yarn@4.3.1 --activate
-          $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
-          Push-Location src/RemoteWebView.Blazor.JS
-          yarn install --immutable
-          # Web.JS is a nested package with no committed lockfile. Yarn 4 treats it
-          # as part of this project and refuses `yarn install` there. npm installs
-          # the same package.json dependencies into Web.JS/node_modules, which is
-          # what Boot.Desktop.ts and the Web.JS sources import.
-          Push-Location Web.JS
-          npm install --no-audit --no-fund
-          Pop-Location
-          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
-            throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
-          }
-          # npm file:../dotnet-runtime already links that package. Copying it
-          # again overwrites the junction with itself on Windows.
-          if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-runtime/package.json')) {
-            throw 'Web.JS is missing @microsoft/dotnet-runtime after npm install'
-          }
-          npm run build:production
-          $js = Get-Item "dist/remote.blazor.desktop.js"
-          Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
-          npm test
-          Pop-Location
+          js-tests: "true"
 
       - name: Test native toolchain helpers
         run: |
@@ -105,554 +100,163 @@ jobs:
           pwsh -NoProfile -File test/RunTests.ToolchainTests.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Restore and build test projects
-        id: build
+      # The EndToEnd suite's first test is the runner's first Chrome start.
+      # On the win25 20261116 image that start answered DevTools after the
+      # suite's 15s wait in both branch runs (44794534176, 44796565291) while
+      # every later start passed. Start Chrome once so binaries are loaded.
+      - name: Warm up Chrome
         run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          $common = @(
-            '-c', 'Release',
-            '-p:Platform=x64',
-            '-p:EnableWindowsTargeting=true',
-            '-p:GeneratePackageOnBuild=false',
-            '-p:PackAsTool=false'
-          )
-          dotnet build src/RemoteBlazorWebView/RemoteBlazorWebView.csproj @common
-          $projects = @(
-            'src/RemoteWebView/RemoteWebView.csproj',
-            'src/RemoteWebViewService/RemoteWebViewService.csproj',
-            'src/EditWebView/EditWebView.csproj',
-            'src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj',
-            'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
-            'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
-            'src/Benchmarks/FilePOC/Client/Client.csproj',
-            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
-            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
-            'test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj',
-            'test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj',
-            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
-            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj',
-            'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj'
-          )
-          foreach ($project in $projects) {
-            $args = $common
-            if ($project -like '*FileSyncServer.Tests*') {
-              # Keep the test output at bin/x64/Release/<tfm> so ServerFixture (six
-              # levels up to src/RemoteWebViewService/bin/publishNoAuth) and
-              # Utilities.RelativeRoot (seven levels up, then RemoteBlazorWebView\...)
-              # both resolve on the GitHub checkout layout.
-              $args += '-p:AppendRuntimeIdentifierToOutputPath=false'
-            }
-            dotnet build $project @args
-          }
+          $chrome = @(
+            'C:\Program Files\Google\Chrome\Application\chrome.exe',
+            'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $chrome) { Write-Host 'Chrome is not installed; nothing to warm up.'; exit 0 }
+          $profile = Join-Path $env:RUNNER_TEMP 'chrome-warmup'
+          $p = Start-Process -FilePath $chrome -ArgumentList '--headless=new', '--no-first-run', '--no-default-browser-check', "--user-data-dir=$profile", 'about:blank' -PassThru
+          Start-Sleep -Seconds 15
+          Write-Host "Chrome running after 15s: $(-not $p.HasExited)"
+          Get-Process -Name chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-      - name: Test source generators and remote components
-        if: steps.build.outcome == 'success'
+      - name: Test module serving, source generators, and remote components
         run: |
-          # Both suites always run. PowerShell otherwise keeps only the last native exit code.
+          # All suites always run. PowerShell otherwise keeps only the last native exit code,
+          # which hid EndToEnd failures when Lifecycle passed (run 40813641256).
           $failed = $false
-          dotnet test test/StaticContentCache.Tests/StaticContentCache.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
-            -p:PackAsTool=false `
-            --logger "trx;LogFileName=StaticContentCache.Tests.trx" `
-            --results-directory TestResults/StaticContentCache.Tests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          dotnet test test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
-            -p:PackAsTool=false `
-            --logger "trx;LogFileName=StaticContentCache.ServiceTests.trx" `
-            --results-directory TestResults/StaticContentCache.ServiceTests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          dotnet test test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
-            -p:PackAsTool=false `
-            --logger "trx;LogFileName=RemoteBlazorWebView.SourceGenerators.Tests.trx" `
-            --results-directory TestResults/RemoteBlazorWebView.SourceGenerators.Tests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          dotnet test test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
-            -p:PackAsTool=false `
-            --logger "trx;LogFileName=RemoteBlazorWebView.RemoteComponents.Tests.trx" `
-            --results-directory TestResults/RemoteBlazorWebView.RemoteComponents.Tests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          dotnet test test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
-            -p:PackAsTool=false `
-            --logger "trx;LogFileName=StaticContentCache.EndToEnd.Tests.trx" `
-            --results-directory TestResults/StaticContentCache.EndToEnd.Tests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          dotnet test test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj -c Release --no-build -p:Platform=x64 -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false -p:PackAsTool=false --logger "trx;LogFileName=RemoteWebView.Lifecycle.Tests.trx" --results-directory TestResults/RemoteWebView.Lifecycle.Tests
-          if ($LASTEXITCODE -ne 0) { $failed = $true }
-          if ($failed) { exit 1 }
-
-      # Same publish RunTests.ps1 uses for the non-Rust server. Tests look for
-      # RemoteWebViewService.exe under src/RemoteWebViewService/bin/publishNoAuth.
-      - name: Publish RemoteWebViewService (NoAuthorization)
-        id: publish
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj `
-            -c NoAuthorization `
-            --self-contained true `
-            -r win-x64 `
-            -o src/RemoteWebViewService/bin/publishNoAuth `
-            -p:EnableWindowsTargeting=true `
-            -p:Platform=x64 `
-            -p:GeneratePackageOnBuild=false
-          New-Item -ItemType Directory -Force -Path src/RemoteWebViewService/bin/publishNoAuth/wwwroot | Out-Null
-          if (-not (Test-Path 'src/RemoteWebViewService/bin/publishNoAuth/RemoteWebViewService.exe')) {
-            throw 'RemoteWebViewService.exe was not published to bin/publishNoAuth'
-          }
-
-      # `dotnet dev-certs https --trust` and Import-PfxCertificate into
-      # CurrentUser\Root both wait on a certificate dialog on the hosted
-      # Windows image (runs 40223312855 and 40227579699). HttpClient trusts
-      # LocalMachine\Root, which does not prompt for an elevated runner.
-      # --check --trust only looks at CurrentUser\Root, so it is not used.
-      - name: Trust the HTTPS development certificate
-        timeout-minutes: 2
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          $pfx = Join-Path $env:RUNNER_TEMP 'aspnet-devcert.pfx'
-          dotnet dev-certs https -ep $pfx -p placeholder
-          $password = ConvertTo-SecureString placeholder -Force -AsPlainText
-          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\CurrentUser\My | Out-Null
-          Import-PfxCertificate -FilePath $pfx -Password $password -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
-          $thumbprint = (Get-PfxData -FilePath $pfx -Password $password).EndEntityCertificates[0].Thumbprint
-          $trusted = Get-ChildItem Cert:\LocalMachine\Root | Where-Object Thumbprint -eq $thumbprint
-          if (-not $trusted) { throw "Dev cert $thumbprint is not in LocalMachine\Root" }
-
-      # Main build already succeeded (this step is skipped otherwise). The
-      # tutorial net11 apps default to Developer mode and reference
-      # ..\..\RemoteBlazorWebView\src\..., which is this checkout once the
-      # tutorial tree sits next to it. NuGet.config in the tutorial repo is
-      # left as committed, including its local PeakSWC source. That directory
-      # is created empty so restore can see it; Developer mode does not read
-      # packages from it.
-      - name: Checkout tutorial (net11)
-        if: steps.build.outcome == 'success'
-        uses: actions/checkout@v4
-        with:
-          repository: budcribar/RemoteBlazorWebViewTutorial
-          ref: net11
-          path: _ci-tutorial
-          persist-credentials: false
-
-      - name: Publish tutorial apps
-        if: steps.build.outcome == 'success'
-        timeout-minutes: 40
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          # windows-latest also has a stable SDK. A preview SDK is ignored
-          # unless global.json sets allowPrerelease. The sibling tree has no
-          # global.json of its own.
-          $env:DOTNET_ROLL_FORWARD_TO_PRERELEASE = '1'
-          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
-          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-          Copy-Item -Path _ci-tutorial -Destination $dest -Recurse
-          Copy-Item -Path (Join-Path $env:GITHUB_WORKSPACE 'global.json') -Destination (Join-Path $dest 'global.json') -Force
-          Write-Host "dotnet $(dotnet --version)"
-          dotnet --list-sdks
-          # The committed local source does not exist on the runner. Creating
-          # the directory does not change NuGet.config and does not publish packages.
-          New-Item -ItemType Directory -Force -Path 'C:\Users\budcr\source\repos\RemoteBlazorWebView\artifacts' | Out-Null
-          $common = @('-p:Platform=x64', '-p:EnableWindowsTargeting=true', '-p:GeneratePackageOnBuild=false')
-          $apps = @(
-            @{
-              Project = 'RemoteBlazorWebViewTutorial.WinFormsApp\RemoteBlazorWebViewTutorial.WinFormsApp.csproj'
-              Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'
-              DebugTfm = 'net11.0-windows'
-            },
-            @{
-              Project = 'RemoteBlazorWebViewTutorial.WpfApp\RemoteBlazorWebViewTutorial.WpfApp.csproj'
-              Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'
-              DebugTfm = 'net11.0-windows10.0.17763.0'
-            },
-            @{
-              Project = 'RemoteBlazorWebViewTutorial\RemoteBlazorWebViewTutorial.csproj'
-              Exe = 'RemoteBlazorWebViewTutorial.exe'
-              DebugTfm = 'net11.0-windows'
-            }
+          $props = $env:TEST_PROPS.Split(' ')
+          $suites = @(
+            'StaticContentCache.Tests',
+            'StaticContentCache.ServiceTests',
+            'RemoteBlazorWebView.SourceGenerators.Tests',
+            'RemoteBlazorWebView.RemoteComponents.Tests',
+            'StaticContentCache.EndToEnd.Tests',
+            'RemoteWebView.Lifecycle.Tests',
+            'RemoteWebView.RemoteTicket.Tests'
           )
-          foreach ($app in $apps) {
-            $project = Join-Path $dest $app.Project
-            $dir = Split-Path $project
-            $publish = Join-Path $dir 'bin\publish'
-            $embeddedOut = Join-Path $dir 'bin\publishEmbedded'
-            $isWpf = $app.Project -like '*WpfApp*'
-            Write-Host "Publish Release $($app.Project)"
-            if ($isWpf) {
-              # Non-embedded WPF is a normal multi-file publish. wwwroot and the
-              # mixed-mode assemblies stay beside the exe. No PublishSingleFile
-              # and no extraction to %TEMP%\.net.
-              dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish -p:PublishSingleFile=false @common
-            } else {
-              dotnet publish $project -c Release --self-contained true -r win-x64 -o $publish @common
-              # WinForms and Photino stay single-file: exe plus wwwroot.
-              Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
-            }
-            $www = Join-Path $publish 'wwwroot'
-            if (-not (Test-Path $www)) { throw "Publish did not produce wwwroot at $www" }
-            if ($isWpf) {
-              foreach ($dll in 'DirectWriteForwarder.dll', 'System.Printing.dll', 'ijwhost.dll') {
-                $dllPath = Join-Path $publish $dll
-                if (-not (Test-Path $dllPath)) { throw "Non-embedded WPF publish is missing $dll beside the exe" }
-              }
-              Write-Host "Non-embedded WPF publish has $((Get-ChildItem $publish -Filter '*.dll' -File).Count) assemblies beside the exe"
-            } else {
-              $publishLeftover = @(Get-ChildItem $publish -Force | Where-Object { $_.Name -ne 'wwwroot' -and $_.Extension -ne '.exe' })
-              if ($publishLeftover.Count -gt 0) { throw "Publish folder is not exe + wwwroot ($($app.Exe)): $($publishLeftover.Name -join ', ')" }
-            }
-            $embeddedWww = Join-Path $dir 'embedded\wwwroot'
-            New-Item -ItemType Directory -Force -Path $embeddedWww | Out-Null
-            Copy-Item (Join-Path $www '*') $embeddedWww -Recurse -Force
-            Write-Host "Publish Embedded $($app.Project)"
-            dotnet publish $project -c Embedded --self-contained true -r win-x64 -o $embeddedOut @common
-            Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' } | Remove-Item -Recurse -Force
-            $embeddedLeftover = @(Get-ChildItem $embeddedOut -Force | Where-Object { $_.Extension -ne '.exe' })
-            if ($embeddedLeftover.Count -gt 0) { throw "Embedded publish is not exe-only ($($app.Exe)): $($embeddedLeftover.Name -join ', ')" }
-            Write-Host "Build Debug $($app.Project)"
-            dotnet build $project -c Debug @common
-            $expectedDir = Join-Path $dir "bin\x64\Debug\$($app.DebugTfm)"
-            $expectedExe = Join-Path $expectedDir $app.Exe
-            if (-not (Test-Path $expectedExe)) {
-              $debugRoot = Join-Path $dir 'bin\x64\Debug'
-              $found = Get-ChildItem $debugRoot -Recurse -Filter $app.Exe -ErrorAction SilentlyContinue |
-                Where-Object { $_.FullName -notmatch '\\ref\\' } |
-                Select-Object -First 1
-              if ($found) {
-                Write-Host "Copying debug output from $($found.DirectoryName) to $expectedDir"
-                New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
-                Copy-Item (Join-Path $found.DirectoryName '*') $expectedDir -Recurse -Force
-              }
-            }
-          }
-          $expected = @(
-            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-            'RemoteBlazorWebViewTutorial.WinFormsApp\bin\x64\Debug\net11.0-windows\RemoteBlazorWebViewTutorial.WinFormsApp.exe',
-            'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe',
-            'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe',
-            'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net11.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe',
-            'RemoteBlazorWebViewTutorial\bin\publish\RemoteBlazorWebViewTutorial.exe',
-            'RemoteBlazorWebViewTutorial\bin\publishEmbedded\RemoteBlazorWebViewTutorial.exe',
-            'RemoteBlazorWebViewTutorial\bin\x64\Debug\net11.0-windows\RemoteBlazorWebViewTutorial.exe'
-          )
-          $missing = @()
-          foreach ($relative in $expected) {
-            $path = Join-Path $dest $relative
-            if (Test-Path $path) {
-              Write-Host "ok $path"
-            } else {
-              Write-Host "MISSING $path"
-              $leaf = Split-Path $relative -Leaf
-              $root = Join-Path $dest (Split-Path (Split-Path $relative))
-              Get-ChildItem $root -Recurse -Filter $leaf -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "found $($_.FullName)" }
-              $missing += $path
-            }
-          }
-          if ($missing.Count -gt 0) { throw "Tutorial outputs the tests look for were not produced." }
-
-      # The desktop tests only report the process exit code. The tutorial WPF
-      # app shows that exception in a MessageBox, so this step writes it to a
-      # file (startup hook) and checks Compositor / WebView2 / composition
-      # separately. It does not change product code and does not fail the job.
-      - name: Diagnose WPF tutorial startup
-        if: steps.build.outcome == 'success'
-        timeout-minutes: 15
-        continue-on-error: true
-        run: |
-          $ErrorActionPreference = 'Continue'
-          $diag = Join-Path $env:GITHUB_WORKSPACE 'wpf-crash-diag'
-          New-Item -ItemType Directory -Force -Path $diag | Out-Null
-          $started = Get-Date
-          $probeRoot = Join-Path $env:GITHUB_WORKSPACE '.github/workflows/wpf-startup-probe'
-          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
-          function Write-Layout([string]$name, [string]$relative) {
-            $dir = Join-Path $dest $relative
-            $out = Join-Path $diag "$name.txt"
-            if (-not (Test-Path $dir)) { "MISSING $dir" | Out-File $out -Encoding utf8; Write-Host "MISSING $dir"; return }
-            $rows = Get-ChildItem $dir -Force | Select-Object Name, Length, Mode
-            $rows | Out-File $out -Encoding utf8
-            Write-Host "---- $name ----"
-            $rows | ForEach-Object { Write-Host ("{0}`t{1}`t{2}" -f $_.Mode, $_.Length, $_.Name) }
-          }
-          Write-Layout 'wpf-publish-files' 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish'
-          Write-Layout 'wpf-embedded-files' 'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded'
-          Write-Layout 'winforms-publish-files' 'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish'
-          Write-Layout 'winforms-embedded-files' 'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publishEmbedded'
-
-          @(
-            "SESSIONNAME=$env:SESSIONNAME",
-            "USERNAME=$env:USERNAME",
-            "USERINTERACTIVE=$([Environment]::UserInteractive)",
-            "started=$($started.ToString('o'))"
-          ) | Out-File (Join-Path $diag 'environment.txt') -Encoding utf8
-          query.exe session 2>&1 | Out-File (Join-Path $diag 'sessions.txt') -Encoding utf8
-          query.exe user 2>&1 | Out-File (Join-Path $diag 'users.txt') -Encoding utf8
-
-          $runtimeLog = Join-Path $diag 'webview2-runtime.txt'
-          $guids = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-          foreach ($root in @(
-              "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$guids",
-              "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$guids",
-              "HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$guids")) {
-            "---- $root ----" | Out-File $runtimeLog -Append -Encoding utf8
-            if (Test-Path $root) {
-              Get-ItemProperty $root | Out-File $runtimeLog -Append -Encoding utf8
-            } else {
-              'missing' | Out-File $runtimeLog -Append -Encoding utf8
-            }
-          }
-          foreach ($dir in @(
-              "$env:ProgramFiles\Microsoft\EdgeWebView\Application",
-              "${env:ProgramFiles(x86)}\Microsoft\EdgeWebView\Application")) {
-            "---- $dir ----" | Out-File $runtimeLog -Append -Encoding utf8
-            if (Test-Path $dir) { Get-ChildItem $dir | Out-File $runtimeLog -Append -Encoding utf8 }
-            else { 'missing' | Out-File $runtimeLog -Append -Encoding utf8 }
-          }
-
-          $hookOut = Join-Path $diag 'hook'
-          dotnet build (Join-Path $probeRoot 'StartupHook.csproj') -c Release -o $hookOut -p:GeneratePackageOnBuild=false --nologo *> (Join-Path $diag 'hook-build.txt')
-          "hook-build-exit=$LASTEXITCODE" | Out-File (Join-Path $diag 'hook-build.txt') -Append -Encoding utf8
-          $hookDll = Join-Path $hookOut 'StartupHook.dll'
-
-          $probeOut = Join-Path $diag 'probe'
-          dotnet build (Join-Path $probeRoot 'WpfStartupProbe.csproj') -c Release -o $probeOut -p:EnableWindowsTargeting=true -p:GeneratePackageOnBuild=false --nologo *> (Join-Path $diag 'probe-build.txt')
-          "probe-build-exit=$LASTEXITCODE" | Out-File (Join-Path $diag 'probe-build.txt') -Append -Encoding utf8
-          $probeExe = Join-Path $probeOut 'WpfStartupProbe.exe'
-
-          function Invoke-Captured([string]$name, [string]$exe, [string[]]$argList, [switch]$UseHook) {
-            $meta = Join-Path $diag "$name.meta.txt"
-            $previousHooks = $env:DOTNET_STARTUP_HOOKS
-            $previousLog = $env:WPF_CRASH_LOG
-            try {
-              if (-not (Test-Path $exe)) {
-                "MISSING $exe" | Out-File $meta -Encoding utf8
-                return
-              }
-              $stdout = Join-Path $diag "$name.stdout.txt"
-              $stderr = Join-Path $diag "$name.stderr.txt"
-              $dump = Join-Path $diag "$name.dmp"
-              $env:DOTNET_DbgEnableMiniDump = '1'
-              $env:DOTNET_DbgMiniDumpType = '1'
-              $env:DOTNET_DbgMiniDumpName = $dump
-              $env:DOTNET_CreateDumpDiagnostics = '1'
-              if ($UseHook -and (Test-Path $hookDll)) {
-                $env:DOTNET_STARTUP_HOOKS = $hookDll
-                $env:WPF_CRASH_LOG = Join-Path $diag "$name.unhandled.txt"
-              } else {
-                Remove-Item Env:DOTNET_STARTUP_HOOKS -ErrorAction SilentlyContinue
-                Remove-Item Env:WPF_CRASH_LOG -ErrorAction SilentlyContinue
-              }
-              $sw = [Diagnostics.Stopwatch]::StartNew()
-              $p = Start-Process -FilePath $exe -ArgumentList $argList -WorkingDirectory (Split-Path $exe) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-              $seen = ''
-              while (-not $p.HasExited -and $sw.Elapsed.TotalSeconds -lt 45) {
-                try { $p.Refresh() } catch {}
-                if (-not $seen -and $p.MainWindowHandle -ne [IntPtr]::Zero) { $seen = $sw.Elapsed.ToString() }
-                Start-Sleep -Milliseconds 200
-              }
-              $killed = $false
-              if (-not $p.HasExited) {
-                $killed = $true
-                & taskkill.exe /PID $p.Id /T /F *> (Join-Path $diag "$name.taskkill.txt")
-                try { $p.WaitForExit(5000) } catch {}
-              }
-              try { $p.Refresh() } catch {}
-              @(
-                "exe=$exe",
-                "args=$($argList -join ' ')",
-                "elapsed=$($sw.Elapsed)",
-                "windowAt=$seen",
-                "killed=$killed",
-                "exit=$($p.ExitCode)",
-                "dump=$(Test-Path $dump)"
-              ) | Out-File $meta -Encoding utf8
-            } catch {
-              "LAUNCH ERROR $($_.Exception)" | Out-File $meta -Encoding utf8
-            } finally {
-              if ($null -eq $previousHooks) { Remove-Item Env:DOTNET_STARTUP_HOOKS -ErrorAction SilentlyContinue }
-              else { $env:DOTNET_STARTUP_HOOKS = $previousHooks }
-              if ($null -eq $previousLog) { Remove-Item Env:WPF_CRASH_LOG -ErrorAction SilentlyContinue }
-              else { $env:WPF_CRASH_LOG = $previousLog }
-            }
-          }
-
-          if (Test-Path $probeExe) {
-            foreach ($mode in @('compositor', 'composition', 'composition-nodrop', 'webview2', 'webview2-nodrop')) {
-              Invoke-Captured "probe-$mode" $probeExe @($mode, (Join-Path $diag "probe-$mode.log"))
-            }
-          }
-
-          function Invoke-Concurrent([string]$name, [string]$exe, [int]$count) {
-            $log = Join-Path $diag "$name.txt"
-            if (-not (Test-Path $exe)) {
-              "MISSING $exe" | Out-File $log -Encoding utf8
-              return
-            }
-            $procs = @()
-            $sw = [Diagnostics.Stopwatch]::StartNew()
-            for ($i = 0; $i -lt $count; $i++) {
-              $p = Start-Process -FilePath $exe -ArgumentList @('-u=https://127.0.0.1:9', "-i=22222222-2222-2222-2222-22222222222$i") -WorkingDirectory (Split-Path $exe) -PassThru -RedirectStandardOutput (Join-Path $diag "$name-$i.stdout.txt") -RedirectStandardError (Join-Path $diag "$name-$i.stderr.txt")
-              $procs += $p
-            }
-            $seen = @{}
-            while ($sw.Elapsed.TotalSeconds -lt 45) {
-              $pending = $false
-              foreach ($p in $procs) {
-                try { $p.Refresh() } catch {}
-                if (-not $seen.ContainsKey($p.Id) -and $p.MainWindowHandle -ne [IntPtr]::Zero) { $seen[$p.Id] = $sw.Elapsed.ToString() }
-                if (-not $p.HasExited -and -not $seen.ContainsKey($p.Id)) { $pending = $true }
-              }
-              if (-not $pending) { break }
-              Start-Sleep -Milliseconds 200
-            }
-            $lines = @("exe=$exe", "count=$count", "elapsed=$($sw.Elapsed)")
-            foreach ($p in $procs) {
-              try { $p.Refresh() } catch {}
-              $windowAt = ''
-              if ($seen.ContainsKey($p.Id)) { $windowAt = $seen[$p.Id] }
-              $lines += "pid=$($p.Id) windowAt=$windowAt exited=$($p.HasExited) exit=$($p.ExitCode)"
-              if (-not $p.HasExited) { & taskkill.exe /PID $p.Id /T /F *> (Join-Path $diag "$name-$($p.Id).taskkill.txt") }
-            }
-            $extract = Join-Path $env:TEMP '.net'
-            $lines += "temp=$extract"
-            $lines | Out-File $log -Encoding utf8
-            Write-Host ($lines -join "`n")
-            if (Test-Path $extract) {
-              Get-ChildItem $extract -Force | ForEach-Object { Write-Host "extract $($_.FullName)" }
-              Get-ChildItem $extract -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue |
-                Select-Object FullName, Length, Mode | Out-File (Join-Path $diag "$name-extract.txt") -Encoding utf8
-            }
-          }
-
-          $wpfPublishExe = Join-Path $dest 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'
-          $wpfExtract = Join-Path $env:TEMP '.net\RemoteBlazorWebViewTutorial.WpfApp'
-          if (Test-Path $wpfExtract) { Remove-Item $wpfExtract -Recurse -Force }
-          Invoke-Captured 'wpf-cold' $wpfPublishExe @('-u=https://127.0.0.1:9', '-i=11111111-1111-1111-1111-111111111111')
-          if (Test-Path $wpfExtract) { Remove-Item $wpfExtract -Recurse -Force }
-          Invoke-Concurrent 'wpf-concurrent-cold' $wpfPublishExe 3
-
-          $launches = @(
-            @{ Name = 'wpf-publish'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
-            @{ Name = 'wpf-publish-nohook'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publish\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $false },
-            @{ Name = 'wpf-embedded'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\publishEmbedded\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $false },
-            @{ Name = 'wpf-debug'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp\bin\x64\Debug\net11.0-windows10.0.17763.0\RemoteBlazorWebViewTutorial.WpfApp.exe'; Hook = $true },
-            @{ Name = 'winforms-publish'; Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp\bin\publish\RemoteBlazorWebViewTutorial.WinFormsApp.exe'; Hook = $true }
-          )
-          foreach ($launch in $launches) {
-            if ($launch.Hook) {
-              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=11111111-1111-1111-1111-111111111111') -UseHook
-            } else {
-              Invoke-Captured $launch.Name (Join-Path $dest $launch.Exe) @('-u=https://127.0.0.1:9', '-i=11111111-1111-1111-1111-111111111111')
-            }
-          }
-
-          Start-Sleep -Seconds 3
-          $events = Join-Path $diag 'application-events.txt'
-          try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $started.AddMinutes(-1) } -ErrorAction Stop |
-              Where-Object { $_.Id -in 1000, 1001, 1023, 1026 -or $_.ProviderName -match 'Runtime|Application Error|Windows Error Reporting' } |
-              Select-Object -First 30 |
-              ForEach-Object { "==== $($_.TimeCreated.ToString('o')) $($_.ProviderName) Id=$($_.Id) ===="; $_.Message; '' } |
-              Out-File $events -Encoding utf8
-          } catch {
-            "Get-WinEvent failed: $($_.Exception.Message)" | Out-File $events -Encoding utf8
-          }
-          if (-not (Test-Path $events) -or (Get-Item $events).Length -lt 20) {
-            wevtutil.exe qe Application /c:20 /rd:true /f:text *> (Join-Path $diag 'application-events-raw.txt')
-          }
-          exit 0
-
-      - name: Upload WPF startup diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: wpf-startup-diag
-          path: wpf-crash-diag/**
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Install Playwright browsers
-        if: always() && steps.publish.outcome == 'success'
-        run: |
-          $script = Get-ChildItem -Path test/FileSyncServer.Tests/bin -Recurse -Filter playwright.ps1 | Select-Object -First 1
-          if (-not $script) { throw 'playwright.ps1 was not produced by the FileSyncServer.Tests build' }
-          & $script.FullName install
-
-      - name: Test StaticContentCache and lifecycle
-        if: always() && steps.publish.outcome == 'success'
-        run: |
-          $projects = @(
-            'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
-            'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
-            'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
-            'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj'
-          )
-          $failed = $false
-          foreach ($project in $projects) {
-            $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
-            dotnet test $project `
-              -c Release `
-              --no-build `
-              -p:Platform=x64 `
-              -p:EnableWindowsTargeting=true `
-              -p:GeneratePackageOnBuild=false `
-              --logger "trx;LogFileName=$name.trx" `
-              --results-directory "TestResults/$name"
+          foreach ($suite in $suites) {
+            dotnet test "test/$suite/$suite.csproj" @props `
+              --logger "trx;LogFileName=$suite.trx" `
+              --results-directory "TestResults/$suite"
             if ($LASTEXITCODE -ne 0) { $failed = $true }
           }
           if ($failed) { exit 1 }
 
+      - name: Publish the relay and install Playwright
+        id: publish
+        if: always() && steps.build.outcome == 'success'
+        uses: ./.github/actions/windows-test-publish
+
       # Client.exe is copied into the test output by the FileSyncServer.Tests
-      # build (commit 36f28cf). These classes drive that client and the
+      # build. These classes drive that client and the
       # publishNoAuth server, or only check the JS bundle size.
       - name: Test FileSyncServer headless
         if: always() && steps.publish.outcome == 'success'
         run: |
-          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
+          $props = $env:TEST_PROPS.Split(' ')
+          $filter = ($env:HEADLESS_CLASSES.Split(' ') | ForEach-Object { "FullyQualifiedName~$_" }) -join '|'
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj @props `
             -p:AppendRuntimeIdentifierToOutputPath=false `
-            --filter "FullyQualifiedName~FileFetchingTests|FullyQualifiedName~ClientCachingTests|FullyQualifiedName~ServerCachingTests|FullyQualifiedName~ConcurrentRequestsTests|FullyQualifiedName~LoadTest|FullyQualifiedName~PerformanceTests|FullyQualifiedName~TestMisc" `
+            --filter $filter `
             --logger "trx;LogFileName=FileSyncServer.Headless.trx" `
             --results-directory TestResults/FileSyncServer.Headless
 
-      # Tutorial executables are published above. StartProcess gives up after
-      # 30s when a hosted session never creates a main window, so this step
-      # cannot sit in that loop until the job timeout. continue-on-error stays
-      # while those desktop launches still cannot complete on the runner.
-      # File-not-found for those executables fails the publish step above.
-      - name: Test FileSyncServer desktop and tutorial
-        if: always() && steps.publish.outcome == 'success'
-        timeout-minutes: 60
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results-unit
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+
+  desktop:
+    name: Desktop (${{ matrix.shard }})
+    if: inputs.suite != 'quick'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each shard lists the test classes it runs (matched as
+        # FileSyncServer.Tests.<class>.). `rest` runs every other non-headless
+        # class: Local.*, TestBlazorFormControl, TestBlazorWpfControl,
+        # UrlLoadingStrategyTests, and anything added later.
+        include:
+          - shard: server
+            classes: Remote.TestServerWpf Remote.TestServerForm
+          - shard: remote-wpf
+            classes: Remote.TestRemoteBlazorWpf Remote.TestRemoteBlazorDebugWpf Remote.TestRemoteEmbeddedBlazorWpf
+          - shard: remote-forms
+            classes: Remote.TestRemoteBlazorForm Remote.TestRemoteBlazorWinFormsDebug Remote.TestRemoteEmbeddedBlazorForm
+          - shard: remote-webview
+            classes: Remote.TestRemoteBlazorWebView Remote.TestRemoteEmbeddedBlazorWebView
+          - shard: shared
+            classes: Remote.TestSharedControlWpf Remote.TestSharedControlWinForms
+          - shard: rest
+            classes: ""
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/windows-test-setup
+
+      - name: Publish the relay and tutorial, install Playwright
+        uses: ./.github/actions/windows-test-publish
+        with:
+          tutorial: "true"
+
+      # Each shard starts on a fresh runner, so its first test used to be the
+      # runner's first Edge start and the first start of a tutorial build
+      # (WebView2 creates each build's profile on its first start, which is
+      # slow). In the old single job, earlier tests always did both first.
+      # Without that, the Photino tutorial crashed in NavigateToString on
+      # ReadyToConnect (0xC0000005: WebView2 not ready yet), the first
+      # TestServerWpf test read about half its files, and TestConnectedEvent's
+      # Edge missed its wait (runs 44794534176, 44796565291, 44798662282).
+      # This starts the nine tutorial builds the tests use in local mode (no
+      # relay) and Edge once, then closes them.
+      - name: Warm up the tutorial builds and Edge
+        run: |
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'RemoteBlazorWebViewTutorial'
+          $apps = @(
+            @{ Dir = 'RemoteBlazorWebViewTutorial'; Exe = 'RemoteBlazorWebViewTutorial.exe'; DebugTfm = 'net11.0-windows' },
+            @{ Dir = 'RemoteBlazorWebViewTutorial.WinFormsApp'; Exe = 'RemoteBlazorWebViewTutorial.WinFormsApp.exe'; DebugTfm = 'net11.0-windows' },
+            @{ Dir = 'RemoteBlazorWebViewTutorial.WpfApp'; Exe = 'RemoteBlazorWebViewTutorial.WpfApp.exe'; DebugTfm = 'net11.0-windows10.0.17763.0' }
+          )
+          $started = foreach ($app in $apps) {
+            $bin = Join-Path $dest "$($app.Dir)\bin"
+            foreach ($dir in (Join-Path $bin 'publish'), (Join-Path $bin 'publishEmbedded'), (Join-Path $bin "x64\Debug\$($app.DebugTfm)")) {
+              Start-Process -FilePath (Join-Path $dir $app.Exe) -WorkingDirectory $dir -PassThru
+            }
+          }
+          $edge = Start-Process -FilePath 'msedge.exe' -ArgumentList '--no-first-run', '--no-default-browser-check', 'about:blank' -PassThru
+          Start-Sleep -Seconds 30
+          Write-Host "Tutorial builds still running after 30s: $(@($started | Where-Object { -not $_.HasExited }).Count) of $(@($started).Count)"
+          Write-Host "Edge running: $(-not $edge.HasExited)"
+          foreach ($name in 'RemoteBlazorWebViewTutorial', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial.WpfApp', 'msedge', 'msedgewebview2') {
+            Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          }
+          # Let the killed WebView2 processes release their profile folders.
+          Start-Sleep -Seconds 3
+
+      # Full desktop and tutorial gate. Do not add Category!=Slow here; that filter is only for local and on-demand fast runs.
+      # StartProcess gives up after 30s when a hosted session never creates a
+      # main window, so a shard cannot sit in that loop until the job timeout.
+      - name: Test FileSyncServer desktop and tutorial (${{ matrix.shard }})
+        timeout-minutes: 50
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARD_CLASSES: ${{ matrix.classes }}
+          # Every class a named shard runs. Keep in step with the matrix above.
+          NAMED_CLASSES: >-
+            Remote.TestServerWpf Remote.TestServerForm
+            Remote.TestRemoteBlazorWpf Remote.TestRemoteBlazorDebugWpf Remote.TestRemoteEmbeddedBlazorWpf
+            Remote.TestRemoteBlazorForm Remote.TestRemoteBlazorWinFormsDebug Remote.TestRemoteEmbeddedBlazorForm
+            Remote.TestRemoteBlazorWebView Remote.TestRemoteEmbeddedBlazorWebView
+            Remote.TestSharedControlWpf Remote.TestSharedControlWinForms
         run: |
           # The startup diagnostic launches the tutorial exes. A surviving
           # WebView2 browser keeps the user-data folder and then ignores
@@ -660,22 +264,41 @@ jobs:
           foreach ($name in 'RemoteBlazorWebViewTutorial.WpfApp', 'RemoteBlazorWebViewTutorial.WinFormsApp', 'RemoteBlazorWebViewTutorial', 'msedgewebview2') {
             Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           }
-          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj `
-            -c Release `
-            --no-build `
-            -p:Platform=x64 `
-            -p:EnableWindowsTargeting=true `
-            -p:GeneratePackageOnBuild=false `
+          # >- folds the lists onto one line separated by spaces.
+          $words = { param($s) @($s.Split([char[]]' ', [StringSplitOptions]::RemoveEmptyEntries)) }
+          if ($env:SHARD -eq 'rest') {
+            # Not headless, and not in any named shard.
+            $terms = @(& $words $env:HEADLESS_CLASSES | ForEach-Object { "FullyQualifiedName!~$_" })
+            $terms += @(& $words $env:NAMED_CLASSES | ForEach-Object { "FullyQualifiedName!~FileSyncServer.Tests.$_." })
+            $filter = $terms -join '&'
+          } else {
+            $filter = @(& $words $env:SHARD_CLASSES | ForEach-Object { "FullyQualifiedName~FileSyncServer.Tests.$_." }) -join '|'
+          }
+          Write-Host "Filter: $filter"
+          $props = $env:TEST_PROPS.Split(' ')
+          # console verbosity=normal prints each test with its duration, so the
+          # shards can be rebalanced from the log.
+          dotnet test test/FileSyncServer.Tests/FileSyncServer.Tests.csproj @props `
             -p:AppendRuntimeIdentifierToOutputPath=false `
-            --filter "FullyQualifiedName!~FileFetchingTests&FullyQualifiedName!~ClientCachingTests&FullyQualifiedName!~ServerCachingTests&FullyQualifiedName!~ConcurrentRequestsTests&FullyQualifiedName!~LoadTest&FullyQualifiedName!~PerformanceTests&FullyQualifiedName!~TestMisc" `
-            --logger "trx;LogFileName=FileSyncServer.Desktop.trx" `
-            --results-directory TestResults/FileSyncServer.Desktop
+            --filter $filter `
+            --logger "console;verbosity=normal" `
+            --logger "trx;LogFileName=FileSyncServer.Desktop.$env:SHARD.trx" `
+            --results-directory "TestResults/FileSyncServer.Desktop.$env:SHARD"
+          $testExit = $LASTEXITCODE
+          # A filter that matches nothing passes quietly, so a renamed class
+          # would drop its tests. Fail the shard when it ran no tests.
+          $trx = Get-ChildItem "TestResults/FileSyncServer.Desktop.$env:SHARD" -Filter *.trx -Recurse | Select-Object -First 1
+          $total = 0
+          if ($trx) { $total = [int]([xml](Get-Content $trx.FullName -Raw)).TestRun.ResultSummary.Counters.total }
+          Write-Host "Shard $env:SHARD ran $total tests"
+          if ($total -eq 0) { throw "Shard $env:SHARD matched no tests. Check the class names in the matrix." }
+          exit $testExit
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-test-results
+          name: windows-test-results-desktop-${{ matrix.shard }}
           path: TestResults/**/*.trx
           if-no-files-found: warn
           retention-days: 14

@@ -26,12 +26,24 @@ client code don't get the diagnostic, but the contract is just as likely to chan
 | Service | Used by | Transport | Endpoint |
 |---|---|---|---|
 | `rwvagent.AgentHub` (`AgentHubService`) | the agent | native gRPC (HTTP/2) | `/rwvagent.AgentHub/Connect` |
-| `rwvagent.AgentAdmin` (`AgentAdminService`) | the admin site | gRPC-Web, CORS policy `CorsPolicy` | `/rwvagent.AgentAdmin/GetAgents`, `WatchAgents`, `StartSession`, `WatchLaunch`, `CancelLaunch` |
+| `rwvagent.AgentAdmin` (`AgentAdminService`) | the admin site | gRPC-Web, CORS policy `CorsPolicy` | `/rwvagent.AgentAdmin/GetAgents`, `WatchAgents`, `StartSession`, `WatchLaunch`, `CancelLaunch`, `EndSession`, `UpdateRpcd`, `WatchUpdateRpcd` |
 
 - `AgentHub.Connect` is anonymous at the HTTP level. The first message must be `AgentHello`, otherwise the call ends with `InvalidArgument`.
   An enrollment key that isn't on the allow-list ends it with `PermissionDenied`. A new stream for the same `machine_id` replaces the old one.
 - `AgentAdmin` gets the same treatment as `ClientIPC`, the other service the admin site calls: anonymous, gRPC-Web, `CorsPolicy`.
-  `GetAgents` and `WatchAgents` are always readable. `StartSession` and `CancelLaunch` are gated by `AGENT_ADMIN_KEY` (below).
+  `GetAgents` and `WatchAgents` are always readable. `StartSession`, `CancelLaunch`, `EndSession`, `UpdateRpcd` and `WatchUpdateRpcd` are gated by `AGENT_ADMIN_KEY` (below).
+  `UpdateRpcd` uses the same caller check as `StartSession` for that computer (admin key, or a relay ticket that may start a session, and the same shop scope).
+  It forwards `HubCommand.update_rpcd` with the channel, version, `approved`, and `approved_by` it was given, and does not set `approved` itself.
+  The relay does not send an installer URL or a checksum. The agent's first snapshot is the RPC response (often `checking`, or a refusal).
+  `WatchUpdateRpcd` replays that snapshot, asks the agent with `update_rpcd_status` (an empty `request_id` means the latest), and streams each change until `terminal`, including `old_version` and `new_version`.
+  An offline computer fails with `FailedPrecondition` "That computer is offline". An agent that never answers (it was built before this command and drops it) fails with `FailedPrecondition` "This agent cannot install RPCD updates."
+  `EndSession` takes a machine ID and sends the agent a cancel for that computer's newest unfinished launch, so the agent closes the app
+  it started. It cannot end a session the relay has no launch for (started at the PC, or before the relay restarted).
+  The relay ends its own side of the session first (logged once as `Session <id> shut down: EndRequestedByAdmin (by <requester>)`) and
+  only then sends the cancel, so the app's streams aborting when the agent closes it log at Debug, not as failures. `EndSession`
+  takes the same `requester` as `StartSession`, so the `Diagnostics end requested ... by <requester>` line keeps its label.
+  With authentication on, the requester shown in the consent prompt and the log is the signed-in user's name; the caller may only
+  add a short label in parentheses after that same name, for example `Pat Lee (AI connector)`.
 - An agent shows as offline 90 s after its last message, or as soon as its stream ends. Offline agents stay listed for 7 days.
 - `WatchAgents` sends the full list on every change, and at least every 15 s.
 - `WatchLaunch` replays the latest stage first. It ends after READY, DECLINED, FAILED or ENDED. A later ENDED, after READY, is still recorded.
@@ -55,9 +67,12 @@ Registrations, launches, declines and failures are written to the log and to the
 
 | Variable | Meaning |
 |---|---|
-| `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents. If it's unset or empty, any key is accepted and a warning is logged once. |
-| `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession` and `CancelLaunch` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. |
+| `AGENT_ENROLLMENT_KEYS` | Comma-separated enrollment keys the relay accepts from agents (constant-time comparison). If it's unset or empty, the relay refuses every agent with `PermissionDenied` "This relay has no enrollment keys configured, so it accepts no agents" and logs a warning once. Only in the Development environment (`ASPNETCORE_ENVIRONMENT=Development`) does an unset list accept any key, with a warning logged once. Set it before deploying a relay that agents already use: an agent whose key isn't listed is refused and keeps retrying. An agent sends the `key` from its `%ProgramData%\RemotePCDiagnostics\agent.json` (its `--key=` / `ENROLLMENT_KEY` at install). With the `RemoteTicket` provider the account host decides instead, and this list isn't used. |
+| `AGENT_ADMIN_KEY` | The admin key. If it's set, `StartSession`, `CancelLaunch`, `EndSession`, `UpdateRpcd` and `WatchUpdateRpcd` need gRPC metadata (a request header) `x-admin-key` with exactly this value (constant-time comparison), otherwise they fail with `PermissionDenied` "Admin key required". If it's unset, anyone can start a session, but every start asks for consent (no unattended starts) and a warning is logged once. A relay ticket that may start a session counts as this key for `UpdateRpcd` and `WatchUpdateRpcd`, the same way it does for `StartSession`. |
 | `PUBLIC_BASE_URL` | The relay's public base address, sent to the agent as `server_url` and used for `app_url`. Example: `https://server.remoteblazorwebview.com:34544`. If it's unset, the relay uses the scheme and host of the admin site's `StartSession` request. |
+
+On Railway, `scripts/Set-RailwayAgentKeys.ps1` sets the list with the Railway CLI, for example
+`./scripts/Set-RailwayAgentKeys.ps1 -Key test-shop -IncludeLocalAgentKey -Append -WhatIf` (drop `-WhatIf` to apply). Dot-sourcing the file defines a `Set-RailwayAgentKeys` function instead of running it.
 
 ## Keepalive
 

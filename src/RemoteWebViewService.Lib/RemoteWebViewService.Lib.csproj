@@ -10,6 +10,7 @@
     <LangVersion>latest</LangVersion>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <Configurations>Debug;Release;Authorization;NoAuthorization;AzureNoAuth</Configurations>
+    <PlatformTarget>AnyCPU</PlatformTarget>
 
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <IsPackable>true</IsPackable>
@@ -25,7 +26,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
     <PackageTags>BlazorWebView, Blazor, WebView, RemoteBlazorWebView</PackageTags>
-    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.0, the first release for .NET 11: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.1: all seven packages and both Roslyn source generators emit AnyCPU IL for native Windows ARM64 support; adds signed RemoteTicket authorization, per-agent token binding, session key protection, RPCD update forwarding/cancel, scheduled metrics/alerts/boot-time reporting, and relay security hardening. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
     <NoWarn>$(NoWarn);NU5100</NoWarn>
     <!-- The agent registry (Agents/, agent.proto) is marked [Experimental("RWV001")]; the library itself uses it freely. -->
     <NoWarn>$(NoWarn);RWV001</NoWarn>
@@ -54,7 +55,7 @@
     <PackageReference Include="Grpc.AspNetCore.Web" Version="2.85.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="11.0.0" />
     <Protobuf Include="..\Protos\webview.proto" GrpcServices="Server" Link="Protos\webview.proto" />
-    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Server" Link="Protos\agent.proto" />
+    <Protobuf Include="..\Protos\agent.proto" GrpcServices="Both" Link="Protos\agent.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,5 +67,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="StaticContentCache.ServiceTests" />
+    <InternalsVisibleTo Include="PeakSWC.RemoteWebViewService.RemoteTicket" />
   </ItemGroup>
 </Project>

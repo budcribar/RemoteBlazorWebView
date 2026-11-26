@@ -20,17 +20,17 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.0` and does not set `VersionSuffix`, so the package version is `11.0.0`. `global.json` pins SDK `11.0.100`, which is GA.
+`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.1` and does not set `VersionSuffix`, so the package version is `11.0.1`. `global.json` pins SDK `11.0.100`, which is GA.
 
 The rule going forward:
 
 - The package major is the .NET major of the line (`net9` is 9, `net10` is 10, `net11` is 11). It must match the major of `sdk.version` in that line's `global.json` and the major of `VersionPrefix`.
-- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net11 that is `11.0.0` with no suffix. The script does not replace a GA SDK with `10.0.0`.
+- When that SDK is GA (no `preview`, `rc`, `alpha`, `beta`, or `pre`), the version is the committed `VersionPrefix` and `VersionSuffix`. On net11 that is `11.0.1` with no suffix. The script does not replace a GA SDK with `10.0.0`.
 - When the SDK is a prerelease, `VersionPrefix` is `{major}.0.0` unless `version_override` is set. The prerelease label comes from that SDK token, written the way packages on nuget.org already are: the dot inside the token is removed. `rc.2` becomes `rc2`. `preview.5` becomes `preview5`. A bare `pre` stays `pre`. A committed suffix spelled `rc.2` or `preview.5` is rewritten the same way.
 - `version_override` is a single token such as `10.0.14` or `10.0.13-rc2`. The text before the first hyphen is `VersionPrefix`. The text after it is `VersionSuffix`. It replaces both the committed GA version and the prerelease derivation.
 - `patch` is empty or `0` for none. A positive integer `N` appends `-pN`. `10.0.13` with patch `1` is `10.0.13-p1` (`VersionSuffix` `p1`).
 
-`11.0.0-rc2` is already on nuget.org. `11.0.0` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
+`11.0.0-rc2` and `11.0.0` are already on nuget.org. `11.0.1` is the committed version and is not published by this file. The script reads each package's public flat-container index (`https://api.nuget.org/v3-flatcontainer/<id>/index.json`, no account and no key) and prints a warning when the derived version, including a `-pN` build, is already listed. A warning does not stop the script. The next package after one that is already listed has to be a new version.
 
 SemVer treats a hyphen as the start of a prerelease. `11.0.0-rc2-p1` is one prerelease identifier (`rc2-p1`). It sorts after `11.0.0-rc2` because `rc2-p1` is greater than `rc2` in ASCII order, so a patch on an rc is a later prerelease. `11.0.0-p1` sorts **before** `11.0.0`, because every prerelease is less than the release with the same numbers. Use `-pN` for another build of an rc. For a stable package that must install over `11.0.0`, set `version_override` to `11.0.1` and leave `patch` empty.
 
@@ -68,14 +68,14 @@ Dispatch **Release packages** on `cursor/release-workflow-205f` (and, once revie
 | `line` | required | `net9`, `net10`, or `net11`. The workflow checks out that branch for the pack. |
 | `version_override` | empty | Replaces the derived version. Use the no-dot spelling, for example `11.0.0-rc3`. |
 | `patch` | empty | Servicing counter. Empty or `0` adds nothing. `1` appends `-p1`. |
-| `dry_run` | `true` | Packs and uploads artifacts. net11 still runs Windows tests. Does not push to NuGet. |
+| `dry_run` | `true` | Packs and uploads artifacts. net11 still runs Windows tests when `line` is net11. Does not push to NuGet; untick it to push. |
 
 Jobs:
 
 1. **Version and notes.** Derives the version and writes release notes: a `Based on maui <version>` line, then commit subjects since the last tag. Subjects that mention `LoadTest`, `ceiling`, `req/s`, `requests per`, or `throughput` are omitted. There is no performance claim in the generated notes. Notes stay within 4000 characters; a longer list is cut and linked to the tag compare view. The job uploads `PackageReleaseNotes.txt` and `release-notes.patch`. It also leaves `eng/apply-release-notes.sh` for the same edit. The workflow does not commit or push that edit. The maintainer applies the patch, or runs the script, and commits so the seven `PackageReleaseNotes` properties match the published text.
-2. **Windows tests.** Runs for `net11` whether or not `dry_run` is set. It calls `.github/workflows/windows-tests.yml` (`workflow_call` on this branch). Packing and the artifact upload wait for that job to pass. net9 and net10 still use their own Windows tests workflows, which are not reusable yet. A pack of those lines prints a warning and does not call the net11 suite.
-3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the seven projects. For net11 this starts only after Windows tests pass. Each package's `PackageReleaseNotes` for that pack is the generated notes, so the artifact matches the text the maintainer is asked to commit. The job uploads the seven `.nupkg` files and `SHA256SUMS.txt`.
-4. **Push to NuGet.org.** The job condition compares `dry_run` (a boolean) to the sentinel `__nuget_push_disabled__`, which the dispatch form cannot set. GitHub does not schedule the job. A literal `if: false` was not used because actionlint rejects that constant.
+2. **Windows tests.** Runs when `line` is `net11`, whether or not `dry_run` is set. It calls this branch's `.github/workflows/windows-tests.yml` (`workflow_call`), which runs the unit and headless job and the FileSyncServer desktop shards on parallel Windows runners, always as the full suite. Packing and the artifact upload wait for every one of those jobs to pass. A dispatch with another line prints a warning and does not call this suite.
+3. **Pack.** Builds `remote.blazor.desktop.js`, then packs the seven projects. When `line` is net11 this starts only after Windows tests pass. Each package's `PackageReleaseNotes` for that pack is the generated notes, so the artifact matches the text the maintainer is asked to commit. The job uploads the seven `.nupkg` files and `SHA256SUMS.txt`.
+4. **Push to NuGet.org.** Runs only when `dry_run` is off, after `pack` succeeds. The `nuget-org` environment holds it until its required reviewer (budcribar) approves; then it pushes the seven packages with a short-lived key from trusted publishing.
 
 After the run, download `PackageReleaseNotes.txt` and `release-notes.patch` from the `release-plan-<line>` artifact. On the line being released, either `git apply release-notes.patch` or `eng/apply-release-notes.sh . PackageReleaseNotes.txt`. Review the seven `PackageReleaseNotes` edits, commit them with the `Directory.Build.props` version, and push that commit yourself. The workflow never does that commit.
 
@@ -87,7 +87,7 @@ BlazorBot runs a separate read-only check of the .NET SDK and runtime for each l
 
 The nuget.org profile name is `budcribar`. The workflow reads it from the repository variable `NUGET_USER`. That variable is a name, not a secret, and it is not an API key. Do not add `NUGET_API_KEY`.
 
-Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. Once the push job is allowed to run, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
+Confirm the policy fields against [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) before creating it. Checked against that page: the policy is repository owner, repository name, workflow **file name only**, and an optional Actions environment. When the push job runs, `NuGet/login@v1` exchanges a GitHub OIDC token for one short-lived API key (about one hour, one exchange per token). The username is the nuget.org profile name, not an email address. No long-lived API key is stored.
 
 These were created by hand on 2026-11-10; the workflow does not create them. Recreate them the same way if they are ever removed.
 
@@ -101,4 +101,4 @@ These were created by hand on 2026-11-10; the workflow does not create them. Rec
 
 The nuget.org policy is scoped to `PeakSWC.*`. The `nuget-push` job runs only when `dry_run` is off, after `pack` succeeds, and is then held until the required reviewer approves it.
 
-The push source, once the job is allowed to run, is `https://api.nuget.org/v3/index.json`. The key used there is `steps.login.outputs.NUGET_API_KEY`, the temporary key from the login action, not a repository secret.
+The push source is `https://api.nuget.org/v3/index.json`. The key used there is `steps.login.outputs.NUGET_API_KEY`, the temporary key from the login action, not a repository secret.

@@ -53,11 +53,14 @@ namespace FileSyncServer.Tests.Remote
     public class SharedControlWinFormsFixture : SharedControlFixture { public SharedControlWinFormsFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWinFormsApp; } }
 
     [Collection("TestSharedControlWpf")]
+    [Trait("Category", "Slow")]
     public class TestSharedControlWpf(ITestOutputHelper output) : BaseTestSharedControl<SharedControlWpfFixture>(output) { }
 
     [Collection("TestSharedControlWinForms")]
+    [Trait("Category", "Slow")]
     public class TestSharedControlWinForms(ITestOutputHelper output) : BaseTestSharedControl<SharedControlWinFormsFixture>(output) { }
 
+    [Trait("Category", "Slow")]
     public abstract class BaseTestSharedControl<T>(ITestOutputHelper output) : IAsyncLifetime where T : SharedControlFixture, new()
     {
         private static readonly LocatorAssertionsToHaveTextOptions Soon = new() { Timeout = 20000 };
@@ -207,10 +210,13 @@ namespace FileSyncServer.Tests.Remote
             var viewer = await _fixture.OpenMirror($"https://localhost:{network.Port}/");
             await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 1", new LocatorAssertionsToContainTextOptions { Timeout = 20000 });
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
+            Assert.Equal("connected", await ConnectionState(viewer));
 
             // The viewer's network goes away: its page says so instead of standing there looking alive.
             network.Disconnect();
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToContainTextAsync("Connection lost", new LocatorAssertionsToContainTextOptions { Timeout = 30000 });
+            // And tells the app, which can no longer believe the control it last had (window.RemoteControl.connectionState).
+            Assert.Equal("reconnecting", await ConnectionState(viewer));
 
             // The session carries on without it.
             await owner.Locator(".btn").ClickAsync();
@@ -221,10 +227,14 @@ namespace FileSyncServer.Tests.Remote
             await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 2", new LocatorAssertionsToContainTextOptions { Timeout = 45000 });
             await Expect(viewer.Locator("#rbwv-connection-lost")).ToHaveCountAsync(0);
             await Expect(SharedControlFixture.Status(viewer)).ToHaveTextAsync("View only", Soon);
+            Assert.Equal("connected", await ConnectionState(viewer));
 
             await owner.Locator(".btn").ClickAsync();
             await Expect(SharedControlFixture.Count(viewer)).ToContainTextAsync("Current count: 3", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
         }
+
+        private static Task<string> ConnectionState(IPage page) =>
+            page.EvaluateAsync<string>("() => window.RemoteControl ? window.RemoteControl.getState().connectionState : 'no RemoteControl'");
 
         [Fact]
         public async Task An_unattended_session_gives_control_as_soon_as_someone_joins_and_only_once()

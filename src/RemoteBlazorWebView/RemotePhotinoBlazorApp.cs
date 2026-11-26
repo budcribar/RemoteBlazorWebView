@@ -85,7 +85,7 @@ namespace PeakSWC.RemoteWebView
             else
             {
                 WindowManager?.Navigate(@"wwwroot\index.html");
-                MainWindow.NavigateToString("<br/>");
+                MainWindow.NavigateToString(RemoteBlazorWebViewWindow.StartPage);
             }
                
 

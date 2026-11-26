@@ -49,7 +49,7 @@ public class AuthorizationTests
         await using var _ = server;
         using var http = Http(server);
 
-        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"status/{state.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"wait/{state.Id}")).StatusCode);
     }
 
     [Fact]
@@ -59,9 +59,34 @@ public class AuthorizationTests
         await using var _ = server;
         using var http = Http(server);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Get(http, $"status/{state.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Get(http, $"wait/{state.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Get(http, $"mirror/{state.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Get(http, "health")).StatusCode); // not a session page
+    }
+
+    // The agent that started the app asks /status, with no user to sign in, to learn when the app is up.
+    [Fact]
+    public async Task Status_is_open_without_signing_in_and_says_whether_an_app_registered_the_id()
+    {
+        var (server, state) = await StartAsync(new FakeAuthorization());
+        await using var _ = server;
+        using var http = Http(server);
+
+        var registered = await Get(http, $"status/{state.Id}");
+        Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
+        Assert.Contains("true", await registered.Content.ReadAsStringAsync());
+
+        var unknown = await Get(http, $"status/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.OK, unknown.StatusCode);
+        Assert.Contains("false", await unknown.Content.ReadAsStringAsync());
+
+        // A browser asked for this id before its app was up: the entry is there, the app is not.
+        var waitingFor = Guid.NewGuid().ToString();
+        var sessions = server.Services.GetRequiredService<ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>>();
+        sessions[waitingFor] = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = await Get(http, $"status/{waitingFor}");
+        Assert.Equal(HttpStatusCode.OK, pending.StatusCode);
+        Assert.Contains("false", await pending.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -71,7 +96,7 @@ public class AuthorizationTests
         await using var _ = server;
         using var http = Http(server);
 
-        var response = await Get(http, $"status/{state.Id}", FakeAuthorization.User("Pat Lee", "other", "bench"));
+        var response = await Get(http, $"wait/{state.Id}", FakeAuthorization.User("Pat Lee", "other", "bench"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -84,9 +109,9 @@ public class AuthorizationTests
         using var http = Http(server);
 
         // A forwarded link: signed in, but the session is not in any of this user's groups.
-        Assert.Equal(HttpStatusCode.Forbidden, (await Get(http, $"status/{state.Id}", FakeAuthorization.User("Sam", "other"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Get(http, $"wait/{state.Id}", FakeAuthorization.User("Sam", "other"))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Get(http, $"mirror/{state.Id}", FakeAuthorization.User("Sam", "other"))).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Get(http, $"status/{state.Id}", FakeAuthorization.User("Nobody"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Get(http, $"wait/{state.Id}", FakeAuthorization.User("Nobody"))).StatusCode);
     }
 
     [Fact]
@@ -96,12 +121,12 @@ public class AuthorizationTests
         await using var _ = server;
         using var http = Http(server);
 
-        var first = await Get(http, $"status/{state.Id}?{FakeAuthorization.Query}={Uri.EscapeDataString(FakeAuthorization.User("Pat", "bench"))}");
+        var first = await Get(http, $"wait/{state.Id}?{FakeAuthorization.Query}={Uri.EscapeDataString(FakeAuthorization.User("Pat", "bench"))}");
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         var cookie = Assert.Single(first.Headers.GetValues("Set-Cookie")).Split(';')[0];
         Assert.StartsWith(FakeAuthorization.Cookie + "=", cookie);
 
-        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"status/{state.Id}", cookie: cookie)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"wait/{state.Id}", cookie: cookie)).StatusCode);
     }
 
     [Fact]
@@ -118,7 +143,7 @@ public class AuthorizationTests
         var cookie = page.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(OwnerAccess.CookieName(state.Id), StringComparison.Ordinal)).Split(';')[0];
 
         // From then on the owner cookie stands for the key on the session's other pages.
-        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"status/{state.Id}", cookie: cookie)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Get(http, $"wait/{state.Id}", cookie: cookie)).StatusCode);
     }
 
     [Theory]
@@ -149,7 +174,7 @@ public class AuthorizationTests
 
         var cookie = $"{OwnerAccess.CookieName(other.Id)}={state.OwnerToken}"; // the first session's token under the second's name
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Get(http, $"status/{other.Id}", cookie: cookie)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Get(http, $"wait/{other.Id}", cookie: cookie)).StatusCode);
     }
 
     [Fact]

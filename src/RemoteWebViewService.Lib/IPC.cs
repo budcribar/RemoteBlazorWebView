@@ -30,6 +30,20 @@ namespace PeakSWC.RemoteWebView
 
         /// <summary>The app asked for "participants:" messages (CreateWebView participantEvents).</summary>
         public bool ParticipantEvents { get; set; }
+
+        /// <summary>Who may be given control (the session's own list). Null in tests that build an IPC on its own.</summary>
+        public SessionControllers? Controllers { get; init; }
+
+        /// <summary>The signed-in user id of an attached connection, or null when it is not attached.</summary>
+        public string? ConnectionUserId(string clientId)
+        {
+            lock (browserStateLock)
+            {
+                foreach (var brn in observers.Keys)
+                    if (brn.ClientId == clientId) return brn.UserId;
+            }
+            return null;
+        }
         public void BrowserResponseStream(BrowserResponseNode brn, CancellationTokenSource linkedToken)
         {
             var channel = Channel.CreateUnbounded<StringRequest>();
@@ -41,7 +55,11 @@ namespace PeakSWC.RemoteWebView
                 if (latestScroll != null) channel.Writer.TryWrite(latestScroll);
                 observers.TryAdd(brn, channel);
             }
-            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, linkedToken.Token), linkedToken.Token);
+            // The loop must always start: it is what takes the browser out of the session again when its stream ends.
+            // Started with the stream's token it never ran for a browser that left straight after joining (a cancelled
+            // token cancels the start), and that browser stayed in the roster for the rest of the session.
+            var token = linkedToken.Token;
+            ProcessMessagesTask = Task.Run(() => ProcessMessages(brn, token), CancellationToken.None);
         }
 
         public Task ClientTask { get; }
@@ -128,7 +146,11 @@ namespace PeakSWC.RemoteWebView
             lock (browserStateLock)
             {
                 bool first = true;
-                foreach (var brn in observers.Keys.OrderBy(k => k.JoinOrder)) // join order: the first non-owner is the remote user
+                // Join order: the first non-owner is the remote user. When control is limited to some users (SessionControllers),
+                // their connections come first, so pages that hand control to "the remote user" pick one who may have it.
+                var controllers = Controllers;
+                bool limited = controllers?.IsLimited == true;
+                foreach (var brn in observers.Keys.OrderBy(k => limited && k.ClientId != ownerClientId && !controllers!.Lists(k.UserId) ? 1 : 0).ThenBy(k => k.JoinOrder))
                 {
                     if (brn.ClientId == excludeClientId)
                         continue;

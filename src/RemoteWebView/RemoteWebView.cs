@@ -145,6 +145,10 @@ namespace PeakSWC.RemoteWebView
 
         private GrpcChannel? channel;
 
+        // This session's own secret for its calls to the relay: sent with CreateWebView and, as the x-app-key header, with
+        // every later call, so that knowing the session id is not enough to end the session or talk to its browsers.
+        private readonly string appKey = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+
         protected WebViewIPC.WebViewIPCClient? Client()
         {
             // TODO Pass cts to other requests
@@ -168,19 +172,22 @@ namespace PeakSWC.RemoteWebView
                 channel = GrpcChannel.ForAddress(blazorWebView.GrpcBaseUri,
                     new GrpcChannelOptions
                     {
-                        HttpHandler = new SocketsHttpHandler
+                        HttpHandler = new AppKeyHandler(appKey)
                         {
-                            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-                            KeepAlivePingDelay = TimeSpan.FromSeconds(30),
-                            KeepAlivePingTimeout = TimeSpan.FromSeconds(120),   // 30 seconds is not enough to pass stress tests
-                            EnableMultipleHttp2Connections = true
+                            InnerHandler = new SocketsHttpHandler
+                            {
+                                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                                KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+                                KeepAlivePingTimeout = TimeSpan.FromSeconds(120),   // 30 seconds is not enough to pass stress tests
+                                EnableMultipleHttp2Connections = true
+                            }
                         }
                     });
 
                 client = new WebViewIPC.WebViewIPCClient(channel);
 
                 logger.LogDebug(" Id: {Id} ServerUri: {ServerUri} GrpcBaseUri: {GrpcBaseUri} Markup: {Markup} PingInterval: {PingIntervalSeconds} Group:{Group} EnableMirrors:{EnableMirrors}", blazorWebView.Id, blazorWebView.ServerUri, blazorWebView.GrpcBaseUri, blazorWebView.Markup.Replace("\r\n", "").Replace(" ", ""), PingIntervalSeconds, blazorWebView.Group, blazorWebView.EnableMirrors);
-                var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors, VoiceHostKey = (blazorWebView as IVoiceHost)?.VoiceHostKey ?? "", OwnerKey = blazorWebView.OwnerKey ?? "", ParticipantEvents = true }, cancellationToken: cts.Token);
+                var events = client.CreateWebView(new CreateWebViewRequest { Id = blazorWebView.Id.ToString(), HtmlHostPath = HostHtmlPath, Markup = blazorWebView.Markup, Group = blazorWebView.Group, HostName = Dns.GetHostName(), Pid = Environment.ProcessId, ProcessName = Process.GetCurrentProcess().ProcessName, EnableMirrors = blazorWebView.EnableMirrors, VoiceHostKey = (blazorWebView as IVoiceHost)?.VoiceHostKey ?? "", OwnerKey = blazorWebView.OwnerKey ?? "", ParticipantEvents = true, AppKey = appKey }, cancellationToken: cts.Token);
 
                 Exception? exception = ProcessBrowserMessages(blazorWebView, events).Result;
 

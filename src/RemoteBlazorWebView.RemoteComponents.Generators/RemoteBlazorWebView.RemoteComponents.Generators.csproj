@@ -12,6 +12,7 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <Configurations>Debug;Release;Embedded;Developer</Configurations>
     <Platforms>x64;AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <!-- A fixed output folder (no platform, no TFM) so the RemoteComponents project can pack the dll from a known path. -->
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Pages;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
 using System.Collections.Concurrent;
@@ -25,12 +26,30 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 var (parsedGuid, serviceDictionary) = client.Value;
                 string guid = parsedGuid.ToString();
                 var serviceStateChannel = context.RequestServices.GetRequiredService<ConcurrentDictionary<string, Channel<string>>>();
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                using var pending = PendingSessions.Join(serviceDictionary, guid);
+                var serviceStateTaskSource = pending.Source;
 
+                ServiceState? serviceState = null;
                 try
                 {
                     // Wait for the task to be completed or time out using the extension method
-                    var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // Re-verify session access after waiting on a pre-opened /mirror/{id} URL.
+                    var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                    if (authorization?.Enabled == true)
+                    {
+                        var users = context.RequestServices.GetService<IUserService>();
+                        if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                        {
+                            LogPageRequest(context, guid, serviceState, "refused (not a member of this session's group)");
+                            context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                                ? StatusCodes.Status403Forbidden
+                                : StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                     // A browser has the client's page: started from /app/{id} (InUse), or loaded straight from /{id} (Refresh), which is
                     // how a remote component's frame loads it. The frame and its mirror render at the same time, so give the app's page a
@@ -47,6 +66,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
 
                         if ((HttpStatusCode)fileInfo.StatusCode != HttpStatusCode.OK)
                         {
+                            LogPageRequest(context, guid, serviceState, $"mirror page not found ({fileInfo.StatusCode})");
                             await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
                             return;
                         }
@@ -56,6 +76,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             serviceState.User = context.User.GetUserDisplayName() ?? string.Empty;
                         }
                         serviceState.IsMirroredConnection.Add(context.Connection.Id);
+                        LogPageRequest(context, guid, serviceState, "mirror served");
 
                         await serviceState.IPC.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }).ConfigureAwait(false);
                         foreach (var channel in serviceStateChannel.Values)
@@ -74,8 +95,20 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         if (voiceKey is not null)
                             await context.Response.WriteAsync(VoiceRoom.ControllerScript(parsedGuid, voiceKey)).ConfigureAwait(false);
                     }
+                    else if (serviceState.EnableMirrors)
+                    {
+                        // The app is up but its own page is not open yet (after a reboot a remote browser often gets here first,
+                        // or is sent here from /app). Ask the browser to try again in a moment rather than leave it on an error.
+                        LogPageRequest(context, guid, serviceState, "mirror waiting for the app's page");
+                        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                        context.Response.Headers.RetryAfter = MirrorWaitingPage.RetrySeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        context.Response.Headers.CacheControl = "no-store";
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(MirrorWaitingPage.Html(serviceState.ProcessName, serviceState.HostName)).ConfigureAwait(false);
+                    }
                     else
                     {
+                        LogPageRequest(context, guid, serviceState, "refused (mirrors not enabled)");
                         context.Response.StatusCode = 400;
                         context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync("Mirroring is not enabled").ConfigureAwait(false);
@@ -83,6 +116,7 @@ namespace PeakSWC.RemoteWebView.EndPoints
                 }
                 catch(Exception)
                 {
+                    LogPageRequest(context, guid, serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     context.Response.StatusCode = 404;
                     await context.Response.WriteAsync("Service state not found").ConfigureAwait(false);
                     return;

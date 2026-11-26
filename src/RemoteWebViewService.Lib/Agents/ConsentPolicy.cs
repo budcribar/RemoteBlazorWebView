@@ -30,5 +30,22 @@ namespace PeakSWC.RemoteWebView.Agents
                 return StartDecision.Refuse(AdminKeyRequired);
             return StartDecision.Allow(requireConsent: !(unattended && ceiling == ConsentMode.ConsentUnattendedAllowed));
         }
+
+        /// <summary>Refusal when an RPCD update is asked for and the relay has no admin key.</summary>
+        public static readonly string AdminKeyNotConfiguredForUpdate =
+            $"RPCD updates need an admin key. Set {AgentOptions.AdminKeyVariable} on the relay, or sign in through a shop.";
+
+        /// <summary>
+        /// Whether an RPCD update may be forwarded. Nobody at the PC is asked before an update, so the no-key fallback of
+        /// <see cref="Decide"/> (allow, but ask the person) does not apply: without an admin key the update is refused.
+        /// </summary>
+        public static StartDecision DecideUpdate(bool adminKeyConfigured, bool adminKeyValid)
+        {
+            if (!adminKeyConfigured)
+                return StartDecision.Refuse(AdminKeyNotConfiguredForUpdate);
+            if (!adminKeyValid)
+                return StartDecision.Refuse(AdminKeyRequired);
+            return StartDecision.Allow(requireConsent: false);
+        }
     }
 }

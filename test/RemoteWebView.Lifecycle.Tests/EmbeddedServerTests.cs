@@ -207,7 +207,8 @@ public class EmbeddedServerTests
     [Fact]
     public async Task Embedded_server_does_not_expose_agent_services()
     {
-        await using var server = await RemoteWebViewServer.StartAsync();
+        // MaxClients == 1 is the single-client embedded host: AgentHub stays unmapped. MaxClients > 1 maps it.
+        await using var server = await RemoteWebViewServer.StartAsync(new RemoteWebViewServerOptions { MaxClients = 1 });
         using var http = new HttpClient(new SocketsHttpHandler()) { BaseAddress = server.GrpcUri };
         using var req = new HttpRequestMessage(HttpMethod.Post, "rwvagent.AgentHub/Connect")
         {

@@ -18,8 +18,12 @@ namespace PeakSWC.RemoteWebView
         }
 
         /// <summary>The user's directory object id (Azure AD's "oid" claim, in either spelling), which
-        /// <see cref="IUserService"/> looks groups up by. Same claims as Microsoft.Identity.Web's GetObjectId.</summary>
+        /// <see cref="IUserService"/> looks groups up by. Same claims as Microsoft.Identity.Web's GetObjectId,
+        /// then the standard name identifier and "sub" so a cookie sign-in can use those too.</summary>
         public static string? GetUserObjectId(this ClaimsPrincipal principal) =>
-            principal.FindFirst("oid")?.Value ?? principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            principal.FindFirst("oid")?.Value
+            ?? principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+            ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst("sub")?.Value;
     }
 }

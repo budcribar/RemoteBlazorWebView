@@ -14,6 +14,20 @@ namespace PeakSWC.RemoteWebView
 {
     public class RemoteBlazorWebViewWindow : PhotinoWindow, IBlazorWebView
     {
+        /// <summary>
+        /// The page a remote app shows until ReadyToConnect replaces it. Its script reports that WebView2 is up.
+        /// </summary>
+        internal const string StartPage = "<br/><script>window.external.sendMessage('rbwv:ready')</script>";
+
+        // Set by the first message from any page (StartPage's report, or a local
+        // Blazor page's own traffic), which proves WebView2 has finished starting.
+        private readonly TaskCompletionSource webViewReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public RemoteBlazorWebViewWindow()
+        {
+            WebMessageReceived += (_, _) => webViewReady.TrySetResult();
+        }
+
         public CoreWebView2CookieManager CookieManager => default!;
         public Uri? ServerUri { get; set; }
         public string Group { get; set; } = "test";
@@ -97,22 +111,16 @@ namespace PeakSWC.RemoteWebView
              this.LoadRawString(htmlContent);
         }
 
+        /// <summary>
+        /// Waits until WebView2 has finished starting, so a ReadyToConnect handler can call NavigateToString.
+        /// Photino's native NavigateToString crashes (0xC0000005) before then. A fixed 5s wait after the window
+        /// handle used to stand in for this, and a build's first start on a fresh PC can take longer.
+        /// </summary>
         public async Task WaitForInitializationComplete()
         {
-            while(true)
-            {
-                try
-                {
-                    var h = this.WindowHandle;
-                    await Task.Delay(5000);
-                    break;
-                }
-                catch (Exception)
-                {
-                    await Task.Delay(100);
-                }
-            }
-           
+            var done = await Task.WhenAny(webViewReady.Task, Task.Delay(TimeSpan.FromSeconds(60))).ConfigureAwait(false);
+            if (done != webViewReady.Task)
+                Debug.WriteLine("WebView2 did not report ready within 60s; continuing.");
         }
 
         public Task<Uri?> GetGrpcBaseUriAsync(Uri? serverUri)

@@ -51,9 +51,10 @@
          them; warnings from this repo's own code (IL2026, IL3050) are NOT suppressed. -->
     <NoWarn>NU5100;IL2104;IL3053;IL3000</NoWarn>
     <RootNamespace>PeakSWC.RemoteWebView</RootNamespace>
-    <Platforms>x64</Platforms>
+    <Platforms>x64;AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.0, the first release for .NET 11: sharing control between the owner and a remote user (give / take control, unattended sessions, session controls bar), voice calls, fixes for the trimmed and native relay. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
+    <PackageReleaseNotes>Based on ASP.NET Core 11.0.0 and maui 11.0.10. 11.0.1: all seven packages and both Roslyn source generators emit AnyCPU IL for native Windows ARM64 support; adds signed RemoteTicket authorization, per-agent token binding, session key protection, RPCD update forwarding/cancel, scheduled metrics/alerts/boot-time reporting, and relay security hardening. Upgrade the relay and the packages together. See RELEASE_NOTES.md in the repository.</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/budcribar/RemoteBlazorWebView</PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureNoAuth|x64'">
@@ -70,9 +71,11 @@
        setting, not a compile-time switch: see IRelayAuthorization. -->
   <ItemGroup Condition="'$(Configuration)' != 'NoAuthorization'">
     <ProjectReference Include="..\RemoteWebViewService.AzureB2C\RemoteWebViewService.AzureB2C.csproj" />
+    <ProjectReference Include="..\RemoteWebViewService.RemoteTicket\RemoteWebViewService.RemoteTicket.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Authorization\AzureB2CRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
+    <Compile Remove="Authorization\RemoteTicketRegistration.cs" Condition="'$(Configuration)' == 'NoAuthorization'" />
     <Compile Remove="Authorization\AzureB2CByDefault.cs" Condition="'$(Configuration)' != 'Authorization'" />
   </ItemGroup>
   <ItemGroup>
