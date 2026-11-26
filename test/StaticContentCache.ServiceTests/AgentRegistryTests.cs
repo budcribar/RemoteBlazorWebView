@@ -756,15 +756,21 @@ public class AgentRegistryTests
 
         using (var call = relay.Invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options))
         {
-            await call.RequestStream.WriteAsync(new AgentMessage { Heartbeat = new Heartbeat() });
-            var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
+            var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            {
+                await call.RequestStream.WriteAsync(new AgentMessage { Heartbeat = new Heartbeat() });
+                await call.ResponseStream.MoveNext(timeout.Token);
+            });
             Assert.Equal(StatusCode.InvalidArgument, ex.StatusCode);
         }
 
         using (var call = relay.Invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options))
         {
-            await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", "wrong") });
-            var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
+            var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            {
+                await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", "wrong") });
+                await call.ResponseStream.MoveNext(timeout.Token);
+            });
             Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
         }
 
@@ -781,8 +787,11 @@ public class AgentRegistryTests
         foreach (var key in new[] { "any-key", "" })
         {
             using var call = relay.Invoker.AsyncDuplexStreamingCall(ConnectMethod, null, options);
-            await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", key) });
-            var ex = await Assert.ThrowsAsync<RpcException>(() => call.ResponseStream.MoveNext(timeout.Token));
+            var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            {
+                await call.RequestStream.WriteAsync(new AgentMessage { Hello = Hello("m-1", key) });
+                await call.ResponseStream.MoveNext(timeout.Token);
+            });
             Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
             Assert.Equal(PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy.NoKeysConfiguredReason, ex.Status.Detail);
         }
