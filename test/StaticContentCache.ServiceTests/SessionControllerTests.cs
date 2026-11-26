@@ -162,7 +162,7 @@ public class SessionControllerTests
             new ServerFileSyncManager(NullLogger<ServerFileSyncManager>.Instance), agents: registry);
         using var cancel = new CancellationTokenSource();
 
-        var call = app.CreateWebView(new CreateWebViewRequest { Id = started.SessionId, HtmlHostPath = "wwwroot" }, new AppWriter(), new CallContext(cancel.Token));
+        var call = app.CreateWebView(new CreateWebViewRequest { Id = started.SessionId, HtmlHostPath = "wwwroot" }, new AppWriter(), new CallContext(token: cancel.Token));
         var state = await services.GetOrAdd(started.SessionId, _ => new(TaskCreationOptions.RunContinuationsAsynchronously)).Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(state.Controllers.IsLimited);
@@ -203,7 +203,7 @@ public class SessionControllerTests
             Browser = new BrowserIPCService(NullLogger<RemoteWebViewService>.Instance, services, shutdown, new FakeAuthorization(), new FakeUserService(users));
         }
 
-        public HttpContext SignedIn(string name)
+        public DefaultHttpContext SignedIn(string name)
         {
             users.Set(name, [Shop]);
             var identity = new ClaimsIdentity([new Claim(FakeAuthorization.ObjectIdClaim, name), new Claim("name", name)], FakeAuthorization.Scheme);
@@ -217,7 +217,7 @@ public class SessionControllerTests
             writers[clientId] = writer;
             var request = new ReceiveMessageRequest { Id = Id, ClientId = clientId, ClientKey = "k-" + clientId, IsOwner = owner, OwnerToken = owner ? State.OwnerToken : "" };
             var http = owner ? new DefaultHttpContext() : SignedIn(clientId);
-            streams.Add(Browser.ReceiveMessage(request, writer, new CallContext(cancel.Token, http)));
+            streams.Add(Browser.ReceiveMessage(request, writer, new CallContext(http, cancel.Token)));
             await WaitFor(() => State.IPC.HasConnection(clientId) && (!owner || State.OwnerClientId == clientId));
         }
 
@@ -271,7 +271,7 @@ public class SessionControllerTests
         public Task WriteAsync(WebMessageResponse message, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
-    private sealed class CallContext(CancellationToken token = default, HttpContext? http = null) : ServerCallContext
+    private sealed class CallContext(HttpContext? http = null, CancellationToken token = default) : ServerCallContext
     {
         private readonly Dictionary<object, object> userState = http != null ? new() { ["__HttpContext"] = http } : new();
 
