@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using PeakSWC.RemoteWebView.Agent;
 using PeakSWC.RemoteWebView.Services;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -371,7 +372,11 @@ namespace PeakSWC.RemoteWebView.Agents
         {
             HttpContext? http = null;
             try { http = context.GetHttpContext(); }
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException)
+            {
+                // Unit tests call the service without an ASP.NET request.
+                http = null;
+            }
             return policy.CheckAdminAccessAsync(http, GetAdminKey(context), options, context.CancellationToken);
         }
 
@@ -433,11 +438,8 @@ namespace PeakSWC.RemoteWebView.Agents
             string label = text[prefix.Length..^1].Trim();
             if (label.Length == 0 || label.Length > MaxRequesterLabelLength)
                 return name;
-            foreach (char ch in label)
-            {
-                if (!char.IsLetterOrDigit(ch) && ch != ' ' && ch != '-')
-                    return name;
-            }
+            if (label.Any(ch => !char.IsLetterOrDigit(ch) && ch != ' ' && ch != '-'))
+                return name;
             return $"{name} ({label})";
         }
 
