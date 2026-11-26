@@ -20,6 +20,8 @@ public class AgentRegistryTests
 {
     private const string ServerUrl = "https://server.remoteblazorwebview.com:34544";
     private static readonly string[] ExpectedClosedKeys = ["alpha", "beta"];
+    private static readonly string[] CheckingDownloadingSucceeded = ["checking", "downloading", "succeeded"];
+    private static readonly string[] InstallingSucceeded = ["installing", "succeeded"];
 
     // ---------------------------------------------------------------- consent rule
 
@@ -1035,7 +1037,7 @@ public class AgentRegistryTests
         });
 
         var seen = await ReadAll(watch.Subscription.Reader);
-        Assert.Equal(new[] { "checking", "downloading", "succeeded" }, seen.Select(p => p.Stage));
+        Assert.Equal(CheckingDownloadingSucceeded, seen.Select(p => p.Stage));
         Assert.Equal("1.2.0", seen[^1].OldVersion);
         Assert.Equal("1.2.0-ci.1000.1", seen[^1].NewVersion);
     }
@@ -1067,7 +1069,7 @@ public class AgentRegistryTests
             NewVersion = "1.2.0-ci.1000.1",
         });
         var seen = await ReadAll(watch.Subscription!.Reader);
-        Assert.Equal(new[] { "installing", "succeeded" }, seen.Select(p => p.Stage));
+        Assert.Equal(InstallingSucceeded, seen.Select(p => p.Stage));
     }
 
     [Fact]
