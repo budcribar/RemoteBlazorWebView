@@ -147,6 +147,9 @@ namespace PeakSWC.RemoteWebView
             }
         }
 
+        private static void IgnoreDuringDispose(Exception ex) =>
+            System.Diagnostics.Debug.WriteLine($"Ignored while ending the session: {ex.GetType().Name}");
+
         private async ValueTask DisposeAsyncCore(SessionEndReason? reason)
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
@@ -164,19 +167,19 @@ namespace PeakSWC.RemoteWebView
                     else
                         await cts.CancelAsync().ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                 try
                 {
                     BrowserIPC.Semaphore.Dispose();
                 }
-                catch { }
+                catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                 try
                 {
                     FileCollection.Writer.TryComplete();
                 }
-                catch { }
+                catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                 IPC?.Shutdown();
 
@@ -187,7 +190,7 @@ namespace PeakSWC.RemoteWebView
                 {
                     cts.Dispose();
                 }
-                catch { }
+                catch (Exception ex) { IgnoreDuringDispose(ex); }
             }
 
             // Disposal flag already set using Interlocked at the start
@@ -208,19 +211,19 @@ namespace PeakSWC.RemoteWebView
                     {
                         cts.Cancel();
                     }
-                    catch { }
+                    catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                     try
                     {
                         BrowserIPC.Semaphore.Dispose();
                     }
-                    catch { }
+                    catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                     try
                     {
                         FileCollection.Writer.TryComplete();
                     }
-                    catch { }
+                    catch (Exception ex) { IgnoreDuringDispose(ex); }
 
                     IPC?.Shutdown();
 
@@ -237,14 +240,14 @@ namespace PeakSWC.RemoteWebView
                         {
                             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
                         }
-                        catch { }
+                        catch (Exception ex) { IgnoreDuringDispose(ex); }
                     }
 
                     try
                     {
                         cts.Dispose();
                     }
-                    catch { }
+                    catch (Exception ex) { IgnoreDuringDispose(ex); }
                 }
             }
 
