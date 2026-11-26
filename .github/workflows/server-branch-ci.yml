@@ -81,9 +81,9 @@ jobs:
           corepack enable
           corepack prepare yarn@4.3.1 --activate
           pushd src/RemoteWebView.Blazor.JS >/dev/null
-          yarn install --immutable
+          yarn install --immutable # NOSONAR githubactions:S6505 protoc and protoc-gen-grpc-web require postinstall to place binaries
           pushd Web.JS >/dev/null
-          npm install --no-audit --no-fund
+          npm install --ignore-scripts --no-audit --no-fund
           popd >/dev/null
           python3 - <<'PY'
           import os

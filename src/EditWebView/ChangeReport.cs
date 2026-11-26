@@ -288,13 +288,34 @@ namespace EditWebView
             try
             {
                 string text = File.ReadAllText(Path.Combine(repoPath, project));
-                var match = Regex.Match(text, $"Include=\"{Regex.Escape(package)}\"\\s+Version=\"([^\"]+)\"");
+                var match = Regex.Match(text, $"Include=\"{Regex.Escape(package)}\"\\s+Version=\"([^\"]+)\"", RegexOptions.None, TimeSpan.FromSeconds(5));
                 return match.Success ? match.Groups[1].Value : null;
             }
             catch (Exception)
             {
                 return null;
             }
+        }
+
+        private static readonly string GitExecutable = ResolveGitPath();
+
+        private static string ResolveGitPath()
+        {
+            string exeName = OperatingSystem.IsWindows() ? "git.exe" : "git";
+            string? pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(pathEnv))
+            {
+                foreach (string dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        string candidate = Path.Combine(dir.Trim(), exeName);
+                        if (File.Exists(candidate)) return Path.GetFullPath(candidate);
+                    }
+                    catch { /* ignore malformed PATH entries */ }
+                }
+            }
+            return exeName;
         }
 
         /// <summary>The tag in an archive address such as https://github.com/dotnet/maui/archive/refs/tags/10.0.120.zip.</summary>
@@ -307,7 +328,7 @@ namespace EditWebView
         /// <summary>What a git command writes, byte for byte (a file's content from 'git show').</summary>
         public static byte[] GitBytes(string repoPath, string[] arguments)
         {
-            var start = new ProcessStartInfo("git")
+            var start = new ProcessStartInfo(GitExecutable)
             {
                 WorkingDirectory = repoPath,
                 RedirectStandardOutput = true,
@@ -333,7 +354,7 @@ namespace EditWebView
 
         private static string Git(string repoPath, string[] arguments, int[]? okExitCodes = null)
         {
-            var start = new ProcessStartInfo("git")
+            var start = new ProcessStartInfo(GitExecutable)
             {
                 WorkingDirectory = repoPath,
                 RedirectStandardOutput = true,

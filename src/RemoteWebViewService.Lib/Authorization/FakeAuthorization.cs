@@ -78,7 +78,7 @@ namespace PeakSWC.RemoteWebView
             {
                 value = fromQuery.FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(value))
-                    Response.Cookies.Append(FakeAuthorization.Cookie, value, new CookieOptions { Path = "/", HttpOnly = true, SameSite = SameSiteMode.Lax, IsEssential = true });
+                    Response.Cookies.Append(FakeAuthorization.Cookie, value, new CookieOptions { Path = "/", HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, IsEssential = true });
             }
             if (string.IsNullOrWhiteSpace(value)) Request.Cookies.TryGetValue(FakeAuthorization.Cookie, out value);
             if (string.IsNullOrWhiteSpace(value)) return Task.FromResult(AuthenticateResult.NoResult());

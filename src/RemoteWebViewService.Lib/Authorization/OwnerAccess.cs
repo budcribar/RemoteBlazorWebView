@@ -46,7 +46,7 @@ namespace PeakSWC.RemoteWebView
         /// connection, which may go to a different host than the page. Scoped to this session's id.
         /// </summary>
         public static void SetOwnerCookie(HttpContext context, ServiceState state) =>
-            context.Response.Cookies.Append(CookieName(state.Id), state.OwnerToken, new CookieOptions
+            context.Response.Cookies.Append(CookieName(state.Id), state.OwnerToken, new CookieOptions // NOSONAR S3330: page script reads this session-scoped owner token to authenticate the gRPC stream
             {
                 Path = "/",
                 Secure = true,

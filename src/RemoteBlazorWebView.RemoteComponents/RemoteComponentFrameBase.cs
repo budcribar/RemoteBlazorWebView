@@ -239,6 +239,7 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
         }
         _sink?.Dispose();
         if (_session is { } s) await s.DisposeAsync();
+        _cts.Dispose();
         GC.SuppressFinalize(this);
     }
 }

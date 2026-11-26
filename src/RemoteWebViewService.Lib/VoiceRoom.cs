@@ -80,7 +80,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         }
 
         context.Response.Headers.CacheControl = "no-store";
-        context.Response.Cookies.Delete(CookieName(id), new CookieOptions { Path = $"/{id}", Secure = true });
+        context.Response.Cookies.Delete(CookieName(id), new CookieOptions { Path = $"/{id}", Secure = true, HttpOnly = true });
         return _controllerKey;
     }
 
@@ -125,7 +125,7 @@ internal sealed class VoiceRoom(string hostKey, CancellationToken hostLifetime)
         context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.ContentSecurityPolicy =
-            "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'";
+            "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'";
         context.Response.Headers["Permissions-Policy"] = "microphone=(self), camera=()";
         await context.Response.WriteAsync($"""
             <!doctype html><html lang="en"><meta charset="utf-8"><title>Remote voice call</title>
