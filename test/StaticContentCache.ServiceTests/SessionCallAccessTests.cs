@@ -53,7 +53,7 @@ public class SessionCallAccessTests
         using var cancel = new CancellationTokenSource();
 
         var stream = s.Browser.ReceiveMessage(new ReceiveMessageRequest { Id = s.Id, ClientId = "tech", ClientKey = "kt" }, new NullWriter(),
-            new CallContext(cancel.Token, s.SignedIn("tech", Shop)));
+            new CallContext(s.SignedIn("tech", Shop), cancellationToken: cancel.Token));
 
         await WaitFor(() => s.State.IPC.HasConnection("tech"));
         Assert.True(s.State.IPC.HasConnection("tech"));
@@ -68,7 +68,7 @@ public class SessionCallAccessTests
         using var cancel = new CancellationTokenSource();
 
         var stream = s.Browser.ReceiveMessage(new ReceiveMessageRequest { Id = s.Id, ClientId = "owner", ClientKey = "ko", IsOwner = true, OwnerToken = s.State.OwnerToken },
-            new NullWriter(), new CallContext(cancel.Token, Anonymous()));
+            new NullWriter(), new CallContext(Anonymous(), cancellationToken: cancel.Token));
 
         await WaitFor(() => s.State.OwnerClientId == "owner");
         Assert.Equal("owner", s.State.OwnerClientId);
@@ -207,7 +207,7 @@ public class SessionCallAccessTests
 
     // ---- helpers ----
 
-    private static HttpContext Anonymous() => new DefaultHttpContext();
+    private static DefaultHttpContext Anonymous() => new();
 
     private static async Task WaitFor(Func<bool> condition)
     {
@@ -259,7 +259,7 @@ public class SessionCallAccessTests
         }
 
         /// <summary>A signed-in user in the given groups, as the sign-in middleware would leave the request.</summary>
-        public HttpContext SignedIn(string name, params string[] groups)
+        public DefaultHttpContext SignedIn(string name, params string[] groups)
         {
             users.Set(name, groups);
             var identity = new ClaimsIdentity([new Claim(FakeAuthorization.ObjectIdClaim, name), new Claim("name", name)], FakeAuthorization.Scheme);
@@ -293,9 +293,9 @@ public class SessionCallAccessTests
         private readonly CancellationToken token;
         private readonly Dictionary<object, object> userState = new();
 
-        public CallContext(CancellationToken token = default, HttpContext? http = null, string? adminKey = null, string? appKey = null)
+        public CallContext(HttpContext? http = null, string? adminKey = null, string? appKey = null, CancellationToken cancellationToken = default)
         {
-            this.token = token;
+            token = cancellationToken;
             if (http != null)
                 userState["__HttpContext"] = http;
             if (adminKey != null)
