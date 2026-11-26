@@ -46,7 +46,8 @@ public class ClientStreamWriteTests
         using var cancel = new CancellationTokenSource();
         var ipc = new IPC(cancel.Token, NullLogger<RemoteWebViewService>.Instance, enableMirrors: false);
 
-        await ipc.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" });
+        var ex = await Record.ExceptionAsync(() => ipc.WriteToClientAsync(new WebMessageResponse { Response = "browserAttached:" }));
+        Assert.Null(ex);
         cancel.Cancel();
     }
 

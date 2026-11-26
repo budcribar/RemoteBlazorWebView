@@ -84,7 +84,7 @@ namespace PeakSWC.RemoteWebView
         }
 
         public AgentAdminAccessDecision CheckAdminAccess(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options) =>
-            CheckAdminAccessAsync(httpContext, adminKeyHeader, options).GetAwaiter().GetResult();
+            CheckAdminAccessAsync(httpContext, adminKeyHeader, options, httpContext?.RequestAborted ?? CancellationToken.None).GetAwaiter().GetResult();
 
         public async Task<AgentAdminAccessDecision> CheckAdminAccessAsync(HttpContext? httpContext, string? adminKeyHeader, AgentOptions options, CancellationToken cancellationToken = default)
         {

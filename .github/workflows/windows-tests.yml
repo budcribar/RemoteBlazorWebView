@@ -59,7 +59,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 # Pushes to a branch share one group, so a newer push cancels the older run.
 # Every other run (manual dispatch, or Release packages through
@@ -78,6 +77,9 @@ env:
 
 jobs:
   unit:
+    permissions:
+      contents: read
+      actions: write
     name: Unit and headless
     runs-on: windows-latest
     timeout-minutes: 45

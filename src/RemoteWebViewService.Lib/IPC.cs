@@ -287,10 +287,7 @@ namespace PeakSWC.RemoteWebView
             await clientWriteLock.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                if (token.CanBeCanceled)
-                    await stream.WriteAsync(message, token).ConfigureAwait(false);
-                else
-                    await stream.WriteAsync(message).ConfigureAwait(false);
+                await stream.WriteAsync(message, token).ConfigureAwait(false);
             }
             finally
             {
