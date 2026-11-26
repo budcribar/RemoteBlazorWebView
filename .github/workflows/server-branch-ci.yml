@@ -81,7 +81,7 @@ jobs:
           corepack enable
           corepack prepare yarn@4.3.1 --activate
           pushd src/RemoteWebView.Blazor.JS >/dev/null
-          YARN_ENABLE_SCRIPTS=false yarn install --immutable
+          yarn install --immutable # NOSONAR githubactions:S6505 protoc and protoc-gen-grpc-web require postinstall to place binaries
           pushd Web.JS >/dev/null
           npm install --ignore-scripts --no-audit --no-fund
           popd >/dev/null
