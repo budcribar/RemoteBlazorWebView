@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
 # RemoteWebViewService (net10) for Railway TCP proxy: Kestrel does TLS + HTTP/2 on 8443.
+# Native AOT (-p:RelayAot=true): one self-contained binary with the RemoteTicket provider and no Azure AD B2C, on the
+# chiseled runtime-deps image (no shell, no package manager, non-root). About 33 MB compressed instead of about 123 MB.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# The AOT compiler links with clang and needs zlib.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends clang zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 # Only what the server needs (no npm: the browser JS is streamed by the client app, server has no wwwroot)
 COPY global.json Directory.Build.props ./
@@ -8,10 +14,9 @@ COPY icons/ icons/
 COPY README.md ./
 COPY src/Protos/ src/Protos/
 COPY src/RemoteWebViewService.Lib/ src/RemoteWebViewService.Lib/
-COPY src/RemoteWebViewService.AzureB2C/ src/RemoteWebViewService.AzureB2C/
 COPY src/RemoteWebViewService.RemoteTicket/ src/RemoteWebViewService.RemoteTicket/
 COPY src/RemoteWebViewService/ src/RemoteWebViewService/
-RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64
+RUN dotnet restore src/RemoteWebViewService/RemoteWebViewService.csproj -r linux-x64 -p:RelayAot=true
 # The commit is appended to InformationalVersion as 10.0.15+<sha>, shown on the admin About page. Railway passes
 # RAILWAY_GIT_COMMIT_SHA for GitHub-triggered builds; for `railway up` (CLI) deploys it is empty, so fall back to the
 # uploaded .git/HEAD (.dockerignore lets in only HEAD and refs). Railway allows no bind mounts, so copy it: the .gi[t]
@@ -30,17 +35,18 @@ RUN sha="$RAILWAY_GIT_COMMIT_SHA"; \
     fi; \
     echo "Relay commit: ${sha:-unknown}"; \
     dotnet publish src/RemoteWebViewService/RemoteWebViewService.csproj \
-      -c Release -r linux-x64 --self-contained false --no-restore \
+      -c Release -r linux-x64 --self-contained true --no-restore -p:RelayAot=true \
       -p:PackAsTool=false -p:GeneratePackageOnBuild=false \
       -p:SourceRevisionId="$sha" \
       -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# -extra adds ICU and time zone data, which the JIT image had.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled-extra AS runtime
 WORKDIR /app
-COPY --from=build /app ./
+COPY --from=build /app/RemoteWebViewService ./
 ENV ASPNETCORE_ENVIRONMENT=Production \
     REMOTEWEBVIEW_TLS_PORT=8443 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1
 EXPOSE 8443
 USER $APP_UID
-ENTRYPOINT ["dotnet", "RemoteWebViewService.dll"]
+ENTRYPOINT ["./RemoteWebViewService"]
