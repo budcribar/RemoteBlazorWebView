@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Threading.Tasks;
 using PeakSWC.RemoteWebView.Services;
 
 namespace PeakSWC.RemoteWebView
@@ -26,9 +27,20 @@ namespace PeakSWC.RemoteWebView
         /// <summary>Records <paramref name="reason"/> (unless one is recorded already), then cancels. Returns true when this call's reason was recorded.</summary>
         public bool Cancel(SessionEndReason reason)
         {
-            var recorded = Interlocked.CompareExchange(ref _reason, (int)reason, -1) == -1;
+            var recorded = Record(reason);
             Cancel();
             return recorded;
         }
+
+        /// <summary>Same as <see cref="Cancel(SessionEndReason)"/>, awaiting the token's cancellation callbacks.</summary>
+        public async ValueTask<bool> CancelAsync(SessionEndReason reason)
+        {
+            var recorded = Record(reason);
+            await base.CancelAsync().ConfigureAwait(false);
+            return recorded;
+        }
+
+        private bool Record(SessionEndReason reason) =>
+            Interlocked.CompareExchange(ref _reason, (int)reason, -1) == -1;
     }
 }

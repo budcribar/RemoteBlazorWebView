@@ -90,7 +90,6 @@ namespace PeakSWC.RemoteWebView
         {
             await DisposeAsyncCore(reason).ConfigureAwait(false);
             Dispose(disposing: false);
-            GC.SuppressFinalize(this);
         }
 
         private int _disposed = 0; // 0 = not disposed, 1 = disposed
@@ -121,6 +120,33 @@ namespace PeakSWC.RemoteWebView
 
         protected virtual ValueTask DisposeAsyncCore() => DisposeAsyncCore(null);
 
+        private async ValueTask AwaitDisposalTasks()
+        {
+            var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
+            var timeout = TimeSpan.FromSeconds(30);
+            foreach (var task in tasks)
+            {
+                if (task == null)
+                    continue;
+                try
+                {
+                    // None, not the shutdown token: that token is already cancelled and would end the 30s wait immediately.
+                    if (await Task.WhenAny(task, Task.Delay(timeout, CancellationToken.None)).ConfigureAwait(false) == task)
+                        await task.ConfigureAwait(false);
+                    else
+                        Logger.LogError("Task timed out during async disposal.");
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during cancellation.
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "An error occurred while awaiting a task during async disposal.");
+                }
+            }
+        }
+
         private async ValueTask DisposeAsyncCore(SessionEndReason? reason)
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 1)
@@ -133,7 +159,10 @@ namespace PeakSWC.RemoteWebView
                 // Signal cancellation, with the reason recorded first when there is one
                 try
                 {
-                    if (reason is { } why) cts.Cancel(why); else cts.Cancel();
+                    if (reason is { } why)
+                        await cts.CancelAsync(why).ConfigureAwait(false);
+                    else
+                        await cts.CancelAsync().ConfigureAwait(false);
                 }
                 catch { }
 
@@ -151,39 +180,7 @@ namespace PeakSWC.RemoteWebView
 
                 IPC?.Shutdown();
 
-                // Await all relevant tasks
-                var tasks = new List<Task?> { FileReaderTask, PingTask, IPC?.ProcessMessagesTask, IPC?.ClientTask, IPC?.BrowserTask };
-                var timeout = TimeSpan.FromSeconds(30); 
-
-                foreach (var task in tasks)
-                {
-                    if (task != null)
-                    {
-                        try
-                        {
-                            // Apply timeout to prevent indefinite hangs
-                            // None, not the shutdown token: that token is already cancelled and would end the 30s wait immediately.
-                            if (await Task.WhenAny(task, Task.Delay(timeout, CancellationToken.None)).ConfigureAwait(false) == task)
-                            {
-                                // Task completed within the timeout
-                                await task.ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                // Task timed out
-                                Logger.LogError("Task timed out during async disposal.");
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // Expected during cancellation; no action needed
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "An error occurred while awaiting a task during async disposal.");
-                        }
-                    }
-                }
+                await AwaitDisposalTasks().ConfigureAwait(false);
 
                 // Dispose of the CTS after task completion
                 try
