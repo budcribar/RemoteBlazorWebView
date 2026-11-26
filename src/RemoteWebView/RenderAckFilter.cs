@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 
 namespace PeakSWC.RemoteWebView
 {
@@ -26,7 +27,7 @@ namespace PeakSWC.RemoteWebView
         private const string RenderCompleted = Prefix + "[\"OnRenderCompleted\",";
         private const string AttachPage = Prefix + "[\"AttachPage\",";
 
-        private readonly object _gate = new();
+        private readonly Lock _gate = new();
         private long _lastSent;
         private long _lastAcked;
 
