@@ -74,7 +74,11 @@ public sealed class RemoteComponentConnection(TextReader? input, TextWriter? out
                 catch (Exception ex) when (ex is not OperationCanceledException) { HandlerFailed?.Invoke(ex); }
             }
         }
-        catch (Exception ex) when (ex is IOException or ObjectDisposedException) { }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            // The other end already closed the pipe. Reading stops and Closed is raised below.
+            System.Diagnostics.Debug.WriteLine(ex);
+        }
         Closed?.Invoke();
     }
 
@@ -87,8 +91,10 @@ public sealed class RemoteComponentConnection(TextReader? input, TextWriter? out
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        try { output?.Dispose(); } catch { }
-        try { input?.Dispose(); } catch { }
+        try { output?.Dispose(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+        try { input?.Dispose(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
     }
 }
 
