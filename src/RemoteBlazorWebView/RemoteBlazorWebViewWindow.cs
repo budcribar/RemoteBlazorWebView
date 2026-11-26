@@ -122,7 +122,7 @@ namespace PeakSWC.RemoteWebView
             using var timeout = new CancellationTokenSource();
             var delay = Task.Delay(TimeSpan.FromSeconds(60), timeout.Token);
             var done = await Task.WhenAny(webViewReady.Task, delay).ConfigureAwait(false);
-            timeout.Cancel();
+            await timeout.CancelAsync().ConfigureAwait(false);
             if (done != webViewReady.Task)
                 Debug.WriteLine("WebView2 did not report ready within 60s; continuing.");
         }
