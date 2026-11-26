@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,18 +38,13 @@ namespace PeakSWC.RemoteWebView
             if (sessions == null || string.IsNullOrEmpty(group))
                 return 0;
 
-            var count = 0;
-            foreach (var pending in sessions.Values)
+            return sessions.Values.Count(pending =>
             {
                 if (!pending.Task.IsCompletedSuccessfully)
-                    continue;
+                    return false;
                 var state = pending.Task.Result;
-                if (!string.Equals(state.Group, group, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                if (IsLive(state))
-                    count++;
-            }
-            return count;
+                return string.Equals(state.Group, group, StringComparison.OrdinalIgnoreCase) && IsLive(state);
+            });
         }
 
         private static bool IsLive(ServiceState state)
