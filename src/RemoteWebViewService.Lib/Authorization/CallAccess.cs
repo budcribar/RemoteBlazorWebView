@@ -92,11 +92,8 @@ namespace PeakSWC.RemoteWebView
             var filtered = new Dictionary<string, string>(StringComparer.Ordinal);
             if (cookies is null)
                 return filtered;
-            foreach (var c in cookies)
-            {
-                if (!IsSensitive(c.Key))
-                    filtered[c.Key] = c.Value;
-            }
+            foreach (var c in cookies.Where(c => !IsSensitive(c.Key)))
+                filtered[c.Key] = c.Value;
             return filtered;
         }
     }
