@@ -729,13 +729,13 @@ public class ControlTransferTests
             Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, ClientKey = key ?? KeyOf(clientId), Sequence = sequence, IsPrimary = true, Message = $"m{sequence}-{clientId}" },
                 new CallContext(CancellationToken.None));
 
-        public Task Restart(string requester, string? key = null) =>
+        public Task<Google.Protobuf.WellKnownTypes.Empty> Restart(string requester, string? key = null) =>
             Ipc.Restart(new RestartRequest { Id = Id, ClientId = requester, ClientKey = key ?? KeyOf(requester) }, new CallContext(CancellationToken.None));
 
         /// <summary>The relay still has this session (false once it has been shut down or dropped).</summary>
         public bool IsRegistered => services.ContainsKey(Id);
 
-        public Task SetPrimary(string requester, string target, string? key = null) =>
+        public Task<Google.Protobuf.WellKnownTypes.Empty> SetPrimary(string requester, string target, string? key = null) =>
             Ipc.SetPrimary(new SetPrimaryRequest { Id = Id, ClientId = requester, ClientKey = key ?? KeyOf(requester), Target = target }, new CallContext(CancellationToken.None));
 
         public async ValueTask DisposeAsync()
