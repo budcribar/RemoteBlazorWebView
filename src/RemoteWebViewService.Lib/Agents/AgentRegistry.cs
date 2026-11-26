@@ -193,6 +193,19 @@ namespace PeakSWC.RemoteWebView.Agents
             }
         }
 
+        /// <summary>
+        /// An offline computer keeps its shop, unless the authority just issued it a new token for the new shop
+        /// (the old shop reset it). A computer that is online in another shop is always refused.
+        /// </summary>
+        private static void ThrowIfAnotherShop(AgentEntry? entry, string group, string? issuedAgentToken)
+        {
+            if (entry != null
+                && !string.IsNullOrEmpty(entry.Group)
+                && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase)
+                && (entry.Online || string.IsNullOrWhiteSpace(issuedAgentToken)))
+                throw new InvalidOperationException("That computer is already enrolled to another shop.");
+        }
+
         public AgentConnection Register(AgentHello hello, string ipAddress, IServerStreamWriter<HubCommand>? writer, string group = "", string? issuedAgentToken = null)
         {
             ArgumentNullException.ThrowIfNull(hello);
@@ -205,13 +218,7 @@ namespace PeakSWC.RemoteWebView.Agents
             lock (gate)
             {
                 bool isNew = !agents.TryGetValue(hello.MachineId, out var entry);
-                // An offline computer keeps its shop, unless the authority just issued it a new token for the new shop
-                // (the old shop reset it). A computer that is online in another shop is always refused.
-                if (entry != null
-                    && !string.IsNullOrEmpty(entry.Group)
-                    && !string.Equals(entry.Group, group, StringComparison.OrdinalIgnoreCase)
-                    && (entry.Online || string.IsNullOrWhiteSpace(issuedAgentToken)))
-                    throw new InvalidOperationException("That computer is already enrolled to another shop.");
+                ThrowIfAnotherShop(entry, group, issuedAgentToken);
 
                 // A newly issued token means the authority has already decided this connect (first enrollment, a replacement
                 // token, or a reset), so the token remembered here is out of date and must not refuse it.
@@ -760,6 +767,19 @@ namespace PeakSWC.RemoteWebView.Agents
         /// </summary>
         public EndSessionResult PeekEndSession(string machineId, string? groupScope = null) => FindEnd(machineId, groupScope, send: false);
 
+        private LaunchEntry? NewestLiveLaunch(string machineId)
+        {
+            LaunchEntry? live = null;
+            foreach (var launch in launches.Values)
+            {
+                if (!string.Equals(launch.MachineId, machineId, StringComparison.OrdinalIgnoreCase) || IsFinal(launch.Latest.Stage))
+                    continue;
+                if (live == null || launch.Updated > live.Updated)
+                    live = launch;
+            }
+            return live;
+        }
+
         private EndSessionResult FindEnd(string machineId, string? groupScope, bool send)
         {
             lock (gate)
@@ -770,14 +790,7 @@ namespace PeakSWC.RemoteWebView.Agents
                 if (entry == null || (groupScope != null && !string.Equals(entry.Group, groupScope, StringComparison.OrdinalIgnoreCase)))
                     return new EndSessionResult(EndSessionOutcome.EndSessionNotFound);
 
-                LaunchEntry? live = null;
-                foreach (var launch in launches.Values)
-                {
-                    if (!string.Equals(launch.MachineId, entry.MachineId, StringComparison.OrdinalIgnoreCase) || IsFinal(launch.Latest.Stage))
-                        continue;
-                    if (live == null || launch.Updated > live.Updated)
-                        live = launch;
-                }
+                var live = NewestLiveLaunch(entry.MachineId);
 
                 if (live == null)
                     return new EndSessionResult(
