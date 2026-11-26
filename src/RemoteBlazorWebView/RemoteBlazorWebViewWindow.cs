@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
@@ -118,7 +119,10 @@ namespace PeakSWC.RemoteWebView
         /// </summary>
         public async Task WaitForInitializationComplete()
         {
-            var done = await Task.WhenAny(webViewReady.Task, Task.Delay(TimeSpan.FromSeconds(60))).ConfigureAwait(false);
+            using var timeout = new CancellationTokenSource();
+            var delay = Task.Delay(TimeSpan.FromSeconds(60), timeout.Token);
+            var done = await Task.WhenAny(webViewReady.Task, delay).ConfigureAwait(false);
+            timeout.Cancel();
             if (done != webViewReady.Task)
                 Debug.WriteLine("WebView2 did not report ready within 60s; continuing.");
         }
