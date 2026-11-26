@@ -99,6 +99,27 @@ public class AgentMetricsTests
     }
 
     [Fact]
+    public void CancelUpdate_GoesToTheOnlineAgentInScope_AndACancelledUpdateIsTerminal()
+    {
+        var registry = new AgentRegistry();
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null, group: "shop-a");
+
+        Assert.False(registry.CancelUpdateRpcd("m-1", "req-1", "shop-b", out var error));
+        Assert.Equal(AgentRegistry.UnknownAgentError, error);
+        Assert.True(registry.CancelUpdateRpcd("m-1", " req-1 ", "shop-a", out _));
+        Assert.True(connection.Commands.TryRead(out var cancel));
+        Assert.Equal("req-1", cancel.CancelUpdateRpcd.RequestId);
+
+        Assert.True(AgentRegistry.IsUpdateTerminal(new UpdateRpcdProgress { RequestId = "req-1", Stage = "cancelled" }));
+        Assert.False(AgentRegistry.IsUpdateTerminal(new UpdateRpcdProgress { RequestId = "req-1", Stage = "waiting" }));
+
+        registry.Disconnect(connection);
+        Assert.False(registry.CancelUpdateRpcd("m-1", "req-1", null, out error));
+        Assert.Equal(AgentRegistry.OfflineError, error);
+        Assert.False(connection.Commands.TryRead(out _));
+    }
+
+    [Fact]
     public void TheSavedRevision_IsListed_FromHelloAndHeartbeat()
     {
         var registry = new AgentRegistry();

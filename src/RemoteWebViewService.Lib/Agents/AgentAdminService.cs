@@ -293,6 +293,16 @@ namespace PeakSWC.RemoteWebView.Agents
             return progress;
         }
 
+        public override async Task<CancelUpdateRpcdResponse> CancelUpdateRpcd(UpdateRpcdWatchRequest request, ServerCallContext context)
+        {
+            var access = await RequireAccessAsync(context).ConfigureAwait(false);
+            RequireMutation(access, context);
+            bool sent = registry.CancelUpdateRpcd(request.MachineId, request.RequestId, access.GroupScope, out var error);
+            if (sent)
+                AgentEvents.Info(logger, Category, $"RPCD update cancel sent to {request.MachineId} (request '{request.RequestId}')");
+            return new CancelUpdateRpcdResponse { Sent = sent, Error = sent ? string.Empty : error };
+        }
+
         public override async Task WatchUpdateRpcd(UpdateRpcdWatchRequest request, IServerStreamWriter<UpdateRpcdProgress> responseStream, ServerCallContext context)
         {
             var access = await RequireAccessAsync(context).ConfigureAwait(false);

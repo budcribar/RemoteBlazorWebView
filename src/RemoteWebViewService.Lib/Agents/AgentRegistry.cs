@@ -158,7 +158,7 @@ namespace PeakSWC.RemoteWebView.Agents
             if (progress == null || string.IsNullOrEmpty(progress.Stage))
                 return false;
             return progress.Terminal
-                || progress.Stage is "refused" or "already_up_to_date" or "succeeded" or "failed";
+                || progress.Stage is "refused" or "already_up_to_date" or "succeeded" or "failed" or "cancelled";
         }
 
         /// <summary>
