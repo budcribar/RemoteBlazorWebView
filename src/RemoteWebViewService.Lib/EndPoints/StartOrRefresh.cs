@@ -23,17 +23,45 @@ namespace PeakSWC.RemoteWebView.EndPoints
                     return;
 
                 var (guid, serviceDictionary) = client.Value;
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(guid.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+                using var pending = PendingSessions.Join(serviceDictionary, guid.ToString());
+                var serviceStateTaskSource = pending.Source;
 
+                ServiceState? serviceState = null;
                 try
                 {
                     // Wait for the task to be completed or time out using the extension method
-                    var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                    serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+
+                    // Re-verify session access after waiting on a pre-opened /{id} URL.
+                    var authorization = context.RequestServices.GetService<IRelayAuthorization>();
+                    if (authorization?.Enabled == true)
+                    {
+                        var users = context.RequestServices.GetService<IUserService>();
+                        if (!await SessionMembership.AllowsHttpAsync(context, serviceState, authorization, users).ConfigureAwait(false))
+                        {
+                            LogPageRequest(context, guid.ToString(), serviceState, "refused (not a member of this session's group)");
+                            context.Response.StatusCode = context.User.Identity?.IsAuthenticated == true
+                                ? StatusCodes.Status403Forbidden
+                                : StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
                     var ready = await serviceState.FileManagerReady.Task.WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
-                    // Handle the case where refresh is not enabled
-                    if (!serviceState.Refresh)
+                    // In a shared session only the owner's surface loads the app's page; any other browser is sent to the mirror,
+                    // so a remote tab coming back after the PC restarted can never be taken for a refresh and restart the app.
+                    if (SendsToMirror(serviceState, context))
                     {
+                        LogPageRequest(context, guid.ToString(), serviceState, "sent to /mirror (no owner cookie)");
+                        RedirectToMirror(context, guid.ToString());
+                        return;
+                    }
+
+                    // The first load serves the page; a later one is a refresh (the app restarts), except the owner's first.
+                    if (ServesPage(serviceState, context))
+                    {
+                        LogPageRequest(context, guid.ToString(), serviceState, serviceState.Refresh ? "served the page (the owner's first load)" : "served the page (first load)");
                         // Retrieve and stream the home HTML file
                         var rfr = context.RequestServices.GetRequiredService<RemoteFileResolver>();
                         var fileInfo = await rfr.GetFileMetaDataAsync(guid.ToString(), serviceState.HtmlHostPath).ConfigureAwait(false);
@@ -55,12 +83,15 @@ namespace PeakSWC.RemoteWebView.EndPoints
                         using Stream stream = fileStream.Stream;
                         await stream.CopyToAsync(context.Response.Body).ConfigureAwait(false);
                         serviceState.Refresh = true;
+                        if (OwnerAccess.HasOwnerCookie(context, serviceState))
+                            serviceState.OwnerPageServed = true;
                         if (voiceKey is not null)
                             await context.Response.WriteAsync(VoiceRoom.ControllerScript(guid, voiceKey)).ConfigureAwait(false);
                     }
                     else
                     {
                         // Handle the refresh logic
+                        LogPageRequest(context, guid.ToString(), serviceState, "refresh: the app is asked to restart");
                         await serviceState.IPC.ReceiveMessage(new WebMessageResponse { Response = "refreshed:" }).ConfigureAwait(false);
 
                         // Wait for the client to shut down, with a timeout of 30 seconds
@@ -81,12 +112,13 @@ namespace PeakSWC.RemoteWebView.EndPoints
                             await context.Response.WriteAsync(RestartFailedPage.Html(serviceState.ProcessName, serviceState.Pid, serviceState.HostName)).ConfigureAwait(false);
 
                             // Shutdown since the client did not respond to the restart request
-                            await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid.ToString()).ConfigureAwait(false);
+                            await context.RequestServices.GetRequiredService<ShutdownService>().Shutdown(guid.ToString(), SessionEndReason.RefreshRestartTimedOut).ConfigureAwait(false);
                         }
                     }
                 }
                 catch (Exception)
                 {
+                    LogPageRequest(context, guid.ToString(), serviceState, serviceState == null ? "no app registered this id in time" : "failed");
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     context.Response.ContentType = "text/html";
                     await context.Response.WriteAsync(RestartFailedPage.Html(guid.ToString(), true)).ConfigureAwait(false);
@@ -95,6 +127,16 @@ namespace PeakSWC.RemoteWebView.EndPoints
                
             };
         }
+
+        /// <summary>
+        /// Whether a load of /{id} is given the app's page (true) or counts as a refresh, which restarts the app (false).
+        /// The first load is given the page. So is the first load by the owner's own surface (it carries the owner cookie
+        /// that /app/{id}?role=owner&amp;key=... set), whoever came before it: after the PC restarts, a browser tab left on
+        /// the session can reach the new copy of the app before the app's own window does, and the window's load must not
+        /// then restart the app it belongs to. The owner's later loads are refreshes like anyone else's.
+        /// </summary>
+        internal static bool ServesPage(ServiceState serviceState, HttpContext context) =>
+            !serviceState.Refresh || (!serviceState.OwnerPageServed && OwnerAccess.HasOwnerCookie(context, serviceState));
 
         // The object captured before the loop is the registration that was live when
         // this wait started. A missing key or a different object means that registration

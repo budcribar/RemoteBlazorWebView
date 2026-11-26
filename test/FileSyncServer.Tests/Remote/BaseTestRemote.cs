@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 namespace FileSyncServer.Tests.Remote
 {
     [Collection("RemoteBlazorWpf Collection")]
+    [Trait("Category", "Slow")]
     public abstract class BaseTestRemote<T>(ITestOutputHelper output) : IAsyncLifetime where T : BaseTestRemoteFixture, new()
     {
         protected readonly T _fixture = new T();

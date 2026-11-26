@@ -1,10 +1,12 @@
 
+using Grpc.AspNetCore.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,6 +107,9 @@ namespace PeakSWC.RemoteWebView
                     lb.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
                     // Agent registrations, launches and declines are logged at Information so they reach the console (Railway logs)
                     lb.AddFilter("PeakSWC.RemoteWebView.Agents", Microsoft.Extensions.Logging.LogLevel.Information);
+                    // Session registrations, page requests and what the relay did with them (served, refresh, sent to the mirror),
+                    // control transfers and restart requests: what's needed to tell which browser restarted an app.
+                    lb.AddFilter("PeakSWC.RemoteWebView.RemoteWebViewService", Microsoft.Extensions.Logging.LogLevel.Information);
                     // EventLog is Windows-only; on Linux (containers) log to console instead
                     if (!System.OperatingSystem.IsWindows()) { lb.AddConsole(); lb.AddProvider(InMemoryEventLog.Provider); return; }
                     // Configure EventLog provider
@@ -174,6 +179,9 @@ namespace PeakSWC.RemoteWebView
                 authorization = RelayAuthorization.Resolve(configuration);
                 services.AddSingleton(authorization);
             }
+            // Shop Identity replaces these. Every other provider, including the native relay, allows every group and every agent.
+            services.TryAddSingleton<IShopSessionPolicy, AllowAllShopSessionPolicy>();
+            services.TryAddSingleton<IAgentTenantPolicy, AllowAllAgentTenantPolicy>();
             authorization.ConfigureServices(services, configuration);
             if (authorization.Enabled)
             {
@@ -217,30 +225,52 @@ namespace PeakSWC.RemoteWebView
 
             services.AddGrpc(options =>
             {
-                options.EnableDetailedErrors = true;
                 options.ResponseCompressionLevel = CompressionLevel.Optimal;
                 options.ResponseCompressionAlgorithm = "gzip";
 #if STATS
                 options.Interceptors.Add<StatsInterceptor>();
 #endif
             });
+            // Exception text goes back to gRPC callers only in Development. Elsewhere callers get the status code
+            // and any message the service set on purpose (RpcException); details stay in the relay's own log.
+            services.AddOptions<GrpcServiceOptions>()
+                .Configure<IHostEnvironment>((options, env) => options.EnableDetailedErrors = env.IsDevelopment());
+            if (!Embedded)
+                services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365));
             services.AddTransient<RemoteFileResolver>();
 
+            var allowedOrigins = ReadAllowedOrigins(configuration);
             services.AddCors(o =>
             {
                 o.AddPolicy("CorsPolicy", builder =>
                 {
-                    builder.AllowAnyOrigin();
+                    if (allowedOrigins.Length > 0)
+                        builder.WithOrigins(allowedOrigins);
+                    else
+                        builder.AllowAnyOrigin();
                     builder.AllowAnyHeader();
                     builder.AllowAnyMethod();
-
-                    // TODO tighten this up
-                    //builder.WithOrigins("localhost:443", "localhost", "YourCustomDomain");
-                    // builder.WithMethods("POST, OPTIONS");
-                    //builder.AllowAnyHeader();
-                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message","Grpc-Encoding", "Grpc-Accept-Encoding", "X-Grpc-Web", "User-Agent");
+                    builder.WithExposedHeaders("Grpc-Status", "Grpc-Message", "Grpc-Encoding", "Grpc-Accept-Encoding", "X-Grpc-Web", "User-Agent");
                 });
             });
+        }
+
+        private static string[] ReadAllowedOrigins(IConfiguration configuration)
+        {
+            var origins = new List<string>();
+            var raw = configuration["Cors:AllowedOrigins"];
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    origins.Add(part);
+            }
+            var section = configuration.GetSection("Cors:AllowedOrigins");
+            foreach (var child in section.GetChildren())
+            {
+                if (!string.IsNullOrWhiteSpace(child.Value))
+                    origins.Add(child.Value.Trim());
+            }
+            return origins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -251,12 +281,11 @@ namespace PeakSWC.RemoteWebView
                 app.UseDeveloperExceptionPage();
                 app.UseWebAssemblyDebugging();
             }
-            else
+            else if (!Embedded)
             {
-                // TODO
-                //app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                //app.UseHsts();
+                // Tells browsers to stay on HTTPS for this host. Only sent on HTTPS responses and never for
+                // localhost, and off for the embedded loopback server, which may run plain HTTP.
+                app.UseHsts();
             }
 #if RATELIMIT
            
@@ -311,12 +340,15 @@ namespace PeakSWC.RemoteWebView
             {
                 if (adminServices)
                 {
-                    endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
+                    if (env.IsDevelopment() || GetBool(configuration, "FileWatcher:Enabled", false))
+                        endpoints.MapGrpcService<FileWatcherService>().AllowAnonymous();
                     endpoints.MapGrpcService<ClientIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
                 }
                 endpoints.MapGrpcService<RemoteWebViewService>().AllowAnonymous();
                 endpoints.MapGrpcService<BrowserIPCService>().EnableGrpcWeb().AllowAnonymous().RequireCors("CorsPolicy");
-                if (!Embedded)
+                // Same gate as ClientIPCService: embedded hosts with MaxClients > 1 can exercise AgentHub and AgentAdmin.
+                // The offline sweeper stays out of embedded hosts so unit tests do not run a background timer.
+                if (adminServices)
                 {
                     // Agents authenticate with their enrollment key (AGENT_ENROLLMENT_KEYS), checked in AgentHubService.Connect.
                     endpoints.MapGrpcService<AgentHubService>().AllowAnonymous();
@@ -336,13 +368,19 @@ namespace PeakSWC.RemoteWebView
 
                 // Refresh from nested page i.e.https://localhost/9bfd9d43-0289-4a80-92d8-6e617729da12/counter
                 endpoints.MapGet("/{id:guid}/{unused:alpha}", Endpoints.StartOrRefresh()).RequireSessionAccess(authorization);
-                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).RequireSessionAccess(authorization);
+                // Open without sign-in: it says only whether an app has registered this id, and the agent that started the app
+                // asks it (with no user to sign in) to learn when the app is up. Behind sign-in the agent got the sign-in page,
+                // could not tell, and fell back to waiting a fixed 20 seconds on every launch.
+                endpoints.MapGet("/status/{id:guid}", Endpoints.Status()).AllowAnonymous();
                 endpoints.MapGet("/grpcbaseuri", Endpoints.GrpcBaseUri()).RequireSessionAccess(authorization);           
                 endpoints.MapGet("/wait/{id:guid}", Endpoints.Wait()).RequireSessionAccess(authorization);
 #if STATS
                 endpoints.MapGet("/stats", Endpoints.Stats()).RequireSessionAccess(authorization);
                 endpoints.MapGet("/stats/reset", Endpoints.ResetStats()).RequireSessionAccess(authorization);
 #endif
+                if (authorization is IRelayEndpointExtension extension)
+                    extension.MapEndpoints(endpoints);
+
                 endpoints.MapGet("/health", Endpoints.Health());
                 endpoints.MapGet("/", Endpoints.Contact());
                 endpoints.MapFallbackToFile("index.html");

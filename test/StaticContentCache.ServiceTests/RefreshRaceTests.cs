@@ -73,6 +73,30 @@ public class RefreshRaceTests
         Assert.True(started.Elapsed >= timeout);
     }
 
+    // /status says "connected" only once an app has registered the id. The page endpoints add an unfinished entry for an id
+    // a browser asks for before its app is up; the agent polls /status to learn when the app it started is ready, and that
+    // entry must not tell it so.
+    [Fact]
+    public void Status_counts_only_a_finished_registration()
+    {
+        var services = new ConcurrentDictionary<string, TaskCompletionSource<ServiceState>>();
+        var registered = Guid.NewGuid().ToString();
+        var waitedFor = Guid.NewGuid().ToString();
+        var failed = Guid.NewGuid().ToString();
+        var done = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        done.SetResult(new ServiceState(NullLogger<RemoteWebViewService>.Instance, false) { Id = registered });
+        services[registered] = done;
+        services[waitedFor] = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancelled = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        cancelled.SetCanceled();
+        services[failed] = cancelled;
+
+        Assert.True(Endpoints.IsRegistered(services, registered));
+        Assert.False(Endpoints.IsRegistered(services, waitedFor));
+        Assert.False(Endpoints.IsRegistered(services, failed));
+        Assert.False(Endpoints.IsRegistered(services, Guid.NewGuid().ToString()));
+    }
+
     private static BrowserIPCService NewBrowserIpc(ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> services)
     {
         var channels = new ConcurrentDictionary<string, Channel<string>>();

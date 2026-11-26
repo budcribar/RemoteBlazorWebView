@@ -14,6 +14,8 @@ export interface ConnectionLostOptions {
     reload: () => void;
     /** True when the address answers, which a /mirror address does only while its session is running. */
     probe?: (address: string) => Promise<boolean>;
+    /** Called once when the page stops waiting: the session did not come back in time, or the page cannot return. */
+    ended?: () => void;
     firstTryMs?: number;
     retryMs?: number;
     giveUpMs?: number;
@@ -67,6 +69,7 @@ export function connectionLost(options: ConnectionLostOptions) {
 
     if (!options.canReturn) {
         notice(TEXT_LOST);
+        options.ended?.();
         return;
     }
 
@@ -78,7 +81,7 @@ export function connectionLost(options: ConnectionLostOptions) {
 
     const attempt = async () => {
         if (await probe(options.address)) { options.reload(); return; }
-        if (Date.now() - started > giveUpMs) { notice(TEXT_ENDED); return; }
+        if (Date.now() - started > giveUpMs) { notice(TEXT_ENDED); options.ended?.(); return; }
         setTimeout(attempt, retryMs);
     };
     setTimeout(attempt, options.firstTryMs ?? 2000);

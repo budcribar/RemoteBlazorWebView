@@ -109,10 +109,6 @@ export function initSessionControls() {
         render();
     });
 
-    const bindVoice = () => window.RemoteVoice?.subscribe(s => { voice = s; render(); });
-    if (window.RemoteVoice) bindVoice();
-    else window.addEventListener('remotevoiceready', bindVoice, { once: true });
-
     // The placeholder is rendered by Blazor, possibly after this runs, and may be re-created (or its template or its
     // options changed) by a re-render. The bar is not inside the placeholder, so drawing it never counts as a change to it.
     new MutationObserver(records => {
@@ -127,6 +123,20 @@ export function initSessionControls() {
     render();
 }
 
+// The bar listens to the voice client only once the app's layout has the placeholder. Without one this page has no
+// bar, and the voice client (which hides its own panel on these pages) can then tell that nothing shows its controls
+// and say so in the console (VoiceClient.js).
+let voiceBound = false;
+function bindVoice() {
+    if (voiceBound || !slot) return;
+    if (!window.RemoteVoice) {
+        window.addEventListener('remotevoiceready', bindVoice, { once: true });
+        return;
+    }
+    voiceBound = true;
+    window.RemoteVoice.subscribe(s => { voice = s; render(); });
+}
+
 // Returns true when the placeholder changed (appeared, was replaced, or went away).
 function findSlot(): boolean {
     const found = document.getElementById(SLOT_ID);
@@ -134,6 +144,7 @@ function findSlot(): boolean {
     if (slot) { slot.style.width = ''; slot.style.height = ''; } // the old one no longer reserves the bar's space
     slot = found;
     if (slot && typeof ResizeObserver !== 'undefined') new ResizeObserver(schedulePlace).observe(slot);
+    bindVoice();
     return true;
 }
 

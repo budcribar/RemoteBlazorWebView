@@ -11,19 +11,29 @@ namespace PeakSWC.RemoteWebView.Agents
 {
     /// <summary>AgentHub: the long-lived stream each agent keeps open (native gRPC, anonymous; enrollment key checked here).</summary>
     [System.Diagnostics.CodeAnalysis.Experimental(ExperimentalApi.AgentRegistry, UrlFormat = ExperimentalApi.UrlFormat)]
-    public class AgentHubService(ILogger<AgentHubService> logger, AgentRegistry registry, AgentOptions options) : AgentHub.AgentHubBase
+    public class AgentHubService(ILogger<AgentHubService> logger, AgentRegistry registry, AgentOptions options, PeakSWC.RemoteWebView.IAgentTenantPolicy? tenantPolicy = null) : AgentHub.AgentHubBase
     {
         private const string Category = "PeakSWC.RemoteWebView.Agents.AgentHubService";
+        private readonly PeakSWC.RemoteWebView.IAgentTenantPolicy policy = tenantPolicy ?? new PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy();
         private static int warnedAnyKey;
+        private static int warnedNoKeys;
 
         public override async Task Connect(IAsyncStreamReader<AgentMessage> requestStream, IServerStreamWriter<HubCommand> responseStream, ServerCallContext context)
         {
             var callToken = context.CancellationToken;
             var hello = await ReadHelloAsync(requestStream, callToken).ConfigureAwait(false);
             string ip = GetRemoteIp(context);
-            EnsureEnrollmentAccepted(hello, ip);
+            var decision = await AcceptEnrollmentAsync(hello, ip, callToken).ConfigureAwait(false);
 
-            var connection = registry.Register(hello, ip, responseStream);
+            AgentConnection connection;
+            try
+            {
+                connection = registry.Register(hello, ip, responseStream, decision.Group, decision.IssuedAgentToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+            }
             AgentEvents.Info(logger, Category, DescribeRegistration(connection, hello, ip));
 
             using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(callToken, connection.Replaced);
@@ -75,20 +85,21 @@ namespace PeakSWC.RemoteWebView.Agents
             return hello;
         }
 
-        private void EnsureEnrollmentAccepted(AgentHello hello, string ip)
+        private async Task<PeakSWC.RemoteWebView.AgentEnrollmentDecision> AcceptEnrollmentAsync(AgentHello hello, string ip, CancellationToken cancellationToken)
         {
-            if (options.AcceptsAnyKey)
+            var decision = await policy.CheckEnrollmentAsync(hello.EnrollmentKey, hello.MachineId, hello.AgentToken, options, cancellationToken).ConfigureAwait(false);
+            bool keysDecide = policy is PeakSWC.RemoteWebView.AllowAllAgentTenantPolicy;
+            if (!decision.Accepted)
             {
-                if (Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
-                    AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: any agent enrollment key is accepted");
-                return;
+                if (keysDecide && options.RefusesEveryKey && Interlocked.Exchange(ref warnedNoKeys, 1) == 0)
+                    AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: every agent is refused. Set it to the keys your agents were installed with.");
+                AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted ({decision.DenialReason ?? "no reason given"})");
+                throw new RpcException(new Status(StatusCode.PermissionDenied, decision.DenialReason ?? "The enrollment key was not accepted"));
             }
 
-            if (options.IsKeyAccepted(hello.EnrollmentKey))
-                return;
-
-            AgentEvents.Warn(logger, $"Agent {hello.MachineName} ({hello.MachineId}) from {ip} was refused: enrollment key not accepted");
-            throw new RpcException(new Status(StatusCode.PermissionDenied, "The enrollment key was not accepted"));
+            if (keysDecide && options.AcceptsAnyKey && Interlocked.Exchange(ref warnedAnyKey, 1) == 0)
+                AgentEvents.Warn(logger, $"{AgentOptions.EnrollmentKeysVariable} is not set: any agent enrollment key is accepted");
+            return decision;
         }
 
         private static string DescribeRegistration(AgentConnection connection, AgentHello hello, string ip)
@@ -115,6 +126,19 @@ namespace PeakSWC.RemoteWebView.Agents
                     var stored = registry.OnProgress(connection, message.Progress);
                     if (stored != null)
                         LogProgress(hello, stored);
+                    break;
+                case AgentMessage.BodyOneofCase.UpdateRpcd:
+                    var update = registry.OnUpdateProgress(connection, message.UpdateRpcd);
+                    if (update != null)
+                        LogUpdate(hello, update);
+                    break;
+                case AgentMessage.BodyOneofCase.Metrics:
+                    int delivered = registry.OnMetrics(connection, message.Metrics);
+                    logger.LogDebug("Agent {MachineId} uploaded {Count} metrics run(s) to {Watchers} watcher(s)", hello.MachineId, message.Metrics.Runs.Count, delivered);
+                    break;
+                case AgentMessage.BodyOneofCase.Alerts:
+                    int alertWatchers = registry.OnAlerts(connection, message.Alerts);
+                    logger.LogDebug("Agent {MachineId} uploaded {Count} alert(s) to {Watchers} watcher(s)", hello.MachineId, message.Alerts.Alerts.Count, alertWatchers);
                     break;
                 case AgentMessage.BodyOneofCase.Hello:
                     logger.LogWarning("Agent {MachineId} sent a second AgentHello; ignored", hello.MachineId);
@@ -151,6 +175,12 @@ namespace PeakSWC.RemoteWebView.Agents
                 case LaunchStage.StageDeclined:
                     AgentEvents.Info(logger, Category, $"Diagnostics declined on {where}: {progress.Detail}");
                     break;
+                case LaunchStage.StageConsentTimedOut:
+                    AgentEvents.Info(logger, Category, $"Diagnostics consent went unanswered on {where}: {progress.Detail}");
+                    break;
+                case LaunchStage.StageConditionsNotMet:
+                    AgentEvents.Info(logger, Category, $"Scheduled diagnostics not started on {where}: {progress.Detail}");
+                    break;
                 case LaunchStage.StageFailed:
                     AgentEvents.Warn(logger, $"Diagnostics failed to start on {where}: {progress.Detail}");
                     break;
@@ -161,6 +191,29 @@ namespace PeakSWC.RemoteWebView.Agents
                     logger.LogDebug("Launch progress {Stage} on {Where}: {Detail}", progress.Stage, where, progress.Detail);
                     break;
             }
+        }
+
+        private void LogUpdate(AgentHello hello, UpdateRpcdProgress progress)
+        {
+            string where = $"{hello.MachineName} ({hello.MachineId}), request {progress.RequestId}";
+            if (!AgentRegistry.IsUpdateTerminal(progress))
+            {
+                logger.LogDebug("RPCD update {Stage} on {Where}: {Detail}", progress.Stage, where, progress.Detail);
+                return;
+            }
+
+            string message = $"RPCD update {progress.Stage} on {where}: {FirstSentence(progress.Error, progress.Detail)}";
+            if (progress.Stage is "failed" or "refused")
+                AgentEvents.Warn(logger, message);
+            else
+                AgentEvents.Info(logger, Category, message);
+        }
+
+        private static string FirstSentence(string? error, string? detail)
+        {
+            if (!string.IsNullOrWhiteSpace(error))
+                return error;
+            return detail ?? string.Empty;
         }
 
         public static string GetRemoteIp(ServerCallContext context)

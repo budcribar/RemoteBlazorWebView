@@ -12,6 +12,7 @@ namespace PeakSWC.RemoteWebView
     /// <item><see cref="NoAuthorization"/> (the default): nobody signs in.</item>
     /// <item><see cref="FakeAuthorization"/>: for tests; the request itself says who the user is.</item>
     /// <item>AzureB2C (PeakSWC.RemoteWebViewService.AzureB2C, not part of the native relay): Azure AD B2C sign-in.</item>
+    /// <item>RemoteTicket (PeakSWC.RemoteWebViewService.RemoteTicket, not part of the native relay): signed tickets from a separate account host.</item>
     /// </list>
     /// Chosen by the "Authorization:Provider" setting (None, Fake, AzureB2C), or handed to an embedded relay in
     /// <see cref="RemoteWebViewServerOptions.Authorization"/>. What a signed-in user may then open is the same for every

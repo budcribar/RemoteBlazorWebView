@@ -1,11 +1,30 @@
 # Release notes
 
+## 11.0.1.1
+
+Synced with `net10` through PR #121 (`10.0.15.2`, `10.0.15.3`, and subsequent relay/agent updates). Upgrade the relay (RemoteWebViewService) and the packages together.
+
+### Packages
+
+- **AnyCPU IL for Windows ARM64.** All seven packages and both Roslyn source generators now emit AnyCPU IL instead of x64-only IL so apps targeting `win-arm64` build and run natively.
+- **A page's requests carry a secret key.** Each page picks a key and sends it with its requests; the relay verifies it and never passes it on. A remote component's frame takes its key from its parent page.
+- **`window.RemoteControl` reports the connection.** `getState().connectionState` tracks `connecting`, `connected`, `reconnecting`, and `disconnected`.
+- Voice with no session bar placeholder warns in the browser console instead of silently showing no call buttons.
+
+### Relay (RemoteWebViewService and RemoteWebViewService.Lib)
+
+- **Signed RemoteTicket authorization** (`RemoteWebViewService.RemoteTicket`), with optional `IRelayEndpointExtension`, `IShopSessionPolicy`, and `IAgentTenantPolicy` hooks, plus header/cookie/query ticket handling and a required 32-byte signing key.
+- **Per-agent token binding & enrollment key enforcement.** Outside Development, a relay with no `AGENT_ENROLLMENT_KEYS` refuses agents. Newly issued per-agent tokens replace remembered tokens cleanly.
+- **Agent operations & telemetry.** Adds `EndSession`, `PublishRelease` (`ReleaseAvailableCommand`), `STAGE_CONSENT_TIMED_OUT`, RPCD update forwarding (with admin key, installer log, and queued-update cancellation), scheduled metrics, agent alerts, boot-time reporting, no-window/hidden-run launch conditions, and `GetRequester`.
+- **Shared session & security hardening.** Redirects non-owner browsers in shared sessions to `/mirror/<id>`, keeps waiting session entries until the last waiter leaves, gives control of agent-started sessions to the requester, applies session sign-in rules to gRPC calls, refuses `GetIds` when sign-in is required, scopes client/group listing to the signed-in caller, limits gRPC error details to Development, adds HSTS, and logs session shutdown reasons (`SessionEndReason`).
+
 ## 11.0.0
 
-The first release for .NET 11 (SDK 11.0.100, ASP.NET Core 11.0.0, MAUI WebView packages 11.0.10). It has everything in
+The first release for .NET 11 (SDK 11.0.1.100, ASP.NET Core 11.0.0, MAUI WebView packages 11.0.1.10). It has everything in
 10.0.15 and 10.0.15.1 below: sharing control, unattended sessions, voice, the opt-in session controls bar and its
 templates, the owner key, `ParticipantsChanged` and the injected sign-in providers. Where the notes below say "10.0.15 on
 both sides", on this line read 11.0.0: a relay and packages from either line work together from 10.0.15 / 11.0.0 up.
+
 
 ## 10.0.15.1
 

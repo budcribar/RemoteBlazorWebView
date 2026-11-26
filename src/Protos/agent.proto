@@ -33,6 +33,9 @@ message AgentMessage {
     AgentHello hello = 1;
     Heartbeat heartbeat = 2;
     LaunchProgress progress = 3;
+    UpdateRpcdProgress update_rpcd = 4; // progress for an update_rpcd command; the relay forwards it to WatchUpdateRpcd
+    MetricsBatch metrics = 5;           // scheduled metrics runs from the agent's outbox; the relay forwards them to WatchMetrics
+    AlertBatch alerts = 6;              // alerts from the agent's outbox; the relay forwards them to WatchAlerts
   }
 }
 
@@ -46,6 +49,12 @@ message AgentHello {
   string cached_app_version = 7;  // empty when no app is cached
   ConsentMode consent_ceiling = 8;
   Lifetime lifetime = 9;
+  google.protobuf.Timestamp boot_time = 10;  // when Windows last started (UTC); unset on older agents
+  string agent_token = 11;                   // per-agent token assigned on first enrollment
+  int64 metrics_schedule_revision = 12;      // revision of the scheduled-metrics setting the agent has saved (0 = none yet)
+  int64 alert_settings_revision = 13;        // revision of the alert setting the agent has saved (0 = none yet: its defaults)
+  int32 utc_offset_minutes = 14;             // the PC's local time minus UTC, in minutes, now (with daylight saving)
+  PowerSource power_source = 15;             // on AC or on battery now; POWER_UNKNOWN on older agents
 }
 
 message Heartbeat {
@@ -53,6 +62,26 @@ message Heartbeat {
   bool session_running = 2;
   string session_id = 3;          // the running app's session GUID, if any
   string cached_app_version = 4;
+  int64 metrics_schedule_revision = 5;  // as in AgentHello
+  int64 alert_settings_revision = 6;    // as in AgentHello
+  int32 utc_offset_minutes = 7;         // as in AgentHello
+  PowerSource power_source = 8;         // as in AgentHello
+}
+
+// Where the PC gets its power. A desktop with no battery reports POWER_AC.
+enum PowerSource {
+  POWER_UNKNOWN = 0;
+  POWER_AC = 1;
+  POWER_BATTERY = 2;
+}
+
+// What must hold on the PC before the agent starts a hidden session for scheduled checks. The agent checks them right before it
+// starts the app, and answers STAGE_CONDITIONS_NOT_MET (detail says which one) instead of starting it. All unset: no conditions.
+message LaunchConditions {
+  bool require_ac_power = 1;       // plugged in (a PC with no battery always is)
+  int32 min_idle_minutes = 2;      // nobody has used the keyboard or mouse for this long (a locked session counts as idle)
+  int32 window_start_minute = 3;   // allowed hours in the PC's local time, minutes after midnight; start == end means any time.
+  int32 window_end_minute = 4;     // the window may cross midnight (1320 to 360 is 10 PM to 6 AM)
 }
 
 enum LaunchStage {
@@ -63,9 +92,11 @@ enum LaunchStage {
   STAGE_VERIFYING = 4;
   STAGE_STARTING = 5;
   STAGE_READY = 6;      // the app is running and registered with the relay under session_id
-  STAGE_DECLINED = 7;   // the person at the PC said no (or didn't answer in time)
+  STAGE_DECLINED = 7;   // the person at the PC said no (agents older than STAGE_CONSENT_TIMED_OUT also send it for no answer)
   STAGE_FAILED = 8;
   STAGE_ENDED = 9;      // the app exited
+  STAGE_CONSENT_TIMED_OUT = 10;  // nobody at the PC answered the consent prompt within the time limit
+  STAGE_CONDITIONS_NOT_MET = 11; // a LaunchConditions rule didn't hold (on battery, someone is using the PC, outside the hours); nothing started
 }
 
 message LaunchProgress {
@@ -80,7 +111,147 @@ message HubCommand {
   oneof body {
     LaunchCommand launch = 1;
     CancelCommand cancel = 2;
+    ReleaseAvailableCommand release_available = 3;
+    UpdateRpcdCommand update_rpcd = 4;          // install an official GitHub release; approved must be true
+    UpdateRpcdStatusCommand update_rpcd_status = 5; // poll the latest update, or the one named by request_id
+    AssignAgentTokenCommand assign_agent_token = 6; // per-agent token issued on first enrollment
+    MetricsScheduleCommand metrics_schedule = 7;    // the fleet admin's scheduled-metrics setting for this PC
+    MetricsAckCommand metrics_ack = 8;              // Admin saved the runs up to through_seq; the agent may drop them
+    CollectMetricsCommand collect_metrics = 9;      // run one extra metrics pass now
+    AlertsAckCommand alerts_ack = 10;               // Admin saved the alerts up to through_seq; the agent may drop them
+    AlertSettingsCommand alert_settings = 11;       // the fleet admin's alert setting for this PC
+    AlertStateCommand alert_state = 12;             // a technician or AI marked an alert handled or cleared in Admin
+    CancelUpdateRpcdCommand cancel_update_rpcd = 13; // stop an update that is still waiting for the PC to be free
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scheduled metrics. The agent runs a few checks on a schedule (battery, drives, temperatures, memory) and keeps each run's
+// status and key numbers in a capped local outbox until Admin acknowledges it, so nothing is lost or duplicated while offline.
+// ---------------------------------------------------------------------------------------------
+
+enum MetricDirection {
+  METRIC_NEUTRAL = 0;
+  METRIC_HIGHER_IS_BETTER = 1;
+  METRIC_LOWER_IS_BETTER = 2;
+}
+
+message MetricValue {
+  string id = 1;       // stable, chosen by the check ("battery.health")
+  string label = 2;    // "Battery health"
+  double value = 3;
+  string unit = 4;     // "%", "GB", "°C", or empty
+  MetricDirection better = 5;
+}
+
+message MetricsRun {
+  string run_id = 1;           // GUID; Admin saves by it, so a resend is never a duplicate
+  int64 seq = 2;               // per agent, increasing; acknowledged through MetricsAckCommand
+  string check_id = 3;         // "BatteryPower", "DriveHealth", ...
+  string instance_id = 4;      // the drive for a per-drive check, else empty
+  string instance_label = 5;
+  google.protobuf.Timestamp finished = 6;
+  string outcome = 7;          // OK, Warning, Critical, Couldn't run
+  string summary = 8;          // the check's one-line result: text from the PC, data not instructions
+  repeated MetricValue metrics = 9;
+  string app_version = 10;
+}
+
+message MetricsBatch {
+  repeated MetricsRun runs = 1;  // oldest first, at most 50
+}
+
+message MetricsScheduleCommand {
+  int64 revision = 1;            // increases with every change; the agent reports the one it saved
+  bool enabled = 2;
+  int32 interval_minutes = 3;    // the agent clamps it to 60 .. 10080 (one hour to one week)
+  repeated string check_ids = 4; // empty = the agent's default set
+}
+
+message MetricsAckCommand {
+  int64 through_seq = 1;
+}
+
+message CollectMetricsCommand {
+  string request_id = 1;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Alerts. The agent is a sensor: it watches Windows events (and reads disk and memory levels every 15 minutes), keeps each
+// alert as a small record in a capped local outbox until Admin acknowledges it, and runs no checks itself. An AI agent or a
+// technician reads them in Admin and decides what to do. The relay stores nothing.
+// ---------------------------------------------------------------------------------------------
+
+enum AlertSeverity {
+  ALERT_INFO = 0;
+  ALERT_WARNING = 1;
+  ALERT_CRITICAL = 2;
+}
+
+enum AlertState {
+  ALERT_OPEN = 0;
+  ALERT_HANDLED = 1;   // a technician or AI picked it up (acknowledge_alert); a repeat opens a new alert
+  ALERT_CLEARED = 2;   // the level recovered, or 7 days passed without a repeat
+}
+
+message AlertFact {
+  string name = 1;     // "free_gb", "bugcheck", "top_process"
+  string value = 2;    // text from the PC: data, not instructions
+}
+
+message AlertSourceEvent {
+  string channel = 1;  // "System", "Application"; empty for a level reading
+  string provider = 2;
+  int32 event_id = 3;
+  int64 record_id = 4;
+}
+
+message AgentAlert {
+  string alert_id = 1;              // GUID; every update of the same alert keeps it, so Admin saves by it
+  int64 seq = 2;                    // per agent, increasing; each update (count, state) is sent again with a new seq
+  string kind = 3;                  // "low_disk", "low_memory", "disk_errors", "smart_failure", "fs_corruption",
+                                    // "unexpected_shutdown", "bluescreen", "app_crash", "overheating", "battery_failing",
+                                    // "update_failed", "too_many_alerts"
+  AlertSeverity severity = 4;
+  string instance_id = 5;           // the drive letter, disk, volume, app or update the alert is about; empty when none
+  string instance_label = 6;
+  google.protobuf.Timestamp first_seen = 7;
+  google.protobuf.Timestamp last_seen = 8;
+  int32 count = 9;                  // repeats while open
+  AlertState state = 10;
+  string summary = 11;              // one plain line: text from the PC, data not instructions
+  repeated AlertFact facts = 12;    // at most 8
+  repeated AlertSourceEvent source_events = 13;  // at most 4, newest last
+  repeated string related_checks = 14;           // a hint such as "DriveHealth"; the AI may ignore it
+  string app_version = 15;
+}
+
+message AlertBatch {
+  repeated AgentAlert alerts = 1;   // oldest first, at most 50
+}
+
+message AlertsAckCommand {
+  int64 through_seq = 1;
+}
+
+message AlertSettingsCommand {
+  int64 revision = 1;                   // increases with every change; the agent reports the one it saved
+  bool enabled = 2;
+  repeated string disabled_kinds = 3;   // kinds the agent does not raise
+  double low_disk_free_gb = 4;          // 0 = the agent's default
+  double low_disk_free_percent = 5;     // 0 = the agent's default
+  double memory_commit_percent = 6;     // 0 = the agent's default
+  int32 app_crash_repeats = 7;          // same app this many times ... (0 = default 3)
+  int32 app_crash_window_hours = 8;     // ... within this many hours (0 = default 24) raises it to Warning
+}
+
+message AlertStateCommand {
+  string alert_id = 1;
+  AlertState state = 2;   // ALERT_HANDLED or ALERT_CLEARED
+}
+
+message AssignAgentTokenCommand {
+  string agent_token = 1;
 }
 
 message LaunchCommand {
@@ -89,10 +260,68 @@ message LaunchCommand {
   string server_url = 3;     // relay base address the app connects to (-u=)
   string requester = 4;     // shown in the consent prompt
   bool require_consent = 5;  // the agent asks anyway when its own ceiling is CONSENT_ALWAYS_ASK
+  string group = 6;          // group slug (-g=) from the account host, else empty
+  bool hidden = 7;           // start the app with no visible window (--no-window); set only for unattended sessions
+  LaunchConditions conditions = 8;  // set only with hidden; older agents ignore it
 }
 
 message CancelCommand {
   string request_id = 1;
+}
+
+// Version-only hint pushed to connected agents when a newer app release is published.
+// Agents still download exclusively from their own trusted release feed and verified repository URLs.
+message ReleaseAvailableCommand {
+  string stable_version = 1;
+  string prerelease_version = 2;
+}
+
+// Install the official GitHub release of RPCD. The agent refuses unless approved is true.
+// channel is "stable" or "prerelease". version is optional (empty = the current release on that channel).
+// approved_by is an audit label only. It is not approval, and it must not carry a customer name.
+// The relay does not send an installer URL or a checksum. The agent downloads from GitHub itself.
+message UpdateRpcdCommand {
+  string request_id = 1;
+  string channel = 2;
+  string version = 3;
+  bool approved = 4;
+  string approved_by = 5;
+}
+
+// Stops an update that is still in the "waiting" stage (the PC was busy when it was asked). The agent answers with an
+// update_rpcd progress whose stage is "cancelled". An update past waiting is not stopped. Empty request_id = the latest.
+message CancelUpdateRpcdCommand {
+  string request_id = 1;
+}
+
+// Empty request_id asks for the latest update on this PC.
+message UpdateRpcdStatusCommand {
+  string request_id = 1;
+}
+
+// One pollable snapshot. terminal is true for refused, already_up_to_date, succeeded, failed, cancelled and agent_not_updated.
+// waiting means the PC was busy (a check, fix or other work running): the agent starts the update when it is free.
+// agent_not_updated means the app is new_version and the installed agent service is not that build.
+// old_version is the build before the attempt. new_version is the release being installed, then the build now on disk.
+message UpdateRpcdProgress {
+  string request_id = 1;
+  string stage = 2;
+  string detail = 3;
+  int32 percent = 4;
+  string old_version = 5;
+  string new_version = 6;
+  bool terminal = 7;
+  string error = 8;
+  string channel = 9;
+  // Set when Setup failed. installer_log is the masked tail of the /LOG file (about the last 200 lines).
+  // installer_exit_code is present only then, including 0 when Setup exited 0 but the version did not change.
+  // Keep in step with RemotePCDiagnostics' agent.proto: a field missing here is dropped on the way to Admin.
+  string installer_log = 10;
+  optional int32 installer_exit_code = 11;
+  // Set when a persistent agent service was installed before this update.
+  // old_agent_version is that build. agent_version is the service executable after the attempt.
+  string old_agent_version = 12;
+  string agent_version = 13;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -104,6 +333,97 @@ service AgentAdmin {
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
   rpc WatchLaunch(WatchLaunchRequest) returns (stream LaunchProgress); // replays the latest stage first
   rpc CancelLaunch(CancelCommand) returns (google.protobuf.Empty);
+  rpc EndSession(EndSessionRequest) returns (EndSessionResponse);      // stops the app the agent started on that computer
+  rpc PublishRelease(ReleaseAvailableCommand) returns (google.protobuf.Empty); // notifies connected agents of new release versions
+  // Forwards UpdateRpcdCommand to that computer's agent and returns the first progress (often "checking" or a refusal).
+  rpc UpdateRpcd(UpdateRpcdAdminRequest) returns (UpdateRpcdProgress);
+  // Replays the latest progress first, then each change until terminal. request_id empty = the latest update.
+  rpc WatchUpdateRpcd(UpdateRpcdWatchRequest) returns (stream UpdateRpcdProgress);
+  // Asks the agent to stop an update that is still waiting for the PC to be free. The result arrives on WatchUpdateRpcd.
+  rpc CancelUpdateRpcd(UpdateRpcdWatchRequest) returns (CancelUpdateRpcdResponse);
+  // Scheduled metrics runs as agents upload them, for the computers the caller may see. Nothing is kept on the relay: a run
+  // stays in the agent's outbox until AckMetrics, so a subscriber that was away gets it on the agent's next upload.
+  rpc WatchMetrics(google.protobuf.Empty) returns (stream MetricsUpload);
+  rpc AckMetrics(MetricsAckRequest) returns (google.protobuf.Empty);
+  // Sends the setting to the agent when it is online; Admin sends it again when the agent reports an older revision.
+  rpc SetMetricsSchedule(MetricsScheduleRequest) returns (MetricsCommandResponse);
+  rpc CollectMetrics(CollectMetricsRequest) returns (MetricsCommandResponse);
+  // Alerts as agents upload them, for the computers the caller may see. As with metrics, nothing is kept on the relay: an alert
+  // stays in the agent's outbox until AckAlerts.
+  rpc WatchAlerts(google.protobuf.Empty) returns (stream AlertUpload);
+  rpc AckAlerts(AlertsAckRequest) returns (google.protobuf.Empty);
+  // Sends the setting to the agent when it is online; Admin sends it again when the agent reports an older revision.
+  rpc SetAlertSettings(AlertSettingsRequest) returns (MetricsCommandResponse);
+  // Tells the agent an alert was handled or cleared in Admin, so a repeat opens a new one. Offline: the agent clears it after 7 days.
+  rpc SetAlertState(AlertStateRequest) returns (MetricsCommandResponse);
+}
+
+message AlertUpload {
+  string machine_id = 1;
+  string machine_name = 2;
+  string group = 3;
+  repeated AgentAlert alerts = 4;
+}
+
+message AlertsAckRequest {
+  string machine_id = 1;
+  int64 through_seq = 2;
+}
+
+message AlertSettingsRequest {
+  string machine_id = 1;
+  AlertSettingsCommand settings = 2;
+}
+
+message AlertStateRequest {
+  string machine_id = 1;
+  string alert_id = 2;
+  AlertState state = 3;
+}
+
+message MetricsUpload {
+  string machine_id = 1;
+  string machine_name = 2;
+  string group = 3;
+  repeated MetricsRun runs = 4;
+}
+
+message MetricsAckRequest {
+  string machine_id = 1;
+  int64 through_seq = 2;
+}
+
+message MetricsScheduleRequest {
+  string machine_id = 1;
+  MetricsScheduleCommand schedule = 2;
+}
+
+message CollectMetricsRequest {
+  string machine_id = 1;
+}
+
+// The answer to a command sent to one agent (metrics and alerts both use it).
+message MetricsCommandResponse {
+  bool sent = 1;
+  string error = 2;   // "That computer is offline", "No such computer"
+}
+
+message UpdateRpcdAdminRequest {
+  string machine_id = 1;
+  string channel = 2;
+  string version = 3;
+  bool approved = 4;
+  string approved_by = 5;
+}
+
+message UpdateRpcdWatchRequest {
+  string machine_id = 1;
+  string request_id = 2;
+}
+
+message CancelUpdateRpcdResponse {
+  bool sent = 1;
+  string error = 2;   // "That computer is offline", "No such computer"
 }
 
 message AgentInfo {
@@ -120,6 +440,12 @@ message AgentInfo {
   bool session_running = 11;
   string session_id = 12;
   string ip_address = 13;
+  string group = 14;         // group slug owning this agent, empty for unscoped agents
+  google.protobuf.Timestamp boot_time = 15;  // from AgentHello; unset when the agent did not report it
+  int64 metrics_schedule_revision = 16;      // the scheduled-metrics revision the agent last reported
+  int64 alert_settings_revision = 17;        // the alert-settings revision the agent last reported
+  int32 utc_offset_minutes = 18;             // from the last hello or heartbeat
+  PowerSource power_source = 19;             // from the last hello or heartbeat
 }
 
 message AgentList {
@@ -129,7 +455,11 @@ message AgentList {
 message StartSessionRequest {
   string machine_id = 1;
   bool unattended = 2;      // honoured only when the agent's ceiling is CONSENT_UNATTENDED_ALLOWED
-  string requester = 3;    // display name for the consent prompt; the relay fills it from the signed-in user when auth is on
+  string requester = 3;    // display name for the consent prompt; when auth is on the relay uses the signed-in user's name
+                           // and keeps only a short label the caller put after that same name: "Pat Lee (AI connector)"
+  bool hidden = 4;          // start the app with no visible window, for checks run at a quiet time; honoured only when the
+                           // session is unattended (no consent prompt), older agents ignore it and show the window
+  LaunchConditions conditions = 5;  // checked by the agent before it starts the app; sent only with hidden
 }
 
 message StartSessionResponse {
@@ -142,4 +472,23 @@ message StartSessionResponse {
 
 message WatchLaunchRequest {
   string request_id = 1;
+}
+
+message EndSessionRequest {
+  string machine_id = 1;
+  string requester = 2;    // who asks, for the audit line; the same rules as StartSessionRequest.requester
+}
+
+enum EndSessionOutcome {
+  END_SESSION_UNKNOWN = 0;
+  END_SESSION_REQUESTED = 1;           // the agent was told to stop the app (or the start in progress); session_running clears when it has
+  END_SESSION_NOT_RUNNING = 2;         // no session is running and no start is in progress
+  END_SESSION_NOT_AGENT_LAUNCHED = 3;  // a session is running that the relay has no launch for: started at the PC, or before the relay restarted
+  END_SESSION_OFFLINE = 4;             // the computer is offline, so the command cannot reach it
+  END_SESSION_NOT_FOUND = 5;           // no such computer for this caller
+}
+
+message EndSessionResponse {
+  EndSessionOutcome outcome = 1;
+  string request_id = 2;    // the launch that was told to stop, when outcome is END_SESSION_REQUESTED
 }

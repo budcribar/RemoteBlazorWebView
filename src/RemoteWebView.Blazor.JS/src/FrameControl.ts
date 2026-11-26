@@ -10,12 +10,16 @@
 // the frame that currently holds the component's control gives it to that connection. The relay already lets the
 // current holder give control away; nothing else is needed from it.
 //
+// A frame's connection also has a key, the secret that shows the relay a request is its own (the ids here are public).
+// It is derived from the parent page's key, which no other browser has, and handed to the frame with its id.
+//
 // Parent -> frame:  { type: 'rbwv-parent-control', primaryId }   (primaryId is the derived id, never the app's own ids)
 // Frame -> parent:  { type: 'rbwv-control-query' }               (asked when the frame starts)
 // Frames are sandboxed with an opaque origin, so messages are matched by window (parent / contentWindow), not origin.
 
 const frameSelector = 'iframe[data-rbwv-src]';
 const idPattern = /^[0-9a-f]{32}$/;
+const keyPattern = /^[0-9a-f]{64}$/;
 
 const derived = new Map<string, string>();
 
@@ -30,17 +34,28 @@ export async function panelClientId(mainClientId: string): Promise<string> {
     return id;
 }
 
+async function sha256Hex(text: string): Promise<string> {
+    const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** The key a frame on the page with key `mainClientKey` uses in the component's session. Empty when the page has none. */
+export async function panelClientKey(mainClientKey: string): Promise<string> {
+    return mainClientKey ? sha256Hex('rbwv-frame-key:' + mainClientKey) : '';
+}
+
 /** True when this page is itself framed (a remote component's page or its mirror). */
 export function isFramed(): boolean {
     try { return window.parent !== window; } catch { return true; }
 }
 
-/** What the parent page passed this frame in its address fragment: its connection id, and whether the parent is the owner's surface. */
-export function readFrameIdentity(): { clientId: string | null, owner: boolean } {
-    if (!isFramed()) return { clientId: null, owner: false };
+/** What the parent page passed this frame in its address fragment: its connection id and key, and whether the parent is the owner's surface. */
+export function readFrameIdentity(): { clientId: string | null, clientKey: string | null, owner: boolean } {
+    if (!isFramed()) return { clientId: null, clientKey: null, owner: false };
     const p = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const id = p.get('rbwvFrameId');
-    return { clientId: id && idPattern.test(id) ? id : null, owner: p.get('rbwvOwner') === '1' };
+    const key = p.get('rbwvFrameKey');
+    return { clientId: id && idPattern.test(id) ? id : null, clientKey: key && keyPattern.test(key) ? key : null, owner: p.get('rbwvOwner') === '1' };
 }
 
 /** Adds this page's frame identity to a component address (the fragment is never sent to the relay). */
@@ -59,10 +74,13 @@ function postToFrames() {
         (f as HTMLIFrameElement).contentWindow?.postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*'));
 }
 
-/** Called once on every page. `onIdentityReady` runs when this page's own frame identity (RemoteBlazor.frameHash) is known. */
-export function initParentFrameControl(onIdentityReady: () => void) {
-    void panelClientId(window.RemoteBlazor.clientId).then(id => {
-        window.RemoteBlazor.frameHash = `#rbwvFrameId=${id}${window.RemoteBlazor.isOwner ? '&rbwvOwner=1' : ''}`;
+/**
+ * Called once on every page, with the page's own key. `onIdentityReady` runs when this page's own frame identity
+ * (RemoteBlazor.frameHash) is known.
+ */
+export function initParentFrameControl(clientKey: string, onIdentityReady: () => void) {
+    void Promise.all([panelClientId(window.RemoteBlazor.clientId), panelClientKey(clientKey)]).then(([id, key]) => {
+        window.RemoteBlazor.frameHash = `#rbwvFrameId=${id}${key ? '&rbwvFrameKey=' + key : ''}${window.RemoteBlazor.isOwner ? '&rbwvOwner=1' : ''}`;
         onIdentityReady();
     });
 

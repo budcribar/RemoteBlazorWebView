@@ -1,6 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using PeakSWC.RemoteWebView.Agents;
 using PeakSWC.RemoteWebView.Services;
 using PeakSWC.RemoteWebView.RemoteStaticFiles;
 using System;
@@ -13,10 +14,17 @@ using System.Threading.Tasks;
 
 namespace PeakSWC.RemoteWebView
 {
-    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager) : WebViewIPC.WebViewIPCBase
+    public class RemoteWebViewService(ILogger<RemoteWebViewService> logger, ConcurrentDictionary<string, TaskCompletionSource<ServiceState>> serviceDictionary, ConcurrentDictionary<string, Channel<string>> serviceStateChannel, ShutdownService shutdownService, ServerFileSyncManager _fileSyncManager, IShopSessionPolicy? shopSessions = null, IRelayAuthorization? authorization = null, AgentRegistry? agents = null) : WebViewIPC.WebViewIPCBase
     {
+        /// <summary>
+        /// Every session id on the relay. Refused when the relay requires sign-in: a session id is what the browser calls
+        /// use to attach, so listing them to an anonymous caller would hand out every shop's sessions.
+        /// </summary>
         public override Task<IdArrayResponse> GetIds(Empty request, ServerCallContext context)
         {
+            if (authorization?.Enabled == true)
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Listing session ids is turned off on a relay that requires sign-in."));
+
             var results = new IdArrayResponse();
             results.Responses.AddRange(serviceDictionary.Keys);
             return Task.FromResult(results);
@@ -33,7 +41,27 @@ namespace PeakSWC.RemoteWebView
 
             logger.LogDebug("CreateWebView called for Id: {Id}", request.Id);
 
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            // A completed registration is a duplicate id. Refuse it before the shop cap so a retry of the same
+            // session is not counted as a second seat.
+            if (serviceDictionary.TryGetValue(request.Id, out var existing) && existing.Task.IsCompleted)
+            {
+                logger.LogError("CreateWebView failed to add client for Id: {Id}", request.Id);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+
+            var group = request.Group ?? string.Empty;
+            var active = ShopSessionActivity.Count(serviceDictionary, group);
+            var decision = await (shopSessions ?? AllowAllShopSessionPolicy.Instance).CheckCreateSessionAsync(group, active, context.CancellationToken).ConfigureAwait(false);
+            if (!decision.Allowed)
+            {
+                logger.LogWarning("CreateWebView denied for Id {Id} in group {Group}: {ErrorCode}. {Message}", request.Id, group, decision.ErrorCode, decision.Message);
+                await responseStream.WriteAsync(new WebMessageResponse { Response = "createFailed:" + (decision.ErrorCode ?? "denied") }, CancellationToken.None).ConfigureAwait(false);
+                return;
+            }
+
+            using var pending = PendingSessions.Join(serviceDictionary, request.Id);
+            var serviceStateTaskSource = pending.Source;
 
             if (serviceStateTaskSource.Task.IsCompleted)
             {
@@ -50,13 +78,16 @@ namespace PeakSWC.RemoteWebView
                 InUse = false,
                 Url = $"https://{context.Host}/app/{request.Id}",
                 Id = request.Id,
-                Group = request.Group,
+                Group = group,
                 Pid = request.Pid,
                 HostName = request.HostName,
                 ProcessName = request.ProcessName,
                 OwnerKey = request.OwnerKey,
+                AppKey = request.AppKey,
             };
             state.IPC.ParticipantEvents = request.ParticipantEvents;
+            // A session an agent started for a signed-in user: only that user is given control (others may watch).
+            state.Controllers.Add(agents?.StartedBy(request.Id));
 
             using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, state.Token);
             try
@@ -65,10 +96,17 @@ namespace PeakSWC.RemoteWebView
                 foreach (var x in serviceStateChannel.Values)
                     x.Writer.TryWrite($"Start:{request.Id}");
                 state.IPC.ClientResponseStream = responseStream;
+                // Once the app's call has ended its response stream is complete, and a write to it throws; drop it so a shutdown
+                // notice for an app that has already gone is skipped instead of failing.
+                using var dropStream = context.CancellationToken.Register(() => state.IPC.ClientResponseStream = null);
 
                 await responseStream.WriteAsync(new WebMessageResponse { Response = "created:" }, CancellationToken.None).ConfigureAwait(false);
 
+                shutdownService.Forget(request.Id);
                 serviceStateTaskSource.SetResult(state);
+                // Pairs with the shutdown line (ShutdownService), which says when and why the id was given up.
+                logger.LogInformation("Session {Id} registered: {ProcessName} (pid {Pid}) on {HostName}, group '{Group}', owner key: {Keyed}, app key: {AppKeyed}, mirrors: {Mirrors}",
+                    request.Id, request.ProcessName, request.Pid, request.HostName, group, OwnerAccess.IsKeyed(state) ? "yes" : "no", AppAccess.IsKeyed(state) ? "yes" : "no", request.EnableMirrors ? "on" : "off");
 
                 await Task.Delay(Timeout.Infinite, linkedToken.Token).ConfigureAwait(false);
             }
@@ -86,7 +124,7 @@ namespace PeakSWC.RemoteWebView
                     await state.DisposeAsync().ConfigureAwait(false);
                     return;
                 }
-                await shutdownService.Shutdown(request.Id, ex).ConfigureAwait(false);
+                await shutdownService.Shutdown(request.Id, SessionEndReason.CreateWebViewFailed, ex).ConfigureAwait(false);
             }         
         }
      
@@ -116,6 +154,27 @@ namespace PeakSWC.RemoteWebView
 
             logger.LogDebug("Client '{ClientGuid}' connected and initialized.", clientGuid);
 
+            using var pending = PendingSessions.Join(serviceDictionary, clientGuid);
+            var serviceStateTaskSource = pending.Source;
+            ServiceState serviceState;
+            try
+            {
+                serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
+                await shutdownService.Shutdown(clientGuid, SessionEndReason.FileReadStreamEnded).ConfigureAwait(false);
+                return;
+            }
+
+            // Checked before the stream is registered: whoever registers it serves the session's files to its browsers.
+            if (!AppAccess.Allows(serviceState, context))
+            {
+                logger.LogWarning("RequestClientFileRead for session {ClientGuid} refused: missing or wrong {Header}.", clientGuid, AppAccess.HeaderName);
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Not this session's app."));
+            }
+
             // Register the client
             _fileSyncManager.RegisterClient(clientGuid, initResponse.Init.HtmlHostPath);
 
@@ -124,9 +183,6 @@ namespace PeakSWC.RemoteWebView
 
             try
             {
-                var serviceStateTaskSource = serviceDictionary.GetOrAdd(clientGuid, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-
-                var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
                 serviceState.FileManagerReady.TrySetResult(true);
 
                 // Create a linked cancellation token to handle both client cancellation and server cancellation
@@ -144,6 +200,11 @@ namespace PeakSWC.RemoteWebView
 
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex) when (shutdownService.HasEnded(clientGuid, out var ended))
+            {
+                // The session ended first (e.g. an admin ended it and the agent then closed the app): the abort is expected.
+                logger.LogDebug(ex, "File-read stream for session {ClientGuid} stopped after the session ended ({Reason}).", clientGuid, ended);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error handling client '{ClientGuid}' responses.", clientGuid);
@@ -153,7 +214,7 @@ namespace PeakSWC.RemoteWebView
                 // Clean up when the client disconnects
                 _fileSyncManager.RemoveClient(clientGuid);
                 logger.LogDebug("Cleaned up resources for client '{ClientGuid}'.", clientGuid);
-                await shutdownService.Shutdown(clientGuid);
+                await shutdownService.Shutdown(clientGuid, SessionEndReason.FileReadStreamEnded).ConfigureAwait(false);
             }
         }
         public override async Task<Empty> Shutdown(IdMessageRequest request, ServerCallContext context)
@@ -161,23 +222,39 @@ namespace PeakSWC.RemoteWebView
             if (request == null || string.IsNullOrWhiteSpace(request.Id))
                 return new Empty();
 
-            await shutdownService.Shutdown(request.Id).ConfigureAwait(false);
+            // Only the session's own app may end it (a registration still pending has no key to check yet).
+            if (serviceDictionary.TryGetValue(request.Id, out var source) && source.Task.IsCompletedSuccessfully && !AppAccess.Allows(source.Task.Result, context))
+            {
+                logger.LogWarning("Shutdown of session {Id} refused: missing or wrong {Header}.", request.Id, AppAccess.HeaderName);
+                throw new RpcException(new Status(StatusCode.PermissionDenied, "Not this session's app."));
+            }
+
+            await shutdownService.Shutdown(request.Id, SessionEndReason.RequestedByApp).ConfigureAwait(false);
             return new Empty();
         }
 
         public override async Task<SendMessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
         {
-            var serviceStateTaskSource = serviceDictionary.GetOrAdd(request.Id, _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
+            using var pending = PendingSessions.Join(serviceDictionary, request.Id);
+            var serviceStateTaskSource = pending.Source;
 
             try
             {
                 var serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                if (!AppAccess.Allows(serviceState, context))
+                {
+                    logger.LogWarning("SendMessage to session {Id} refused: missing or wrong {Header}.", request.Id, AppAccess.HeaderName);
+                    return new SendMessageResponse { Id = request.Id, Success = false };
+                }
                 await serviceState.IPC.SendMessage(request.Message).ConfigureAwait(false);
                 return new SendMessageResponse { Id = request.Id, Success = true };
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "SendMessage failed for Id: {Id}", request.Id);
+                if (shutdownService.HasEnded(request.Id, out var ended))
+                    logger.LogDebug("SendMessage from the app for session {Id} dropped: the session ended ({Reason}).", request.Id, ended);
+                else
+                    logger.LogError(ex, "SendMessage failed for Id: {Id}", request.Id);
             }
 
             return new SendMessageResponse { Id = request.Id, Success = false };
@@ -186,6 +263,7 @@ namespace PeakSWC.RemoteWebView
         public override async Task Ping(IAsyncStreamReader<PingMessageRequest> requestStream, IServerStreamWriter<PingMessageResponse> responseStream, ServerCallContext context)
         {
             var id = string.Empty;
+            bool refused = false;
             // One source for the read loop and the writer, created once the client registration exists.
             CancellationTokenSource? linkedToken = null;
             CancellationTokenSource activeToken;
@@ -208,8 +286,16 @@ namespace PeakSWC.RemoteWebView
                     id = message.Id;
                     if (serviceState == null)
                     {
-                        var serviceStateTaskSource = serviceDictionary.GetOrAdd(id.ToString(), _ => new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously));
-                        serviceState = await serviceStateTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                        using (var pending = PendingSessions.Join(serviceDictionary, id.ToString()))
+                            serviceState = await pending.Source.Task.WaitAsync(TimeSpan.FromSeconds(60), CancellationToken.None).ConfigureAwait(false);
+                        if (!AppAccess.Allows(serviceState, context))
+                        {
+                            // Not the app: the session is left alone (shutting it down here would hand anyone a way to end it).
+                            logger.LogWarning("Ping for session {Id} refused: missing or wrong {Header}.", id, AppAccess.HeaderName);
+                            id = string.Empty;
+                            refused = true;
+                            throw new RpcException(new Status(StatusCode.PermissionDenied, "Not this session's app."));
+                        }
                         linkedToken = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serviceState.Token);
                     }
                     activeToken = linkedToken ?? throw new InvalidOperationException("Ping registration was not created.");
@@ -229,7 +315,7 @@ namespace PeakSWC.RemoteWebView
                                     {
                                         await responseStream.WriteAsync(new PingMessageResponse { Id = id, Cancelled = true }, writerToken.Token).ConfigureAwait(false);
                                         logger.LogWarning("Ping timeout for Id: {Id}", id);
-                                        await shutdownService.Shutdown(id).ConfigureAwait(false);
+                                        await shutdownService.Shutdown(id, SessionEndReason.PingTimeout, detail: $"no reply within {(message.PingIntervalSeconds > 0 ? message.PingIntervalSeconds : 30)} s").ConfigureAwait(false);
                                         break;
                                     }
                                 }
@@ -253,18 +339,27 @@ namespace PeakSWC.RemoteWebView
                 }
                 while (await requestStream.MoveNext(activeToken.Token).ConfigureAwait(false));
             }
+            catch (RpcException) when (refused)
+            {
+                throw;
+            }
             catch (OperationCanceledException)
             {
-                // No need to shutdown as we are in the process of shutting down
-                logger.LogInformation("Ping operation canceled for Id: {Id}", id);
-                if (!string.IsNullOrWhiteSpace(id))
-                    await shutdownService.Shutdown(id).ConfigureAwait(false);
+                if (shutdownService.HasEnded(id, out var ended))
+                    logger.LogDebug("Ping stream for session {Id} stopped: the session is already ending ({Reason}).", id, ended);
+                else if (!string.IsNullOrWhiteSpace(id))
+                    // The session was still running, so the app's own ping stream went away: its connection closed or dropped.
+                    await shutdownService.Shutdown(id, SessionEndReason.PingStreamClosed).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (shutdownService.HasEnded(id, out var ended))
+            {
+                logger.LogDebug(ex, "Ping stream for session {Id} stopped after the session ended ({Reason}).", id, ended);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Exception in Ping for Id: {Id}", id);
                 if (!string.IsNullOrWhiteSpace(id))
-                    await shutdownService.Shutdown(id, ex).ConfigureAwait(false);
+                    await shutdownService.Shutdown(id, SessionEndReason.PingStreamFailed, ex).ConfigureAwait(false);
             }
             finally
             {

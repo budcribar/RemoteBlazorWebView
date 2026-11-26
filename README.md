@@ -48,7 +48,7 @@ Only one connection controls the app at a time; the relay ignores input from eve
 
 **Session controls bar (opt-in).** Nothing is drawn on your pages unless you ask. There are three ways to go:
 
-- **No bar.** Leave the placeholder out. The session still works; with `ShareControl` there are then no buttons to hand control over (use an unattended session, or draw your own).
+- **No bar.** Leave the placeholder out. The session still works; with `ShareControl` there are then no buttons to hand control over (use an unattended session, or draw your own). The same goes for voice: with `EnableVoice` and no placeholder there are no call buttons on either side, so nobody can start or answer a call, and the browser console says so. Add the placeholder, or draw your own from `window.RemoteVoice`.
 - **The built-in bar.** Put an empty `<div id="rbwv-session-controls" data-share-link="true"></div>` in your layout where the bar should sit. Each browser draws its own bar over it (status, *Give control* / *Take control*, *Copy link* for the owner, voice buttons). `data-restart="true"` adds *Restart app*; `data-host-name` / `data-remote-name` rename the two parties ("The host", "Remote user"), for example `data-remote-name="The technician"`. Restyle with the `rbwv-control-*` / `rbwv-voice-*` classes.
 - **Your own bar.** Put a `<template>` inside the placeholder and mark its elements with `data-rbwv`. Each browser gets a copy with only the parts that apply to it; the status is filled in and the buttons are wired. Layout, wording, classes and icons are yours:
 
@@ -85,16 +85,22 @@ By default the relay asks nobody to sign in: a session's pages open for anyone w
 |---|---|
 | `None` (default) | No sign-in. |
 | `AzureB2C` | Azure AD B2C sign-in (settings: the `AzureAdB2C` section and `Secret`). In every relay build except the native one (`-c NoAuthorization`). A relay built with `-c Authorization` uses it without the setting. |
+| `RemoteTicket` | Signed tickets from a separate account host. Not part of the native relay. Set `RelayTicket:SigningKey` (environment `RELAY_TICKET_SECRET`), `RelayTicket:AuthorityUrl`, and `RelayTicket:LoginUrl`. The ticket is the `rwv-relay-ticket` cookie or the `x-relay-ticket` header. `/mirror` without a valid ticket redirects to the login URL. |
 | `Fake` | For tests: the request names its user as `name;group1,group2` in the `X-Rbwv-Fake-User` header, the `fake-user` query value or the `rbwv-fake-user` cookie. The relay refuses to start with it outside the Development environment. |
 
 With sign-in on, a session's pages (`/app`, `/mirror`, `/<id>`, `/status`, `/wait`) open for a signed-in user whose groups
 include the session's `Group`, and for the app's own window, which needs no account: it opens its page with the owner key
 (below). Each connection's signed-in name is in the roster. A relay hosted in-process takes a provider directly:
-`RemoteWebViewServerOptions.Authorization`. A provider is an `IRelayAuthorization`.
+`RemoteWebViewServerOptions.Authorization`. A provider is an `IRelayAuthorization`. Shop accounts are hosted separately. This relay does not render shop pages. When `RemoteTicket` is configured it accepts signed tickets and asks that host which groups are active.
 
 **Owner key.** With `ShareControl`, the app makes a secret for the session (`OwnerKey`) and opens its own page as
 `/app/<id>?role=owner&key=<key>`. Only that page is the owner; `?role=owner` added to any other link is ignored.
 `ParticipantsChanged` on the control reports who is in the session, their names and who has control.
+
+**Connection keys.** Every browser in a session is sent the connection ids of the others, so that control can be
+handed over. An id therefore proves nothing: each page also picks a secret key, sends it with its own requests, and the
+relay accepts input, a hand-over or a restart from a connection only with that connection's key. Nothing to configure.
+An app built with packages from before keys existed sends none and works as before, without this protection.
 
 # Samples
 
@@ -148,4 +154,18 @@ TIME_TOLERANCE=0.20 COUNT_TOLERANCE=0.05 BASELINE=origin/net10 bash scripts/perf
 Results land in `perf-results/summary.md`. The baseline checkout is a temporary git worktree, removed when the script exits. The harness sources are copied into that worktree, so both sides run the same scenario code against their own libraries. The current `remote.blazor.desktop.js` is copied in too; bundle size is not part of the comparison.
 
 `elapsedMs` on these loopback fetches is a few milliseconds, so a ratio over 1.20 can be runner noise. The count and byte columns are the ones that should stay flat. `allocatedBytes` includes Kestrel threads, so it uses the timing tolerance. A scenario that exists on only one side (the cache-provider fetch, on a baseline without that constructor argument) is `SKIP`, not `WARN`. 
+
+# Fast tests
+
+The FileSync desktop and tutorial Playwright classes are marked `[Trait("Category", "Slow")]`. A normal `dotnet test` still runs them. To skip only that suite:
+
+```console
+dotnet test --filter Category!=Slow
+dotnet build src/RemoteWebViewService/RemoteWebViewService.csproj -c NoAuthorization
+```
+
+`Category!=Slow` keeps the relay and embedded-server tests, agent registry and hub tests, RemoteTicket tests, and the FileSync headless classes (`FileFetchingTests`, `ClientCachingTests`, `ServerCachingTests`, `ConcurrentRequestsTests`, `LoadTest`, `PerformanceTests`, `TestMisc`). On Windows, `.\RunTests.ps1 -Fast` does the same and checks that the NoAuthorization build does not reference Shop Identity, SQLite, or RemoteTicket.
+
+Pushes to `net11` still run the full Windows desktop and tutorial step and the performance regression workflow. An on-demand run is `.github/workflows/fast-tests.yml` (`workflow_dispatch` only). 
+
 

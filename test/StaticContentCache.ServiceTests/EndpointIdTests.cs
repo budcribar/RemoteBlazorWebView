@@ -33,7 +33,14 @@ public class EndpointIdTests
         Assert.Equal("application/json", absentType);
         Assert.False(JsonSerializer.Deserialize<StatusResponse>(absentBody)!.Connected);
 
-        clients[id.ToString()] = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // An unfinished entry (a browser is waiting for this id's app) is not a connected app.
+        var registration = new TaskCompletionSource<ServiceState>(TaskCreationOptions.RunContinuationsAsynchronously);
+        clients[id.ToString()] = registration;
+        var (_, pendingBody, _) = await InvokeAsync(Endpoints.Status(), id.ToString(), clients);
+        Assert.False(JsonSerializer.Deserialize<StatusResponse>(pendingBody)!.Connected);
+
+        await using var state = new ServiceState(Microsoft.Extensions.Logging.Abstractions.NullLogger<RemoteWebViewService>.Instance, false) { Id = id.ToString() };
+        registration.SetResult(state);
         var (presentStatus, presentBody, presentType) = await InvokeAsync(Endpoints.Status(), id.ToString(), clients);
 
         Assert.Equal(StatusCodes.Status200OK, presentStatus);

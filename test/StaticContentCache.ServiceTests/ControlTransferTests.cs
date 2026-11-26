@@ -425,6 +425,16 @@ public class ControlTransferTests
     }
 
     [Fact]
+    public async Task A_browser_that_leaves_as_soon_as_it_has_joined_is_not_left_in_the_session()
+    {
+        await using var s = new Session();
+        for (int i = 0; i < 50; i++) // the relay has had no time to start serving it
+            s.Join("gone-" + i).Leave();
+
+        await WaitFor(() => !Enumerable.Range(0, 50).Any(i => s.State.IPC.HasConnection("gone-" + i)));
+    }
+
+    [Fact]
     public async Task A_viewer_leaving_changes_nothing_but_the_roster()
     {
         await using var s = new Session();
@@ -493,6 +503,148 @@ public class ControlTransferTests
 
     // ---- helpers ----
 
+    // ---- A clientId is public (the roster sends every one to every browser); the key is what makes a request a connection's own ----
+
+    [Fact]
+    public async Task A_viewer_cannot_take_control_by_naming_the_controller_as_the_requester()
+    {
+        await using var s = new Session();
+        s.Join("owner", owner: true);
+        s.Join("remote");
+        var viewer = s.Join("viewer");
+        await WaitFor(() => s.State.PrimaryClientId == "owner" && viewer.LastRoster()?.Count == 3);
+        await s.SetPrimary("owner", "remote");
+        await WaitFor(() => viewer.LastRoster()!.Single(p => p.Primary).Id == "remote");
+        var controller = viewer.LastRoster()!.Single(p => p.Primary).Id; // what the viewer's own roster tells it
+
+        await s.SetPrimary(requester: controller, target: "viewer", key: Session.KeyOf("viewer")); // with its own key
+        await s.SetPrimary(requester: controller, target: "viewer", key: "");                      // with none
+        await s.SetPrimary(requester: "owner", target: "owner", key: Session.KeyOf("viewer"));     // or as the owner taking it back
+
+        Assert.Equal("remote", s.State.PrimaryClientId);
+    }
+
+    [Fact]
+    public async Task Input_that_names_the_controller_without_its_key_is_refused()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("owner", owner: true);
+        s.Join("viewer");
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+
+        var forged = await s.Send("owner", 1, key: Session.KeyOf("viewer"));
+        var keyless = await s.Send("owner", 1, key: "");
+
+        Assert.False(forged.Success);
+        Assert.False(keyless.Success);
+        Assert.Equal(1u, s.State.BrowserIPC.SequenceNum); // nothing reached the app
+        Assert.Empty(s.State.BrowserIPC.MessageDictionary);
+
+        Assert.True((await s.Send("owner", 1)).Success); // the controller itself is unaffected
+        await WaitFor(() => host.Messages.Contains("m1-owner"));
+    }
+
+    [Fact]
+    public async Task A_viewer_cannot_restart_the_app_by_naming_the_owner_or_the_controller()
+    {
+        await using var s = new Session();
+        var host = s.CaptureHost();
+        s.Join("owner", owner: true);
+        s.Join("remote");
+        s.Join("viewer");
+        await WaitFor(() => s.State.PrimaryClientId == "owner");
+        await s.SetPrimary("owner", "remote");
+
+        await s.Restart("owner", key: Session.KeyOf("viewer"));
+        await s.Restart("remote", key: Session.KeyOf("viewer"));
+        await s.Restart("remote", key: "");
+
+        Assert.Equal(0, s.State.RestartRequested);
+        Assert.DoesNotContain(host.Messages, m => m.StartsWith("refreshed:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_second_stream_under_a_known_clientId_needs_its_key()
+    {
+        await using var s = new Session();
+        var owner = s.Join("owner", owner: true);
+        await WaitFor(() => s.State.PrimaryClientId == "owner" && owner.LastRoster()?.Count == 1);
+
+        var impostor = s.Join("owner", key: "not-the-owners-key");
+        await impostor.Stream.WaitAsync(TimeSpan.FromSeconds(5)); // refused: the stream ends at once
+
+        Assert.Null(impostor.LastRoster());              // it was told nothing
+        Assert.Single(owner.LastRoster()!);              // and nobody was told about it
+        Assert.Equal("owner", s.State.PrimaryClientId);  // its leaving is not the controller leaving
+        Assert.True(s.IsRegistered);
+    }
+
+    [Fact]
+    public async Task The_owners_clientId_cannot_be_taken_over_after_the_owner_has_left()
+    {
+        await using var s = new Session();
+        var owner = s.Join("owner", owner: true);
+        var remote = s.Join("remote");
+        await WaitFor(() => s.State.PrimaryClientId == "owner" && remote.LastRoster()?.Count == 2);
+        await s.SetPrimary("owner", "remote");
+        owner.Leave();
+        await owner.Stream.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("owner", s.State.OwnerClientId); // the session still names it
+
+        var impostor = s.Join("owner", key: Session.KeyOf("viewer"));
+        await impostor.Stream.WaitAsync(TimeSpan.FromSeconds(5));
+        await s.SetPrimary(requester: "owner", target: "owner", key: Session.KeyOf("viewer"));
+
+        Assert.Equal("remote", s.State.PrimaryClientId);
+    }
+
+    [Fact]
+    public async Task Before_anyone_has_control_a_request_with_no_clientId_cannot_hand_it_out()
+    {
+        await using var s = new Session();
+        var viewer = s.Join("viewer");
+        await WaitFor(() => viewer.LastRoster()?.Count == 1);
+        Assert.Equal("", s.State.PrimaryClientId);
+
+        await s.SetPrimary(requester: "", target: "viewer", key: "");
+
+        Assert.Equal("", s.State.PrimaryClientId);
+    }
+
+    [Fact]
+    public async Task The_first_message_of_the_controlling_page_fixes_its_key_before_its_stream_opens()
+    {
+        await using var s = new Session();
+        Assert.True((await s.Send("a", 1)).Success); // "connected:" goes out before the page opens its stream
+
+        var impostor = s.Join("a", key: "another-key");
+        await impostor.Stream.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False((await s.Send("a", 2, key: "another-key")).Success);
+
+        var page = s.Join("a");
+        await WaitFor(() => page.LastRoster()?.Count == 1);
+        Assert.True((await s.Send("a", 2)).Success);
+        Assert.Equal(3u, s.State.BrowserIPC.SequenceNum);
+    }
+
+    [Fact]
+    public async Task Pages_that_send_no_key_work_as_before()
+    {
+        await using var s = new Session();
+        s.Join("owner", owner: true, key: "");
+        var remote = s.Join("remote", key: "");
+        await WaitFor(() => s.State.PrimaryClientId == "owner" && remote.LastRoster()?.Count == 2);
+
+        await s.SetPrimary("owner", "remote", key: "");
+        Assert.Equal("remote", s.State.PrimaryClientId);
+        Assert.True((await s.Send("remote", 1, key: "")).Success);
+        Assert.Equal(2u, s.State.BrowserIPC.SequenceNum);
+
+        await s.SetPrimary("owner", "owner", key: "");
+        Assert.Equal("owner", s.State.PrimaryClientId);
+    }
+
     private static async Task WaitFor(Func<bool> condition, int milliseconds = 5000)
     {
         var until = DateTime.UtcNow.AddMilliseconds(milliseconds);
@@ -554,30 +706,36 @@ public class ControlTransferTests
             return writer;
         }
 
+        /// <summary>
+        /// The secret a page sends with its own requests. Every call below sends the named connection's own key unless
+        /// the test passes another: what a different browser, which only knows the clientId, would have to guess.
+        /// </summary>
+        public static string KeyOf(string clientId) => "key-of-" + clientId;
+
         /// <summary>A browser opens its stream from the relay (what a page does once, when it starts).</summary>
-        public Connection Join(string clientId, bool owner = false, string ownerToken = "")
+        public Connection Join(string clientId, bool owner = false, string ownerToken = "", string? key = null)
         {
             var cancel = new CancellationTokenSource();
             var writer = new Writer();
-            var stream = Ipc.ReceiveMessage(new ReceiveMessageRequest { Id = Id, ClientId = clientId, IsOwner = owner, OwnerToken = ownerToken }, writer, new CallContext(cancel.Token));
+            var stream = Ipc.ReceiveMessage(new ReceiveMessageRequest { Id = Id, ClientId = clientId, ClientKey = key ?? KeyOf(clientId), IsOwner = owner, OwnerToken = ownerToken }, writer, new CallContext(cancel.Token));
             var connection = new Connection(stream, cancel, writer);
             connections.Add(connection);
             return connection;
         }
 
         /// <summary>A browser sends one message to the app. Every page believes it is the controller until told otherwise.</summary>
-        public Task<SendMessageResponse> Send(string clientId, uint sequence) =>
-            Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, Sequence = sequence, IsPrimary = true, Message = $"m{sequence}-{clientId}" },
+        public Task<SendMessageResponse> Send(string clientId, uint sequence, string? key = null) =>
+            Ipc.SendMessage(new SendSequenceMessageRequest { Id = Id, ClientId = clientId, ClientKey = key ?? KeyOf(clientId), Sequence = sequence, IsPrimary = true, Message = $"m{sequence}-{clientId}" },
                 new CallContext(CancellationToken.None));
 
-        public Task Restart(string requester) =>
-            Ipc.Restart(new RestartRequest { Id = Id, ClientId = requester }, new CallContext(CancellationToken.None));
+        public Task Restart(string requester, string? key = null) =>
+            Ipc.Restart(new RestartRequest { Id = Id, ClientId = requester, ClientKey = key ?? KeyOf(requester) }, new CallContext(CancellationToken.None));
 
         /// <summary>The relay still has this session (false once it has been shut down or dropped).</summary>
         public bool IsRegistered => services.ContainsKey(Id);
 
-        public Task SetPrimary(string requester, string target) =>
-            Ipc.SetPrimary(new SetPrimaryRequest { Id = Id, ClientId = requester, Target = target }, new CallContext(CancellationToken.None));
+        public Task SetPrimary(string requester, string target, string? key = null) =>
+            Ipc.SetPrimary(new SetPrimaryRequest { Id = Id, ClientId = requester, ClientKey = key ?? KeyOf(requester), Target = target }, new CallContext(CancellationToken.None));
 
         public async ValueTask DisposeAsync()
         {

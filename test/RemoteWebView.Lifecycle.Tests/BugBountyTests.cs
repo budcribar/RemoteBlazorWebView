@@ -176,7 +176,7 @@ public class BugBountyTests
         var channels = new ConcurrentDictionary<string, Channel<string>>();
         var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, services);
 
-        await shutdown.Shutdown(id);
+        await shutdown.Shutdown(id, SessionEndReason.RequestedByApp);
 
         Assert.False(state.InUse);
         Assert.True(state.Token.IsCancellationRequested);
@@ -1837,8 +1837,8 @@ public class BugBountyTests
         var channels = new ConcurrentDictionary<string, Channel<string>>();
         var shutdown = new ShutdownService(NullLogger<RemoteWebViewService>.Instance, channels, dict);
 
-        var ex1 = await Record.ExceptionAsync(() => shutdown.Shutdown(null!));
-        var ex2 = await Record.ExceptionAsync(() => shutdown.Shutdown("   "));
+        var ex1 = await Record.ExceptionAsync(() => shutdown.Shutdown(null!, SessionEndReason.RequestedByApp));
+        var ex2 = await Record.ExceptionAsync(() => shutdown.Shutdown("   ", SessionEndReason.RequestedByApp));
 
         Assert.Null(ex1);
         Assert.Null(ex2);

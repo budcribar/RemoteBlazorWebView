@@ -216,6 +216,31 @@ namespace FileSyncServer.Tests.Remote
             }
         }
 
+        /// <summary>Each session the relay knows (files, bytes, how long connected) and its latest logged events, for a failure message.</summary>
+        private async Task<string> DescribeRelayAsync(ClientIPC.ClientIPCClient client, ServerResponse status)
+        {
+            var lines = new List<string>();
+            foreach (var connection in status.ConnectionResponses)
+            {
+                var index = Ids.IndexOf(connection.Id);
+                lines.Add($"session {(index >= 0 ? $"client {index + 1}" : "not started by this test")} {connection.Id}: {connection.TotalFilesRead} files, " +
+                    $"{connection.TotalBytesRead} bytes, connected {connection.TimeConnected:F1} s, in use {connection.InUse}");
+            }
+            foreach (var id in Ids.Where(id => status.ConnectionResponses.All(c => c.Id != id)))
+                lines.Add($"session {id}: not known to the relay");
+            try
+            {
+                var events = await client.GetLoggedEventsAsync(new Empty { });
+                foreach (var entry in events.EventResponses.Take(30))
+                    lines.Add($"{entry.Timestamp.ToDateTime():HH:mm:ss.fff} {string.Join(" ", entry.Messages)}");
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"(could not read the relay's logged events: {ex.Message})");
+            }
+            return string.Join(Environment.NewLine, lines);
+        }
+
         public async Task VerifyServerStats(int num, int expectedFiles, bool isWpf)
         {
             using var httpHandler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
@@ -233,16 +258,24 @@ namespace FileSyncServer.Tests.Remote
             // not be complete the moment the clients are up (CI saw 65 of 125 files). Wait for them to arrive; the
             // totals must then be exactly right, so a relay that serves too much still fails.
             long totalFilesRead, totalBytesRead;
+            ServerResponse status;
             var deadline = DateTime.UtcNow.AddSeconds(60);
             while (true)
             {
-                var response = await client!.GetServerStatusAsync(new Empty { });
-                totalFilesRead = response.ConnectionResponses.Sum(x => (long)x.TotalFilesRead);
-                totalBytesRead = response.ConnectionResponses.Sum(x => (long)x.TotalBytesRead);
+                status = await client!.GetServerStatusAsync(new Empty { });
+                totalFilesRead = status.ConnectionResponses.Sum(x => (long)x.TotalFilesRead);
+                totalBytesRead = status.ConnectionResponses.Sum(x => (long)x.TotalBytesRead);
                 if ((totalFilesRead >= (long)expectedFiles * num && totalBytesRead >= perClient * num) || DateTime.UtcNow >= deadline)
                     break;
                 await Task.Delay(250);
             }
+
+            // When the totals are short, say which session is short and what the relay logged, so a one-off CI failure can be
+            // told apart: a session that restarted (its counters start again, and its connected time is short) or a page that
+            // never asked for its files.
+            if (totalFilesRead != (long)expectedFiles * num || totalBytesRead != perClient * num)
+                Assert.Fail($"Expected {(long)expectedFiles * num} files and {perClient * num} bytes from {num} clients, the relay counted " +
+                    $"{totalFilesRead} files and {totalBytesRead} bytes.{Environment.NewLine}{await DescribeRelayAsync(client, status)}");
 
             Assert.Equal((long)expectedFiles * num, totalFilesRead);
             Assert.Equal(perClient * num, totalBytesRead);

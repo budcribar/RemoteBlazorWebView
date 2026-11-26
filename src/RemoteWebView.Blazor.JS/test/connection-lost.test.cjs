@@ -30,8 +30,11 @@ function setup() {
 test('a page that cannot come back only says the connection is lost', () => {
     const page = setup();
     let reloads = 0;
-    page.exports.connectionLost({ canReturn: false, address: '/x/', reload: () => reloads++, probe: async () => { throw new Error('must not probe'); } });
+    let ended = 0;
+    page.exports.connectionLost({ canReturn: false, address: '/x/', reload: () => reloads++, probe: async () => { throw new Error('must not probe'); },
+        ended: () => ended++ });
     assert.equal(page.text(), page.exports.TEXT_LOST);
+    assert.equal(ended, 1);
     assert.equal(page.elements[0].id, page.exports.NOTICE_ID);
     assert.equal(page.elements[0].attributes.role, 'status');
     assert.equal(page.timers.length, 0);
@@ -58,12 +61,16 @@ test('a mirror page waits until the session answers, then reloads once', async (
 test('a session that never answers ends the wait with "The session has ended."', async () => {
     const page = setup();
     let reloads = 0;
-    page.exports.connectionLost({ canReturn: true, address: '/mirror/abc', reload: () => reloads++, probe: async () => false, giveUpMs: 1000 });
+    let ended = 0;
+    page.exports.connectionLost({ canReturn: true, address: '/mirror/abc', reload: () => reloads++, probe: async () => false, giveUpMs: 1000,
+        ended: () => ended++ });
     await page.runTimer();
     assert.equal(page.text(), page.exports.TEXT_WAITING);
+    assert.equal(ended, 0); // still waiting
     page.advance(1001);
     await page.runTimer();
     assert.equal(page.text(), page.exports.TEXT_ENDED);
+    assert.equal(ended, 1);
     assert.equal(page.timers.length, 0);
     assert.equal(reloads, 0);
     assert.equal(page.elements.length, 1); // the same notice, not a second one

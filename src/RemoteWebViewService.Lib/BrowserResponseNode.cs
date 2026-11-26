@@ -11,6 +11,9 @@ namespace PeakSWC.RemoteWebView
         /// <summary>The signed-in user's display name on this connection (empty without authorization). Shown in the roster.</summary>
         public string UserName { get; init; } = string.Empty;
 
+        /// <summary>The signed-in user's id on this connection (empty without authorization). Decides who may be given control (SessionControllers).</summary>
+        public string UserId { get; init; } = string.Empty;
+
         /// <summary>Order in which connections joined (process-wide), so the roster lists them oldest first.</summary>
         public long JoinOrder { get; } = System.Threading.Interlocked.Increment(ref joinCounter);
         private static long joinCounter;

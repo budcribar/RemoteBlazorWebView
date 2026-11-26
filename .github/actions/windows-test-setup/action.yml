@@ -1,0 +1,107 @@
+# Shared setup for every job in windows-tests.yml. Each job runs on its own
+# Windows runner, so each one builds the same tree the old single job built,
+# in the same layout (paths the tests resolve are unchanged).
+#
+# js-tests also runs the bundle's npm tests (only one job needs to).
+# windows-test-publish does the publishing the FileSyncServer tests need.
+
+name: Windows test setup
+description: Build remote.blazor.desktop.js and the test projects.
+
+inputs:
+  js-tests:
+    description: Run npm test for remote.blazor.desktop.js
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # global.json pins 10.0.404 with rollForward latestMinor. This step
+    # installs the 10.0.x band, which satisfies that roll-forward.
+    # The MAUI workload is not required: these tests do not build MAUI apps.
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+        cache: true
+        cache-dependency-path: "**/*.csproj"
+
+    # The bundle builds with Node 22.3.0, yarn, and webpack. protoc.exe is
+    # already in src/RemoteWebView.Blazor.JS/protoc/bin.
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.3.0
+
+    - name: Build remote.blazor.desktop.js
+      shell: pwsh
+      env:
+        RUN_JS_TESTS: ${{ inputs.js-tests }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $PSNativeCommandUseErrorActionPreference = $true
+        corepack enable
+        corepack prepare yarn@4.3.1 --activate
+        $env:PATH = "$(Resolve-Path 'src/RemoteWebView.Blazor.JS/protoc/bin');$env:PATH"
+        Push-Location src/RemoteWebView.Blazor.JS
+        yarn install --immutable
+        # Web.JS is a nested package with no committed lockfile. Yarn 4 treats it
+        # as part of this project and refuses `yarn install` there. npm installs
+        # the same package.json dependencies into Web.JS/node_modules, which is
+        # what Boot.Desktop.ts and the Web.JS sources import.
+        Push-Location Web.JS
+        npm install --no-audit --no-fund
+        Pop-Location
+        if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-js-interop')) {
+          throw 'Web.JS is missing @microsoft/dotnet-js-interop after npm install'
+        }
+        if (-not (Test-Path 'Web.JS/node_modules/@microsoft/dotnet-runtime/package.json')) {
+          throw 'Web.JS is missing @microsoft/dotnet-runtime after npm install'
+        }
+        npm run build:production
+        $js = Get-Item "dist/remote.blazor.desktop.js"
+        Write-Host "remote.blazor.desktop.js is $($js.Length) bytes"
+        if ($env:RUN_JS_TESTS -eq 'true') { npm test }
+        Pop-Location
+
+    - name: Restore and build test projects
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $PSNativeCommandUseErrorActionPreference = $true
+        $common = @(
+          '-c', 'Release',
+          '-p:Platform=x64',
+          '-p:EnableWindowsTargeting=true',
+          '-p:GeneratePackageOnBuild=false',
+          '-p:PackAsTool=false'
+        )
+        dotnet build src/RemoteBlazorWebView/RemoteBlazorWebView.csproj @common
+        $projects = @(
+          'src/RemoteWebView/RemoteWebView.csproj',
+          'src/RemoteWebViewService/RemoteWebViewService.csproj',
+          'src/EditWebView/EditWebView.csproj',
+          'src/RemoteBlazorWebView.RemoteComponents/RemoteBlazorWebView.RemoteComponents.csproj',
+          'src/RemoteBlazorWebView.Wpf/RemoteBlazorWebView.Wpf.csproj',
+          'src/RemoteBlazorWebView.WinForms/RemoteBlazorWebView.WindowsForms.csproj',
+          'src/Benchmarks/FilePOC/Client/Client.csproj',
+          'test/StaticContentCache.Tests/StaticContentCache.Tests.csproj',
+          'test/StaticContentCache.ServiceTests/StaticContentCache.ServiceTests.csproj',
+          'test/RemoteBlazorWebView.SourceGenerators.Tests/RemoteBlazorWebView.SourceGenerators.Tests.csproj',
+          'test/RemoteBlazorWebView.RemoteComponents.Tests/RemoteBlazorWebView.RemoteComponents.Tests.csproj',
+          'test/FileSyncServer.Tests/FileSyncServer.Tests.csproj',
+          'test/StaticContentCache.EndToEnd.Tests/StaticContentCache.EndToEnd.Tests.csproj',
+          'test/RemoteWebView.Lifecycle.Tests/RemoteWebView.Lifecycle.Tests.csproj',
+          'test/RemoteWebView.RemoteTicket.Tests/RemoteWebView.RemoteTicket.Tests.csproj'
+        )
+        foreach ($project in $projects) {
+          $args = $common
+          if ($project -like '*FileSyncServer.Tests*') {
+            # Keep the test output at bin/x64/Release/<tfm> so ServerFixture (six
+            # levels up to src/RemoteWebViewService/bin/publishNoAuth) and
+            # Utilities.RelativeRoot (seven levels up, then RemoteBlazorWebView\...)
+            # both resolve on the GitHub checkout layout.
+            $args += '-p:AppendRuntimeIdentifierToOutputPath=false'
+          }
+          dotnet build $project @args
+        }

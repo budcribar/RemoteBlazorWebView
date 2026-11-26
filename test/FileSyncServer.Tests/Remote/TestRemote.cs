@@ -9,15 +9,18 @@ namespace FileSyncServer.Tests.Remote
 {
     #region WPF
     [Collection("TestRemoteBlazorWpf")]
+    [Trait("Category", "Slow")]
     public class TestRemoteBlazorWpf(ITestOutputHelper output) : BaseTestRemote<RemoteBlazorWpfFixture>(output) {
     }
     public class RemoteBlazorWpfFixture : BaseTestRemoteFixture { public RemoteBlazorWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfApp; } }
 
     [Collection("TestRemoteBlazorDebugWpf")]
+    [Trait("Category", "Slow")]
     public class TestRemoteBlazorDebugWpf(ITestOutputHelper output) : BaseTestRemote<RemoteBlazorDebugWpfFixture>(output) {
     }
     public class RemoteBlazorDebugWpfFixture : BaseTestRemoteFixture { public RemoteBlazorDebugWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfDebugApp; } }
     [Collection("TestRemoteEmbeddedBlazorWpf")]
+    [Trait("Category", "Slow")]
     public class TestRemoteEmbeddedBlazorWpf(ITestOutputHelper output) : BaseTestRemote<TestRemoteEmbeddedBlazorWpfFixture>(output) {
     }
     public class TestRemoteEmbeddedBlazorWpfFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorWpfFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWpfEmbeddedApp; } }
@@ -25,16 +28,19 @@ namespace FileSyncServer.Tests.Remote
 
     #region Form
     [Collection("TestRemoteBlazorForm")]
+    [Trait("Category", "Slow")]
     public class TestRemoteBlazorForm(ITestOutputHelper output) : BaseTestRemote<TestRemoteBlazorFormFixture>(output) {
     }
     public class TestRemoteBlazorFormFixture : BaseTestRemoteFixture { public TestRemoteBlazorFormFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWinFormsApp; } }
 
     [Collection("TestRemoteBlazorWinFormsDebug")]
+    [Trait("Category", "Slow")]
     public class TestRemoteBlazorWinFormsDebug(ITestOutputHelper output) : BaseTestRemote<TestRemoteBlazorWinFormsDebugFixture>(output) {
     }
     public class TestRemoteBlazorWinFormsDebugFixture : BaseTestRemoteFixture { public TestRemoteBlazorWinFormsDebugFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWinFormsDebugApp; } }
 
     [Collection("TestRemoteEmbeddedBlazorForm")]
+    [Trait("Category", "Slow")]
     public class TestRemoteEmbeddedBlazorForm(ITestOutputHelper output) : BaseTestRemote<TestRemoteEmbeddedBlazorFormFixture>(output) {
     }
     public class TestRemoteEmbeddedBlazorFormFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorFormFixture() { ClientExecutablePath = Utilities.StartRemoteEmbeddedBlazorWinFormsApp; } }
@@ -43,11 +49,13 @@ namespace FileSyncServer.Tests.Remote
     #region Photino
 
     [Collection("TestRemoteBlazorWebView")]
+    [Trait("Category", "Slow")]
     public class TestRemoteBlazorWebView(ITestOutputHelper output) : BaseTestRemote<TestRemoteBlazorWebViewFixture>(output) {
     }
     public class TestRemoteBlazorWebViewFixture : BaseTestRemoteFixture { public TestRemoteBlazorWebViewFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWebViewApp; } }
 
     [Collection("TestRemoteEmbeddedBlazorWebView")]
+    [Trait("Category", "Slow")]
     public class TestRemoteEmbeddedBlazorWebView(ITestOutputHelper output) : BaseTestRemote<TestRemoteEmbeddedBlazorWebViewFixture>(output) {
     }
     public class TestRemoteEmbeddedBlazorWebViewFixture : BaseTestRemoteFixture { public TestRemoteEmbeddedBlazorWebViewFixture() { ClientExecutablePath = Utilities.StartRemoteBlazorWebViewEmbeddedApp; } }

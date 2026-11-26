@@ -9,6 +9,13 @@ export interface Participant {
     primary: boolean;
 }
 
+/**
+ * This page's stream from the session: connecting until the first message arrives, connected while messages can arrive,
+ * reconnecting while a lost or restarting session is waited for, disconnected once nothing will come back (ConnectionLost.ts).
+ * A page whose control marker still says in control is not in control while this is anything but connected.
+ */
+export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+
 export interface ControlState {
     participants: Participant[];
     myClientId: string;
@@ -17,6 +24,7 @@ export interface ControlState {
     shareUrl: string | null;
     /** The app is restarting (someone pressed Restart); this page waits for the new copy and comes back by itself. */
     restarting: boolean;
+    connectionState: ConnectionState;
 }
 
 export interface RemoteControlApi {
@@ -67,12 +75,13 @@ let isOwner = false;
 let iHaveControl = false;
 let shareUrl: string | null = null;
 let restarting = false;
+let connectionState: ConnectionState = 'connecting';
 let requestPrimaryImpl: (t: string) => void = () => { /* set in initControl */ };
 let requestRestartImpl: () => void = () => { /* set in initControl */ };
 const subscribers = new Set<(s: ControlState) => void>();
 
 function snapshot(): ControlState {
-    return { participants, myClientId, isOwner, iHaveControl, shareUrl, restarting };
+    return { participants, myClientId, isOwner, iHaveControl, shareUrl, restarting, connectionState };
 }
 
 function notify() {
@@ -111,6 +120,13 @@ export function setParticipants(next: Participant[]) {
 /** This connection gained or lost control ("primaryChanged:" / roster reconciliation). */
 export function setPrimary(value: boolean) {
     iHaveControl = value;
+    notify();
+}
+
+/** The stream's state changed (RemoteWebView.ts). Subscribers hear only a change, since every message reports connected. */
+export function setConnectionState(next: ConnectionState) {
+    if (connectionState === next) return;
+    connectionState = next;
     notify();
 }
 
