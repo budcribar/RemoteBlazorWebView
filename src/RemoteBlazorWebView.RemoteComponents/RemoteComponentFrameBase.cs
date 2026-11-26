@@ -205,10 +205,13 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
             _sink = DotNetObjectReference.Create(new HeightSink(this));
             await _module.InvokeVoidAsync("watch", _frame, _sink);
         }
-        catch (JSException) { }
-        catch (JSDisconnectedException) { }
-        catch (InvalidOperationException) { } // prerendering or no JS runtime
+        catch (JSException ex) { NoteScriptGone(ex); }
+        catch (JSDisconnectedException ex) { NoteScriptGone(ex); }
+        catch (InvalidOperationException ex) { NoteScriptGone(ex); } // prerendering or no JS runtime
     }
+
+    private static void NoteScriptGone(Exception ex) =>
+        System.Diagnostics.Debug.WriteLine($"Remote component frame script is gone: {ex.GetType().Name}");
 
     private void SetHeight(double requested)
     {
@@ -231,11 +234,13 @@ public abstract class RemoteComponentFrameBase : ComponentBase, IAsyncDisposable
     public virtual async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _cts.Cancel();
+        await _cts.CancelAsync().ConfigureAwait(false);
         if (_module is not null)
         {
-            try { await _module.InvokeVoidAsync("unwatch", _frame); } catch { }
-            try { await _module.DisposeAsync(); } catch { }
+            try { await _module.InvokeVoidAsync("unwatch", _frame).ConfigureAwait(false); }
+            catch (Exception ex) { NoteScriptGone(ex); }
+            try { await _module.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception ex) { NoteScriptGone(ex); }
         }
         _sink?.Dispose();
         if (_session is { } s) await s.DisposeAsync();
