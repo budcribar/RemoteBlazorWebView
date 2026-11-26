@@ -20,7 +20,7 @@ runs:
     # installs the 10.0.x band, which satisfies that roll-forward.
     # The MAUI workload is not required: these tests do not build MAUI apps.
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: 10.0.x
         cache: true
@@ -29,7 +29,7 @@ runs:
     # The bundle builds with Node 22.3.0, yarn, and webpack. protoc.exe is
     # already in src/RemoteWebView.Blazor.JS/protoc/bin.
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: 22.3.0
 

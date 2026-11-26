@@ -60,15 +60,15 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # global.json pins 11.0.100-rc.3.26522.148 (allowPrerelease, rollForward latestMinor),
       # the SDK in mcr.microsoft.com/dotnet/sdk:11.0.100-rc.3. The 11.0-preview tag is older.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22.3.0
 
@@ -154,7 +154,7 @@ jobs:
           done
           exit "$failed"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: server-test-results
@@ -166,6 +166,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build the Railway image
         run: docker build -t remotewebviewservice:ci .

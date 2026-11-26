@@ -66,7 +66,7 @@ runs:
     # packages from it.
     - name: Checkout tutorial (net11)
       if: inputs.tutorial == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         repository: budcribar/RemoteBlazorWebViewTutorial
         ref: net11

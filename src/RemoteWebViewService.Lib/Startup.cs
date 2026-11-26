@@ -279,7 +279,6 @@ namespace PeakSWC.RemoteWebView
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseWebAssemblyDebugging();
             }
             else if (!Embedded)
             {
