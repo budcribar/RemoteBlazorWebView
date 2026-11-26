@@ -54,7 +54,7 @@ namespace FileSyncServer.Tests.Local
                 // the app's page (run 44798662282, a shard's first app start), so
                 // wait for one rather than failing on an empty list.
                 var context = contexts[0];
-                var page = context.Pages.FirstOrDefault();
+                var page = context.Pages.Count > 0 ? context.Pages[0] : null;
                 if (page == null)
                 {
                     try
