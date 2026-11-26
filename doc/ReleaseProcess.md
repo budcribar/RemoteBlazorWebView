@@ -20,7 +20,7 @@ Packed in this order, because `RemoteWebViewService` project-references `RemoteW
 
 ## Version rule
 
-`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.1.1` and does not set `VersionSuffix`, so the package version is `11.0.1.1`. `global.json` pins SDK `11.0.1.100`, which is GA.
+`Directory.Build.props` is the only place a package version is committed. Today on net11 that file sets `VersionPrefix` to `11.0.1.1` and does not set `VersionSuffix`, so the package version is `11.0.1.1`. `global.json` pins SDK `11.0.100`, which is GA.
 
 The rule going forward:
 
@@ -61,7 +61,7 @@ How to run it on `net11`:
 
 ## What a dispatch does
 
-Dispatch **Release packages** on `cursor/release-workflow-205f` (and, once reviewed, on the line you are releasing). Inputs:
+Dispatch **Release packages** on the line you are releasing (for example `net11`). Inputs:
 
 | Input | Default | Meaning |
 |---|---|---|
