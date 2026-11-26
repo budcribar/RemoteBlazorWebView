@@ -15,7 +15,9 @@
 //
 // Parent -> frame:  { type: 'rbwv-parent-control', primaryId }   (primaryId is the derived id, never the app's own ids)
 // Frame -> parent:  { type: 'rbwv-control-query' }               (asked when the frame starts)
-// Frames are sandboxed with an opaque origin, so messages are matched by window (parent / contentWindow), not origin.
+// Frames are sandboxed with an opaque origin by default, so messages are matched by window (parent / contentWindow).
+// The origin is checked as well: "null" (the default sandbox), this page's own origin, or, for an app whose Sandbox
+// adds allow-same-origin, the frame's own origin (parent side) or the parent page's origin (frame side).
 
 const frameSelector = 'iframe[data-rbwv-src]';
 const idPattern = /^[0-9a-f]{32}$/;
@@ -68,6 +70,18 @@ export function withFrameIdentity(url: string): string {
 
 let desiredForFrames: string | null = null;
 
+/** The origin a frame's page comes from ('' while it has no address). */
+function frameOrigin(frame: HTMLIFrameElement): string {
+    try { return frame.src ? new URL(frame.src, document.baseURI).origin : ''; } catch { return ''; }
+}
+
+/** The origin of the page this frame is on ('' when the browser does not say). */
+function parentOrigin(): string {
+    const ancestors = window.location.ancestorOrigins;
+    if (ancestors && ancestors.length > 0) return ancestors[0];
+    try { return document.referrer ? new URL(document.referrer).origin : ''; } catch { return ''; }
+}
+
 function postToFrames() {
     if (!desiredForFrames) return;
     document.querySelectorAll(frameSelector).forEach(f =>
@@ -99,11 +113,12 @@ export function initParentFrameControl(clientKey: string, onIdentityReady: () =>
     });
 
     window.addEventListener('message', e => {
-        if (e.origin !== 'null' && e.origin !== window.location.origin) return;
         const d = e.data;
         if (!d || typeof d !== 'object' || d.type !== 'rbwv-control-query' || !desiredForFrames) return;
         for (const f of Array.from(document.querySelectorAll(frameSelector))) {
-            if ((f as HTMLIFrameElement).contentWindow === e.source) {
+            const frame = f as HTMLIFrameElement;
+            if (frame.contentWindow === e.source) {
+                if (e.origin !== 'null' && e.origin !== window.location.origin && e.origin !== frameOrigin(frame)) return;
                 (e.source as Window).postMessage({ type: 'rbwv-parent-control', primaryId: desiredForFrames }, '*'); // NOSONAR typescript:S2819 sandboxed iframe has opaque origin "null"; verified by contentWindow === e.source
                 return;
             }
@@ -133,9 +148,11 @@ function evaluate() {
 /** Called once on a framed page. */
 export function initFrameControl() {
     if (!isFramed()) return;
+    const fromParent = parentOrigin();
     window.addEventListener('message', e => {
         if (e.source !== window.parent) return;
-        if (e.origin !== 'null' && e.origin !== window.location.origin && window.location.origin !== 'null') return;
+        // window.origin, not location.origin: a sandboxed frame's location still shows its address, but its origin is "null".
+        if (e.origin !== 'null' && window.origin !== 'null' && e.origin !== window.location.origin && e.origin !== fromParent) return;
         const d = e.data;
         if (!d || typeof d !== 'object' || d.type !== 'rbwv-parent-control' || typeof d.primaryId !== 'string' || !idPattern.test(d.primaryId)) return;
         desired = d.primaryId;
