@@ -158,7 +158,11 @@ namespace PeakSWC.RemoteWebView.Agents
             return copy;
         }
 
-        private static string Cut(string? text, int max) =>
-            string.IsNullOrEmpty(text) ? string.Empty : text.Length <= max ? text : text[..max];
+        private static string Cut(string? text, int max)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length <= max)
+                return text ?? string.Empty;
+            return text[..max];
+        }
     }
 }
