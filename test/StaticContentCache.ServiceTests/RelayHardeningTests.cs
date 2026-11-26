@@ -147,7 +147,7 @@ public class RelayHardeningTests
             });
             var headers = new Metadata { { AgentOptions.AdminKeyHeader, "secret-admin-key" } };
 
-            await service.WatchFile(new WatchFileRequest { FilePath = insideFile }, writer, new TestCallContext(cts.Token, AnonymousHttp(), headers));
+            await service.WatchFile(new WatchFileRequest { FilePath = insideFile }, writer, new TestCallContext(AnonymousHttp(), headers, cts.Token));
 
             Assert.Contains(chunks, c => c.ResponseCase == WatchFileResponse.ResponseOneofCase.Chunk && c.Chunk.Content.ToStringUtf8() == "hello");
         }
@@ -270,7 +270,7 @@ public class RelayHardeningTests
             var error = await Assert.ThrowsAsync<RpcException>(() => browser.ReceiveMessage(
                 new ReceiveMessageRequest { Id = randomId, ClientId = "c1", ClientKey = "k1" },
                 new NullStringWriter(),
-                new TestCallContext(hangUp.Token, http: AnonymousHttp())));
+                new TestCallContext(http: AnonymousHttp(), cancellationToken: hangUp.Token)));
             Assert.Equal(StatusCode.PermissionDenied, error.StatusCode);
         }
         Assert.Empty(sessions);
@@ -279,7 +279,7 @@ public class RelayHardeningTests
         var waiting = browser.ReceiveMessage(
             new ReceiveMessageRequest { Id = randomId, ClientId = "c1", ClientKey = "k1", OwnerToken = "not-a-real-token" },
             new NullStringWriter(),
-            new TestCallContext(new CancellationTokenSource(TimeSpan.FromMilliseconds(600)).Token, http: AnonymousHttp()));
+            new TestCallContext(http: AnonymousHttp(), cancellationToken: new CancellationTokenSource(TimeSpan.FromMilliseconds(600)).Token));
         await Task.Delay(200);
         Assert.Empty(sessions);
         var ownerError = await Assert.ThrowsAsync<RpcException>(() => waiting);
@@ -439,7 +439,7 @@ public class RelayHardeningTests
 
     // ---- Helpers ----
 
-    private static HttpContext AnonymousHttp() => new DefaultHttpContext();
+    private static DefaultHttpContext AnonymousHttp() => new();
 
     private static ClaimsPrincipal SignedInPrincipal(string oid) =>
         new(new ClaimsIdentity([new Claim("oid", oid), new Claim("name", oid)], "test"));
@@ -486,9 +486,9 @@ public class RelayHardeningTests
         private readonly CancellationToken token;
         private readonly Metadata headers;
 
-        public TestCallContext(CancellationToken token = default, HttpContext? http = null, Metadata? headers = null)
+        public TestCallContext(HttpContext? http = null, Metadata? headers = null, CancellationToken cancellationToken = default)
         {
-            this.token = token;
+            token = cancellationToken;
             this.headers = headers ?? new Metadata();
             if (http != null)
                 UserState["__HttpContext"] = http;
