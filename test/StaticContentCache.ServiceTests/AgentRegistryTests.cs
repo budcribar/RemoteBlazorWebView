@@ -1100,6 +1100,28 @@ public class AgentRegistryTests
     }
 
     [Fact]
+    public void A_new_update_becomes_the_latest_even_when_the_previous_one_never_finished()
+    {
+        var registry = new AgentRegistry(new ManualTime());
+        var connection = registry.Register(Hello("m-1"), "10.0.0.1", null);
+
+        // The first request waited for the PC, then the agent dropped it (idle is not terminal).
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "old-req", Stage = "waiting" });
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "old-req", Stage = "idle" });
+
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "new-req", Stage = "checking" });
+        Assert.Equal("new-req", registry.GetLatestUpdate("m-1")!.RequestId);
+
+        var done = registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "new-req", Stage = "succeeded", Terminal = true });
+        Assert.NotNull(done); // logged as "RPCD update succeeded"
+        Assert.Equal("succeeded", registry.GetLatestUpdate("m-1")!.Stage);
+
+        // A late snapshot of the older request doesn't take over.
+        registry.OnUpdateProgress(connection, new UpdateRpcdProgress { RequestId = "old-req", Stage = "idle" });
+        Assert.Equal("new-req", registry.GetLatestUpdate("m-1")!.RequestId);
+    }
+
+    [Fact]
     public async Task An_update_survives_disconnect_and_the_reconnect_asks_for_the_snapshot()
     {
         var registry = new AgentRegistry(new ManualTime());
