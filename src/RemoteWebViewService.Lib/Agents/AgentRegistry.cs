@@ -573,10 +573,14 @@ namespace PeakSWC.RemoteWebView.Agents
                 if (IsUpdateTerminal(update.Latest))
                     return null;
 
-                bool newerThanLatest = string.IsNullOrEmpty(entry.LatestUpdateRequestId)
+                // The agent runs one update at a time, so the first snapshot of a request it hasn't reported before is its update now,
+                // even when the previous one never reached a terminal stage (it can go back to idle: it was dropped). Only a late
+                // snapshot of an older request must not take over, even after the latest one finished.
+                bool firstSnapshot = string.IsNullOrEmpty(update.Latest.Stage);
+                bool newerThanLatest = firstSnapshot
+                    || string.IsNullOrEmpty(entry.LatestUpdateRequestId)
                     || string.Equals(entry.LatestUpdateRequestId, stored.RequestId, StringComparison.OrdinalIgnoreCase)
-                    || !updates.TryGetValue(entry.LatestUpdateRequestId, out var currentLatest)
-                    || IsUpdateTerminal(currentLatest.Latest);
+                    || !updates.ContainsKey(entry.LatestUpdateRequestId);
 
                 update.Latest = stored;
                 update.Updated = time.GetUtcNow();
